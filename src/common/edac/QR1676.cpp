@@ -76,7 +76,7 @@ uint8_t QR1676::decode(const uint8_t* data)
 
     code ^= error_pattern;
 
-    return code >> 7;
+    return (code >> 8) & 0x7FU;
 }
 
 /* Encode QR (16,7,6) FEC. */

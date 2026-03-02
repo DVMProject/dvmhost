@@ -306,12 +306,13 @@ namespace modem
          * @param disableOFlowReset Flag indicating whether the ADC/DAC overflow reset logic is disabled.
          * @param ignoreModemConfigArea Flag indicating whether the modem configuration area is ignored.
          * @param dumpModemStatus Flag indicating whether the modem status is dumped to the log.
+         * @param displayDebugMessages Flag indicating whether or not modem debug messages are displayed in the log.
          * @param trace Flag indicating whether air interface modem trace is enabled.
          * @param debug Flag indicating whether air interface modem debug is enabled.
          */
         Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
             uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint32_t dmrQueueSize, uint32_t p25QueueSize, uint32_t nxdnQueueSize,
-            bool disableOFlowReset, bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug);
+            bool disableOFlowReset, bool ignoreModemConfigArea, bool dumpModemStatus, bool displayDebugMessages, bool trace, bool debug);
         /**
          * @brief Finalizes a instance of the Modem class.
          */
@@ -601,30 +602,34 @@ namespace modem
          * @brief Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer.
          * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
          * @returns bool True, if data is written, otherwise false.
          */
-        bool writeDMRFrame1(const uint8_t* data, uint32_t length);
+        bool writeDMRFrame1(const uint8_t* data, uint32_t length, bool imm = false);
         /**
          * @brief Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer.
          * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
          * @returns bool True, if data is written, otherwise false.
          */
-        bool writeDMRFrame2(const uint8_t* data, uint32_t length);
+        bool writeDMRFrame2(const uint8_t* data, uint32_t length, bool imm = false);
         /**
          * @brief Writes P25 frame data to the P25 ring buffer.
          * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
          * @returns bool True, if data is written, otherwise false.
          */
-        bool writeP25Frame(const uint8_t* data, uint32_t length);
+        bool writeP25Frame(const uint8_t* data, uint32_t length, bool imm = false);
         /**
          * @brief Writes NXDN frame data to the NXDN ring buffer.
          * @param[in] data Data to write to ring buffer.
          * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
          * @returns bool True, if data is written, otherwise false.
          */
-        bool writeNXDNFrame(const uint8_t* data, uint32_t length);
+        bool writeNXDNFrame(const uint8_t* data, uint32_t length, bool imm = false);
 
         /**
          * @brief Triggers the start of DMR transmit.
@@ -655,9 +660,10 @@ namespace modem
          * @brief Writes raw data to the air interface modem.
          * @param data Data to write to modem.
          * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
          * @returns int Actual length of data written.
          */
-        virtual int write(const uint8_t* data, uint32_t length);
+        virtual int write(const uint8_t* data, uint32_t length, bool imm = false);
 
         /**
          * @brief Gets the flag for the V.24 connection state.
@@ -827,6 +833,7 @@ namespace modem
         bool m_gotModemStatus;
 
         bool m_dumpModemStatus;
+        bool m_displayModemDebugMessages;
 
         /**
          * @brief Internal helper to warm reset the connection to the modem.

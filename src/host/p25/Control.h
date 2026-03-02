@@ -170,9 +170,10 @@ namespace p25
         /**
          * @brief Get frame data from data ring buffer.
          * @param[out] data Buffer to store frame data.
+         * @param[out] imm Flag indicating whether the frame is immediate.
          * @returns uint32_t Length of frame data retrieved.
          */
-        uint32_t getFrame(uint8_t* data);
+        uint32_t getFrame(uint8_t* data, bool* imm = nullptr);
         /** @} */
 
         /**
@@ -315,6 +316,9 @@ namespace p25
         bool m_demandUnitRegForRefusedAff;
         bool m_dfsiFDX;
         bool m_forceAllowTG0;
+        bool m_immediateCallTerm;
+        bool m_explicitTDUGrantRelease;
+        bool m_disableDenyResponse;
 
         uint32_t m_defaultNetIdleTalkgroup;
 
@@ -357,6 +361,10 @@ namespace p25
         Timer m_activeTGUpdate;
 
         Timer m_ccPacketInterval;
+
+        uint32_t m_rfCallTermSrcId;
+        uint32_t m_rfCallTermDstId;
+        Timer m_rfVoiceCallTermTimeout;
 
         StopWatch m_interval;
 

@@ -53,6 +53,7 @@ AdjSiteMapLookup::AdjSiteMapLookup(const std::string& filename, uint32_t reloadT
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
     m_rules(),
+    m_lastLoadTime(0U),
     m_stop(false),
     m_adjPeerMap()
 {
@@ -240,6 +241,9 @@ bool AdjSiteMapLookup::load()
     if (size == 0U) {
         return false;
     }
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_lastLoadTime = now;
 
     LogInfoEx(LOG_HOST, "Loaded %lu entries into adjacent site map table", size);
 

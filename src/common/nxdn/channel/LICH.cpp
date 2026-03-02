@@ -57,12 +57,7 @@ LICH::~LICH() = default;
 LICH& LICH::operator=(const LICH& data)
 {
     if (&data != this) {
-        m_lich = data.m_lich;
-
-        m_rfct = data.m_rfct;
-        m_fct = data.m_fct;
-        m_option = data.m_option;
-        m_outbound = data.m_outbound;
+        copy(data);
     }
 
     return *this;
@@ -155,10 +150,10 @@ void LICH::copy(const LICH& data)
 {
     m_lich = data.m_lich;
 
-    m_rfct = (RFChannelType::E)((m_lich >> 6) & 0x03U);
-    m_fct = (FuncChannelType::E)((m_lich >> 4) & 0x03U);
-    m_option = (ChOption::E)((m_lich >> 2) & 0x03U);
-    m_outbound = ((m_lich >> 1) & 0x01U) == 0x01U;
+    m_rfct = data.m_rfct;
+    m_fct = data.m_fct;
+    m_option = data.m_option;
+    m_outbound = data.m_outbound;
 }
 
 /* Internal helper to generate the parity bit for the LICH. */

@@ -54,8 +54,8 @@ public:
      */
     void setColorTheme() override
     {
-        term_fg                           = FColor::Cyan;
-        term_bg                           = FColor::Blue;
+        term_fg                           = FColor::White;
+        term_bg                           = FColor::DarkGray;
 
         list_fg                           = FColor::Black;
         list_bg                           = FColor::LightGray;
@@ -78,10 +78,12 @@ public:
         shadow_bg                         = FColor::LightGray;  // only for transparent shadow
 
         current_element_focus_fg          = FColor::White;
-        current_element_focus_bg          = FColor::Cyan;
-        current_element_fg                = FColor::LightBlue;
-        current_element_bg                = FColor::Cyan;
+        current_element_focus_bg          = FColor::Blue;
+        current_element_fg                = FColor::LightGray;
+        current_element_bg                = FColor::DarkGray;
+
         current_inc_search_element_fg     = FColor::LightRed;
+
         selected_current_element_focus_fg = FColor::LightRed;
         selected_current_element_focus_bg = FColor::Cyan;
         selected_current_element_fg       = FColor::Red;
@@ -129,22 +131,22 @@ public:
 
         menu_active_focus_fg              = FColor::Black;
         menu_active_focus_bg              = FColor::White;
-        menu_active_fg                    = FColor::Black;
-        menu_active_bg                    = FColor::LightGray;
+        menu_active_fg                    = FColor::White;
+        menu_active_bg                    = FColor::Cyan;
         menu_inactive_fg                  = FColor::DarkGray;
-        menu_inactive_bg                  = FColor::LightGray;
-        menu_hotkey_fg                    = FColor::Blue;
-        menu_hotkey_bg                    = FColor::LightGray;
+        menu_inactive_bg                  = FColor::Cyan;
+        menu_hotkey_fg                    = FColor::Yellow;
+        menu_hotkey_bg                    = FColor::Cyan;
 
-        statusbar_fg                      = FColor::Black;
-        statusbar_bg                      = FColor::LightGray;
-        statusbar_hotkey_fg               = FColor::Blue;
-        statusbar_hotkey_bg               = FColor::LightGray;
-        statusbar_separator_fg            = FColor::Black;
+        statusbar_fg                      = FColor::White;
+        statusbar_bg                      = FColor::Blue;
+        statusbar_hotkey_fg               = FColor::Yellow;
+        statusbar_hotkey_bg               = FColor::Blue;
+        statusbar_separator_fg            = FColor::White;
         statusbar_active_fg               = FColor::Black;
-        statusbar_active_bg               = FColor::White;
+        statusbar_active_bg               = FColor::LightGray;
         statusbar_active_hotkey_fg        = FColor::Blue;
-        statusbar_active_hotkey_bg        = FColor::White;
+        statusbar_active_hotkey_bg        = FColor::LightGray;
 
         scrollbar_fg                      = FColor::Cyan;
         scrollbar_bg                      = FColor::DarkGray;

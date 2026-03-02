@@ -226,10 +226,18 @@ namespace lookups
          */
         void setReloadTime(uint32_t reloadTime) { m_reloadTime = reloadTime; }
 
+        /**
+         * @brief Returns the last load time of this lookup table.
+         * @return const uint64_t Last load time in milliseconds since epoch.
+         */
+        const uint64_t lastLoadTime() const { return m_lastLoadTime; }
+
     private:
         std::string m_rulesFile;
         uint32_t m_reloadTime;
         yaml::Node m_rules;
+
+        uint64_t m_lastLoadTime;
 
         bool m_stop;
 

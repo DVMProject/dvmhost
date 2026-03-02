@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -39,6 +39,7 @@ namespace p25
          */
 
         /** @name Frame Lengths and Misc Constants */
+        // TIA-102.BAAA-B Section 4 and 5; TIA-102.AABB-B Section 5
         const uint32_t  P25_HDU_FRAME_LENGTH_BYTES = 99U;
         const uint32_t  P25_HDU_FRAME_LENGTH_BITS = P25_HDU_FRAME_LENGTH_BYTES * 8U;
 
@@ -63,11 +64,28 @@ namespace p25
         const uint32_t  P25_TDULC_FRAME_LENGTH_BYTES = 54U;
         const uint32_t  P25_TDULC_FRAME_LENGTH_BITS = P25_TDULC_FRAME_LENGTH_BYTES * 8U;
 
-        const uint32_t  P25_P2_FRAME_LENGTH_BYTES = 45U;
-        const uint32_t  P25_P2_FRAME_LENGTH_BITS = P25_P2_FRAME_LENGTH_BYTES * 8U;
-
         const uint32_t  P25_NID_LENGTH_BYTES = 8U;
         const uint32_t  P25_NID_LENGTH_BITS = P25_NID_LENGTH_BYTES * 8U;
+
+        // TIA-102.BBAC-A Section 4
+        const uint32_t  P25_P2_FRAME_LENGTH_BYTES = 40U;
+        const uint32_t  P25_P2_FRAME_LENGTH_BITS = P25_P2_FRAME_LENGTH_BYTES * 8U;
+
+        const uint32_t  P25_P2_IEMI_LENGTH_BITS = 312U;
+        const uint32_t  P25_P2_IEMI_LENGTH_BYTES = (P25_P2_IEMI_LENGTH_BITS / 8U) + 1U;
+        const uint32_t  P25_P2_IEMI_WSYNC_LENGTH_BITS = 276U;
+        const uint32_t  P25_P2_IEMI_WSYNC_LENGTH_BYTES = (P25_P2_IEMI_WSYNC_LENGTH_BITS / 8U) + 1U;
+
+        const uint32_t  P25_P2_IEMI_MAC_LENGTH_BITS = 156U;
+        const uint32_t  P25_P2_IEMI_MAC_LENGTH_BYTES = (P25_P2_IEMI_MAC_LENGTH_BITS / 8U) + 1U;
+
+        const uint32_t  P25_P2_SOEMI_MAC_LENGTH_BITS = 156U;
+        const uint32_t  P25_P2_SOEMI_MAC_LENGTH_BYTES = (P25_P2_SOEMI_MAC_LENGTH_BITS / 8U) + 1U;
+        const uint32_t  P25_P2_SOEMI_LENGTH_BITS = 270U;
+        const uint32_t  P25_P2_SOEMI_LENGTH_BYTES = (P25_P2_SOEMI_LENGTH_BITS / 8U) + 1U;
+
+        const uint32_t  P25_P2_IOEMI_MAC_LENGTH_BITS = 180U;
+        const uint32_t  P25_P2_IOEMI_MAC_LENGTH_BYTES = (P25_P2_IOEMI_MAC_LENGTH_BITS / 8U) + 1U;
 
         // TIA-102.BAAA-B Section 7.3
         // 5     5      7     5      F     5      F     F      7     7      F     F
@@ -112,7 +130,7 @@ namespace p25
 
         const uint32_t  P25_TDULC_FEC_LENGTH_BYTES = 36U;
         const uint32_t  P25_TDULC_LENGTH_BYTES = 18U;
-        const uint32_t  P25_TDULC_PAYLOAD_LENGTH_BYTES = 8U;
+        const uint32_t  P25_TDULC_PAYLOAD_LENGTH_BYTES = 8U; // 9 bytes including LCO, 8 bytes payload
 
         const uint32_t  P25_TSBK_FEC_LENGTH_BYTES = 25U;
         const uint32_t  P25_TSBK_FEC_LENGTH_BITS = P25_TSBK_FEC_LENGTH_BYTES * 8U - 4U; // Trellis is actually 196 bits
@@ -837,6 +855,70 @@ namespace p25
             };
         }
 
+        // TIA-102.BBAD-D Section 4.1
+        /** @brief Phase 2 MAC PDU Opcode(s) */
+        namespace P2_MAC_HEADER_OPCODE {
+            /** @brief Phase 2 MAC PDU Opcode(s) */
+            enum : uint8_t {
+                SIGNAL = 0x00U,                         //!<
+                PTT = 0x01U,                            //!< Push-To-Talk
+                END_PTT = 0x02U,                        //!< End Push-To-Talk
+                IDLE = 0x03U,                           //!< Idle
+                ACTIVE = 0x04U,                         //!< Active
+
+                HANGTIME = 0x06U,                       //!< Call Hangtime
+            };
+        }
+
+        // TIA-102.BBAD-D Section 4.2
+        /** @brief Phase 2 MAC 4V/SACCH Offset(s) */
+        namespace P2_MAC_HEADER_OFFSET {
+            /** @brief Phase 2 MAC 4V/SACCH Offset(s) */
+            enum : uint8_t {
+                FIRST_4V_NEXT = 0x00U,                  //!< First 4V Next non-SACCH Burst on Slot
+                FIRST_4V_2ND = 0x01U,                   //!< First 4V Second non-SACCH Burst on Slot
+                FIRST_4V_3RD = 0x02U,                   //!< First 4V Third non-SACCH Burst on Slot
+                FIRST_4V_4TH = 0x03U,                   //!< First 4V Fourth non-SACCH Burst on Slot
+                FIRST_4V_5TH = 0x04U,                   //!< First 4V Fifth non-SACCH Burst on Slot
+                FIRST_4V_6TH = 0x05U,                   //!< First 4V Sixth non-SACCH Burst on Slot (Inbound Reserved)
+
+                INBOUND_RANDOM_SACCH = 0x06U,           //!< Inbound Random SACCH (Outbound Reserved)
+
+                NO_VOICE_OR_UNK = 0x07U                 //!< No Voice or Unknown
+            };
+        }
+
+        // TIA-102.BBAD-D Section 3
+        /** @brief Phase 2 MAC MCO Partitioning */
+        namespace P2_MAC_MCO_PARTITION {
+            /** @brief Phase 2 MAC MCO Partitioning */
+            enum : uint8_t {
+                UNIQUE = 0x00U,                         //!< Unique
+
+                ABBREVIATED = 0x40U,                    //!< Abbreviate
+                MFID_SPECIFIC = 0x80U,                  //!< MFID Specific
+                EXPLICIT = 0xC0U                        //!< Explicit
+            };
+        }
+
+        // TIA-102.BBAD-D Section 3
+        /** @brief Phase 2 MAC PDU Opcode(s) */
+        namespace P2_MAC_MCO {
+            /** @brief Phase 2 MAC PDU Opcode(s) */
+            enum : uint8_t {
+            // MAC PDU ISP/OSP Shared Opcode(s) (Unique Partition)
+                PDU_NULL = 0x00U,                       //!< Null MAC
+
+                GROUP = 0x01U,                          //!< GRP VCH USER - Group Voice Channel User
+                PRIVATE = 0x02U,                        //!< UU VCH USER - Unit-to-Unit Voice Channel User
+                TEL_INT_VCH_USER = 0x03U,               //!< TEL INT VCH USER - Telephone Interconnect Voice Channel User
+
+                MAC_RELEASE = 0x61U,                    //!< MAC RELEASE - MAC Release
+
+            /* Any abbreviated or explicit partition opcodes are essentially just TSBKO's. */
+            };
+        }
+
         // TIA-102.BAAC-D Section 2.11
         /** @brief Data Unit ID(s) */
         namespace DUID {
@@ -854,6 +936,7 @@ namespace p25
             };
         }
 
+        // TIA-102.BBAC-A Section 5.4.1
         /** @brief Phase 2 Data Unit ID(s) */
         namespace P2_DUID {
             /** @brief Data Unit ID(s) */

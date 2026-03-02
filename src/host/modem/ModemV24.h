@@ -42,9 +42,10 @@ namespace modem
      */
     enum SERIAL_TX_TYPE {
         STT_NO_DATA,                        //!< No Data
-        STT_NON_IMBE,                       //!< Non-IMBE Data/Signalling Frame
-        STT_NON_IMBE_NO_JITTER,             //!< Non-IMBE Data/Signalling Frame with Jitter Disabled
-        STT_IMBE                            //!< IMBE Voice Frame
+        STT_START_STOP,                     //!< Start/Stop Signalling Frame
+        STT_START_STOP_NO_JITTER,           //!< Start/Stop Signalling Frame with Jitter Disabled
+        STT_DATA,                           //!< Paced Data/Signalling Frame or IMBE Voice Frame
+        STT_DATA_FAST                       //!< Fast Paced Data/Signalling Frame
     };
 
     /** @} */
@@ -79,18 +80,21 @@ namespace modem
             kId(0U),
             VHDR1(nullptr),
             VHDR2(nullptr),
+            LDULC(nullptr),
+            seqNo(0U),
+            n(0U),
             netLDU1(nullptr),
             netLDU2(nullptr),
             pduUserData(nullptr),
-            dataHeader(),
+            dataHeader(nullptr),
             dataCall(false),
             pduUserDataOffset(0U),
             pduTotalBlocks(0U),
             errors(0U)
         {
             MI = new uint8_t[P25DEF::MI_LENGTH_BYTES];
-            VHDR1 = new uint8_t[P25DFSIDEF::DFSI_TIA_VHDR_LEN];
-            VHDR2 = new uint8_t[P25DFSIDEF::DFSI_TIA_VHDR_LEN];
+            VHDR1 = new uint8_t[P25DFSIDEF::DFSI_MOT_VHDR_1_LEN];
+            VHDR2 = new uint8_t[P25DFSIDEF::DFSI_MOT_VHDR_2_LEN];
             LDULC = new uint8_t[P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES];
 
             netLDU1 = new uint8_t[9U * 25U];
@@ -109,20 +113,38 @@ namespace modem
          */
         ~DFSICallData()
         {
-            if (MI != nullptr)
+            if (MI != nullptr) {
                 delete[] MI;
-            if (VHDR1 != nullptr)
+                MI = nullptr;
+            }
+            if (VHDR1 != nullptr) {
                 delete[] VHDR1;
-            if (VHDR2 != nullptr)
+                VHDR1 = nullptr;
+            }
+            if (VHDR2 != nullptr) {
                 delete[] VHDR2;
-            if (LDULC != nullptr)
+                VHDR2 = nullptr;
+            }
+            if (LDULC != nullptr) {
                 delete[] LDULC;
-            if (netLDU1 != nullptr)
+                LDULC = nullptr;
+            }
+            if (netLDU1 != nullptr) {
                 delete[] netLDU1;
-            if (netLDU2 != nullptr)
+                netLDU1 = nullptr;
+            }
+            if (netLDU2 != nullptr) {
                 delete[] netLDU2;
-            if (pduUserData != nullptr)
+                netLDU2 = nullptr;
+            }
+            if (pduUserData != nullptr) {
                 delete[] pduUserData;
+                pduUserData = nullptr;
+            }
+            if (dataHeader != nullptr) {
+                delete dataHeader;
+                dataHeader = nullptr;
+            }
         }
 
         /**
@@ -146,9 +168,9 @@ namespace modem
             kId = 0U;
 
             if (VHDR1 != nullptr)
-                ::memset(VHDR1, 0x00U, P25DFSIDEF::DFSI_TIA_VHDR_LEN);
+                ::memset(VHDR1, 0x00U, P25DFSIDEF::DFSI_MOT_VHDR_1_LEN);
             if (VHDR2 != nullptr)
-                ::memset(VHDR2, 0x00U, P25DFSIDEF::DFSI_TIA_VHDR_LEN);
+                ::memset(VHDR2, 0x00U, P25DFSIDEF::DFSI_MOT_VHDR_2_LEN);
 
             if (LDULC != nullptr)
                 ::memset(LDULC, 0x00U, P25DEF::P25_LDU_LC_FEC_LENGTH_BYTES);
@@ -163,7 +185,8 @@ namespace modem
 
             if (pduUserData != nullptr)
                 ::memset(pduUserData, 0x00U, P25DEF::P25_MAX_PDU_BLOCKS * P25DEF::P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
-            dataHeader.reset();
+            if (dataHeader != nullptr)
+                dataHeader->reset();
 
             dataCall = false;
             pduUserDataOffset = 0U;
@@ -257,7 +280,7 @@ namespace modem
         /**
          * @brief Data call header.
          */
-        p25::data::DataHeader dataHeader;
+        p25::data::DataHeader* dataHeader;
 
         /**
          * @brief Flag indicating the current call is a data call.
@@ -500,11 +523,12 @@ namespace modem
          * @param diu Flag indicating whether or not V.24 communications are to a DIU.
          * @param jitter 
          * @param dumpModemStatus Flag indicating whether the modem status is dumped to the log.
+         * @param displayDebugMessages Flag indicating whether or not modem debug messages are displayed in the log.
          * @param trace Flag indicating whether air interface modem trace is enabled.
          * @param debug Flag indicating whether air interface modem debug is enabled.
          */
         ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, uint32_t p25TxQueueSize,
-            bool rtrt, uint16_t jitter, bool dumpModemStatus, bool trace, bool debug);
+            bool rtrt, uint16_t jitter, bool dumpModemStatus, bool displayDebugMessages, bool trace, bool debug);
         /**
          * @brief Finalizes a instance of the ModemV24 class.
          */
@@ -554,9 +578,10 @@ namespace modem
          * @brief Writes raw data to the air interface modem.
          * @param data Data to write to modem.
          * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
          * @returns int Actual length of data written.
          */
-        int write(const uint8_t* data, uint32_t length) override;
+        int write(const uint8_t* data, uint32_t length, bool imm = false) override;
 
     private:
         bool m_rtrt;
@@ -568,6 +593,7 @@ namespace modem
         p25::NID* m_nid;
 
         RingBuffer<uint8_t> m_txP25Queue;
+        RingBuffer<uint8_t> m_txImmP25Queue;
 
         DFSICallData* m_txCall;
         DFSICallData* m_rxCall;
@@ -585,11 +611,14 @@ namespace modem
 
         bool m_useTIAFormat;
 
+        std::mutex m_txP25QueueLock;
+
         /**
          * @brief Helper to write data from the P25 Tx queue to the serial interface.
+         * @param[in] queue Pointer to the ring buffer containing data to write.
          * @return int Actual number of bytes written to the serial interface.
          */
-        int writeSerial();
+        int writeSerial(RingBuffer<uint8_t>* queue);
 
         /**
          * @brief Helper to store converted Rx frames.
@@ -602,7 +631,7 @@ namespace modem
          * @param dataHeader Instance of a PDU data header.
          * @param pduUserData Buffer containing user data to transmit.
          */
-        void storeConvertedRxPDU(p25::data::DataHeader& dataHeader, uint8_t* pduUserData);
+        void storeConvertedRxPDU(p25::data::DataHeader* dataHeader, uint8_t* pduUserData);
         /**
          * @brief Helper to generate a P25 TDU packet.
          * @param buffer Buffer to create TDU.
@@ -627,8 +656,10 @@ namespace modem
          * @param data Buffer containing V.24 data frame to send.
          * @param len Length of buffer.
          * @param msgType Type of message to send (used for proper jitter clocking).
+         * @param imm Flag indicating whether the frame is immediate.
+         * @returns bool True, if data is queued, otherwise false.
          */
-        void queueP25Frame(uint8_t* data, uint16_t length, SERIAL_TX_TYPE msgType);
+        bool queueP25Frame(uint8_t* data, uint16_t length, SERIAL_TX_TYPE msgType, bool imm = false);
 
         /**
          * @brief Send a start of stream sequence (HDU, etc) to the connected serial V24 device.
@@ -665,14 +696,16 @@ namespace modem
          * @brief Internal helper to convert from TIA-102 air interface to V.24/DFSI.
          * @param data Buffer containing data to convert.
          * @param length Length of buffer.
+         * @param imm Flag indicating whether the frame is immediate.
          */
-        void convertFromAirV24(uint8_t* data, uint32_t length);
+        void convertFromAirV24(uint8_t* data, uint32_t length, bool imm);
         /**
          * @brief Internal helper to convert from TIA-102 air interface to TIA-102 DFSI.
          * @param data Buffer containing data to convert.
          * @param length Length of buffer.
+         * @param imm Flag indicating whether the frame is immediate.
          */
-        void convertFromAirTIA(uint8_t* data, uint32_t length);
+        void convertFromAirTIA(uint8_t* data, uint32_t length, bool imm);
     };
 } // namespace modem
 

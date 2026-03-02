@@ -70,9 +70,11 @@ namespace p25
              * @param len Length of data frame.
              * @param currentBlock 
              * @param blockLength 
+             * @param totalBlocks 
              * @returns bool True, if data frame is processed, otherwise false.
              */
-            bool processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uint32_t blockLength);
+            bool processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uint32_t blockLength,
+                uint16_t totalBlocks);
             /** @} */
 
             /**
@@ -136,6 +138,9 @@ namespace p25
             uint32_t m_rfPDUCount;
             uint32_t m_rfPDUBits;
             data::Assembler* m_netAssembler;
+            std::unordered_map<uint16_t, uint8_t*> m_netReceivedBlocks;
+            uint16_t m_netDataBlockCnt;
+            uint16_t m_netTotalBlocks;
 
             uint8_t* m_retryPDUData;
             uint32_t m_retryPDUBitLength;
@@ -195,6 +200,11 @@ namespace p25
              * @param lastBlock Flag indicating whether or not this is the last block.
              */
             void writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_t len, bool lastBlock);
+
+            /**
+             * @brief Helper to reset received network blocks.
+             */
+            void resetReceivedBlocks();
 
             /**
              * @brief Helper to write a P25 PDU packet.

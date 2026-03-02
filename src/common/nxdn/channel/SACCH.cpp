@@ -73,10 +73,7 @@ SACCH::~SACCH()
 SACCH& SACCH::operator=(const SACCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
-
-        m_ran = m_data[0U] & 0x3FU;
-        m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
+        copy(data);
     }
 
     return *this;
@@ -161,11 +158,9 @@ void SACCH::encode(uint8_t* data) const
 {
     assert(data != nullptr);
 
-    m_data[0U] &= 0xC0U;
-    m_data[0U] |= m_ran;
-
-    m_data[0U] &= 0x3FU;
-    m_data[0U] |= (m_structure << 6) & 0xC0U;
+    // rebuild byte 0 from member variables: upper 2 bits = structure, lower 6 bits = RAN
+    m_data[0U] = (m_structure << 6) & 0xC0U;  // set structure in upper 2 bits
+    m_data[0U] |= m_ran & 0x3FU;              // set RAN in lower 6 bits
 
     uint8_t buffer[NXDN_SACCH_CRC_LENGTH_BYTES];
     ::memset(buffer, 0x00U, NXDN_SACCH_CRC_LENGTH_BYTES);
@@ -249,9 +244,14 @@ void SACCH::setData(const uint8_t* data)
 
 void SACCH::copy(const SACCH& data)
 {
-    m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];
+    if (m_data == nullptr)
+        m_data = new uint8_t[NXDN_SACCH_CRC_LENGTH_BYTES];
     ::memcpy(m_data, data.m_data, NXDN_SACCH_CRC_LENGTH_BYTES);
 
-    m_ran = m_data[0U] & 0x3FU;
-    m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
+    m_ran = data.m_ran;
+    m_structure = data.m_structure;
+
+    // rebuild byte 0 from member variables: upper 2 bits = structure, lower 6 bits = RAN
+    m_data[0U] = (m_structure << 6) & 0xC0U;  // set structure in upper 2 bits
+    m_data[0U] |= m_ran & 0x3FU;              // set RAN in lower 6 bits
 }

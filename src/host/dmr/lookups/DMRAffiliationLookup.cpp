@@ -61,11 +61,11 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
         return false;
     }
 
-    __lock();
-
     if (getAvailableSlotForChannel(chNo) == 0U || chNo == m_tsccChNo) {
         m_chLookup->removeRFCh(chNo);
     }
+
+    __lock();
 
     m_grantChTable[dstId] = chNo;
     m_grantSrcIdTable[dstId] = srcId;

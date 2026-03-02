@@ -57,7 +57,7 @@ namespace network
     // ---------------------------------------------------------------------------
 
     /**
-     * @brief Implements the FNE peer networking logic.
+     * @brief Implements the FNE upstream peer networking logic.
      * @ingroup fne_network
      */
     class HOST_SW_API PeerNetwork : public Network {

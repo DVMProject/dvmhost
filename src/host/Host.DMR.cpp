@@ -267,7 +267,8 @@ void* Host::threadDMRWriter1(void* arg)
                                 }
                             }
 
-                            uint32_t len = host->m_dmr->getFrame(1U, data);
+                            bool imm = false;
+                            uint32_t len = host->m_dmr->getFrame(1U, data, &imm);
                             if (len > 0U) {
                                 // if the state is idle; set to DMR, start mode timer and start DMR idle frames
                                 if (host->m_state == STATE_IDLE) {
@@ -551,7 +552,8 @@ void* Host::threadDMRWriter2(void* arg)
                                 }
                             }
 
-                            uint32_t len = host->m_dmr->getFrame(2U, data);
+                            bool imm = false;
+                            uint32_t len = host->m_dmr->getFrame(2U, data, &imm);
                             if (len > 0U) {
                                 // if the state is idle; set to DMR, start mode timer and start DMR idle frames
                                 if (host->m_state == STATE_IDLE) {

@@ -136,18 +136,7 @@ CAC::~CAC()
 CAC& CAC::operator=(const CAC& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_CAC_CRC_LENGTH_BYTES);
-
-        m_ran = m_data[0U] & 0x3FU;
-        m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
-
-        m_longInbound = data.m_longInbound;
-
-        m_idleBusy = data.m_idleBusy;
-        m_txContinuous = data.m_txContinuous;
-        m_receive = data.m_receive;
-
-        m_rxCRC = data.m_rxCRC;
+        copy(data);
     }
 
     return *this;
@@ -427,11 +416,15 @@ void CAC::setData(const uint8_t* data)
 
 void CAC::copy(const CAC& data)
 {
-    m_data = new uint8_t[NXDN_CAC_CRC_LENGTH_BYTES];
+    if (m_data == nullptr)
+        m_data = new uint8_t[NXDN_CAC_CRC_LENGTH_BYTES];
     ::memcpy(m_data, data.m_data, NXDN_CAC_CRC_LENGTH_BYTES);
 
-    m_ran = m_data[0U] & 0x3FU;
-    m_structure = (ChStructure::E)((m_data[0U] >> 6) & 0x03U);
+    m_ran = data.m_ran;
+    m_structure = data.m_structure;
+
+    m_data[0U] = m_ran;
+    m_data[0U] |= ((m_structure << 6) & 0xC0U);
 
     m_longInbound = data.m_longInbound;
 

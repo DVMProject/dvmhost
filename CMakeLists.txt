@@ -278,7 +278,6 @@ install(TARGETS dvmhost DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmcmd DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmfne DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
-install(TARGETS dvmmon DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS sysview DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS tged DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
@@ -302,7 +301,6 @@ if (NOT TARGET strip)
                     COMMAND arm-linux-gnueabihf-strip -s dvmhost
                     COMMAND arm-linux-gnueabihf-strip -s dvmfne
                     COMMAND arm-linux-gnueabihf-strip -s dvmcmd
-                    COMMAND arm-linux-gnueabihf-strip -s dvmmon
                     COMMAND arm-linux-gnueabihf-strip -s sysview
                     COMMAND arm-linux-gnueabihf-strip -s tged
                     COMMAND arm-linux-gnueabihf-strip -s peered
@@ -322,7 +320,6 @@ if (NOT TARGET strip)
                 COMMAND aarch64-linux-gnu-strip -s dvmhost
                 COMMAND aarch64-linux-gnu-strip -s dvmfne
                 COMMAND aarch64-linux-gnu-strip -s dvmcmd
-                COMMAND aarch64-linux-gnu-strip -s dvmmon
                 COMMAND aarch64-linux-gnu-strip -s sysview
                 COMMAND aarch64-linux-gnu-strip -s tged
                 COMMAND aarch64-linux-gnu-strip -s peered
@@ -342,7 +339,6 @@ if (NOT TARGET strip)
                 COMMAND strip -s dvmhost
                 COMMAND strip -s dvmfne
                 COMMAND strip -s dvmcmd
-                COMMAND strip -s dvmmon
                 COMMAND strip -s sysview
                 COMMAND strip -s tged
                 COMMAND strip -s peered
@@ -378,7 +374,6 @@ if (NOT TARGET tarball)
             COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
             COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v sysview ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v peered ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
@@ -459,7 +454,6 @@ if (NOT TARGET tarball_notools)
             COMMAND touch ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/log/INCLUDE_DIRECTORY
             COMMAND cp -v dvmhost ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v dvmcmd ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
-            COMMAND cp -v dvmmon ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v sysview ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v tged ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
             COMMAND cp -v peered ${CMAKE_INSTALL_PREFIX_TARBALL}/dvm/bin
@@ -537,7 +531,6 @@ add_custom_target(old_install
     COMMAND mkdir -p ${CMAKE_LEGACY_INSTALL_PREFIX}/schema
     COMMAND install -m 755 dvmhost ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 dvmcmd ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
-    COMMAND install -m 755 dvmmon ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 sysview ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 tged ${CMAKE_LEGACY_INSTALL_PREFIX}/bin
     COMMAND install -m 755 peered ${CMAKE_LEGACY_INSTALL_PREFIX}/bin

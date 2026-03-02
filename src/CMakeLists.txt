@@ -84,16 +84,6 @@ target_link_libraries(dvmfne PRIVATE common ${OPENSSL_LIBRARIES} ${LIBDW_LIBRARY
 target_include_directories(dvmfne PRIVATE ${OPENSSL_INCLUDE_DIR} ${LIBDW_INCLUDE_DIR} src src/fne)
 
 #
-## dvmmon
-#
-if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
-    include(src/monitor/CMakeLists.txt)
-    add_executable(dvmmon ${common_INCLUDE} ${dvmmon_SRC})
-    target_link_libraries(dvmmon PRIVATE common ${OPENSSL_LIBRARIES} ${LIBDW_LIBRARY} asio::asio finalcut Threads::Threads)
-    target_include_directories(dvmmon PRIVATE ${OPENSSL_INCLUDE_DIR} ${LIBDW_INCLUDE_DIR} src src/host src/monitor)
-endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
-
-#
 ## sysview
 #
 if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))

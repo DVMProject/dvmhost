@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -29,4 +29,18 @@ void Sync::addP25Sync(uint8_t* data)
     assert(data != nullptr);
 
     ::memcpy(data, P25_SYNC_BYTES, P25_SYNC_LENGTH_BYTES);
+}
+
+/* Helper to append P25 Phase 2 S-OEMI sync bytes to the passed buffer. */
+
+void Sync::addP25P2_SOEMISync(uint8_t* data)
+{
+    assert(data != nullptr);
+
+    for (uint32_t i = 0U; i < P25_P2_OEMI_SYNC_LENGTH_BITS; i++) {
+        uint32_t n = i + 4U + 134U; // this skips the 4 bits of the DUID and remaining 134 bits of Field 1 and 2 for
+                                    // a S-OEMI
+        bool b = READ_BIT(P25_P2_OEMI_SYNC_BYTES, i);
+        WRITE_BIT(data, n, b);
+    }
 }

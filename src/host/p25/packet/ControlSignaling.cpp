@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2022 Jason-UWU
  *
  */
@@ -1754,6 +1754,10 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
     if (m_p25->m_enableControl) {
         writeNet_TSDU_Call_Term(srcId, dstId);
     }
+
+    if (m_p25->m_notifyCC) {
+        m_p25->notifyCC_ReleaseGrant(dstId);
+    }
 }
 
 /* Helper to write control channel packet data. */
@@ -2762,6 +2766,7 @@ void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bo
 void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<OSP_DENY_RSP> osp = std::make_unique<OSP_DENY_RSP>();
+    osp->setMFId(m_lastMFID);
     osp->setAIV(aiv);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
@@ -2773,6 +2778,13 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
         LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, reason = $%02X (%s), srcId = %u, dstId = %u",
             osp->toString().c_str(), osp->getAIV(), reason, P25Utils::denyRsnToString(reason).c_str(),
             osp->getSrcId(), osp->getDstId());
+    }
+
+    // are deny responses disabled?
+    if (!m_p25->m_dedicatedControl && !m_p25->m_controlOnly && m_p25->m_disableDenyResponse) {
+        // at least ACK the request to try to silence the sender
+        writeRF_TSDU_ACK_FNE(srcId, service, aiv, false);
+        return;
     }
 
     writeRF_TSDU_SBF_Imm(osp.get(), false);
@@ -2962,6 +2974,7 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<OSP_QUE_RSP> osp = std::make_unique<OSP_QUE_RSP>();
+    osp->setMFId(m_lastMFID);
     osp->setAIV(aiv);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);

@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "edac/Hamming.h"
@@ -359,4 +360,94 @@ void Hamming::encode17123(bool* d)
     d[14] = d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[5] ^ d[8] ^ d[9] ^ d[11];
     d[15] = d[0] ^ d[1] ^ d[4] ^ d[5] ^ d[7] ^ d[10];
     d[16] = d[0] ^ d[1] ^ d[2] ^ d[5] ^ d[6] ^ d[8] ^ d[11];
+}
+
+/* Decode Hamming (8,4,4). */
+
+bool Hamming::decode844(bool* d)
+{
+    assert(d != nullptr);
+
+    // Hamming(8,4,4) extended code layout:
+    // d[0..3] = data bits (4 bits)
+    // d[4..6] = parity bits (3 bits) - Hamming(7,4,3) parity
+    // d[7]    = overall parity bit (1 bit)
+    //
+    // Parity check matrix:
+    // P0 (d[4]) = d[0] ^ d[1] ^ d[3]
+    // P1 (d[5]) = d[0] ^ d[2] ^ d[3]
+    // P2 (d[6]) = d[1] ^ d[2] ^ d[3]
+    // P3 (d[7]) = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[5] ^ d[6] (overall parity)
+
+    // Calculate syndrome bits for Hamming(7,4,3) portion
+    bool c0 = d[0] ^ d[1] ^ d[3] ^ d[4];  // Check P0
+    bool c1 = d[0] ^ d[2] ^ d[3] ^ d[5];  // Check P1
+    bool c2 = d[1] ^ d[2] ^ d[3] ^ d[6];  // Check P2
+
+    // Calculate overall parity
+    bool c3 = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[5] ^ d[6] ^ d[7];
+
+    // Build syndrome
+    unsigned char syndrome = 0x00U;
+    syndrome |= c0 ? 0x01U : 0x00U;
+    syndrome |= c1 ? 0x02U : 0x00U;
+    syndrome |= c2 ? 0x04U : 0x00U;
+
+    // If overall parity is wrong and syndrome is non-zero, single bit error
+    // If overall parity is wrong and syndrome is zero, error in parity bit d[7]
+    // If overall parity is correct and syndrome is non-zero, double bit error (uncorrectable)
+    // If both are correct, no error
+
+    if (c3) {
+        // Overall parity error detected
+        if (syndrome == 0x00U) {
+            // Error in overall parity bit
+            d[7] = !d[7];
+            return true;
+        }
+        else {
+            // Single bit error - syndrome tells us which bit
+            switch (syndrome) {
+                case 0x03U: d[0] = !d[0]; return true;  // d0 position
+                case 0x05U: d[1] = !d[1]; return true;  // d1 position
+                case 0x06U: d[2] = !d[2]; return true;  // d2 position
+                case 0x07U: d[3] = !d[3]; return true;  // d3 position
+                case 0x01U: d[4] = !d[4]; return true;  // P0 position
+                case 0x02U: d[5] = !d[5]; return true;  // P1 position
+                case 0x04U: d[6] = !d[6]; return true;  // P2 position
+                default: return false;  // Should not happen
+            }
+        }
+    }
+    else {
+        // Overall parity correct
+        if (syndrome == 0x00U) {
+            // No errors
+            return false;
+        }
+        else {
+            // Double bit error detected - uncorrectable
+            return false;
+        }
+    }
+}
+
+/* Encode Hamming (8,4,4). */
+
+void Hamming::encode844(bool* d)
+{
+    assert(d != nullptr);
+
+    // Hamming(8,4,4) extended code
+    // d[0..3] = data bits (input)
+    // d[4..6] = parity bits (calculated)
+    // d[7]    = overall parity bit (calculated)
+
+    // Calculate Hamming(7,4,3) parity bits
+    d[4] = d[0] ^ d[1] ^ d[3];              // P0
+    d[5] = d[0] ^ d[2] ^ d[3];              // P1
+    d[6] = d[1] ^ d[2] ^ d[3];              // P2
+
+    // Calculate overall parity bit
+    d[7] = d[0] ^ d[1] ^ d[2] ^ d[3] ^ d[4] ^ d[5] ^ d[6];
 }

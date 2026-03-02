@@ -168,6 +168,10 @@ namespace network
          */
         void resetP25() override;
         /**
+         * @brief Resets the P25 Phase 2 ring buffer.
+         */
+        void resetP25P2(uint32_t slotNo) override;
+        /**
          * @brief Resets the NXDN ring buffer.
          */
         void resetNXDN() override;
@@ -330,6 +334,7 @@ namespace network
 
         uint32_t* m_rxDMRStreamId;
         uint32_t m_rxP25StreamId;
+        uint32_t* m_rxP25P2StreamId;
         uint32_t m_rxNXDNStreamId;
         uint32_t m_rxAnalogStreamId;
 

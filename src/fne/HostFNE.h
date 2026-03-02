@@ -24,8 +24,8 @@
 #include "common/network/viface/VIFace.h"
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
-#include "network/FNENetwork.h"
-#include "network/DiagNetwork.h"
+#include "network/TrafficNetwork.h"
+#include "network/MetadataNetwork.h"
 #include "network/PeerNetwork.h"
 #include "restapi/RESTAPI.h"
 #include "CryptoContainer.h"
@@ -83,16 +83,16 @@ private:
     const std::string& m_confFile;
     yaml::Node m_conf;
 
-    friend class network::FNENetwork;
-    friend class network::DiagNetwork;
+    friend class network::TrafficNetwork;
+    friend class network::MetadataNetwork;
     friend class network::callhandler::TagDMRData;
     friend class network::callhandler::packetdata::DMRPacketData;
     friend class network::callhandler::TagP25Data;
     friend class network::callhandler::packetdata::P25PacketData;
     friend class network::callhandler::TagNXDNData;
     friend class network::callhandler::TagAnalogData;
-    network::FNENetwork* m_network;
-    network::DiagNetwork* m_diagNetwork;
+    network::TrafficNetwork* m_network;
+    network::MetadataNetwork* m_mdNetwork;
 
     bool m_vtunEnabled;
     PacketDataMode m_packetDataMode;
@@ -120,8 +120,6 @@ private:
 
     bool m_peerReplicaSavesACL;
 
-    bool m_useAlternatePortForDiagnostics;
-
     bool m_allowActivityTransfer;
     bool m_allowDiagnosticTransfer;
 
@@ -144,17 +142,17 @@ private:
      */
     bool createMasterNetwork();
     /**
-     * @brief Entry point to master FNE network thread.
+     * @brief Entry point to master traffic network thread.
      * @param arg Instance of the thread_t structure.
      * @returns void* (Ignore)
      */
-    static void* threadMasterNetwork(void* arg);
+    static void* threadTrafficNetwork(void* arg);
     /**
-     * @brief Entry point to master FNE diagnostics network thread.
+     * @brief Entry point to master metadata network thread.
      * @param arg Instance of the thread_t structure.
      * @returns void* (Ignore)
      */
-    static void* threadDiagNetwork(void* arg);
+    static void* threadMetadataNetwork(void* arg);
     /**
      * @brief Initializes peer FNE network connectivity.
      * @returns bool True, if network connectivity was initialized, otherwise false.

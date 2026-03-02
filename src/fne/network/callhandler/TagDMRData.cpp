@@ -16,7 +16,7 @@
 #include "common/Clock.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/callhandler/TagDMRData.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
@@ -37,7 +37,7 @@ using namespace dmr::defines;
 
 /* Initializes a new instance of the TagDMRData class. */
 
-TagDMRData::TagDMRData(FNENetwork* network, bool debug) :
+TagDMRData::TagDMRData(TrafficNetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
     m_parrotFramesReady(false),
@@ -207,6 +207,12 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         LogInfoEx(LOG_MASTER, CALL_END_LOG);
                 }
 
+                if (!tg.config().parrot()) {
+                    m_network->m_totalActiveCalls--;
+                    if (m_network->m_totalActiveCalls < 0)
+                        m_network->m_totalActiveCalls = 0;
+                }
+
                 // report call event to InfluxDB
                 if (m_network->m_enableInfluxDB) {
                     influxdb::QueryBuilder()
@@ -223,6 +229,16 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
 
                 m_network->eraseStreamPktSeq(peerId, streamId);
+            } else {
+                #define NONCALL_END_LOG "DMR, Non-Call Terminator, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, slotNo, streamId, fromUpstream
+                if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                    LogInfoEx(LOG_PEER, NONCALL_END_LOG);
+                else if (!fromUpstream)
+                    LogInfoEx(LOG_MASTER, NONCALL_END_LOG);
+
+                m_status.lock(false);
+                m_status[dstId].callStartTime = pktTime; // because Non-Call Terminators can just happen lets reset the callStartTime to pktTime to prevent insane durations
+                m_status.unlock();
             }
         }
 
@@ -310,6 +326,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 } else {
                                     LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slotNo = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxSlotNo = %u, rxStreamId = %u, fromUpstream = %u",
                                         peerId, ssrc, srcId, dstId, slotNo, streamId, status.peerId, status.srcId, status.dstId, status.slotNo, status.streamId, fromUpstream);
+
+                                    m_network->m_totalCallCollisions++;
+
                                     return false;
                                 }
                             } else {
@@ -365,6 +384,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 m_status[dstId].ssrc = ssrc;
                 m_status[dstId].activeCall = true;
                 m_status.unlock();
+
+                if (!tg.config().parrot()) {
+                    m_network->m_totalCallsProcessed++;
+                    m_network->m_totalActiveCalls++;
+                }
 
                 // is this a private call?
                 if (flco == FLCO::PRIVATE) {
@@ -684,6 +708,21 @@ void TagDMRData::playbackParrot()
     auto& pkt = m_parrotFrames[0];
     m_parrotFrames.lock();
     if (pkt.buffer != nullptr) {
+        // has the override source ID been set?
+        if (m_network->m_parrotOverrideSrcId > 0U) {
+            pkt.srcId = m_network->m_parrotOverrideSrcId;
+
+            // override source ID
+            SET_UINT24(m_network->m_parrotOverrideSrcId, pkt.buffer, 5U);
+
+            /*
+            ** bryanb: DMR is problematic because the VOICE_LC_HEADER, TERMINATOR_WITH_LC,
+            ** and VOICE_PI_HEADER all contain the source ID in the LC portion of the frame
+            ** and because we are not updating that the parrot playback will appear to come from
+            ** the original source ID in those frames
+            */
+        }
+
         m_lastParrotPeerId = pkt.peerId;
         m_lastParrotSrcId = pkt.srcId;
         m_lastParrotDstId = pkt.dstId;

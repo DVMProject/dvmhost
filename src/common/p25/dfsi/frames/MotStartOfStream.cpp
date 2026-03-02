@@ -54,7 +54,7 @@ MotStartOfStream::MotStartOfStream(uint8_t* data) :
 MotStartOfStream::~MotStartOfStream()
 {
     if (icw != nullptr)
-        delete icw;
+        delete[] icw;
 }
 
 /* Decode a start of stream frame. */

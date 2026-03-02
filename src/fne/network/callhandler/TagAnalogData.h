@@ -23,7 +23,7 @@
 #include "common/dmr/data/NetData.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/Clock.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/callhandler/packetdata/DMRPacketData.h"
 
 namespace network
@@ -35,17 +35,17 @@ namespace network
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Implements the analog call handler and data FNE networking logic.
+         * @brief Implements the analog call handler and data networking logic.
          * @ingroup fne_callhandler
          */
         class HOST_SW_API TagAnalogData {
         public:
             /**
              * @brief Initializes a new instance of the TagAnalogData class.
-             * @param network Instance of the FNENetwork class.
+             * @param network Instance of the TrafficNetwork class.
              * @param debug Flag indicating whether network debug is enabled.
              */
-            TagAnalogData(FNENetwork* network, bool debug);
+            TagAnalogData(TrafficNetwork* network, bool debug);
             /**
              * @brief Finalizes a instance of the TagAnalogData class.
              */
@@ -112,7 +112,7 @@ namespace network
             uint32_t lastParrotDstId() const { return m_lastParrotDstId; }
 
         private:
-            FNENetwork* m_network;
+            TrafficNetwork* m_network;
 
             /**
              * @brief Represents a stored parrot frame.

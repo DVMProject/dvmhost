@@ -22,7 +22,7 @@
 #include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
 #include "common/network/RawFrameQueue.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
 
 namespace network
@@ -54,12 +54,12 @@ namespace network
     public:
         /**
          * @brief Initializes a new instance of the P25OTARService class.
-         * @param network Instance of the FNENetwork class.
+         * @param network Instance of the TrafficNetwork class.
          * @param packetData Instance of the P25PacketData class.
          * @param debug Flag indicating whether debug is enabled.
          * @param verbose Flag indicating whether verbose logging is enabled.
          */
-        P25OTARService(FNENetwork* network, network::callhandler::packetdata::P25PacketData* packetData, bool debug, bool verbose);
+        P25OTARService(TrafficNetwork* network, network::callhandler::packetdata::P25PacketData* packetData, bool debug, bool verbose);
         /**
          * @brief Finalizes a instance of the P25OTARService class.
          */
@@ -102,7 +102,7 @@ namespace network
 
         ThreadPool m_threadPool;
 
-        FNENetwork* m_network;
+        TrafficNetwork* m_network;
         network::callhandler::packetdata::P25PacketData* m_packetData;
 
         concurrent::unordered_map<uint32_t, uint16_t> m_rsiMessageNumber;

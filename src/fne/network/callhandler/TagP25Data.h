@@ -28,7 +28,7 @@
 #include "common/p25/lc/LC.h"
 #include "common/p25/lc/TSBK.h"
 #include "common/p25/lc/TDULC.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
 
 namespace network
@@ -40,17 +40,17 @@ namespace network
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Implements the P25 call handler and data FNE networking logic.
+         * @brief Implements the P25 call handler and data networking logic.
          * @ingroup fne_callhandler
          */
         class HOST_SW_API TagP25Data {
         public:
             /**
              * @brief Initializes a new instance of the TagP25Data class.
-             * @param network Instance of the FNENetwork class.
+             * @param network Instance of the TrafficNetwork class.
              * @param debug Flag indicating whether network debug is enabled.
              */
-            TagP25Data(FNENetwork* network, bool debug);
+            TagP25Data(TrafficNetwork* network, bool debug);
             /**
              * @brief Finalizes a instance of the TagP25Data class.
              */
@@ -170,7 +170,7 @@ namespace network
             packetdata::P25PacketData* packetData() { return m_packetData; }
 
         private:
-            FNENetwork* m_network;
+            TrafficNetwork* m_network;
 
             /**
              * @brief Represents a stored parrot frame.

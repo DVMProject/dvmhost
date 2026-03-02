@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -102,6 +102,14 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
                 dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
                 dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getPacketLength(), dataHeader.getSynchronize(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
                 dataHeader.getHeaderOffset(), dataHeader.getLLId());
+        }
+
+        if (dataHeader.getPacketLength() > P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U) {
+            LogError(LOG_P25, P25_PDU_STR ", ISP, packet length %u exceeds maximum supported size %u",
+                dataHeader.getPacketLength(), P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES);
+
+            resetDisassemblyState();
+            return false;
         }
 
         // make sure we don't get a PDU with more blocks then we support
@@ -484,6 +492,21 @@ uint32_t Assembler::getUserData(uint8_t* buffer) const
 {
     assert(buffer != nullptr);
     assert(m_pduUserData != nullptr);
+
+    if (m_pduUserDataLength == 0U) {
+        LogError(LOG_P25, P25_PDU_STR ", no user data available to retrieve! BUGBUG!");
+        return 0U;
+    }
+
+    if (m_pduUserDataLength > (P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U)) {
+        LogError(LOG_P25, P25_PDU_STR ", user data length %u exceeds maximum allowable size! BUGBUG!", m_pduUserDataLength);
+        return 0U;
+    }
+
+    if (m_pduUserData == nullptr) {
+        LogError(LOG_P25, P25_PDU_STR ", no user data available to retrieve! BUGBUG!");
+        return 0U;
+    }
 
     if (m_complete) {
         ::memcpy(buffer, m_pduUserData, m_pduUserDataLength);

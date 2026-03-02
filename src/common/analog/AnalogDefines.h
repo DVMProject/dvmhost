@@ -38,7 +38,7 @@ namespace analog
          */
 
         const uint32_t  AUDIO_SAMPLES_LENGTH = 160U;        //!< Sample size for 20ms of 16-bit audio at 8kHz.
-        const uint32_t  AUDIO_SAMPLES_LENGTH_BYTES = 320U;  //!< Sample size for 20ms of 16-bit audio at 8kHz in bytes.
+        const uint32_t  AUDIO_SAMPLES_LENGTH_BYTES = 320U;  //!< Sample size for 20ms of 16-bit audio at 8kHz in bytes. (AUDIO_SAMPLES_LENGTH * 2)
         /** @} */
 
         /** @brief Audio Frame Type(s) */

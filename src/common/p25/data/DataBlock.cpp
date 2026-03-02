@@ -82,7 +82,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header, bool noTre
                     return false;
                 }
             } else {
-                ::memcpy(buffer, data, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+                ::memcpy(buffer, data, P25_PDU_CONFIRMED_LENGTH_BYTES);
             }
 
 #if DEBUG_P25_PDU_DATA

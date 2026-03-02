@@ -21,77 +21,75 @@ using namespace p25::defines;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("LDU1", "[Reed-Soloman 24,12,13 Test]") {
-    SECTION("RS_241213_Test") {
-        bool failed = false;
+TEST_CASE("P25 LDU1 Reed-Soloman 24,12,13 Test", "[p25][ldu1_rs241213]") {
+    bool failed = false;
 
-        INFO("P25 LDU1 RS (24,12,13) FEC Test");
+    INFO("P25 LDU1 RS (24,12,13) FEC Test");
 
-        srand((unsigned int)time(NULL));
-        RS634717 m_rs = RS634717();
+    srand((unsigned int)time(NULL));
+    RS634717 m_rs = RS634717();
 
-        uint8_t* random = (uint8_t*)malloc(15U);
+    uint8_t* random = (uint8_t*)malloc(15U);
 
-        for (size_t i = 0; i < 15U; i++) {
-            random[i] = rand();
-        }
+    for (size_t i = 0; i < 15U; i++) {
+        random[i] = rand();
+    }
 
-        // LDU1 Encode
-        uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
-        ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
+    // LDU1 Encode
+    uint8_t rs[P25_LDU_LC_FEC_LENGTH_BYTES];
+    ::memset(rs, 0x00U, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-        for (uint32_t i = 0; i < 9U; i++)
-            rs[i] = random[i];
-        rs[8U] = 0xF0U;
+    for (uint32_t i = 0; i < 9U; i++)
+        rs[i] = random[i];
+    rs[8U] = 0xF0U;
 
-        Utils::dump(2U, "LC::encodeLDU1(), LDU1", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::encodeLDU1(), LDU1", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-        // encode RS (24,12,13) FEC
-        m_rs.encode241213(rs);
+    // encode RS (24,12,13) FEC
+    m_rs.encode241213(rs);
 
-        Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::encodeLDU1(), LDU1 RS", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-        // LDU1 Decode
-        rs[6U] >>= 8;
-        rs[7U] >>= 8;
-        rs[8U] >>= 8;
+    // LDU1 Decode
+    rs[6U] >>= 8;
+    rs[7U] >>= 8;
+    rs[8U] >>= 8;
 
-        Utils::dump(2U, "LC::encodeLDU1(), LDU RS (errors injected)", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::encodeLDU1(), LDU RS (errors injected)", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-        // decode RS (24,12,13) FEC
-        try {
-            bool ret = m_rs.decode241213(rs);
-            if (!ret) {
-                ::LogError("T", "LC::decodeLDU1(), failed to decode RS (24,12,13) FEC");
-                failed = true;
-                goto cleanup;
-            }
-        }
-        catch (...) {
-            Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    // decode RS (24,12,13) FEC
+    try {
+        bool ret = m_rs.decode241213(rs);
+        if (!ret) {
+            ::LogError("T", "LC::decodeLDU1(), failed to decode RS (24,12,13) FEC");
             failed = true;
             goto cleanup;
         }
+    }
+    catch (...) {
+        Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+        failed = true;
+        goto cleanup;
+    }
 
-        Utils::dump(2U, "LC::decodeLDU1(), LDU1", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
+    Utils::dump(2U, "LC::decodeLDU1(), LDU1", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
 
-        for (uint32_t i = 0; i < 9U; i++) {
-            if (i == 8U) {
-                if (rs[i] != 0xF0U) {
-                    ::LogError("T", "LC::decodeLDU1(), UNCORRECTABLE AT IDX %d", i);
-                    failed = true;
-                }
-            }
-            else {
-                if (rs[i] != random[i]) {
-                    ::LogError("T", "LC::decodeLDU1(), UNCORRECTABLE AT IDX %d", i);
-                    failed = true;
-                }
+    for (uint32_t i = 0; i < 9U; i++) {
+        if (i == 8U) {
+            if (rs[i] != 0xF0U) {
+                ::LogError("T", "LC::decodeLDU1(), UNCORRECTABLE AT IDX %d", i);
+                failed = true;
             }
         }
+        else {
+            if (rs[i] != random[i]) {
+                ::LogError("T", "LC::decodeLDU1(), UNCORRECTABLE AT IDX %d", i);
+                failed = true;
+            }
+        }
+    }
 
 cleanup:
-        free(random);
-        REQUIRE(failed==false);
-    }
+    free(random);
+    REQUIRE(failed==false);
 }

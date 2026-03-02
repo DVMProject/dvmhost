@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -102,6 +103,18 @@ namespace edac
          * @param d Boolean bit array.
          */
         static void encode17123(bool* d);
+
+        /**
+         * @brief Decode Hamming (8,4,4).
+         * @param d Boolean bit array.
+         * @returns bool True, if bit errors are detected, otherwise false.
+         */
+        static bool decode844(bool* d);
+        /**
+         * @brief Encode Hamming (8,4,4).
+         * @param d Boolean bit array.
+         */
+        static void encode844(bool* d);
     };
 } // namespace edac
 

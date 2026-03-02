@@ -79,22 +79,7 @@ bool MotTDULCFrame::decode(const uint8_t* data)
     // decode start of stream
     startOfStream->decode(startBuffer);
 
-    uint8_t tdulcBuffer[9U];
-    ::memcpy(tdulcBuffer, data + DFSI_MOT_START_LEN, 9U);
-
-    ::memset(tdulcData, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES);
-    tdulcData[0U] = (uint8_t)((tdulcBuffer[0U] >> 3) & 0x3FU);
-    tdulcData[1U] = (uint8_t)(((tdulcBuffer[0U] & 0x07U) << 3) | ((tdulcBuffer[1U] >> 4) & 0x07U));
-    tdulcData[2U] = (uint8_t)(((tdulcBuffer[1U] & 0x0FU) << 2) | ((tdulcBuffer[2U] >> 5) & 0x03U));
-    tdulcData[3U] = (uint8_t)(tdulcBuffer[2U] & 0x1FU);
-    tdulcData[4U] = (uint8_t)((tdulcBuffer[3U] >> 3) & 0x3FU);
-    tdulcData[5U] = (uint8_t)(((tdulcBuffer[3U] & 0x07U) << 3) | ((tdulcBuffer[4U] >> 4) & 0x07U));
-    tdulcData[6U] = (uint8_t)(((tdulcBuffer[4U] & 0x0FU) << 2) | ((tdulcBuffer[5U] >> 5) & 0x03U));
-    tdulcData[7U] = (uint8_t)(tdulcBuffer[5U] & 0x1FU);
-    tdulcData[8U] = (uint8_t)((tdulcBuffer[6U] >> 3) & 0x3FU);
-    tdulcData[9U] = (uint8_t)(((tdulcBuffer[6U] & 0x07U) << 3) | ((tdulcBuffer[7U] >> 4) & 0x07U));
-    tdulcData[10U] = (uint8_t)(((tdulcBuffer[7U] & 0x0FU) << 2) | ((tdulcBuffer[8U] >> 5) & 0x03U));
-    tdulcData[11U] = (uint8_t)(tdulcBuffer[8U] & 0x1FU);
+    ::memcpy(tdulcData, data + DFSI_MOT_START_LEN, P25_TDULC_PAYLOAD_LENGTH_BYTES + 1U);
 
     return true;
 }
@@ -118,18 +103,7 @@ void MotTDULCFrame::encode(uint8_t* data)
     // encode TDULC - scope is intentional
     {
         data[0U] = DFSIFrameType::MOT_TDULC;
-
-        data[DFSI_MOT_START_LEN + 1U] = (uint8_t)((tdulcData[0U] & 0x3FU) << 3) | ((tdulcData[1U] >> 3) & 0x07U);
-        data[DFSI_MOT_START_LEN + 2U] = (uint8_t)((tdulcData[1U] & 0x0FU) << 4) | ((tdulcData[2U] >> 2) & 0x0FU);
-        data[DFSI_MOT_START_LEN + 3U] = (uint8_t)((tdulcData[2U] & 0x03U)) | (tdulcData[3U] & 0x3FU);
-
-        data[DFSI_MOT_START_LEN + 4U] = (uint8_t)((tdulcData[4U] & 0x3FU) << 3) | ((tdulcData[5U] >> 3) & 0x07U);
-        data[DFSI_MOT_START_LEN + 5U] = (uint8_t)((tdulcData[5U] & 0x0FU) << 4) | ((tdulcData[6U] >> 2) & 0x0FU);
-        data[DFSI_MOT_START_LEN + 6U] = (uint8_t)((tdulcData[6U] & 0x03U)) | (tdulcData[7U] & 0x3FU);
-
-        data[DFSI_MOT_START_LEN + 7U] = (uint8_t)((tdulcData[8U] & 0x3FU) << 3) | ((tdulcData[9U] >> 3) & 0x07U);
-        data[DFSI_MOT_START_LEN + 8U] = (uint8_t)((tdulcData[9U] & 0x0FU) << 4) | ((tdulcData[10U] >> 2) & 0x0FU);
-        data[DFSI_MOT_START_LEN + 9U] = (uint8_t)((tdulcData[10U] & 0x03U)) | (tdulcData[11U] & 0x3FU);
+        ::memcpy(data + DFSI_MOT_START_LEN, tdulcData, P25_TDULC_PAYLOAD_LENGTH_BYTES + 1U);
 
         data[DFSI_MOT_START_LEN + 11U] = DFSI_BUSY_BITS_IDLE;
     }

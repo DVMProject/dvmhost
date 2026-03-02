@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -47,15 +47,26 @@ bool ISP_EMERG_ALRM_REQ::decode(const uint8_t* data, bool rawTSBK)
     ** bryanb: this is a bit of a hack -- because the EMERG ALRM and DENY have the same
     ** opcode; the following are used by TSBK_OSP_DENY_RSP; best way to check is for m_response > 0
     */
+    uint8_t si1 = (uint8_t)((tsbkValue >> 56) & 0xFFU);                             // Emerg. Special Info 1
+    bool manDown = si1 & 0x01U;                                                     // Man Down Flag
+    uint8_t si2 = (uint8_t)((tsbkValue >> 48) & 0xFFU);                             // Emerg. Special Info 2
+
+    // if we have no special info, this is a defacto emergency button press
+    if (si1 == 0U && si2 == 0U) {
+        m_emergency = true;
+    }
+
+    // if we have a man down flag set and no special info 2, this is a man-down emergency
+    if (manDown && si2 == 0U) {
+        m_emergency = true;
+    }
+
+    // all other emergency alarms aren't supported and are ignored (and infact most code will treat that as
+    //  OSP_DENY_RSP)
+
     m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
     m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type
     m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                              // Reason
-
-    if (m_response == 0U) {
-        m_emergency = true;
-    } else {
-        m_emergency = false;
-    }
 
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Target Radio Address
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address

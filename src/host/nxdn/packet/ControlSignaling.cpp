@@ -52,7 +52,8 @@ using namespace nxdn::packet;
     }
 
 // Validate the target RID.
-#define VALID_DSTID(_PCKT_STR, _PCKT, _DSTID, _RSN)                                     \
+// NOTE: Pass the source ID explicitly to ensure deny frames reference the correct originator.
+#define VALID_DSTID(_PCKT_STR, _PCKT, _DSTID, _SRCID, _RSN)                              \
     if (!acl::AccessControl::validateSrcId(_DSTID)) {                                   \
         LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \

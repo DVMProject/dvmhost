@@ -52,6 +52,8 @@ network:
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
 
+    # Flag indicating whether or not packet dumping is enabled.
+    packetDump: false
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
@@ -68,7 +70,7 @@ network:
       #   aes - AES-256 Encryption
       #   arc4 - ARC4/ADP Encryption
       tekAlgo: "aes"
-      # Traffic Encryption Key ID
+      # Traffic Encryption Key ID (Hex)
       tekKeyId: 1
 
     # Destination Talkgroup ID for transmitted/received audio frames.
@@ -84,10 +86,16 @@ network:
       #   aes - AES-256 Encryption
       #   arc4 - ARC4/ADP Encryption
       tekAlgo: "aes"
-      # Traffic Encryption Key ID
+      # Traffic Encryption Key ID (Hex)
       tekKeyId: 1
 
+    # Amount of time (ms) from loss of active call before ending call.
+    dropTimeMs: 1000
+
     # Flag indicating whether or not the patch is two-way.
+    #  NOTE: If false (one-way patch from source to destination), and patching clear to
+    #    encrypted traffic, only the destination TEK will be used for encryption. The clear
+    #    traffic must appear on the source side only.
     twoWay: false
 
     # Hostname/IP address of MMDVM gateway to connect to.

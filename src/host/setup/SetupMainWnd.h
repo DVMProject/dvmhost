@@ -461,6 +461,7 @@ public:
         });
         m_modemDebug.addCallback("toggled", this, [&]() {
             m_setup->m_modem->m_debug = m_modemDebug.isChecked();
+            m_setup->m_modem->m_displayModemDebugMessages = m_modemDebug.isChecked();
             m_setup->m_debug = m_modemDebug.isChecked();
             m_setup->writeConfig();
         });

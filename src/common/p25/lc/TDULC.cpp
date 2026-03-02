@@ -192,8 +192,8 @@ bool TDULC::decode(const uint8_t* data, uint8_t* payload, bool rawTDULC)
 
         if (m_raw != nullptr)
             delete[] m_raw;
-        m_raw = new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES];
-        ::memcpy(m_raw, rs + 1U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+        m_raw = new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES + 1U];
+        ::memcpy(m_raw, rs, P25_TDULC_PAYLOAD_LENGTH_BYTES + 1U);
 
         ::memcpy(payload, rs + 1U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
         return true;

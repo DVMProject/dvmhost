@@ -672,9 +672,12 @@ void AffiliationLookup::clock(uint32_t ms)
     for (auto entry : m_grantChTable) {
         uint32_t dstId = entry.first;
 
-        m_grantTimers[dstId].clock(ms);
-        if (m_grantTimers[dstId].isRunning() && m_grantTimers[dstId].hasExpired()) {
-            gntsToRel.push_back(dstId);
+        auto it = m_grantTimers.find(dstId);
+        if (it != m_grantTimers.end()) {
+            it->second.clock(ms);
+            if (it->second.isRunning() && it->second.hasExpired()) {
+                gntsToRel.push_back(dstId);
+            }
         }
     }
     m_grantChTable.unlock();
@@ -691,9 +694,12 @@ void AffiliationLookup::clock(uint32_t ms)
         m_unitRegTable.lock(false);
         std::vector<uint32_t> unitsToDereg = std::vector<uint32_t>();
         for (uint32_t srcId : m_unitRegTable) {
-            m_unitRegTimers[srcId].clock(ms);
-            if (m_unitRegTimers[srcId].isRunning() && m_unitRegTimers[srcId].hasExpired()) {
-                unitsToDereg.push_back(srcId);
+            auto it = m_unitRegTimers.find(srcId);
+            if (it != m_unitRegTimers.end()) {
+                it->second.clock(ms);
+                if (it->second.isRunning() && it->second.hasExpired()) {
+                    unitsToDereg.push_back(srcId);
+                }
             }
         }
         m_unitRegTable.unlock();

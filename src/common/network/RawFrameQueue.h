@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -91,6 +91,12 @@ namespace network
          * @param[in] queue Queue of messages.
          */
         bool flushQueue(udp::BufferQueue* queue);
+
+        /**
+         * @brief Helper to enable or disable debug logging.
+         * @param enable Flag indicating whether debug logging is enabled.
+         */
+        void setDebug(bool enable) { m_debug = enable; }
 
     protected:
         sockaddr_storage m_addr;

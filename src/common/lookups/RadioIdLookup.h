@@ -175,6 +175,17 @@ namespace lookups
          * @param id Unique ID to erase.
          */
         void eraseEntry(uint32_t id);
+
+        /**
+         * @brief Helper to return the lookup table.
+         * @returns std::unordered_map<uint32_t, RadioId> Table.
+         */
+        std::unordered_map<uint32_t, RadioId> table() override
+        {
+            std::lock_guard<std::mutex> lock(s_mutex);
+            return m_table;
+        }
+
         /**
          * @brief Finds a table entry in this lookup table.
          * @param id Unique identifier for table entry.

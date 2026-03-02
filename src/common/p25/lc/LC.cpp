@@ -5,13 +5,15 @@
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 *   Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*   Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+*   Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
 #include "p25/P25Defines.h"
 #include "p25/lc/LC.h"
 #include "p25/P25Utils.h"
+#include "p25/Sync.h"
+#include "edac/CRC.h"
 #include "edac/Golay24128.h"
 #include "edac/Hamming.h"
 #include "Log.h"
@@ -28,6 +30,12 @@ using namespace p25::lc;
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
+
+#if FORCE_TSBK_CRC_WARN
+bool LC::s_warnCRC = true;
+#else
+bool LC::s_warnCRC = false;
+#endif
 
 SiteData LC::s_siteData = SiteData();
 
@@ -63,7 +71,13 @@ LC::LC() :
     m_algId(ALGO_UNENCRYPT),
     m_kId(0U),
     m_slotNo(0U),
+    m_p2DUID(P2_DUID::VTCH_4V),
+    m_colorCode(0U),
+    m_macPduOpcode(P2_MAC_HEADER_OPCODE::IDLE),
+    m_macPduOffset(P2_MAC_HEADER_OFFSET::NO_VOICE_OR_UNK),
+    m_macPartition(P2_MAC_MCO_PARTITION::ABBREVIATED),
     m_rsValue(0U),
+    p2MCOData(nullptr),
     m_rs(),
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
@@ -92,6 +106,11 @@ LC::~LC()
     if (m_userAlias != nullptr) {
         delete[] m_userAlias;
         m_userAlias = nullptr;
+    }
+
+    if (p2MCOData != nullptr) {
+        delete[] p2MCOData;
+        p2MCOData = nullptr;
     }
 }
 
@@ -465,6 +484,311 @@ void LC::encodeLDU2(uint8_t* data)
 #endif
 }
 
+/* Decode a IEMI VCH MAC PDU. */
+
+bool LC::decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync)
+{
+    assert(data != nullptr);
+
+    // determine buffer size based on sync flag
+    uint32_t lengthBits = sync ? P25_P2_IEMI_WSYNC_LENGTH_BITS : P25_P2_IEMI_LENGTH_BITS;
+    uint32_t lengthBytes = sync ? P25_P2_IEMI_WSYNC_LENGTH_BYTES : P25_P2_IEMI_LENGTH_BYTES;
+
+    // decode the Phase 2 DUID
+    uint8_t duid[1U], raw[P25_P2_IEMI_LENGTH_BYTES];  // Use max size for stack allocation
+    ::memset(duid, 0x00U, 1U);
+    ::memset(raw, 0x00U, lengthBytes);
+
+    // DUID bit extraction differs based on sync flag
+    if (sync) {
+        // IEMI with sync: 14 LSB sync bits + 36-bit field 1, then DUIDs at different positions
+        for (uint8_t i = 0U; i < 8U; i++) {
+            uint32_t n = i + 14U + 36U; // skip 14-bit sync + field 1 (36 bits)
+            if (i >= 2U)
+                n += 72U; // skip field 2
+            if (i >= 4U)
+                n += 96U; // skip field 3
+            if (i >= 6U)
+                n += 72U; // skip field 4
+
+            bool b = READ_BIT(data, n);
+            WRITE_BIT(raw, i, b);
+        }
+    } else {
+        // IEMI without sync: 72-bit field 1, then DUIDs
+        for (uint8_t i = 0U; i < 8U; i++) {
+            uint32_t n = i + 72U; // skip field 1
+            if (i >= 2U)
+                n += 72U; // skip field 2
+            if (i >= 4U)
+                n += 96U; // skip field 3
+            if (i >= 6U)
+                n += 72U; // skip field 4
+
+            bool b = READ_BIT(data, n);
+            WRITE_BIT(raw, i, b);
+        }
+    }
+
+    decodeP2_DUIDHamming(raw, duid);
+
+    m_p2DUID = duid[0U] >> 4U;
+
+    if (m_p2DUID == P2_DUID::VTCH_4V || m_p2DUID == P2_DUID::VTCH_2V || !sync)
+        return true; // don't handle 4V or 2V voice PDUs here -- user code will handle
+    else {
+        ::memset(raw, 0x00U, lengthBytes);
+
+        // IEMI with sync: extract data bits (skip 14-bit sync and DUIDs)
+        for (uint32_t i = 0U; i < lengthBits; i++) {
+            uint32_t n = i + 14U; // Skip 14-bit sync
+            if (i >= 36U)
+                n += 2U; // skip DUID 1 after field 1 (36 bits)
+            if (i >= 108U)
+                n += 2U; // skip DUID 2 after field 2 (36+72)
+            if (i >= 204U)
+                n += 2U; // skip DUID 3 after field 3 (36+72+96)
+
+            bool b = READ_BIT(data, n);
+            WRITE_BIT(raw, i, b);
+        }
+
+#if DEBUG_P25_MAC_PDU
+        Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_IEMI(), MAC PDU", raw, lengthBytes);
+#endif
+
+        // decode RS (46,26,21) FEC
+        try {
+            bool ret = m_rs.decode462621(raw);
+            if (!ret) {
+                LogError(LOG_P25, "LC::decodeVCH_MACPDU_IEMI(), failed to decode RS (46,26,21) FEC");
+                return false;
+            }
+        }
+        catch (...) {
+            Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_IEMI(), RS excepted with input data", raw, lengthBytes);
+            return false;
+        }
+
+#if DEBUG_P25_MAC_PDU
+        Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_IEMI(), MAC PDU", raw, lengthBytes);
+#endif
+
+        // are we decoding a FACCH with scrambling?
+        if (m_p2DUID == P2_DUID::FACCH_SCRAMBLED) {
+            /* TODO: if scrambled handle scrambling */
+        }
+
+        // are we decoding a SACCH with scrambling?
+        if (m_p2DUID == P2_DUID::SACCH_SCRAMBLED) {
+            /* TODO: if scrambled handle scrambling */
+        }
+
+        return decodeMACPDU(raw, P25_P2_IEMI_MAC_LENGTH_BITS);
+    }
+
+    return true;
+}
+
+/* Decode a xOEMI VCH MAC PDU. */
+
+bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
+{
+    assert(data != nullptr);
+
+    // decode the Phase 2 DUID
+    uint8_t duid[1U], raw[P25_P2_IEMI_LENGTH_BYTES];
+    ::memset(duid, 0x00U, 1U);
+    ::memset(raw, 0x00U, P25_P2_IEMI_LENGTH_BYTES);
+
+    for (uint8_t i = 0U; i < 8U; i++) {
+        uint32_t n = i;
+        if (i >= 2U)
+            n += 72U; // skip field 1
+        if (i >= 4U)
+            n += 168U; // skip field 2, sync and field 3 (or just field 2)
+        if (i >= 6U)
+            n += 72U; // skip field 3
+
+        bool b = READ_BIT(data, n);
+        WRITE_BIT(raw, i, b);
+    }
+
+    decodeP2_DUIDHamming(raw, duid);
+
+    m_p2DUID = duid[0U] >> 4U;
+
+    if (m_p2DUID == P2_DUID::VTCH_4V || m_p2DUID == P2_DUID::VTCH_2V)
+        return true; // don't handle 4V or 2V voice PDUs here -- user code will handle
+    else {
+        ::memset(raw, 0x00U, P25_P2_IEMI_LENGTH_BYTES);
+
+        if (sync) {
+            for (uint32_t i = 0U; i < P25_P2_SOEMI_LENGTH_BITS; i++) {
+                uint32_t n = i + 2U; // skip DUID 1
+                if (i >= 72U)
+                    n += 2U; // skip DUID 2
+                if (i >= 134U)
+                    n += 42U; // skip sync
+                if (i >= 198U)
+                    n += 2U; // skip DUID 3
+
+                bool b = READ_BIT(data, n);
+                WRITE_BIT(raw, i, b);
+            }
+
+#if DEBUG_P25_MAC_PDU
+            Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
+#endif
+
+            // decode RS (45,26,20) FEC
+            try {
+                bool ret = m_rs.decode452620(raw);
+                if (!ret) {
+                    LogError(LOG_P25, "LC::decodeVCH_MACPDU_OEMI(), failed to decode RS (45,26,20) FEC");
+                    return false;
+                }
+            }
+            catch (...) {
+                Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), RS excepted with input data", raw, P25_P2_IEMI_LENGTH_BYTES);
+                return false;
+            }
+
+#if DEBUG_P25_MAC_PDU
+            Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
+#endif
+        } else {
+            for (uint32_t i = 0U; i < P25_P2_IEMI_LENGTH_BITS; i++) {
+                uint32_t n = i + 2U; // skip DUID 1
+                if (i >= 72U)
+                    n += 2U; // skip DUID 2
+                if (i >= 168U)
+                    n += 2U; // skip DUID 3
+
+                bool b = READ_BIT(data, n);
+                WRITE_BIT(raw, i, b);
+            }
+
+#if DEBUG_P25_MAC_PDU
+            Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
+#endif
+
+            // decode RS (52,30,23) FEC
+            try {
+                bool ret = m_rs.decode523023(raw);
+                if (!ret) {
+                    LogError(LOG_P25, "LC::decodeVCH_MACPDU_OEMI(), failed to decode RS (52,30,23) FEC");
+                    return false;
+                }
+            }
+            catch (...) {
+                Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), RS excepted with input data", raw, P25_P2_IEMI_LENGTH_BYTES);
+                return false;
+            }
+
+#if DEBUG_P25_MAC_PDU
+            Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
+#endif
+        }
+
+        // are we decoding a FACCH with scrambling?
+        if (m_p2DUID == P2_DUID::FACCH_SCRAMBLED) {
+            /* TODO: if scrambled handle scrambling */
+        }
+
+        // are we decoding a SACCH with scrambling?
+        if (m_p2DUID == P2_DUID::SACCH_SCRAMBLED) {
+            /* TODO: if scrambled handle scrambling */
+        }
+
+        return decodeMACPDU(raw, sync ? P25_P2_SOEMI_MAC_LENGTH_BITS : P25_P2_IOEMI_MAC_LENGTH_BITS);
+    }
+
+    return true;
+}
+
+/* Encode a VCH MAC PDU. */
+
+void LC::encodeVCH_MACPDU(uint8_t* data, bool sync)
+{
+    assert(data != nullptr);
+
+    uint8_t raw[P25_P2_IEMI_LENGTH_BYTES];
+    ::memset(raw, 0x00U, P25_P2_IEMI_LENGTH_BYTES);
+
+    if (m_p2DUID != P2_DUID::VTCH_4V && m_p2DUID != P2_DUID::VTCH_2V) {
+        encodeMACPDU(raw, sync ? P25_P2_SOEMI_MAC_LENGTH_BITS : P25_P2_IOEMI_MAC_LENGTH_BITS);
+
+#if DEBUG_P25_MAC_PDU
+        Utils::dump(2U, "P25, LC::encodeVCH_MACPDU(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
+#endif
+
+        // if sync is being included we're an S-OEMI, otherwise an I-OEMI
+        if (sync) {
+            // encode RS (46,26,21) FEC
+            m_rs.encode452620(raw);
+
+#if DEBUG_P25_MAC_PDU
+            Utils::dump(2U, "P25, LC::encodeVCH_MACPDU(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
+#endif
+            for (uint32_t i = 0U; i < P25_P2_SOEMI_LENGTH_BITS; i++) {
+                uint32_t n = i + 2U; // skip DUID 1
+                if (i >= 72U)
+                    n += 2U; // skip DUID 2
+                if (i >= 134U)
+                    n += 42U; // skip sync
+                if (i >= 198U)
+                    n += 2U; // skip DUID 3
+
+                bool b = READ_BIT(raw, i);
+                WRITE_BIT(data, n, b);
+            }
+        } else {
+            // encode RS (52,30,23) FEC
+            m_rs.encode523023(raw);
+
+#if DEBUG_P25_MAC_PDU
+            Utils::dump(2U, "P25, LC::encodeVCH_MACPDU(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
+#endif
+            for (uint32_t i = 0U; i < P25_P2_IEMI_LENGTH_BITS; i++) {
+                uint32_t n = i + 2U; // skip DUID 1
+                if (i >= 72U)
+                    n += 2U; // skip DUID 2
+                if (i >= 168U)
+                    n += 2U; // skip DUID 3
+
+                bool b = READ_BIT(raw, i);
+                WRITE_BIT(data, n, b);
+            }
+        }
+    }
+
+    if (sync) {
+        Sync::addP25P2_SOEMISync(data);
+    }
+
+    // encode the Phase 2 DUID
+    uint8_t duid[1U];
+    ::memset(duid, 0x00U, 1U);
+    duid[0U] = (m_p2DUID & 0x0FU) << 4U;
+
+    ::memset(raw, 0x00U, 1U);
+    encodeP2_DUIDHamming(raw, duid);
+
+    for (uint8_t i = 0U; i < 8U; i++) {
+        uint32_t n = i;
+        if (i >= 2U)
+            n += 72U; // skip field 1
+        if (i >= 4U)
+            n += 168U; // skip field 2, sync and field 3 (or just field 2)
+        if (i >= 6U)
+            n += 72U; // skip field 4
+
+        bool b = READ_BIT(raw, i);
+        WRITE_BIT(data, n, b);
+    }
+}
+
 /* Helper to determine if the MFId is a standard MFId. */
 
 bool LC::isStandardMFId() const
@@ -754,6 +1078,233 @@ void LC::encodeLC(uint8_t* rs)
 */
 }
 
+/* Decode MAC PDU. */
+
+bool LC::decodeMACPDU(const uint8_t* raw, uint32_t macLength)
+{
+    assert(raw != nullptr);
+
+    bool ret = edac::CRC::checkCRC12(raw, macLength - 12U);
+    if (!ret) {
+        if (s_warnCRC) {
+            LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+            ret = true; // ignore CRC error
+        }
+        else {
+            LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+        }
+    }
+
+    if (!ret)
+        return false;
+
+    m_macPduOpcode = (raw[0U] >> 5U) & 0x07U;                                       // MAC PDU Opcode
+    m_macPduOffset = (raw[0U] >> 2U) & 0x07U;                                       // MAC PDU Offset
+
+    switch (m_macPduOpcode) {
+    case P2_MAC_HEADER_OPCODE::PTT:
+        m_algId = raw[10U];                                                         // Algorithm ID
+        if (m_algId != ALGO_UNENCRYPT) {
+            if (m_mi != nullptr)
+                delete[] m_mi;
+            m_mi = new uint8_t[MI_LENGTH_BYTES];
+            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+            ::memcpy(m_mi, raw + 1U, MI_LENGTH_BYTES);                              // Message Indicator
+
+            m_kId = (raw[10U] << 8) + raw[11U];                                     // Key ID
+            if (!m_encrypted) {
+                m_encryptOverride = true;
+                m_encrypted = true;
+            }
+        } else {
+            if (m_mi != nullptr)
+                delete[] m_mi;
+            m_mi = new uint8_t[MI_LENGTH_BYTES];
+            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+
+            m_kId = 0x0000U;
+            if (m_encrypted) {
+                m_encryptOverride = true;
+                m_encrypted = false;
+            }
+        }
+
+        m_srcId = GET_UINT24(raw, 13U);                                             // Source Radio Address
+        m_dstId = GET_UINT16(raw, 16U);                                             // Talkgroup Address
+        break;
+    case P2_MAC_HEADER_OPCODE::END_PTT:
+        m_colorCode = ((raw[1U] & 0x0FU) << 8U) +                                   // Color Code
+            raw[2U];                                                                // ...
+        m_srcId = GET_UINT24(raw, 13U);                                             // Source Radio Address
+        m_dstId = GET_UINT16(raw, 16U);                                             // Talkgroup Address
+        break;
+
+    case P2_MAC_HEADER_OPCODE::IDLE:
+    case P2_MAC_HEADER_OPCODE::ACTIVE:
+    case P2_MAC_HEADER_OPCODE::HANGTIME:
+        /*
+        ** bryanb: likely will need extra work here -- IDLE,ACTIVE,HANGTIME PDUs can contain multiple
+        **  MCOs; for now we're only gonna be decoding the first one...
+        */
+        m_macPartition = raw[1U] >> 5U;                                             // MAC Partition
+        m_lco = raw[1U] & 0x1FU;                                                    // MCO
+
+        if (m_macPartition == P2_MAC_MCO_PARTITION::UNIQUE) {
+            switch (m_lco) {
+            case P2_MAC_MCO::GROUP:
+                m_group = true;
+                m_emergency = (raw[2U] & 0x80U) == 0x80U;                           // Emergency Flag
+                if (!m_encryptOverride) {
+                    m_encrypted = (raw[2U] & 0x40U) == 0x40U;                       // Encryption Flag
+                }
+                m_priority = (raw[2U] & 0x07U);                                     // Priority
+                m_dstId = GET_UINT16(raw, 3U);                                      // Talkgroup Address
+                m_srcId = GET_UINT24(raw, 5U);                                      // Source Radio Address
+                break;
+            case P2_MAC_MCO::PRIVATE:
+                m_group = false;
+                m_emergency = (raw[2U] & 0x80U) == 0x80U;                           // Emergency Flag
+                if (!m_encryptOverride) {
+                    m_encrypted = (raw[2U] & 0x40U) == 0x40U;                       // Encryption Flag
+                }
+                m_priority = (raw[2U] & 0x07U);                                     // Priority
+                m_dstId = GET_UINT24(raw, 3U);                                      // Talkgroup Address
+                m_srcId = GET_UINT24(raw, 6U);                                      // Source Radio Address
+                break;
+            case P2_MAC_MCO::TEL_INT_VCH_USER:
+                m_emergency = (raw[2U] & 0x80U) == 0x80U;                           // Emergency Flag
+                if (!m_encryptOverride) {
+                    m_encrypted = (raw[2U] & 0x40U) == 0x40U;                       // Encryption Flag
+                }
+                m_priority = (raw[2U] & 0x07U);                                     // Priority
+                m_callTimer = GET_UINT16(raw, 3U);                                  // Call Timer
+                if (m_srcId == 0U) {
+                    m_srcId = GET_UINT24(raw, 5U);                                  // Source/Target Address
+                }
+                break;
+
+            case P2_MAC_MCO::PDU_NULL:
+                break;
+
+            default:
+                LogError(LOG_P25, "LC::decodeMACPDU(), unknown MAC PDU LCO, lco = $%02X", m_lco);
+                return false;
+            }
+        } else {
+            // for non-unique partitions, we currently do not decode
+            // instead we will copy the MCO bytes out and allow user code to decode
+            if (p2MCOData != nullptr)
+                delete[] p2MCOData;
+
+            uint32_t macLengthBytes = (macLength / 8U) + ((macLength % 8U) ? 1U : 0U);
+            p2MCOData = new uint8_t[macLengthBytes];
+            ::memset(p2MCOData, 0x00U, macLengthBytes);
+
+            // this will include the entire MCO (and depending on message length multiple MCOs)
+            ::memcpy(p2MCOData, raw + 1U, macLengthBytes - 3U); // excluding MAC PDU header and CRC
+        }
+        break;
+
+    default:
+        LogError(LOG_P25, "LC::decodeMACPDU(), unknown MDC PDU header opcode, opcode = $%02X", m_macPduOpcode);
+        return false;
+    }
+
+    return true;
+}
+
+/* Encode MAC PDU. */
+
+void LC::encodeMACPDU(uint8_t* raw, uint32_t macLength)
+{
+    assert(raw != nullptr);
+
+    raw[0U] = ((m_macPduOpcode & 0x07U) << 5U) +                                    // MAC PDU Opcode
+        ((m_macPduOffset & 0x07U) << 2U);                                           // MAC PDU Offset
+
+    switch (m_macPduOpcode) {
+    case P2_MAC_HEADER_OPCODE::PTT:
+        for (uint32_t i = 0; i < MI_LENGTH_BYTES; i++)
+            raw[i + 1U] = m_mi[i];                                                  // Message Indicator
+
+        raw[10U] = m_algId;                                                         // Algorithm ID
+        raw[11U] = (uint8_t)(m_kId & 0xFFU);                                        // Key ID
+        raw[12U] = (uint8_t)((m_kId >> 8U) & 0xFFU);                                // ...
+
+        SET_UINT24(m_srcId, raw, 13U);                                              // Source Radio Address
+        SET_UINT16((uint16_t)(m_dstId & 0xFFFFU), raw, 16U);                        // Talkgroup Address
+        break;
+    case P2_MAC_HEADER_OPCODE::END_PTT:
+        raw[1U] = (uint8_t)((m_colorCode >> 8U & 0x0FU));                           // Color Code
+        raw[2U] = (uint8_t)(m_colorCode & 0xFFU);                                   // ...
+        SET_UINT24(m_srcId, raw, 13U);                                              // Source Radio Address
+        SET_UINT16((uint16_t)(m_dstId & 0xFFFFU), raw, 16U);                        // Talkgroup Address
+        break;
+
+    case P2_MAC_HEADER_OPCODE::IDLE:
+    case P2_MAC_HEADER_OPCODE::ACTIVE:
+    case P2_MAC_HEADER_OPCODE::HANGTIME:
+        /*
+        ** bryanb: likely will need extra work here -- IDLE,ACTIVE,HANGTIME PDUs can contain multiple
+        **  MCOs; for now we're only gonna be decoding the first one...
+        */
+        raw[1U] = ((m_macPartition & 0x07U) << 5U) +                                // MAC Partition
+            (m_lco & 0x1FU);                                                        // MCO
+
+        if (m_macPartition == P2_MAC_MCO_PARTITION::UNIQUE) {
+            switch (m_lco) {
+            case P2_MAC_MCO::GROUP:
+                raw[2U] = (m_emergency ? 0x80U : 0x00U) +                           // Emergency Flag
+                    (m_encrypted ? 0x40U : 0x00U) +                                 // Encryption Flag
+                    (m_priority & 0x07U);                                           // Priority
+                SET_UINT16((uint16_t)(m_dstId & 0xFFFFU), raw, 3U);                 // Talkgroup Address
+                SET_UINT24(m_srcId, raw, 5U);                                       // Source Radio Address
+                break;
+            case P2_MAC_MCO::PRIVATE:
+                raw[2U] = (m_emergency ? 0x80U : 0x00U) +                           // Emergency Flag
+                    (m_encrypted ? 0x40U : 0x00U) +                                 // Encryption Flag
+                    (m_priority & 0x07U);                                           // Priority
+                SET_UINT24(m_dstId, raw, 3U);                                       // Talkgroup Address
+                SET_UINT24(m_srcId, raw, 6U);                                       // Source Radio Address
+                break;
+            case P2_MAC_MCO::TEL_INT_VCH_USER:
+                raw[2U] = (m_emergency ? 0x80U : 0x00U) +                           // Emergency Flag
+                    (m_encrypted ? 0x40U : 0x00U) +                                 // Encryption Flag
+                    (m_priority & 0x07U);                                           // Priority
+                SET_UINT16((uint16_t)(m_callTimer & 0xFFFFU), raw, 3U);             // Call Timer
+                SET_UINT24(m_srcId, raw, 5U);                                       // Source/Target Radio Address
+                break;
+
+            case P2_MAC_MCO::MAC_RELEASE:
+                raw[2U] = 0x80U;                                                    // Force Preemption (Fixed)
+                SET_UINT24(m_srcId, raw, 3U);                                       // Source Radio Address
+                break;
+
+            case P2_MAC_MCO::PDU_NULL:
+                break;
+
+            default:
+                LogError(LOG_P25, "LC::encodeMACPDU(), unknown MAC PDU LCO, lco = $%02X", m_lco);
+                break;
+            }
+            break;
+        } else {
+            if (p2MCOData != nullptr) {
+                // this will include the entire MCO (and depending on message length multiple MCOs)
+                uint32_t macLengthBytes = (macLength / 8U) + ((macLength % 8U) ? 1U : 0U);
+                ::memcpy(raw + 1U, p2MCOData, macLengthBytes - 3U); // excluding MAC PDU header and CRC
+            }
+        }
+        break;
+
+    default:
+        LogError(LOG_P25, "LC::encodeMACPDU(), unknown MDC PDU header opcode, opcode = $%02X", m_macPduOpcode);
+        break;
+    }
+
+    edac::CRC::addCRC12(raw, macLength - 12U);
+}
+
 /*
 ** Encryption data 
 */
@@ -840,6 +1391,11 @@ void LC::copy(const LC& data)
     m_callTimer = data.m_callTimer;
 
     m_slotNo = data.m_slotNo;
+    m_p2DUID = data.m_p2DUID;
+    m_colorCode = data.m_colorCode;
+    m_macPduOpcode = data.m_macPduOpcode;
+    m_macPduOffset = data.m_macPduOffset;
+    m_macPartition = data.m_macPartition;
 
     m_rsValue = data.m_rsValue;
 
@@ -882,6 +1438,21 @@ void LC::copy(const LC& data)
         m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
         ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
         m_gotUserAlias = false;
+    }
+
+    // do we have Phase 2 MCO data to copy?
+    if (data.p2MCOData != nullptr) {
+        if (p2MCOData != nullptr)
+            delete[] p2MCOData;
+
+        p2MCOData = new uint8_t[P25_P2_IOEMI_MAC_LENGTH_BYTES];
+        ::memset(p2MCOData, 0x00U, P25_P2_IOEMI_MAC_LENGTH_BYTES);
+        ::memcpy(p2MCOData, data.p2MCOData, P25_P2_IOEMI_MAC_LENGTH_BYTES);
+    } else {
+        if (p2MCOData != nullptr) {
+            delete[] p2MCOData;
+            p2MCOData = nullptr;
+        }
     }
 
     s_siteData = data.s_siteData;
@@ -991,6 +1562,52 @@ void LC::encodeHDUGolay(uint8_t* data, const uint8_t* raw)
 
         for (uint32_t j = 0U; j < 18U; j++) {
             WRITE_BIT(data, n, golay[j]);
+            n++;
+        }
+    }
+}
+
+/* Decode Phase 2 DUID hamming FEC. */
+
+void LC::decodeP2_DUIDHamming(const uint8_t* data, uint8_t* raw)
+{
+    uint32_t n = 0U;
+    uint32_t m = 0U;
+    for (uint32_t i = 0U; i < 4U; i++) {
+        bool hamming[8U];
+
+        for (uint32_t j = 0U; j < 8U; j++) {
+            hamming[j] = READ_BIT(data, n);
+            n++;
+        }
+
+        edac::Hamming::decode844(hamming);
+
+        for (uint32_t j = 0U; j < 4U; j++) {
+            WRITE_BIT(raw, m, hamming[j]);
+            m++;
+        }
+    }
+}
+
+/* Encode Phase 2 DUID hamming FEC. */
+
+void LC::encodeP2_DUIDHamming(uint8_t* data, const uint8_t* raw)
+{
+    uint32_t n = 0U;
+    uint32_t m = 0U;
+    for (uint32_t i = 0U; i < 4U; i++) {
+        bool hamming[8U];
+
+        for (uint32_t j = 0U; j < 4U; j++) {
+            hamming[j] = READ_BIT(raw, m);
+            m++;
+        }
+
+        edac::Hamming::encode844(hamming);
+
+        for (uint32_t j = 0U; j < 8U; j++) {
+            WRITE_BIT(data, n, hamming[j]);
             n++;
         }
     }

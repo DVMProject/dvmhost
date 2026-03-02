@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2020-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2020-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -92,8 +92,9 @@ namespace network
     const uint32_t  P25_LDU2_PACKET_LENGTH = 181U;  // 24 byte header + DFSI data + 1 byte frame type
     const uint32_t  P25_TSDU_PACKET_LENGTH = 69U;   // 24 byte header + TSDU data
     const uint32_t  P25_TDULC_PACKET_LENGTH = 78U;  // 24 byte header + TDULC data
+    const uint32_t  P25_P2_PACKET_LENGTH = 66U;     // 24 byte header + P25_P2_FRAME_LENGTH_BYTES + 2 byte trailer
     const uint32_t  NXDN_PACKET_LENGTH = 70U;       // 20 byte header + NXDN_FRAME_LENGTH_BYTES + 2 byte trailer
-    const uint32_t  ANALOG_PACKET_LENGTH = 324U;    // 20 byte header + AUDIO_SAMPLES_LENGTH_BYTES + 4 byte trailer
+    const uint32_t  ANALOG_PACKET_LENGTH = 344U;    // 20 byte header + AUDIO_SAMPLES_LENGTH_BYTES + 4 byte trailer
 
     const uint32_t  HA_PARAMS_ENTRY_LEN = 20U;
 
@@ -376,8 +377,8 @@ namespace network
          * @param peerId Unique ID of this modem on the network.
          * @param duplex Flag indicating full-duplex operation.
          * @param debug Flag indicating whether network debug is enabled.
-         * @param slot1 Flag indicating whether DMR slot 1 is enabled for network traffic.
-         * @param slot2 Flag indicating whether DMR slot 2 is enabled for network traffic.
+         * @param slot1 Flag indicating whether DMR/P25 Phase 2 slot 1 is enabled for network traffic.
+         * @param slot2 Flag indicating whether DMR/P25 Phase 2 slot 2 is enabled for network traffic.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
          * @param localPort Local port used to listen for incoming data.
@@ -393,6 +394,17 @@ namespace network
          * @brief Gets the frame queue for the network.
          */
         FrameQueue* getFrameQueue() const { return m_frameQueue; }
+
+        /**
+         * @brief Helper to enable or disable packet dump logging.
+         * @param enable Flag indicating whether packet dump logging is enabled.
+         */
+        void setPacketDump(bool enable) 
+        { 
+            m_packetDump = enable; 
+            if (m_frameQueue != nullptr) 
+                m_frameQueue->setDebug(enable);
+        }
 
         /**
          * @brief Writes a grant request to the network.
@@ -697,6 +709,11 @@ namespace network
          */
         virtual void resetP25();
         /**
+         * @brief Resets the P25 Phase 2 ring buffer for the given slot.
+         * @param slotNo P25 Phase 2 slot number.
+         */
+        virtual void resetP25P2(uint32_t slotNo);
+        /**
          * @brief Resets the NXDN ring buffer.
          */
         virtual void resetNXDN();
@@ -717,6 +734,12 @@ namespace network
          */
         uint32_t getP25StreamId() const { return m_p25StreamId; }
         /**
+         * @brief Gets the current P25 Phase 2 stream ID.
+         * @param slotNo P25 Phase 2 slot to get stream ID for.
+         * @return uint32_t Stream ID for the given P25 Phase 2 slot.
+         */
+        uint32_t getP25P2StreamId(uint32_t slotNo) const;
+        /**
          * @brief Gets the current NXDN stream ID.
          * @return uint32_t Stream ID.
          */
@@ -734,13 +757,13 @@ namespace network
          * @param length Length of buffer to write.
          * @param pktSeq RTP packet sequence.
          * @param streamId Stream ID.
-         * @param useAlternatePort Flag indicating the message shuold be sent using the alternate port (mainly for activity and diagnostics).
+         * @param metadata Flag indicating the message should be sent to the metadata port.
          * @param peerId If non-zero, overrides the peer ID sent in the packet to the master.
          * @param ssrc If non-zero, overrides the RTP synchronization source ID sent in the packet to the master.
          * @returns bool True, if message was sent, otherwise false. 
          */
         bool writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, 
-            uint16_t pktSeq, uint32_t streamId, bool useAlternatePort = false, uint32_t peerId = 0U, uint32_t ssrc = 0U);
+            uint16_t pktSeq, uint32_t streamId, bool metadata = false, uint32_t peerId = 0U, uint32_t ssrc = 0U);
 
         // Digital Mobile Radio
         /**
@@ -828,10 +851,35 @@ namespace network
             const uint32_t len, bool lastBlock);
 
         /**
+         * @brief Reads P25 Phase 2 raw frame data from the P25 Phase 2 ring buffer.
+         * @param[out] ret Flag indicating whether or not data was received.
+         * @param[out] frameLength Length in bytes of received frame.
+         * @returns UInt8Array Buffer containing received frame.
+         */
+        virtual UInt8Array readP25P2(bool& ret, uint32_t& frameLength);
+        /**
+         * @brief Writes P25 Phase 2 frame data to the network.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param[in] duid P25 Phase 2 DUID type.
+         * @param[in] slot P25 Phase 2 slot number.
+         * @param[in] data Buffer containing P25 Phase 2 data to send.
+         * @param[in] controlByte DVM control byte.
+         * @returns bool True, if message was sent, otherwise false.
+         */
+        virtual bool writeP25P2(const p25::lc::LC& control, p25::defines::P2_DUID::E duid, uint8_t slot, const uint8_t* data,
+            const uint8_t controlByte = 0U);
+
+        /**
          * @brief Helper to test if the P25 ring buffer has data.
          * @returns bool True, if the network P25 ring buffer has data, otherwise false.
          */
         bool hasP25Data() const;
+
+        /**
+         * @brief Helper to test if the P25 Phase 2 ring buffer has data.
+         * @returns bool True, if the network P25 Phase 2 ring buffer has data, otherwise false.
+         */
+        bool hasP25P2Data() const;
 
         /**
          * @brief Helper to validate a P25 network frame length.
@@ -907,13 +955,13 @@ namespace network
         DECLARE_PROTECTED_RO_PROPERTY_PLAIN(uint32_t, addrLen);
 
         /**
-         * @brief Flag indicating whether network DMR slot 1 traffic is permitted.
+         * @brief Flag indicating whether network DMR/P25 Phase 2 slot 1 traffic is permitted.
          */
-        DECLARE_PROTECTED_RO_PROPERTY(bool, slot1, DMRSlot1);
+        DECLARE_PROTECTED_RO_PROPERTY(bool, slot1, Slot1);
         /**
-         * @brief Flag indicating whether network DMR slot 2 traffic is permitted.
+         * @brief Flag indicating whether network DMR/P25 Phase 2 slot 2 traffic is permitted.
          */
-        DECLARE_PROTECTED_RO_PROPERTY(bool, slot2, DMRSlot2);
+        DECLARE_PROTECTED_RO_PROPERTY(bool, slot2, Slot2);
 
         /**
          * @brief Flag indicating whether network traffic is duplex.
@@ -921,11 +969,10 @@ namespace network
         DECLARE_PROTECTED_RO_PROPERTY(bool, duplex, Duplex);
 
     protected:
-        bool m_useAlternatePortForDiagnostics;
-
         bool m_allowActivityTransfer;
         bool m_allowDiagnosticTransfer;
 
+        bool m_packetDump;
         bool m_debug;
 
         udp::Socket* m_socket;
@@ -933,6 +980,7 @@ namespace network
 
         RingBuffer<uint8_t> m_rxDMRData;
         RingBuffer<uint8_t> m_rxP25Data;
+        RingBuffer<uint8_t> m_rxP25P2Data;
         RingBuffer<uint8_t> m_rxNXDNData;
         RingBuffer<uint8_t> m_rxAnalogData;
 
@@ -940,6 +988,7 @@ namespace network
 
         uint32_t* m_dmrStreamId;
         uint32_t m_p25StreamId;
+        uint32_t* m_p25P2StreamId;
         uint32_t m_nxdnStreamId;
         uint32_t m_analogStreamId;
 
@@ -1013,10 +1062,12 @@ namespace network
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      | System ID     | Reserved      | Control Flags | MFId          |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      | Network ID                                    | Reserved      |
+         *      | Network ID                                    |S|Rsvd |P2 DUID|
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      | LSD1          | LSD2          | DUID          | Frame Length  |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * 
+         *  S = Slot Number (clear Slot 1, set Slot 2)
          * 
          *  The data starting at offset 20 for variable number of bytes (DUID dependant)
          *  is the P25 frame.
@@ -1155,6 +1206,28 @@ namespace network
          */
         UInt8Array createP25_PDUMessage(uint32_t& length, const p25::data::DataHeader& header, const uint8_t currentBlock,
             const uint8_t* data, const uint32_t len);
+
+        /**
+         * @brief Creates an P25 Phase 2 frame message.
+         * \code{.unparsed}
+         * 
+         *  The data packed into a P25 Phase 2 frame message is essentially just a message header with the FEC encoded
+         *  raw Phase 2 data.
+         * 
+         *  The data starting at offset 24 for 40 bytes of the raw P25 Phase 2 frame.
+         * 
+         * \endcode
+         * @param[out] length Length of network message buffer.
+         * @param[in] control Instance of p25::lc::LC containing link control data.
+         * @param duid P25 Phase 2 DUID.
+         * @param[in] slot P25 Phase 2 slot (clear Slot 1, set Slot 2).
+         * @param[in] data Buffer containing P25 LDU2 data to send.
+         * @param[in] controlByte DVM Network Control Byte.
+         * @param data Instance of the dmr::data::Data class containing the DMR message.
+         * @returns UInt8Array Buffer containing the built network message.
+         */
+        UInt8Array createP25P2_Message(uint32_t& length, const p25::lc::LC& control, p25::defines::P2_DUID::E duid, 
+            const bool slot, const uint8_t* data, uint8_t controlByte = 0U);
 
         /**
          * @brief Creates an NXDN frame message.

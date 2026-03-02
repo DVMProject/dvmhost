@@ -1,0 +1,72 @@
+#
+# Digital Voice Modem - Host Configuration Generator
+#
+# Example answers file for trunked system configuration
+# This file can be used with: dvmcfg wizard --type trunk -a trunked-answers.yml
+# All fields are optional; prompts will appear for missing values
+
+# System Configuration (Step 1)
+system_name: trunked_test
+base_dir: .
+identity: TRUNKED001
+protocol: p25
+vc_count: 2
+
+# Logging Configuration (Step 2)
+configure_logging: true
+log_path: /var/log/dvm
+activity_log_path: /var/log/dvm/activity
+log_root: TRUNKED
+use_syslog: false
+disable_non_auth_logging: false
+
+# Network Settings (Step 3) - optional
+# fne_address: 127.0.0.1
+# fne_port: 62031
+# fne_password: PASSWORD
+
+# Control Channel Settings (Step 4) - optional
+# base_peer_id: 100000
+# base_rpc_port: 9000
+# modem_type: uart
+
+# Voice Channel Settings (Step 5) - optional
+# cc_tx_freq: 453.0125
+# cc_band: uhf
+# vc_tx_freqs: "453.0375,453.0625"
+# vc_bands: "uhf,uhf"
+
+# Network/System IDs (Step 6) - optional
+# For P25:
+# p25_nac: 0x293
+# p25_network_id: 1
+# p25_system_id: 1
+# p25_rfss_id: 1
+# p25_site_id: 1
+
+# For DMR:
+# dmr_color_code: 1
+# dmr_network_id: 1
+# dmr_site_id: 1
+
+# RPC Configuration (Step 6a) - optional
+# generate_rpc_password: true
+
+# Network Lookups (Step 6b) - optional
+# update_lookups: true
+# save_lookups: true
+
+# File Transfer Settings (Step 6c) - optional
+# allow_activity_transfer: true
+# allow_diagnostic_transfer: true
+# allow_status_transfer: true
+
+# Radio ID File Settings (Step 7) - optional
+# radio_id_file: /path/to/rid.csv
+# radio_id_time: 3600
+# radio_id_acl: blacklist
+
+# Talkgroup ID File Settings (Step 8) - optional
+# talkgroup_id_file: /path/to/talkgroups.csv
+# talkgroup_id_time: 3600
+# talkgroup_id_acl: whitelist

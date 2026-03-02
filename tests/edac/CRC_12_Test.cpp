@@ -18,48 +18,46 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[12-bit Test]") {
-    SECTION("12_Sanity_Test") {
-        bool failed = false;
+TEST_CASE("CRC 12-bit Test", "[crc][12bit]") {
+    bool failed = false;
 
-        INFO("CRC 12-bit CRC Test");
+    INFO("CRC 12-bit CRC Test");
 
-        srand((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL));
 
-        const uint32_t len = 32U;
-        const uint32_t lenBits = len * 8U;
-        uint8_t* random = (uint8_t*)malloc(len);
+    const uint32_t len = 32U;
+    const uint32_t lenBits = len * 8U;
+    uint8_t* random = (uint8_t*)malloc(len);
 
-        for (size_t i = 0; i < len - 2U; i++) {
-            random[i] = rand();
-        }
+    for (size_t i = 0; i < len - 2U; i++) {
+        random[i] = rand();
+    }
 
-        CRC::addCRC12(random, lenBits);
+    CRC::addCRC12(random, lenBits);
 
-        uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
-        ::LogInfoEx("T", "CRC::checkCRC12(), crc = $%04X", inCrc);
+    uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
+    ::LogInfoEx("T", "CRC::checkCRC12(), crc = $%04X", inCrc);
 
-        Utils::dump(2U, "12_Sanity_Test CRC", random, len);
+    Utils::dump(2U, "12_Sanity_Test CRC", random, len);
 
-        bool ret = CRC::checkCRC12(random, lenBits);
-        if (!ret) {
-            ::LogError("T", "12_Sanity_Test, failed CRC12 check");
-            failed = true;
-            goto cleanup;
-        }
+    bool ret = CRC::checkCRC12(random, lenBits);
+    if (!ret) {
+        ::LogError("T", "12_Sanity_Test, failed CRC12 check");
+        failed = true;
+        goto cleanup;
+    }
 
-        random[10U] >>= 8;
-        random[11U] >>= 8;
+    random[10U] >>= 8;
+    random[11U] >>= 8;
 
-        ret = CRC::checkCRC12(random, lenBits);
-        if (ret) {
-            ::LogError("T", "12_Sanity_Test, failed CRC12 error check");
-            failed = true;
-            goto cleanup;
-        }
+    ret = CRC::checkCRC12(random, lenBits);
+    if (ret) {
+        ::LogError("T", "12_Sanity_Test, failed CRC12 error check");
+        failed = true;
+        goto cleanup;
+    }
 
 cleanup:
-        free(random);
-        REQUIRE(failed==false);
-    }
+    free(random);
+    REQUIRE(failed==false);
 }

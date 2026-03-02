@@ -18,6 +18,13 @@ using namespace compress;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define MAX_FRAGMENT_SIZE 8192 * 1024 // 8MB max
+
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -58,6 +65,14 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
     if (curBlock == 0U) {
         uint32_t size = GET_UINT32(data, 0U);
         uint32_t compressedSize = GET_UINT32(data, 4U);
+
+        // make sure we can't exceed max fragment size -- prevent potential DOS attack by sending
+        // enormous fragment sizes
+        if (size > MAX_FRAGMENT_SIZE || compressedSize > MAX_FRAGMENT_SIZE) {
+            LogError(LOG_NET, "%s, fragment size exceeds maximum. BUGBUG.", m_name);
+            delete frag;
+            return false;
+        }
 
         frag->size = size;
         frag->compressedSize = compressedSize;

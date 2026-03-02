@@ -120,6 +120,12 @@ namespace dmr
         const uint32_t  DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES = 10U;
         const uint32_t  DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES = 22U;
 
+        const uint32_t  DMR_PDU_ARP_PCKT_LENGTH = 22U;
+        const uint32_t  DMR_PDU_ARP_HW_ADDR_LENGTH = 3U;
+        const uint32_t  DMR_PDU_ARP_PROTO_ADDR_LENGTH = 4U;
+
+        const uint8_t   DMR_PDU_ARP_CAI_TYPE = 0x21U;
+
         const uint32_t  MI_LENGTH_BYTES = 4U;           // This was guessed based on OTA data captures -- the message indicator seems to be the same length as a source/destination address
         const uint32_t  RAW_AMBE_LENGTH_BYTES = 9U;
         /** @} */
@@ -149,6 +155,7 @@ namespace dmr
 
         const uint16_t  DMR_LOGICAL_CH_ABSOLUTE = 0xFFFU;
 
+        const uint32_t  WUID_IPI = 0xFFFEC3U;           //!< IP Interface Working Unit ID
         const uint32_t  WUID_SUPLI = 0xFFFEC4U;         //!< Supplementary Data Service Working Unit ID
         const uint32_t  WUID_SDMI = 0xFFFEC5U;          //!< UDT Short Data Service Working Unit ID
         const uint32_t  WUID_REGI = 0xFFFEC6U;          //!< Registration Working Unit ID
@@ -179,6 +186,22 @@ namespace dmr
             };
         };
 
+        /** @brief Service Access Point */
+        namespace PDUSAP {
+            /** @brief Service Access Point */
+            enum : uint8_t {
+                UDT = 0x00U,                            //!< Unified Data Transport Header
+
+                PACKET_DATA = 0x04U,                    //!< IP based Packet Data
+
+                ARP = 0x05U,                            //!< ARP
+
+                PROP_PACKET_DATA = 0x09U,               //!< Proprietary Packet Data
+
+                SHORT_DATA = 0x0AU                      //!< Defined Short Data
+            };
+        }
+
         /** @brief Data Response Class */
         namespace PDUResponseClass {
             /** @brief Data Response Class */
@@ -187,7 +210,7 @@ namespace dmr
                 NACK = 0x01U,                           //!< Negative Acknowledge
                 ACK_RETRY = 0x02U                       //!< Acknowlege Retry
             };
-        };
+        }
 
         /** @brief Data Response Type */
         namespace PDUResponseType {
@@ -200,7 +223,7 @@ namespace dmr
                 NACK_MEMORY_FULL = 0x02U,               //!< Memory Full
                 NACK_UNDELIVERABLE = 0x04U              //!< Undeliverable
             };
-        };
+        }
 
         /** @brief ARP Request */
         const uint8_t   DMR_PDU_ARP_REQUEST = 0x01U;

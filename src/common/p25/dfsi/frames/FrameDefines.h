@@ -104,6 +104,8 @@ namespace p25
             namespace MotStreamPayload {
                 /** @brief Motorola Stream Payload */
                 enum E : uint8_t {
+                    DATA_12 = 0x05U,                    //!< P25 12 Block Data
+                    DATA_18 = 0x06U,                    //!< P25 18 Block Data
                     VOICE = 0x0BU,                      //!< P25 Voice
                     DATA = 0x0CU,                       //!< P25 Data
                     TERM_LC = 0x0EU,                    //!< P25 Termination Link Control

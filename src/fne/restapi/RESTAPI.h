@@ -23,7 +23,9 @@
 #include "common/lookups/AdjSiteMapLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/lookups/PeerListLookup.h"
 #include "common/Thread.h"
+#include "fne/CryptoContainer.h"
 #include "fne/restapi/RESTDefines.h"
 
 #include <vector>
@@ -35,7 +37,7 @@
 // ---------------------------------------------------------------------------
 
 class HOST_SW_API HostFNE;
-namespace network { class HOST_SW_API FNENetwork; }
+namespace network { class HOST_SW_API TrafficNetwork; }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -71,14 +73,16 @@ public:
      * @param tidLookup Talkgroup Rules Lookup Table Instance
      * @param peerListLookup Peer List Lookup Table Instance
      * @param adjPeerMapLookup Adjacent Site Map Lookup Table Instance
+     * @param cryptoLookup Crypto Container Instance
      */
     void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, 
-        ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjPeerMapLookup);
+        ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjPeerMapLookup, 
+        CryptoContainer* cryptoLookup);
     /**
-     * @brief Sets the instance of the FNE network.
-     * @param network Instance oft he FNENetwork class.
+     * @brief Sets the instance of the traffic network.
+     * @param network Instance of the TrafficNetwork class.
      */
-    void setNetwork(::network::FNENetwork* network);
+    void setNetwork(::network::TrafficNetwork* network);
 
     /**
      * @brief Opens connection to the network.
@@ -108,12 +112,13 @@ private:
     bool m_debug;
 
     HostFNE* m_host;
-    network::FNENetwork* m_network;
+    network::TrafficNetwork* m_network;
 
     ::lookups::RadioIdLookup* m_ridLookup;
     ::lookups::TalkgroupRulesLookup* m_tidLookup;
     ::lookups::PeerListLookup* m_peerListLookup;
     ::lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
+    CryptoContainer* m_cryptoLookup;
 
     typedef std::unordered_map<std::string, uint64_t>::value_type AuthTokenValueType;
     std::unordered_map<std::string, uint64_t> m_authTokens;
@@ -280,6 +285,20 @@ private:
      * @param match HTTP request matcher.
      */
     void restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+    /**
+     * @brief REST API endpoint; implements put peer NAK request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_PutPeerNAKByPeerId(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+    /**
+     * @brief REST API endpoint; implements put peer NAK request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_PutPeerNAKByAddress(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get adjacent site map list query request.
@@ -332,6 +351,54 @@ private:
      * @param match HTTP request matcher.
      */
     void restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
+    * @brief REST API endpoint; implements get reload peer list request.
+    * @param request HTTP request.
+    * @param reply HTTP reply.
+    * @param match HTTP request matcher.
+    */
+    void restAPI_GetReloadPeerList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
+     * @brief REST API endpoint; implements get reload crypto container request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetReloadCrypto(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
+     * @brief REST API endpoint; implements get statistics request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
+     * @brief REST API endpoint; implements put reset total calls request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetResetTotalCalls(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
+     * @brief REST API endpoint; implements put reset active calls request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetResetActiveCalls(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
+     * @brief REST API endpoint; implements put reset call collisions request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetResetCallCollisions(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get affiliation list request.

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -15,7 +15,7 @@
 #include "common/Log.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/callhandler/TagP25Data.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
@@ -42,7 +42,7 @@ const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 
 /* Initializes a new instance of the TagP25Data class. */
 
-TagP25Data::TagP25Data(FNENetwork* network, bool debug) :
+TagP25Data::TagP25Data(TrafficNetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
     m_parrotFramesReady(false),
@@ -184,32 +184,34 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // special case: if we've received a TSDU and its an LC_CALL_TERM; lets validate the source peer ID,
         //  LC_CALL_TERMs should only be sourced from the peer that initiated the call; other peers should not be
         //  transmitting LC_CALL_TERMs for the call
-        if (duid == DUID::TSDU && tsbk->getLCO() == LCO::CALL_TERM) {
-            if (dstId == 0U) {
-                LogWarning(LOG_NET, "P25, invalid TSDU, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
-                return false;
-            }
-
-            RxStatus status = m_status[dstId];
-
-            auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
-                if (x.second.dstId == dstId) {
-                    if (x.second.activeCall)
-                        return true;
-                }
-                return false;
-            });
-            if (it != m_status.end()) {
-                if (status.peerId != peerId) {
-                    LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Illegal Call Termination, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
-                        peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+        if (duid == DUID::TSDU && tsbk != nullptr) {
+            if (tsbk->getLCO() == LCO::CALL_TERM) {
+                if (dstId == 0U) {
+                    LogWarning(LOG_NET, "P25, invalid TSDU, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
                     return false;
-                } else {
-                    #define REQ_CALL_END_LOG "P25, Requested Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
-                    if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
-                        LogInfoEx(LOG_PEER, REQ_CALL_END_LOG);
-                    else if (!fromUpstream)
-                        LogInfoEx(LOG_MASTER, REQ_CALL_END_LOG);
+                }
+
+                RxStatus status = m_status[dstId];
+
+                auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
+                    if (x.second.dstId == dstId) {
+                        if (x.second.activeCall)
+                            return true;
+                    }
+                    return false;
+                });
+                if (it != m_status.end()) {
+                    if (status.peerId != peerId) {
+                        LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Illegal Call Termination, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
+                            peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+                        return false;
+                    } else {
+                        #define REQ_CALL_END_LOG "P25, Requested Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
+                        if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                            LogInfoEx(LOG_PEER, REQ_CALL_END_LOG);
+                        else if (!fromUpstream)
+                            LogInfoEx(LOG_MASTER, REQ_CALL_END_LOG);
+                    }
                 }
             }
         }
@@ -218,8 +220,14 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         if (duid != DUID::TSDU && duid != DUID::PDU) {
             // is this the end of the call stream?
             if ((duid == DUID::TDU) || (duid == DUID::TDULC)) {
+                // reject TDU with no source or destination
                 if (srcId == 0U && dstId == 0U) {
                     LogWarning(LOG_NET, "P25, invalid TDU, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream);
+                    return false;
+                }
+
+                // reject TDU's with no destination
+                if (dstId == 0U) {
                     return false;
                 }
 
@@ -288,6 +296,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 LogInfoEx(LOG_MASTER, CALL_END_LOG);
                         }
 
+                        if (!tg.config().parrot()) {
+                            m_network->m_totalActiveCalls--;
+                            if (m_network->m_totalActiveCalls < 0)
+                                m_network->m_totalActiveCalls = 0;
+                        }
+
                         // report call event to InfluxDB
                         if (m_network->m_enableInfluxDB) {
                             influxdb::QueryBuilder()
@@ -304,6 +318,16 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                         m_network->eraseStreamPktSeq(peerId, streamId);
                     }
+                } else {
+                    #define NONCALL_TDU_LOG "P25, Non-Call TDU, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
+                    if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                        LogInfoEx(LOG_PEER, NONCALL_TDU_LOG);
+                    else if (!fromUpstream)
+                        LogInfoEx(LOG_MASTER, NONCALL_TDU_LOG);
+
+                    m_status.lock(false);
+                    m_status[dstId].callStartTime = pktTime; // because Non-Call TDUs can just happen lets reset the callStartTime to pktTime to prevent insane durations
+                    m_status.unlock();
                 }
             }
 
@@ -391,6 +415,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                     else {
                                         LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Call Collision, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
                                             peerId, ssrc, sysId, netId, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+
+                                        m_network->m_totalCallCollisions++;
+
                                         return false;
                                     }
                                 } else {
@@ -444,6 +471,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status[dstId].ssrc = ssrc;
                     m_status[dstId].activeCall = true;
                     m_status.unlock();
+
+                    if (!tg.config().parrot()) {
+                        m_network->m_totalCallsProcessed++;
+                        m_network->m_totalActiveCalls++;
+                    }
 
                     // is this a private call?
                     if (lco == LCO::PRIVATE) {
@@ -740,6 +772,7 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
     } 
 
     // repeat traffic to the connected peers
+    m_network->m_peers.shared_lock();
     if (m_network->m_peers.size() > 0U) {
         for (auto peer : m_network->m_peers) {
             if (peerId != peer.first) {
@@ -747,6 +780,7 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
             }
         }
     }
+    m_network->m_peers.shared_unlock();
 
     return true;
 }
@@ -785,6 +819,15 @@ void TagP25Data::playbackParrot()
     auto& pkt = m_parrotFrames[0];
     m_parrotFrames.lock();
     if (pkt.buffer != nullptr) {
+        // has the override source ID been set?
+        if (m_network->m_parrotOverrideSrcId > 0U) {
+            pkt.srcId = m_network->m_parrotOverrideSrcId;
+
+            // override source ID
+            SET_UINT24(m_network->m_parrotOverrideSrcId, pkt.buffer, 5U);
+        }
+
+        // is this the first parrot frame?
         if (m_parrotFirstFrame) {
             if (m_network->m_parrotGrantDemand) {
                 uint32_t srcId = pkt.srcId;
@@ -805,8 +848,19 @@ void TagP25Data::playbackParrot()
                 UInt8Array message = m_network->createP25_TDUMessage(messageLength, control, lsd, controlByte);
                 if (message != nullptr) {
                     if (m_network->m_parrotOnlyOriginating) {
+                        uint32_t targetPeerId = pkt.peerId;
+
+                        // check if this peer is a VC peer (ccPeerId non-zero), and if so
+                        // redirect the grant demand to its CC peer
+                        m_network->m_peers.shared_lock();
+                        auto it = m_network->m_peers.find(pkt.peerId);
+                        if (it != m_network->m_peers.end() && it->second->ccPeerId() > 0) {
+                            targetPeerId = it->second->ccPeerId();
+                        }
+                        m_network->m_peers.shared_unlock();
+
                         LogInfoEx(LOG_P25, "Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", pkt.peerId, srcId, dstId);
-                        m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
+                        m_network->writePeer(targetPeerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
                             RTP_END_OF_CALL_SEQ, m_network->createStreamId());
                     } else {
                         // repeat traffic to the connected peers
@@ -827,10 +881,47 @@ void TagP25Data::playbackParrot()
         m_lastParrotDstId = pkt.dstId;
 
         if (m_network->m_parrotOnlyOriginating) {
-            m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
-            if (m_network->m_debug) {
-                LogDebugEx(LOG_P25, "TagP25Data::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
-                    pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+            uint32_t ccPeerId = 0U;
+
+            // check if this peer is a VC peer (ccPeerId non-zero), and if so
+            // determine its CC peer ID
+            m_network->m_peers.shared_lock();
+            auto it = m_network->m_peers.find(pkt.peerId);
+            if (it != m_network->m_peers.end() && it->second->ccPeerId() > 0) {
+                ccPeerId = it->second->ccPeerId();
+            }
+            m_network->m_peers.shared_unlock();
+
+            // if we have a CC peer ID repeat the parrot traffic to all its connected VC peers
+            if (ccPeerId > 0U && m_network->m_ccPeerMap.find(ccPeerId) != m_network->m_ccPeerMap.end()) {
+                m_network->m_ccPeerMap.shared_lock();
+
+                // repeat traffic to the connected VC peers
+                uint32_t i = 0U;
+                udp::BufferQueue queue = udp::BufferQueue();
+
+                for (auto peer : m_network->m_ccPeerMap[ccPeerId]) {
+                    // every MAX_QUEUED_PEER_MSGS peers flush the queue
+                    if (i % MAX_QUEUED_PEER_MSGS == 0U) {
+                        m_network->m_frameQueue->flushQueue(&queue);
+                    }
+
+                    m_network->writePeerQueue(&queue, peer, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                    if (m_network->m_debug) {
+                        LogDebug(LOG_P25, "TagP25Data::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                            peer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                    }
+
+                    i++;
+                }
+                m_network->m_frameQueue->flushQueue(&queue);
+                m_network->m_ccPeerMap.shared_unlock();
+            } else {
+                m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                if (m_network->m_debug) {
+                    LogDebugEx(LOG_P25, "TagP25Data::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
+                        pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
+                }
             }
         } else {
             // repeat traffic to the connected peers

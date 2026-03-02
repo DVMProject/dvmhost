@@ -6,6 +6,19 @@
 daemon: true
 
 #
+# This flag should be set to 'true', it simply means that you acknowledge the license and restrictions of use for this
+# software, at no time should THIS SOFTWARE EVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS. This 
+# software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, 
+# governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by 
+# the authors.
+#
+# By using this software, you agree to indemnify, defend, and hold harmless the authors, contributors, and affiliated 
+# parties from and against any and all claims, liabilities, damages, losses, or expenses (including reasonable 
+# attorneys’ fees) arising out of or relating to any unlawful, unauthorized, or improper use of the software.
+#
+iAgreeNotToBeStupid: false
+
+#
 # Logging Configuration
 #
 #   Logging Levels:
@@ -76,6 +89,8 @@ network:
     # Flag indicating whether or not the host status will be sent to the network.
     allowStatusTransfer: true
 
+    # Flag indicating whether or not packet dumping is enabled.
+    packetDump: false
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
@@ -229,6 +244,8 @@ protocols:
             disableGrantSourceIdCheck: false
             # Flag indicating whether or not the adjacent site broadcasts are disabled.
             disableAdjSiteBroadcast: false
+            # Flag indicating a dedicated CC while process call TDUs and explicitly release grants when a call TDU occurs.
+            explicitTDUGrantRelease: true
             # Flag indicating immediate TSDUs will be sent twice.
             redundantImmediate: true
             # Flag indicating whether redundant grant responses should be transmitted.
@@ -249,6 +266,9 @@ protocols:
         forceAllowTG0: false
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
+        # Flag indicating whether or not a P25 TDU (call terminator) will occur to the network immmediately after a 
+        #   SU dekey, or on a fixed 1 second delay. (This is useful for systems that require fast call termination after dekeying.)
+        immediateCallTerm: true
         # Flag indicating that the host will attempt to automatically inhibit unauthorized RIDs (those not in the
         # RID ACL list).
         inhibitUnauthorized: false
@@ -288,6 +308,11 @@ protocols:
         unitToUnitAvailCheck: false
         # Flag indicating explicit source ID support is enabled.
         allowExplicitSourceId: false
+        # Flag indicating whether or not the host will disable sending deny responses when operating in conventional.
+        #   (Some subscriber radios do not handle deny responses in conventional, and rather interpret them as
+        #   a emergency call trigger, this option allows the deny response to be disabled to prevent errant emergency
+        #   call triggers.)
+        disableDenyResponse: false
         # Flag indicating whether or not the host will respond to SNDCP data requests.
         sndcpSupport: false
         # BER/Error threshold for silencing voice packets. (0 or 1233 disables)
@@ -682,6 +707,8 @@ system:
         ignoreModemConfigArea: false
         # Flag indicating whether verbose dumping of the modem status is enabled.
         dumpModemStatus: false
+        # Flag indicating whether or not modem debug messages are displayed to the log.
+        displayModemDebugMessages: false
         # Flag indicating whether or not trace logging is enabled.
         trace: false
         # Flag indicating whether or not debug logging is enabled.

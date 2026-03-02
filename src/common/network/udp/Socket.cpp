@@ -325,6 +325,12 @@ ssize_t Socket::read(uint8_t* buffer, uint32_t length, sockaddr_storage& address
         // does the network packet contain the appropriate magic leader?
         uint16_t magic = GET_UINT16(buffer, 0U);
         if (magic == AES_WRAPPED_PCKT_MAGIC) {
+            // prevent malicious packets that are too short
+            if (len < 2U + crypto::AES::BLOCK_BYTES_LEN) {
+                LogError(LOG_NET, "Encrypted packet too short");
+                return -1;
+            }
+
             uint32_t cryptedLen = (len - 2U) * sizeof(uint8_t);
             uint8_t* cryptoBuffer = buffer + 2U;
 

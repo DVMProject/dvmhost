@@ -25,6 +25,7 @@
 
 #include "common/Defines.h"
 #include "common/lookups/LookupTable.h"
+#include "common/network/AdaptiveJitterBuffer.h"
 
 #include <string>
 #include <vector>
@@ -53,6 +54,9 @@ namespace lookups
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_hasCallPriority(false),
+            m_jitterBufferEnabled(false),
+            m_jitterBufferMaxSize(4U),
+            m_jitterBufferMaxWait(40000U),
             m_peerDefault(false)
         {
             /* stub */
@@ -73,6 +77,9 @@ namespace lookups
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_hasCallPriority(false),
+            m_jitterBufferEnabled(false),
+            m_jitterBufferMaxSize(4U),
+            m_jitterBufferMaxWait(40000U),
             m_peerDefault(peerDefault)
         {
             /* stub */
@@ -92,6 +99,9 @@ namespace lookups
                 m_canRequestKeys = data.m_canRequestKeys;
                 m_canIssueInhibit = data.m_canIssueInhibit;
                 m_hasCallPriority = data.m_hasCallPriority;
+                m_jitterBufferEnabled = data.m_jitterBufferEnabled;
+                m_jitterBufferMaxSize = data.m_jitterBufferMaxSize;
+                m_jitterBufferMaxWait = data.m_jitterBufferMaxWait;
                 m_peerDefault = data.m_peerDefault;
             }
 
@@ -112,6 +122,29 @@ namespace lookups
             m_peerAlias = peerAlias;
             m_peerPassword =  peerPassword;
             m_peerDefault = peerDefault;
+        }
+
+        /**
+         * @brief Sets jitter buffer parameters.
+         * @param maxWait Maximum wait time in microseconds.
+         * @param maxSize Maximum buffer size in frames.
+         * @param enabled Jitter buffer enabled flag.
+         */
+        void setJitterBuffer(uint32_t maxWait, uint16_t maxSize, bool enabled)
+        {
+            m_jitterBufferMaxWait = maxWait;
+            m_jitterBufferMaxSize = maxSize;
+            m_jitterBufferEnabled = enabled;
+
+            // clamp jitter buffer parameters
+            if (m_jitterBufferMaxSize < MIN_JITTER_MAX_SIZE)
+                m_jitterBufferMaxSize = MIN_JITTER_MAX_SIZE;
+            if (m_jitterBufferMaxSize > MAX_JITTER_MAX_SIZE)
+                m_jitterBufferMaxSize = MAX_JITTER_MAX_SIZE;
+            if (m_jitterBufferMaxWait < MIN_JITTER_MAX_WAIT)
+                m_jitterBufferMaxWait = MIN_JITTER_MAX_WAIT;
+            if (m_jitterBufferMaxWait > MAX_JITTER_MAX_WAIT)
+                m_jitterBufferMaxWait = MAX_JITTER_MAX_WAIT;
         }
 
     public:
@@ -143,6 +176,20 @@ namespace lookups
          * @brief Flag indicating if the peer has call transmit priority.
          */
         DECLARE_PROPERTY_PLAIN(bool, hasCallPriority);
+
+        /**
+         * @brief Jitter buffer enabled flag.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, jitterBufferEnabled);
+        /**
+         * @brief Maximum buffer size in frames.
+         */
+        DECLARE_PROPERTY_PLAIN(uint16_t, jitterBufferMaxSize);
+        /**
+         * @brief Maximum wait time in microseconds.
+         */
+        DECLARE_PROPERTY_PLAIN(uint32_t, jitterBufferMaxWait);
+
         /**
          * @brief Flag indicating if the peer is default.
          */

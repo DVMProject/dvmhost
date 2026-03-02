@@ -18,39 +18,37 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[8-bit Test]") {
-    SECTION("8_Sanity_Test") {
-        bool failed = false;
+TEST_CASE("CRC 8-bit Test", "[crc][8bit]") {
+    bool failed = false;
 
-        INFO("CRC 8-bit CRC Test");
+    INFO("CRC 8-bit CRC Test");
 
-        srand((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL));
 
-        const uint32_t len = 32U;
-        uint8_t* random = (uint8_t*)malloc(len);
+    const uint32_t len = 32U;
+    uint8_t* random = (uint8_t*)malloc(len);
 
-        for (size_t i = 0; i < len; i++) {
-            random[i] = rand();
-        }
+    for (size_t i = 0; i < len; i++) {
+        random[i] = rand();
+    }
 
-        uint8_t crc = CRC::crc8(random, len);
-        ::LogInfoEx("T", "crc = %02X", crc);
+    uint8_t crc = CRC::crc8(random, len);
+    ::LogInfoEx("T", "crc = %02X", crc);
 
-        Utils::dump(2U, "8_Sanity_Test CRC", random, len);
+    Utils::dump(2U, "8_Sanity_Test CRC", random, len);
 
-        random[10U] >>= 8;
-        random[11U] >>= 8;
+    random[10U] >>= 8;
+    random[11U] >>= 8;
 
-        uint8_t calc = CRC::crc8(random, len);
-        ::LogInfoEx("T", "calc = %02X", calc);
-        if (crc == calc) {
-            ::LogError("T", "8_Sanity_Test, failed CRC8 error check");
-            failed = true;
-            goto cleanup;
-        }
+    uint8_t calc = CRC::crc8(random, len);
+    ::LogInfoEx("T", "calc = %02X", calc);
+    if (crc == calc) {
+        ::LogError("T", "8_Sanity_Test, failed CRC8 error check");
+        failed = true;
+        goto cleanup;
+    }
 
 cleanup:
-        free(random);
-        REQUIRE(failed==false);
-    }
+    free(random);
+    REQUIRE(failed==false);
 }

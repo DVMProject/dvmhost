@@ -145,6 +145,7 @@ CryptoContainer::CryptoContainer(const std::string& filename, const std::string&
     m_file(filename),
     m_password(password),
     m_reloadTime(reloadTime),
+    m_lastLoadTime(0U),
 #if !defined(ENABLE_SSL)
     m_enabled(false),
 #else
@@ -605,6 +606,9 @@ bool CryptoContainer::load()
     size_t size = m_keys.size();
     if (size == 0U)
         return false;
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_lastLoadTime = now;
 
     LogInfoEx(LOG_HOST, "Loaded %lu entries into crypto lookup table", size);
 

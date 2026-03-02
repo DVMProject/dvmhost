@@ -256,7 +256,8 @@ void* Host::threadP25Writer(void* arg)
                         if (nextLen > 0U) {
                             bool ret = host->m_modem->hasP25Space(nextLen);
                             if (ret) {
-                                uint32_t len = host->m_p25->getFrame(data);
+                                bool imm = false;
+                                uint32_t len = host->m_p25->getFrame(data, &imm);
                                 if (len > 0U) {
                                     // if the state is idle; set to P25 and start mode timer
                                     if (host->m_state == STATE_IDLE) {

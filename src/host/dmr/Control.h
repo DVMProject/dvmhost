@@ -159,9 +159,10 @@ namespace dmr
          * @brief Get frame data from data ring buffer.
          * @param slotNo DMR slot number.
          * @param[out] data Buffer to store frame data.
+         * @param[out] imm Flag indicating whether the frame is immediate.
          * @returns uint32_t Length of frame data retrieved.
          */
-        uint32_t getFrame(uint32_t slotNo, uint8_t* data);
+        uint32_t getFrame(uint32_t slotNo, uint8_t* data, bool *imm = nullptr);
         /** @} */
 
         /** @name Data Clocking */

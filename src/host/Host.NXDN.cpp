@@ -213,7 +213,8 @@ void* Host::threadNXDNWriter(void* arg)
                                 }
                             }
 
-                            uint32_t len = host->m_nxdn->getFrame(data);
+                            bool imm = false;
+                            uint32_t len = host->m_nxdn->getFrame(data, &imm);
                             if (len > 0U) {
                                 // if the state is idle; set to NXDN and start mode timer
                                 if (host->m_state == STATE_IDLE) {

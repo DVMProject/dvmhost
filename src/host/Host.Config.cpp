@@ -4,7 +4,7 @@
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-*  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -58,6 +58,13 @@ bool Host::readParams()
     yaml::Node systemConf = m_conf["system"];
     m_duplex = systemConf["duplex"].as<bool>(true);
     bool simplexSameFreq = systemConf["simplexSameFrequency"].as<bool>(false);
+
+    bool iAgreeNotToBeStupid = m_conf["iAgreeNotToBeStupid"].as<bool>(false);
+    if (!iAgreeNotToBeStupid) {
+        LogError(LOG_HOST, HIGHLY_UNNECESSARY_DISCLAIMER_FOR_THE_MENTAL);
+        LogError(LOG_HOST, "You must agree to software license terms, and not to be stupid to use this software. Please set 'iAgreeNotToBeStupid' in the configuration file properly.");
+        return false;
+    }
 
     m_timeout = systemConf["timeout"].as<uint32_t>(120U);
     m_rfModeHang = systemConf["rfModeHang"].as<uint32_t>(10U);
@@ -542,13 +549,16 @@ bool Host::createModem()
     bool disableOFlowReset = modemConf["disableOFlowReset"].as<bool>(false);
     bool ignoreModemConfigArea = modemConf["ignoreModemConfigArea"].as<bool>(false);
     bool dumpModemStatus = modemConf["dumpModemStatus"].as<bool>(false);
+    bool displayModemDebugMessages = modemConf["displayModemDebugMessages"].as<bool>(false);
     bool respTrace = modemConf["respTrace"].as<bool>(false);
     bool trace = modemConf["trace"].as<bool>(false);
     bool debug = modemConf["debug"].as<bool>(false);
 
     // if modem debug is being forced from the commandline -- enable modem debug
-    if (g_modemDebug)
+    if (g_modemDebug) {
+        displayModemDebugMessages = true;
         debug = true;
+    }
 
     if (rfPower == 0U) { // clamp to 1
         rfPower = 1U;
@@ -707,6 +717,10 @@ bool Host::createModem()
         if (dumpModemStatus) {
             LogInfo("    Dump Modem Status: yes");
         }
+
+        if (displayModemDebugMessages) {
+            LogInfo("    Display Modem Debug Messages: yes");
+        }
     }
 
     if (debug) {
@@ -714,13 +728,13 @@ bool Host::createModem()
     }
 
     if (m_isModemDFSI) {
-        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, m_p25QueueSizeBytes, rtrt, jitter,
-            dumpModemStatus, trace, debug);
+        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, p25FifoLength, rtrt, jitter,
+            dumpModemStatus, displayModemDebugMessages, trace, debug);
         ((ModemV24*)m_modem)->setCallTimeout(dfsiCallTimeout);
         ((ModemV24*)m_modem)->setTIAFormat(dfsiTIAMode);
     } else {
         m_modem = new Modem(modemPort, m_duplex, rxInvert, txInvert, pttInvert, dcBlocker, cosLockout, fdmaPreamble, dmrRxDelay, p25CorrCount,
-            m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, trace, debug);
+            m_dmrQueueSizeBytes, m_p25QueueSizeBytes, m_nxdnQueueSizeBytes, disableOFlowReset, ignoreModemConfigArea, dumpModemStatus, displayModemDebugMessages, trace, debug);
     }
     if (!m_modemRemote) {
         m_modem->setModeParams(m_dmrEnabled, m_p25Enabled, m_nxdnEnabled);
@@ -757,7 +771,8 @@ bool Host::createModem()
         return false;
     }
 
-    m_modem->setFifoLength(dmrFifoLength, p25FifoLength, nxdnFifoLength);
+    if (!m_isModemDFSI)
+        m_modem->setFifoLength(dmrFifoLength, p25FifoLength, nxdnFifoLength);
 
     // are we on a protocol version older then 3?
     if (m_modem->getVersion() < 3U) {
@@ -831,6 +846,7 @@ bool Host::createNetwork()
     bool allowStatusTransfer = networkConf["allowStatusTransfer"].as<bool>(true);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool saveLookup = networkConf["saveLookups"].as<bool>(false);
+    bool packetDump = networkConf["packetDump"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
     m_allowStatusTransfer = allowStatusTransfer;
@@ -920,6 +936,10 @@ bool Host::createNetwork()
 
         LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
 
+        if (packetDump) {
+            LogInfo("    Packet Dump: yes");
+        }
+
         if (debug) {
             LogInfo("    Debug: yes");
         }
@@ -943,6 +963,7 @@ bool Host::createNetwork()
         m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, false, slot1, slot2, 
             allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup);
 
+        m_network->setPacketDump(packetDump);
         m_network->setLookups(m_ridLookup, m_tidLookup);
         m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
             m_power, m_latitude, m_longitude, m_height, m_location);

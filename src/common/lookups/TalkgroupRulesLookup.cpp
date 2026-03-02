@@ -54,6 +54,7 @@ TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
     m_rules(),
+    m_lastLoadTime(0U),
     m_acl(acl),
     m_stop(false),
     m_groupHangTime(5U),
@@ -375,6 +376,9 @@ bool TalkgroupRulesLookup::load()
     if (size == 0U) {
         return false;
     }
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_lastLoadTime = now;
 
     LogInfoEx(LOG_HOST, "Loaded %lu entries into talkgroup rules table", size);
 

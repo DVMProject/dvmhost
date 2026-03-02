@@ -20,7 +20,7 @@
 #include "common/Clock.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/callhandler/TagNXDNData.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
@@ -40,7 +40,7 @@ using namespace nxdn::defines;
 
 /* Initializes a new instance of the TagNXDNData class. */
 
-TagNXDNData::TagNXDNData(FNENetwork* network, bool debug) :
+TagNXDNData::TagNXDNData(TrafficNetwork* network, bool debug) :
     m_network(network),
     m_parrotFrames(),
     m_parrotFramesReady(false),
@@ -246,6 +246,12 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             LogInfoEx(LOG_MASTER, CALL_END_LOG);
                     }
 
+                    if (!tg.config().parrot()) {
+                        m_network->m_totalActiveCalls--;
+                        if (m_network->m_totalActiveCalls < 0)
+                            m_network->m_totalActiveCalls = 0;
+                    }
+
                     // report call event to InfluxDB
                     if (m_network->m_enableInfluxDB) {
                         influxdb::QueryBuilder()
@@ -348,6 +354,9 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                                     } else {
                                         LogWarning((fromUpstream) ? LOG_PEER : LOG_MASTER, "NXDN, Call Collision, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, rxPeer = %u, rxSrcId = %u, rxDstId = %u, rxStreamId = %u, fromUpstream = %u",
                                             peerId, ssrc, srcId, dstId, streamId, status.peerId, status.srcId, status.dstId, status.streamId, fromUpstream);
+
+                                        m_network->m_totalCallCollisions++;
+
                                         return false;
                                     }
                                 } else {
@@ -401,6 +410,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     m_status[dstId].ssrc = ssrc;
                     m_status[dstId].activeCall = true;
                     m_status.unlock();
+
+                    if (!tg.config().parrot()) {
+                        m_network->m_totalCallsProcessed++;
+                        m_network->m_totalActiveCalls++;
+                    }
 
                     // is this a private call?
                     if (!group) {
@@ -713,6 +727,14 @@ void TagNXDNData::playbackParrot()
     auto& pkt = m_parrotFrames[0];
     m_parrotFrames.lock();
     if (pkt.buffer != nullptr) {
+        // has the override source ID been set?
+        if (m_network->m_parrotOverrideSrcId > 0U) {
+            pkt.srcId = m_network->m_parrotOverrideSrcId;
+
+            // override source ID
+            SET_UINT24(m_network->m_parrotOverrideSrcId, pkt.buffer, 5U);
+        }
+
         m_lastParrotPeerId = pkt.peerId;
         m_lastParrotSrcId = pkt.srcId;
         m_lastParrotDstId = pkt.dstId;

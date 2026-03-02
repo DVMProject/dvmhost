@@ -55,7 +55,8 @@ namespace lookups
             m_filename(filename),
             m_reloadTime(reloadTime),
             m_table(),
-            m_stop(false)
+            m_stop(false),
+            m_lastLoadTime(0U)
         {
             /* stub */
         }
@@ -185,11 +186,19 @@ namespace lookups
          */
         void setReloadTime(uint32_t reloadTime) { m_reloadTime = reloadTime; }
 
+        /**
+         * @brief Returns the last load time of this lookup table.
+         * @return const uint64_t Last load time in milliseconds since epoch.
+         */
+        const uint64_t lastLoadTime() const { return m_lastLoadTime; }
+
     protected:
         std::string m_filename;
         uint32_t m_reloadTime;
         std::unordered_map<uint32_t, T> m_table;
         bool m_stop;
+
+        uint64_t m_lastLoadTime;
 
         /**
          * @brief Loads the table from the passed lookup table file.

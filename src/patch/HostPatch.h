@@ -78,6 +78,10 @@ private:
 
     bool m_mmdvmP25Reflector;
     mmdvm::P25Network* m_mmdvmP25Net;
+    Timer m_mmdvmCallEndTimer;
+
+    uint16_t m_dropTimeMS;
+    Timer m_callDropTime;
 
     RPT_NET_STATE m_netState;
     p25::lc::LC m_netLC;
@@ -95,6 +99,8 @@ private:
     bool m_grantDemand;
 
     bool m_callInProgress;
+    uint32_t m_callDstId;
+    uint8_t m_callSlotNo;
     uint8_t m_callAlgoId;
     uint64_t m_rxStartTime;
     uint32_t m_rxStreamId;
@@ -114,7 +120,7 @@ private:
     uint32_t m_netId;
     uint32_t m_sysId;
 
-    bool m_running;
+    static bool s_running;
     bool m_trace;
     bool m_debug;
 
@@ -149,6 +155,18 @@ private:
      * @param length 
      */
     void processP25Network(uint8_t* buffer, uint32_t length);
+
+    /**
+     * @brief Helper to reset DMR call state.
+     * @param srcId Source ID.
+     * @param slotNo DMR slot.
+     */
+    void resetDMRCall(uint32_t srcId, uint8_t slotNo);
+    /**
+     * @brief Helper to reset P25 call state.
+     * @param srcId Source ID.
+     */
+    void resetP25Call(uint32_t srcId);
 
     /**
      * @brief Helper to cross encrypt P25 network traffic audio frames.

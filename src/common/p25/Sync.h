@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -35,6 +36,12 @@ namespace p25
          * @param data Buffer to append P25 sync bytes to.
          */
         static void addP25Sync(uint8_t* data);
+
+        /**
+         * @brief Helper to append P25 Phase 2 S-OEMI sync bytes to the passed buffer.
+         * @param data Buffer to append P25 Phase 2 OEMI sync bytes to.
+         */
+        static void addP25P2_SOEMISync(uint8_t* data);
     };
 } // namespace p25
 

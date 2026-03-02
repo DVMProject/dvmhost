@@ -100,9 +100,7 @@ UDCH::~UDCH()
 UDCH& UDCH::operator=(const UDCH& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
-
-        m_ran = m_data[0U] & 0x3FU;
+        copy(data);
     }
 
     return *this;
@@ -256,8 +254,10 @@ void UDCH::setData(const uint8_t* data)
 
 void UDCH::copy(const UDCH& data)
 {
-    m_data = new uint8_t[NXDN_UDCH_CRC_LENGTH_BYTES];
+    if (m_data == nullptr)
+        m_data = new uint8_t[NXDN_UDCH_CRC_LENGTH_BYTES];
     ::memcpy(m_data, data.m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
 
+    m_ran = data.m_ran;
     m_ran = m_data[0U] & 0x3FU;
 }

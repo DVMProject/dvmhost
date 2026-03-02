@@ -18,47 +18,45 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[16-bit CCITT-161 Test]") {
-    SECTION("CCITT-161_Sanity_Test") {
-        bool failed = false;
+TEST_CASE("CRC 16-bit CCITT-161 Test", "[crc][ccitt_161]") {
+    bool failed = false;
 
-        INFO("CRC CCITT-161 16-bit CRC Test");
+    INFO("CRC CCITT-161 16-bit CRC Test");
 
-        srand((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL));
 
-        const uint32_t len = 32U;
-        uint8_t* random = (uint8_t*)malloc(len);
+    const uint32_t len = 32U;
+    uint8_t* random = (uint8_t*)malloc(len);
 
-        for (size_t i = 0; i < len - 2U; i++) {
-            random[i] = rand();
-        }
+    for (size_t i = 0; i < len - 2U; i++) {
+        random[i] = rand();
+    }
 
-        CRC::addCCITT161(random, len);
+    CRC::addCCITT161(random, len);
 
-        uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
-        ::LogInfoEx("T", "CRC::checkCCITT161(), crc = $%04X", inCrc);
+    uint16_t inCrc = (random[len - 2U] << 8) | (random[len - 1U] << 0);
+    ::LogInfoEx("T", "CRC::checkCCITT161(), crc = $%04X", inCrc);
 
-        Utils::dump(2U, "CCITT-161_Sanity_Test CRC", random, len);
+    Utils::dump(2U, "CCITT-161_Sanity_Test CRC", random, len);
 
-        bool ret = CRC::checkCCITT161(random, len);
-        if (!ret) {
-            ::LogError("T", "CCITT-161_Sanity_Test, failed CRC CCITT-162 check");
-            failed = true;
-            goto cleanup;
-        }
+    bool ret = CRC::checkCCITT161(random, len);
+    if (!ret) {
+        ::LogError("T", "CCITT-161_Sanity_Test, failed CRC CCITT-162 check");
+        failed = true;
+        goto cleanup;
+    }
 
-        random[10U] >>= 8;
-        random[11U] >>= 8;
+    random[10U] >>= 8;
+    random[11U] >>= 8;
 
-        ret = CRC::checkCCITT161(random, len);
-        if (ret) {
-            ::LogError("T", "CCITT-161_Sanity_Test, failed CRC CCITT-162 error check");
-            failed = true;
-            goto cleanup;
-        }
+    ret = CRC::checkCCITT161(random, len);
+    if (ret) {
+        ::LogError("T", "CCITT-161_Sanity_Test, failed CRC CCITT-162 error check");
+        failed = true;
+        goto cleanup;
+    }
 
 cleanup:
-        free(random);
-        REQUIRE(failed==false);
-    }
+    free(random);
+    REQUIRE(failed==false);
 }

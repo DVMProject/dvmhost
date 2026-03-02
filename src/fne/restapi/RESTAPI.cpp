@@ -506,6 +506,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
     m_adjSiteMapLookup(nullptr),
+    m_cryptoLookup(nullptr),
     m_authTokens()
 {
     assert(!address.empty());
@@ -556,17 +557,19 @@ RESTAPI::~RESTAPI()
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
 
 void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, 
-    ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjMapLookup)
+    ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjMapLookup,
+    CryptoContainer* cryptoLookup)
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
     m_peerListLookup = peerListLookup;
     m_adjSiteMapLookup = adjMapLookup;
+    m_cryptoLookup = cryptoLookup;
 }
 
-/* Sets the instance of the FNE network. */
+/* Sets the instance of the traffic network. */
 
-void RESTAPI::setNetwork(network::FNENetwork* network)
+void RESTAPI::setNetwork(network::TrafficNetwork* network)
 {
     m_network = network;
 }
@@ -654,6 +657,8 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_PEER_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutPeerAdd, this));
     m_dispatcher.match(FNE_PUT_PEER_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutPeerDelete, this));
     m_dispatcher.match(FNE_GET_PEER_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCommit, this));
+    m_dispatcher.match(FNE_PUT_PEER_NAK_PEERID).put(REST_API_BIND(RESTAPI::restAPI_PutPeerNAKByPeerId, this));
+    m_dispatcher.match(FNE_PUT_PEER_NAK_ADDRESS).put(REST_API_BIND(RESTAPI::restAPI_PutPeerNAKByAddress, this));
 
     m_dispatcher.match(FNE_GET_ADJ_MAP_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAdjMapList, this));
     m_dispatcher.match(FNE_PUT_ADJ_MAP_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutAdjMapAdd, this));
@@ -664,7 +669,13 @@ void RESTAPI::initializeEndpoints()
 
     m_dispatcher.match(FNE_GET_RELOAD_TGS).get(REST_API_BIND(RESTAPI::restAPI_GetReloadTGs, this));
     m_dispatcher.match(FNE_GET_RELOAD_RIDS).get(REST_API_BIND(RESTAPI::restAPI_GetReloadRIDs, this));
+    m_dispatcher.match(FNE_GET_RELOAD_PEERLIST).get(REST_API_BIND(RESTAPI::restAPI_GetReloadPeerList, this));
+    m_dispatcher.match(FNE_GET_RELOAD_CRYPTO).get(REST_API_BIND(RESTAPI::restAPI_GetReloadCrypto, this));
 
+    m_dispatcher.match(FNE_GET_STATS).get(REST_API_BIND(RESTAPI::restAPI_GetStats, this));
+    m_dispatcher.match(FNE_GET_RESET_TOTAL_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetTotalCalls, this));
+    m_dispatcher.match(FNE_GET_RESET_ACTIVE_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetActiveCalls, this));
+    m_dispatcher.match(FNE_GET_RESET_CALL_COLLISIONS).get(REST_API_BIND(RESTAPI::restAPI_GetResetCallCollisions, this));
     m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
 
     m_dispatcher.match(FNE_GET_SPANNING_TREE).get(REST_API_BIND(RESTAPI::restAPI_GetSpanningTree, this));
@@ -719,12 +730,14 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
             } else {
                 m_authTokens.erase(host); // devalidate host
                 errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
+                LogError(LOG_REST, "invalid authentication token from host %s", host.c_str());
                 return false;
             }
         }
     }
 
     errorPayload(reply, "illegal authentication token", HTTPPayload::UNAUTHORIZED);
+    LogError(LOG_REST, "illegal authentication token from host %s", host.c_str());
     return false;
 }
 
@@ -789,6 +802,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     if (::memcmp(m_passwordHash, passwordHash, 32U) != 0) {
         invalidateHostToken(host);
         errorPayload(reply, "invalid password");
+        LogError(LOG_REST, "failed authentication attempt from host %s", host.c_str());
         return;
     }
 
@@ -864,7 +878,7 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
                 network::FNEPeerConnection* peer = entry.second;
                 if (peer != nullptr) {
                     if (m_debug) {
-                        LogDebug(LOG_REST, "Preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
+                        LogDebug(LOG_REST, "preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
                     }
 
                     json::object peerObj = m_network->fneConnObject(peerId, peer);
@@ -873,7 +887,7 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
             }
         }
         else {
-            LogDebug(LOG_REST, "No peers connected to this FNE");
+            LogError(LOG_REST, "peer query failed, no peers connected to this FNE");
         }
 
         // report any peers from replica peers
@@ -891,7 +905,7 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
         }
     }
     else {
-        LogDebug(LOG_REST, "Network not set up, no peers to return");
+        LogError(LOG_REST, "peer query failed, network not set up, no peers to return");
     }
 
     response["peers"].set<json::array>(peers);
@@ -940,6 +954,7 @@ void RESTAPI::restAPI_PutPeerReset(const HTTPPayload& request, HTTPPayload& repl
 
     uint32_t peerId = req["peerId"].get<uint32_t>();
 
+    LogInfoEx(LOG_REST, "PEER %u, attempting to reset connection", peerId);
     m_network->resetPeer(peerId);
 }
 
@@ -969,7 +984,7 @@ void RESTAPI::restAPI_PutPeerResetConn(const HTTPPayload& request, HTTPPayload& 
         for (auto peer : m_host->m_peerNetworks) {
             if (peer.second != nullptr) {
                 if (peer.second->getPeerId() == peerId) {
-                    LogInfoEx(LOG_NET, "PEER %u, request to reset upstream peer connection", peerId);
+                    LogInfoEx(LOG_REST, "PEER %u, request to reset upstream peer connection", peerId);
                     
                     peer.second->clearDuplicateConnFlag();
 
@@ -1050,6 +1065,8 @@ void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, 
         alias = req["alias"].get<std::string>();
     }
 
+    LogInfoEx(LOG_REST, "request to add RID ACL, rid = %u", rid);
+
     // The addEntry function will automatically update an existing entry, so no need to check for an exisitng one here
     m_ridLookup->addEntry(rid, enabled, alias);
 /*    
@@ -1087,6 +1104,8 @@ void RESTAPI::restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& repl
         return;
     }
 
+    LogInfoEx(LOG_REST, "request to delete RID ACL, rid = %u", rid);
+
     m_ridLookup->eraseEntry(rid);
 /*    
     if (m_network != nullptr) {
@@ -1106,6 +1125,7 @@ void RESTAPI::restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& repl
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
+    LogInfoEx(LOG_REST, "request to commit and save RID ACLs");
     m_ridLookup->commit();
 
     reply.payload(response);
@@ -1172,6 +1192,7 @@ void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, c
         ::LogWarning(LOG_REST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
     }
 
+    ::LogInfoEx(LOG_REST, "request to add TGID ACL");
     ::LogInfoEx(LOG_REST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u PREFERRED: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount, prefCount);
 
     m_tidLookup->addEntry(groupVoice);
@@ -1217,6 +1238,7 @@ void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply
         return;
     }
 
+    ::LogInfoEx(LOG_REST, "request to delete TGID ACL, tgid = %u, slot = %u", tgid, slot);
     m_tidLookup->eraseEntry(groupVoice.source().tgId(), groupVoice.source().tgSlot());
 /*    
     if (m_network != nullptr) {
@@ -1236,6 +1258,7 @@ void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
+    LogInfoEx(LOG_REST, "request to commit and save TGID ACLs");
     if(!m_tidLookup->commit()) {
         errorPayload(reply, "failed to write new TGID file");
         return;
@@ -1387,6 +1410,8 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
     entry.canIssueInhibit(canIssueInhibit);
     entry.hasCallPriority(hasCallPriority);
 
+    LogInfoEx(LOG_REST, "request to add peer ACL, peerId = %u", peerId);
+
     m_peerListLookup->addEntry(peerId, entry);
 }
 
@@ -1412,6 +1437,8 @@ void RESTAPI::restAPI_PutPeerDelete(const HTTPPayload& request, HTTPPayload& rep
 
     uint32_t peerId = req["peerId"].get<uint32_t>();
 
+    LogInfoEx(LOG_REST, "request to delete peer ACL, peerId = %u", peerId);
+
     m_peerListLookup->eraseEntry(peerId);
 }
 
@@ -1426,11 +1453,110 @@ void RESTAPI::restAPI_GetPeerCommit(const HTTPPayload& request, HTTPPayload& rep
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
+    LogInfoEx(LOG_REST, "request to commit and save peer ACLs");
     m_peerListLookup->commit();
 
     reply.payload(response);
 }
 
+/* REST API endpoint; implements put peer NAK request. */
+
+void RESTAPI::restAPI_PutPeerNAKByPeerId(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    if (!req["tag"].is<std::string>()) {
+        errorPayload(reply, "tag was not a valid string");
+        return;
+    }
+
+    std::string tag = req["tag"].get<std::string>();
+
+    if (!req["reason"].is<uint32_t>()) {
+        errorPayload(reply, "reason was not a valid integer");
+        return;
+    }
+
+    uint32_t reasonCode = req["reason"].get<uint32_t>();
+
+    LogInfoEx(LOG_REST, "sending NAK to %u, peerId = %u, tag = %s, reason = %u", peerId, peerId, tag.c_str(), reasonCode);
+    m_network->writePeerNAK(peerId, m_network->createStreamId(), tag.c_str(), (NET_CONN_NAK_REASON)reasonCode);
+}
+
+/* REST API endpoint; implements put peer NAK request. */
+
+void RESTAPI::restAPI_PutPeerNAKByAddress(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["address"].is<std::string>()) {
+        errorPayload(reply, "address was not a valid string");
+        return;
+    }
+
+    std::string address = req["address"].get<std::string>();
+
+    if (!req["port"].is<uint16_t>()) {
+        errorPayload(reply, "port was not a valid integer");
+        return;
+    }
+
+    uint16_t port = req["port"].get<uint16_t>();
+
+    if (!req["peerId"].is<uint32_t>()) {
+        errorPayload(reply, "peerId was not a valid integer");
+        return;
+    }
+
+    uint32_t peerId = req["peerId"].get<uint32_t>();
+
+    if (!req["tag"].is<std::string>()) {
+        errorPayload(reply, "tag was not a valid string");
+        return;
+    }
+
+    std::string tag = req["tag"].get<std::string>();
+
+    if (!req["reason"].is<uint32_t>()) {
+        errorPayload(reply, "reason was not a valid integer");
+        return;
+    }
+
+    uint32_t reasonCode = req["reason"].get<uint32_t>();
+
+    sockaddr_storage addr;
+    uint32_t addrLen;
+
+    udp::Socket::lookup(address, port, addr, addrLen);
+
+    LogInfoEx(LOG_REST, "sending NAK to %s:%u, peerId = %u, tag = %s, reason = %u", address.c_str(), port, peerId, tag.c_str(), reasonCode);
+    m_network->writePeerNAK(peerId, tag.c_str(), (NET_CONN_NAK_REASON)reasonCode, addr, addrLen);
+}
 
 /* REST API endpoint; implements get adjacent site map query request. */
 
@@ -1517,6 +1643,7 @@ void RESTAPI::restAPI_PutAdjMapAdd(const HTTPPayload& request, HTTPPayload& repl
         entry.neighbors(neighbor);
     }
 
+    LogInfoEx(LOG_REST, "request to add adjacent site map entry, peerId = %u", peerId);
     m_adjSiteMapLookup->addEntry(entry);
 }
 
@@ -1542,6 +1669,7 @@ void RESTAPI::restAPI_PutAdjMapDelete(const HTTPPayload& request, HTTPPayload& r
 
     uint32_t peerId = req["peerId"].get<uint32_t>();
 
+    LogInfoEx(LOG_REST, "request to delete adjacent site map entry, peerId = %u", peerId);
     m_adjSiteMapLookup->eraseEntry(peerId);
 }
 
@@ -1556,6 +1684,7 @@ void RESTAPI::restAPI_GetAdjMapCommit(const HTTPPayload& request, HTTPPayload& r
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
+    LogInfoEx(LOG_REST, "request to commit and save adjacent site map");
     m_adjSiteMapLookup->commit();
 
     reply.payload(response);
@@ -1572,6 +1701,7 @@ void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& re
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
+    LogInfoEx(LOG_REST, "request to force peer list update");
     if (m_network != nullptr) {
         m_network->m_forceListUpdate = true;
     }
@@ -1610,6 +1740,290 @@ void RESTAPI::restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& rep
 
     if (m_network != nullptr) {
         m_network->m_ridLookup->reload();
+    }
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get reload peer list request. */
+
+void RESTAPI::restAPI_GetReloadPeerList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    if (m_network != nullptr) {
+        m_network->m_peerListLookup->reload();
+    }
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get reload crypto container request. */
+
+void RESTAPI::restAPI_GetReloadCrypto(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    if (m_network != nullptr) {
+        m_network->m_cryptoLookup->reload();
+    }
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get statistics request. */
+
+void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    if (m_network != nullptr) {
+        // peer statistics (right now this is just a list of connected peers)
+        json::array peerStats = json::array();
+        if (m_network->m_peers.size() > 0) {
+            for (auto entry : m_network->m_peers) {
+                uint32_t peerId = entry.first;
+                network::FNEPeerConnection* peer = entry.second;
+                if (peer != nullptr) {
+                    json::object peerObj = json::object();
+                    peerObj["peerId"].set<uint32_t>(peerId);
+                    uint32_t masterId = peer->masterId();
+                    peerObj["masterId"].set<uint32_t>(masterId);
+
+                    peerObj["address"].set<std::string>(peer->address());
+                    uint16_t port = peer->port();
+                    peerObj["port"].set<uint16_t>(port);
+
+                    // format last ping into human readable form
+                    {
+                        std::chrono::milliseconds lastPing(peer->lastPing());
+                        std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point() + lastPing;
+                        std::time_t lastPingTime = std::chrono::system_clock::to_time_t(tp);
+
+                        char timeBuf[26];
+                        ::memset(timeBuf, 0x00U, 26);
+#if defined(_WIN32)
+                        ::ctime_s(timeBuf, 26, &lastPingTime);
+#else
+                        ::ctime_r(&lastPingTime, timeBuf);
+#endif
+                        // remove newline character from ctime output
+                        std::string timeStr = std::string(timeBuf);
+                        timeStr.erase(std::remove(timeStr.begin(), timeStr.end(), '\n'), timeStr.end());
+                        peerObj["lastPing"].set<std::string>(timeStr);
+                    }
+
+                    uint32_t pingsReceived = peer->pingsReceived();
+                    peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
+                    uint32_t missedMetadataUpdates = peer->missedMetadataUpdates();
+                    peerObj["missedMetadataUpdates"].set<uint32_t>(missedMetadataUpdates);
+
+                    bool isNeighbor = peer->isNeighborFNEPeer();
+                    bool isReplica = peer->isReplica();
+                    peerObj["isNeighbor"].set<bool>(isNeighbor);
+                    peerObj["isReplica"].set<bool>(isReplica);
+
+                    peerStats.push_back(json::value(peerObj));
+                }
+            }
+        }
+        response["peerStats"].set<json::array>(peerStats);
+
+        // table load statistics
+        json::object tableLastLoad = json::object();
+
+        // RID table load time
+        {
+            // format last load time into human readable form
+            std::chrono::milliseconds lastLoad(m_network->m_ridLookup->lastLoadTime());
+            std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point() + lastLoad;
+            std::time_t lastLoadTime = std::chrono::system_clock::to_time_t(tp);
+
+            char timeBuf[26];
+            ::memset(timeBuf, 0x00U, 26);
+#if defined(_WIN32)
+            ::ctime_s(timeBuf, 26, &lastLoadTime);
+#else
+            ::ctime_r(&lastLoadTime, timeBuf);
+#endif
+            // remove newline character from ctime output
+            std::string timeStr = std::string(timeBuf);
+            timeStr.erase(std::remove(timeStr.begin(), timeStr.end(), '\n'), timeStr.end());
+            tableLastLoad["ridLastLoadTime"].set<std::string>(timeStr);
+        }
+
+        // talkgroup table load time
+        {
+            // format last load time into human readable form
+            std::chrono::milliseconds lastLoad(m_network->m_tidLookup->lastLoadTime());
+            std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point() + lastLoad;
+            std::time_t lastLoadTime = std::chrono::system_clock::to_time_t(tp);
+
+            char timeBuf[26];
+            ::memset(timeBuf, 0x00U, 26);
+#if defined(_WIN32)
+            ::ctime_s(timeBuf, 26, &lastLoadTime);
+#else
+            ::ctime_r(&lastLoadTime, timeBuf);
+#endif
+            // remove newline character from ctime output
+            std::string timeStr = std::string(timeBuf);
+            timeStr.erase(std::remove(timeStr.begin(), timeStr.end(), '\n'), timeStr.end());
+            tableLastLoad["tgLastLoadTime"].set<std::string>(timeStr);
+        }
+
+        // peer list table load time
+        {
+            // format last load time into human readable form
+            std::chrono::milliseconds lastLoad(m_peerListLookup->lastLoadTime());
+            std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point() + lastLoad;
+            std::time_t lastLoadTime = std::chrono::system_clock::to_time_t(tp);
+
+            char timeBuf[26];
+            ::memset(timeBuf, 0x00U, 26);
+#if defined(_WIN32)
+            ::ctime_s(timeBuf, 26, &lastLoadTime);
+#else
+            ::ctime_r(&lastLoadTime, timeBuf);
+#endif
+            // remove newline character from ctime output
+            std::string timeStr = std::string(timeBuf);
+            timeStr.erase(std::remove(timeStr.begin(), timeStr.end(), '\n'), timeStr.end());
+            tableLastLoad["peerListLastLoadTime"].set<std::string>(timeStr);
+        }
+
+        // adjacent site map table load time
+        {
+            // format last load time into human readable form
+            std::chrono::milliseconds lastLoad(m_adjSiteMapLookup->lastLoadTime());
+            std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point() + lastLoad;
+            std::time_t lastLoadTime = std::chrono::system_clock::to_time_t(tp);
+
+            char timeBuf[26];
+            ::memset(timeBuf, 0x00U, 26);
+#if defined(_WIN32)
+            ::ctime_s(timeBuf, 26, &lastLoadTime);
+#else
+            ::ctime_r(&lastLoadTime, timeBuf);
+#endif
+            // remove newline character from ctime output
+            std::string timeStr = std::string(timeBuf);
+            timeStr.erase(std::remove(timeStr.begin(), timeStr.end(), '\n'), timeStr.end());
+            tableLastLoad["adjSiteMapLastLoadTime"].set<std::string>(timeStr);
+        }
+
+        // crypto key table load time
+        {
+            // format last load time into human readable form
+            std::chrono::milliseconds lastLoad(m_cryptoLookup->lastLoadTime());
+            std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point() + lastLoad;
+            std::time_t lastLoadTime = std::chrono::system_clock::to_time_t(tp);
+
+            char timeBuf[26];
+            ::memset(timeBuf, 0x00U, 26);
+#if defined(_WIN32)
+            ::ctime_s(timeBuf, 26, &lastLoadTime);
+#else
+            ::ctime_r(&lastLoadTime, timeBuf);
+#endif
+            // remove newline character from ctime output
+            std::string timeStr = std::string(timeBuf);
+            timeStr.erase(std::remove(timeStr.begin(), timeStr.end(), '\n'), timeStr.end());
+            tableLastLoad["cryptoKeyLastLoadTime"].set<std::string>(timeStr);
+        }
+        response["tableLastLoad"].set<json::object>(tableLastLoad);
+
+        // total calls processed
+        uint32_t totalCallsProcessed = m_network->m_totalCallsProcessed;
+        response["totalCallsProcessed"].set<uint32_t>(totalCallsProcessed);
+        uint32_t totalCallCollisions = m_network->m_totalCallCollisions;
+        response["totalCallCollisions"].set<uint32_t>(totalCallCollisions);
+        int32_t totalActiveCalls = m_network->m_totalActiveCalls;
+        response["totalActiveCalls"].set<int32_t>(totalActiveCalls);
+
+        // table totals
+        uint32_t ridTotalEntries = m_network->m_ridLookup->table().size();
+        response["ridTotalEntries"].set<uint32_t>(ridTotalEntries);
+        uint32_t tgTotalEntries = m_network->m_tidLookup->groupVoice().size();
+        response["tgTotalEntries"].set<uint32_t>(tgTotalEntries);
+        uint32_t peerListTotalEntries = m_peerListLookup->table().size();
+        response["peerListTotalEntries"].set<uint32_t>(peerListTotalEntries);
+        uint32_t adjSiteMapTotalEntries = m_adjSiteMapLookup->adjPeerMap().size();
+        response["adjSiteMapTotalEntries"].set<uint32_t>(adjSiteMapTotalEntries);
+        uint32_t cryptoKeyTotalEntries = m_cryptoLookup->keys().size();
+        response["cryptoKeyTotalEntries"].set<uint32_t>(cryptoKeyTotalEntries);
+    }
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get reset total calls request. */
+
+void RESTAPI::restAPI_GetResetTotalCalls(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to reset total calls processed");
+    if (m_network != nullptr) {
+        m_network->m_totalCallsProcessed = 0U;
+    }
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get reset active calls request. */
+
+void RESTAPI::restAPI_GetResetActiveCalls(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to reset total active calls");
+    if (m_network != nullptr) {
+        m_network->m_totalActiveCalls = 0U;
+    }
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get reset call collisions request. */
+
+void RESTAPI::restAPI_GetResetCallCollisions(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to reset total call collisions");
+    if (m_network != nullptr) {
+        m_network->m_totalCallCollisions = 0U;
     }
 
     reply.payload(response);

@@ -6,6 +6,19 @@
 daemon: true
 
 #
+# This flag should be set to 'true', it simply means that you acknowledge the license and restrictions of use for this
+# software, at no time should THIS SOFTWARE EVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS. This 
+# software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, 
+# governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by 
+# the authors.
+#
+# By using this software, you agree to indemnify, defend, and hold harmless the authors, contributors, and affiliated 
+# parties from and against any and all claims, liabilities, damages, losses, or expenses (including reasonable 
+# attorneys’ fees) arising out of or relating to any unlawful, unauthorized, or improper use of the software.
+#
+iAgreeNotToBeStupid: false
+
+#
 # Logging Configuration
 #   Logging Levels:
 #     1 - Debug
@@ -40,13 +53,15 @@ master:
     # Hostname/IP address to listen on (blank for all).
     address: 0.0.0.0
     # Port number to listen on.
-    #   NOTE: This port number includes itself for traffic, and master port + 1 for diagnostics and activity logging. (For 
-    #     example, a master port of 62031 will use 62032 for diagnostic and activity messages.)
+    #   NOTE: This port number includes itself for traffic, and master port + 1 for metadata. (For 
+    #     example, a master port of 62031 will use 62032 for metadata messages.)
     port: 62031
     # FNE access password.
     password: RPT1234
     # Flag indicating whether or not verbose logging is enabled.
     verbose: true
+    # Flag indicating whether or not packet dumping is enabled.
+    packetDump: false
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
@@ -62,6 +77,25 @@ master:
       # WAN port for this FNE master.
       #   This port is advertised to the network as a globally WAN accessible port.
       advertisedWANPort: 62031
+
+    #
+    # Adaptive Jitter Buffer Configuration
+    # NOTE: In 99% of cases, the adaptive jitter buffer, if needed, should only be enabled on a per-peer basis,
+    #   and remain disabled for all peers globally. Enabling the jitter buffer adds latency to voice traffic, 
+    #   and should only be used in specific network conditions where high jitter or out-of-order packets are 
+    #   common (i.e. satellite links, cellular networks, etc.).
+    #
+    jitterBuffer:
+        # Flag indicating whether the adaptive jitter buffer is enabled by default for all peers.
+        enabled: false
+        # Default maximum buffer size in frames (range: 2-8 frames).
+        #   Larger values provide more reordering capability but add latency.
+        #   Recommended: 4 frames for most networks, 6-8 for high-jitter links (satellite, cellular).
+        defaultMaxSize: 4
+        # Default maximum wait time in microseconds (range: 10000-200000 us).
+        #   Frames exceeding this age are delivered even if gaps exist.
+        #   Recommended: 40000 us (40ms) for terrestrial, 80000 us (80ms) for satellite.
+        defaultMaxWait: 40000
 
     # Flag indicating whether or not denied traffic will be logged.
     #   (This is useful for debugging talkgroup rules and other ACL issues, but can be very noisy on a busy system.)
@@ -118,6 +152,8 @@ master:
     parrotGrantDemand: true
     # Flag indicating whether or not a parrot TG call will only be sent to the originating peer.
     parrotOnlyToOrginiatingPeer: false
+    # Source ID to override parrot TG calls with (0 for no override).
+    parrotOverrideSrcId: 0
 
     # Flag indicating whether or not P25 OTAR KMF services are enabled.
     kmfServicesEnabled: false
@@ -243,6 +279,8 @@ peers:
       # Textual location for this host.
       location: Anywhere, USA
 
+      # Flag indicating whether or not packet dumping is enabled.
+      packetDump: false
       # Flag indicating whether or not verbose debug logging is enabled.
       debug: false
 
@@ -326,3 +364,12 @@ vtun:
     netmask: 255.255.255.0
     # Broadcast address of the tunnel network interface
     broadcast: 192.168.1.255
+
+    #
+    # P25 SNDCP Dynamic IP Allocation
+    #
+    sndcp:
+        # Starting IP address for dynamic IP allocation pool
+        startAddress: 192.168.1.10
+        # Ending IP address for dynamic IP allocation pool
+        endAddress: 192.168.1.200

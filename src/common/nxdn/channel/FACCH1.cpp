@@ -76,7 +76,7 @@ FACCH1::~FACCH1()
 FACCH1& FACCH1::operator=(const FACCH1& data)
 {
     if (&data != this) {
-        ::memcpy(m_data, data.m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
+        copy(data);
     }
 
     return *this;
@@ -226,6 +226,7 @@ void FACCH1::setData(const uint8_t* data)
 
 void FACCH1::copy(const FACCH1& data)
 {
-    m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];
+    if (m_data == nullptr)
+        m_data = new uint8_t[NXDN_FACCH1_CRC_LENGTH_BYTES];
     ::memcpy(m_data, data.m_data, NXDN_FACCH1_CRC_LENGTH_BYTES);
 }

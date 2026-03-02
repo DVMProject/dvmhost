@@ -1227,6 +1227,10 @@ bool Voice::checkNetTrafficCollision(uint32_t dstId)
     // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
     if (m_slot->m_rfLastDstId != 0U) {
         if (m_slot->m_rfLastDstId != dstId && (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired())) {
+            if (m_debug) {
+                LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "DMR Slot %u, dropping frames, because dstId does not match and RF TG hang timer is running, rfLastDstId = %u, dstId = %u",
+                    m_slot->m_slotNo, m_slot->m_rfLastDstId, dstId);
+            }
             return true;
         }
     }
@@ -1241,12 +1245,20 @@ bool Voice::checkNetTrafficCollision(uint32_t dstId)
     // the destination ID doesn't match the default net idle talkgroup
     if (m_slot->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_slot->m_rfTGHang.isRunning()) {
         if (m_slot->m_defaultNetIdleTalkgroup != dstId) {
+            if (m_debug) {
+                LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "DMR Slot %u, dropping frames, because dstId does not match default net idle talkgroup, defaultNetIdleTalkgroup = %u, dstId = %u",
+                    m_slot->m_slotNo, m_slot->m_defaultNetIdleTalkgroup, dstId);
+            }
             return true;
         }
     }
 
     if (m_slot->m_netLastDstId != 0U) {
         if (m_slot->m_netLastDstId != dstId && (m_slot->m_netTGHang.isRunning() && !m_slot->m_netTGHang.hasExpired())) {
+            if (m_debug) {
+                LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "DMR Slot %u, dropping frames, because dstId does not match and network TG hang timer is running, netLastDstId = %u, dstId = %u",
+                    m_slot->m_slotNo, m_slot->m_netLastDstId, dstId);
+            }
             return true;
         }
     }

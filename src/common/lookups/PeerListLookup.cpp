@@ -242,6 +242,21 @@ bool PeerListLookup::load()
             if (parsed.size() >= 7)
                 hasCallPriority = ::atoi(parsed[6].c_str()) == 1;
 
+            // parse jitter buffer enabled flag
+            bool jitterBufferEnabled = false;
+            if (parsed.size() >= 8)
+                jitterBufferEnabled = ::atoi(parsed[7].c_str()) == 1;
+
+            // parse jitter buffer max size
+            uint16_t jitterBufferMaxSize = DEFAULT_JITTER_MAX_SIZE;
+            if (parsed.size() >= 9)
+                jitterBufferMaxSize = (uint16_t)::atoi(parsed[8].c_str());
+
+            // parse jitter buffer max wait time
+            uint32_t jitterBufferMaxWait = DEFAULT_JITTER_MAX_WAIT;
+            if (parsed.size() >= 10)
+                jitterBufferMaxWait = (uint32_t)::atoi(parsed[9].c_str());
+
             // parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
@@ -253,17 +268,21 @@ bool PeerListLookup::load()
             entry.canRequestKeys(canRequestKeys);
             entry.canIssueInhibit(canIssueInhibit);
             entry.hasCallPriority(hasCallPriority);
+            entry.jitterBufferEnabled(jitterBufferEnabled);
+            entry.jitterBufferMaxSize(jitterBufferMaxSize);
+            entry.jitterBufferMaxWait(jitterBufferMaxWait);
 
             m_table[id] = entry;
 
             // log depending on what was loaded
-            LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s", id,
+            LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s", id,
                 (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                 (!password.empty() ? "using unique peer password" : "using master password"),
                 (peerReplica) ? ", Replication Enabled" : "",
                 (canRequestKeys) ? ", Can Request Keys" : "",
                 (canIssueInhibit) ? ", Can Issue Inhibit" : "",
-                (hasCallPriority) ? ", Has Call Priority" : "");
+                (hasCallPriority) ? ", Has Call Priority" : "",
+                (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "");
         }
     }
 
@@ -273,6 +292,9 @@ bool PeerListLookup::load()
     size_t size = m_table.size();
     if (size == 0U)
         return false;
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_lastLoadTime = now;
 
     LogInfoEx(LOG_HOST, "Loaded %lu entries into peer list lookup table", size);
     return true;
@@ -357,6 +379,22 @@ bool PeerListLookup::save(bool quiet)
         } else {
             line += "0,";
         }
+
+        // add jitter buffer enabled flag
+        bool jitterBufferEnabled = entry.second.jitterBufferEnabled();
+        if (jitterBufferEnabled) {
+            line += "1,";
+        } else {
+            line += "0,";
+        }
+
+        // add jitter buffer max size
+        uint16_t jitterBufferMaxSize = entry.second.jitterBufferMaxSize();
+        line += std::to_string(jitterBufferMaxSize) + ",";
+
+        // add jitter buffer max wait time
+        uint32_t jitterBufferMaxWait = entry.second.jitterBufferMaxWait();
+        line += std::to_string(jitterBufferMaxWait);
 
         line += "\n";
         file << line;

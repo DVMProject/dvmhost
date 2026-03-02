@@ -559,6 +559,20 @@ void DataHeader::reset()
         m_mi = new uint8_t[MI_LENGTH_BYTES];
         ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
     }
+
+    if (m_extAddrData != nullptr) {
+        ::memset(m_extAddrData, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+    } else {
+        m_extAddrData = new uint8_t[P25_PDU_HEADER_LENGTH_BYTES];
+        ::memset(m_extAddrData, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+    }
+
+    if (m_auxESData != nullptr) {
+        ::memset(m_auxESData, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    } else {
+        m_auxESData = new uint8_t[P25_PDU_CONFIRMED_DATA_LENGTH_BYTES];
+        ::memset(m_auxESData, 0x00U, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    }
 }
 
 /* Gets the total length in bytes of enclosed packet data. */

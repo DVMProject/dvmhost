@@ -10,14 +10,18 @@
 /**
  * @file FNEPeerConnection.h
  * @ingroup fne_network
+ * @file FNEPeerConnection.cpp
+ * @ingroup fne_network
  */
 #if !defined(__FNE_PEER_CONNECTION_H__)
 #define __FNE_PEER_CONNECTION_H__
 
 #include "fne/Defines.h"
 #include "common/network/BaseNetwork.h"
+#include "common/network/AdaptiveJitterBuffer.h"
 
 #include <string>
+#include <map>
 #include <shared_mutex>
 
 namespace network
@@ -60,7 +64,12 @@ namespace network
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_config(),
-            m_peerLockMtx()
+            m_peerLockMtx(),
+            m_jitterBuffers(),
+            m_jitterMutex(),
+            m_jitterBufferEnabled(false),
+            m_jitterMaxSize(4U),
+            m_jitterMaxWait(40000U)
         {
             /* stub */
         }
@@ -91,7 +100,12 @@ namespace network
             m_isConventionalPeer(false),
             m_isSysView(false),
             m_config(),
-            m_peerLockMtx()
+            m_peerLockMtx(),
+            m_jitterBuffers(),
+            m_jitterMutex(),
+            m_jitterBufferEnabled(false),
+            m_jitterMaxSize(4U),
+            m_jitterMaxWait(40000U)
         {
             assert(id > 0U);
             assert(sockStorageLen > 0U);
@@ -123,6 +137,43 @@ namespace network
          * @brief Unlock the peer.
          */
         inline void unlock() const { m_peerLockMtx.unlock(); }
+
+        /**
+         * @brief Gets or creates a jitter buffer for the specified stream.
+         * @param streamId Stream ID.
+         * @returns AdaptiveJitterBuffer* Jitter buffer instance.
+         */
+        AdaptiveJitterBuffer* getOrCreateJitterBuffer(uint64_t streamId);
+
+        /**
+         * @brief Cleans up jitter buffer for the specified stream.
+         * @param streamId Stream ID.
+         */
+        void cleanupJitterBuffer(uint64_t streamId);
+
+        /**
+         * @brief Checks for timed-out buffered frames across all streams.
+         */
+        void checkJitterTimeouts();
+
+        /**
+         * @brief Gets jitter buffer enabled state.
+         * @returns bool True if jitter buffer is enabled.
+         */
+        bool jitterBufferEnabled() const { return m_jitterBufferEnabled; }
+
+        /**
+         * @brief Sets jitter buffer parameters.
+         * @param enabled Enable/disable jitter buffer.
+         * @param maxSize Maximum buffer size in frames.
+         * @param maxWait Maximum wait time in microseconds.
+         */
+        void setJitterBufferParams(bool enabled, uint16_t maxSize = 4U, uint32_t maxWait = 40000U)
+        {
+            m_jitterBufferEnabled = enabled;
+            m_jitterMaxSize = maxSize;
+            m_jitterMaxWait = maxWait;
+        }
 
     public:
         /**
@@ -218,6 +269,13 @@ namespace network
 
     private:
         mutable std::mutex m_peerLockMtx;
+
+        std::map<uint64_t, AdaptiveJitterBuffer*> m_jitterBuffers;
+        mutable std::mutex m_jitterMutex;
+
+        bool m_jitterBufferEnabled;
+        uint16_t m_jitterMaxSize;
+        uint32_t m_jitterMaxWait;
     };
 } // namespace network
 

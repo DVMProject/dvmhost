@@ -23,7 +23,7 @@
 #include "common/dmr/data/NetData.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/Clock.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/callhandler/packetdata/DMRPacketData.h"
 
 namespace network
@@ -35,17 +35,17 @@ namespace network
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Implements the DMR call handler and data FNE networking logic.
+         * @brief Implements the DMR call handler and data networking logic.
          * @ingroup fne_callhandler
          */
         class HOST_SW_API TagDMRData {
         public:
             /**
              * @brief Initializes a new instance of the TagDMRData class.
-             * @param network Instance of the FNENetwork class.
+             * @param network Instance of the TrafficNetwork class.
              * @param debug Flag indicating whether network debug is enabled.
              */
-            TagDMRData(FNENetwork* network, bool debug);
+            TagDMRData(TrafficNetwork* network, bool debug);
             /**
              * @brief Finalizes a instance of the TagDMRData class.
              */
@@ -148,7 +148,7 @@ namespace network
             packetdata::DMRPacketData* packetData() { return m_packetData; }
 
         private:
-            FNENetwork* m_network;
+            TrafficNetwork* m_network;
 
             /**
              * @brief Represents a stored parrot frame.

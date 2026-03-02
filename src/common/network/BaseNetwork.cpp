@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2020-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2020-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Caleb, KO4UYJ
  *
  */
@@ -45,14 +45,15 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_slot1(slot1),
     m_slot2(slot2),
     m_duplex(duplex),
-    m_useAlternatePortForDiagnostics(false),
     m_allowActivityTransfer(allowActivityTransfer),
     m_allowDiagnosticTransfer(allowDiagnosticTransfer),
+    m_packetDump(false),
     m_debug(debug),
     m_socket(nullptr),
     m_frameQueue(nullptr),
     m_rxDMRData(NET_RING_BUF_SIZE, "DMR Net Buffer"),
     m_rxP25Data(NET_RING_BUF_SIZE, "P25 Net Buffer"),
+    m_rxP25P2Data(NET_RING_BUF_SIZE, "P25 Phase 2 Net Buffer"),
     m_rxNXDNData(NET_RING_BUF_SIZE, "NXDN Net Buffer"),
     m_rxAnalogData(NET_RING_BUF_SIZE, "Analog Net Buffer"),
     m_random(),
@@ -66,7 +67,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     assert(peerId < 999999999U);
 
     m_socket = new udp::Socket(localPort);
-    m_frameQueue = new FrameQueue(m_socket, peerId, debug);
+    m_frameQueue = new FrameQueue(m_socket, peerId, false);
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -76,6 +77,9 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_dmrStreamId[0U] = createStreamId();
     m_dmrStreamId[1U] = createStreamId();
     m_p25StreamId = createStreamId();
+    m_p25P2StreamId = new uint32_t[2U];
+    m_p25P2StreamId[0U] = createStreamId();
+    m_p25P2StreamId[1U] = createStreamId();
     m_nxdnStreamId = createStreamId();
     m_analogStreamId = createStreamId();
 }
@@ -93,6 +97,7 @@ BaseNetwork::~BaseNetwork()
     }
 
     delete[] m_dmrStreamId;
+    delete[] m_p25P2StreamId;
 }
 
 /* Writes grant request to the network. */
@@ -173,7 +178,7 @@ bool BaseNetwork::writeActLog(const char* message)
 #endif 
     
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY }, (uint8_t*)buffer, (uint32_t)len + 11U,
-        RTP_END_OF_CALL_SEQ, 0U, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, true);
 }
 
 /* Writes the local diagnostics log to the network. */
@@ -201,7 +206,7 @@ bool BaseNetwork::writeDiagLog(const char* message)
 #endif 
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG }, (uint8_t*)buffer, (uint32_t)len + 11U,
-        RTP_END_OF_CALL_SEQ, 0U, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, true);
 }
 
 /* Writes the local status to the network. */
@@ -213,9 +218,6 @@ bool BaseNetwork::writePeerStatus(json::object obj)
 
     if (!m_allowActivityTransfer)
         return false;
-    if (!m_useAlternatePortForDiagnostics)
-        return false; // this is intentional -- peer status is a noisy message and it shouldn't be done
-                      // when the FNE is configured for main port transfers
 
     json::value v = json::value(obj);
     std::string json = std::string(v.serialize());
@@ -233,7 +235,7 @@ bool BaseNetwork::writePeerStatus(json::object obj)
 #endif 
 
     return writeMaster({ NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS }, (uint8_t*)buffer, (uint32_t)len + 11U,
-        RTP_END_OF_CALL_SEQ, 0U, m_useAlternatePortForDiagnostics);
+        RTP_END_OF_CALL_SEQ, 0U, true);
 }
 
 /* Writes a group affiliation to the network. */
@@ -349,6 +351,10 @@ void BaseNetwork::resetDMR(uint32_t slotNo)
         m_dmrStreamId[1U] = createStreamId();
     }
 
+    if (m_debug)
+        LogDebugEx(LOG_NET, "BaseNetwork::resetDMR()", "reset DMR Slot %u stream ID, streamId = %u", slotNo, 
+            (slotNo == 1U) ? m_dmrStreamId[0U] : m_dmrStreamId[1U]);
+
     m_pktSeq = 0U;
     m_rxDMRData.clear();
 }
@@ -358,8 +364,33 @@ void BaseNetwork::resetDMR(uint32_t slotNo)
 void BaseNetwork::resetP25()
 {
     m_p25StreamId = createStreamId();
+
+    if (m_debug)
+        LogDebugEx(LOG_NET, "BaseNetwork::resetP25()", "reset P25 stream ID, streamId = %u", m_p25StreamId);
+
     m_pktSeq = 0U;
     m_rxP25Data.clear();
+}
+
+/* Resets the P25 Phase 2 ring buffer for the given slot. */
+
+void BaseNetwork::resetP25P2(uint32_t slotNo)
+{
+    assert(slotNo == 1U || slotNo == 2U);
+
+    if (slotNo == 1U) {
+        m_p25P2StreamId[0U] = createStreamId();
+    }
+    else {
+        m_p25P2StreamId[1U] = createStreamId();
+    }
+
+    if (m_debug)
+        LogDebugEx(LOG_NET, "BaseNetwork::resetP25P2()", "reset P25 Phase 2 Slot %u stream ID, streamId = %u", slotNo, 
+            (slotNo == 1U) ? m_p25P2StreamId[0U] : m_p25P2StreamId[1U]);
+
+    m_pktSeq = 0U;
+    m_rxP25P2Data.clear();
 }
 
 /* Resets the NXDN ring buffer. */
@@ -367,6 +398,10 @@ void BaseNetwork::resetP25()
 void BaseNetwork::resetNXDN()
 {
     m_nxdnStreamId = createStreamId();
+
+    if (m_debug)
+        LogDebugEx(LOG_NET, "BaseNetwork::resetNXDN()", "reset NXDN stream ID, streamId = %u", m_nxdnStreamId);
+
     m_pktSeq = 0U;
     m_rxNXDNData.clear();
 }
@@ -376,6 +411,10 @@ void BaseNetwork::resetNXDN()
 void BaseNetwork::resetAnalog()
 {
     m_analogStreamId = createStreamId();
+
+    if (m_debug)
+        LogDebugEx(LOG_NET, "BaseNetwork::resetAnalog()", "reset analog stream ID, streamId = %u", m_analogStreamId);
+
     m_pktSeq = 0U;
     m_rxAnalogData.clear();
 }
@@ -394,17 +433,31 @@ uint32_t BaseNetwork::getDMRStreamId(uint32_t slotNo) const
     }
 }
 
+/* Gets the current P25 Phase 2 stream ID. */
+
+uint32_t BaseNetwork::getP25P2StreamId(uint32_t slotNo) const
+{
+    assert(slotNo == 1U || slotNo == 2U);
+
+    if (slotNo == 1U) {
+        return m_p25P2StreamId[0U];
+    }
+    else {
+        return m_p25P2StreamId[1U];
+    }
+}
+
 /* Helper to send a data message to the master. */
 
 bool BaseNetwork::writeMaster(FrameQueue::OpcodePair opcode, const uint8_t* data, uint32_t length, uint16_t pktSeq, uint32_t streamId, 
-    bool useAlternatePort, uint32_t peerId, uint32_t ssrc)
+    bool metadata, uint32_t peerId, uint32_t ssrc)
 {
     if (peerId == 0U)
         peerId = m_peerId;
     if (ssrc == 0U)
         ssrc = m_peerId;
 
-    if (useAlternatePort) {
+    if (metadata) {
         sockaddr_storage addr;
         uint32_t addrLen;
 
@@ -678,11 +731,73 @@ bool BaseNetwork::writeP25PDU(const p25::data::DataHeader& header, const uint8_t
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, seq, m_p25StreamId);
 }
 
+/* Reads P25 raw frame data from the P25 ring buffer. */
+
+UInt8Array BaseNetwork::readP25P2(bool& ret, uint32_t& frameLength)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return nullptr;
+
+    ret = true;
+    if (m_rxP25P2Data.isEmpty()) {
+        ret = false;
+        return nullptr;
+    }
+
+    uint8_t length = 0U;
+    m_rxP25P2Data.get(&length, 1U);
+    if (length == 0U) {
+        ret = false;
+        return nullptr;
+    }
+
+    UInt8Array buffer;
+    frameLength = length;
+    buffer = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+    ::memset(buffer.get(), 0x00U, length);
+    m_rxP25P2Data.get(buffer.get(), length);
+
+    return buffer;
+}
+
+/* Writes P25 Phase 2 frame data to the network. */
+
+bool BaseNetwork::writeP25P2(const p25::lc::LC& control, p25::defines::P2_DUID::E duid, uint8_t slot, const uint8_t* data,
+    const uint8_t controlByte)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    bool resetSeq = false;
+    if (m_p25P2StreamId[slot] == 0U) {
+        resetSeq = true;
+        m_p25P2StreamId[slot] = createStreamId();
+    }
+
+    uint32_t messageLength = 0U;
+    UInt8Array message = createP25P2_Message(messageLength, control, duid, slot, data, controlByte);
+    if (message == nullptr) {
+        return false;
+    }
+
+    return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, message.get(), messageLength, pktSeq(resetSeq), m_p25P2StreamId[slot]);
+}
+
 /* Helper to test if the P25 ring buffer has data. */
 
 bool BaseNetwork::hasP25Data() const
 {
     if (m_rxP25Data.isEmpty())
+        return false;
+
+    return true;
+}
+
+/* Helper to test if the P25 Phase 2 ring buffer has data. */
+
+bool BaseNetwork::hasP25P2Data() const
+{
+    if (m_rxP25P2Data.isEmpty())
         return false;
 
     return true;
@@ -875,23 +990,13 @@ UInt8Array BaseNetwork::readAnalog(bool& ret, uint32_t& frameLength)
         return nullptr;
     }
 
-    uint8_t length = 0U;
-    m_rxAnalogData.get(&length, 1U);
-    if (length == 0U) {
-        ret = false;
-        return nullptr;
-    }
+    uint8_t lenOffs = 0U;
+    m_rxAnalogData.get(&lenOffs, 1U);
 
-    if (length < 254U) {
-        // if the length is less than 254, the analog packet is malformed, analog packets should never be less than 254 bytes
-        LogError(LOG_NET, "malformed analog packet, length < 254 (%u), shouldn't happen", length);
-        ret = false;
-        return nullptr;
-    }
-
+    uint16_t length = 254U + lenOffs;
     if (length == 254U) {
-        m_rxAnalogData.get(&length, 1U); // read the next byte for the actual length
-        length += 254U; // a packet length of 254 is a special case for P25 frames, so we need to add the 254 to the length
+        ret = false;
+        return nullptr;
     }
 
     UInt8Array buffer;
@@ -1023,7 +1128,7 @@ UInt8Array BaseNetwork::createDMR_Message(uint32_t& length, const uint32_t strea
     // pack raw DMR message bytes
     data.getData(buffer + 20U);
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createDMR_Message(), Message", buffer, (DMR_PACKET_LENGTH + PACKET_PAD));
 
     length = (DMR_PACKET_LENGTH + PACKET_PAD);
@@ -1080,7 +1185,7 @@ void BaseNetwork::createP25_MessageHdr(uint8_t* buffer, p25::defines::DUID::E du
         ::memset(mi, 0x00U, MI_LENGTH_BYTES);
         control.getMI(mi);
 
-        if (m_debug) {
+        if (m_packetDump) {
             Utils::dump(1U, "BaseNetwork::createP25_Message(), HDU MI", mi, MI_LENGTH_BYTES);
         }
 
@@ -1158,7 +1263,7 @@ UInt8Array BaseNetwork::createP25_LDU1Message(uint32_t& length, const p25::lc::L
 
     buffer[23U] = count;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createP25_LDU1Message(), Message, LDU1", buffer, (P25_LDU1_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU1_PACKET_LENGTH + PACKET_PAD);
@@ -1233,7 +1338,7 @@ UInt8Array BaseNetwork::createP25_LDU2Message(uint32_t& length, const p25::lc::L
 
     buffer[23U] = count;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createP25_LDU2Message(), Message, LDU2", buffer, (P25_LDU2_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU2_PACKET_LENGTH + PACKET_PAD);
@@ -1254,7 +1359,7 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
     buffer[14U] = controlByte;
     buffer[23U] = MSG_HDR_SIZE;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createP25_TDUMessage(), Message, TDU", buffer, (MSG_HDR_SIZE + PACKET_PAD));
 
     length = (MSG_HDR_SIZE + PACKET_PAD);
@@ -1280,7 +1385,7 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
 
     buffer[23U] = P25_TSDU_FRAME_LENGTH_BYTES;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createP25_TSDUMessage(), Message, TDSU", buffer, (P25_TSDU_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_TSDU_PACKET_LENGTH + PACKET_PAD);
@@ -1306,7 +1411,7 @@ UInt8Array BaseNetwork::createP25_TDULCMessage(uint32_t& length, const p25::lc::
 
     buffer[23U] = P25_TDULC_FRAME_LENGTH_BYTES;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createP25_TDULCMessage(), Message, TDULC", buffer, (P25_TDULC_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_TDULC_PACKET_LENGTH + PACKET_PAD);
@@ -1354,8 +1459,43 @@ UInt8Array BaseNetwork::createP25_PDUMessage(uint32_t& length, const p25::data::
 
     buffer[23U] = count;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createP25_PDUMessage(), Message, PDU", buffer, (count + PACKET_PAD));
+
+    length = (count + PACKET_PAD);
+    return UInt8Array(buffer);
+}
+
+/* Creates an P25 Phase 2 frame message. */
+
+UInt8Array BaseNetwork::createP25P2_Message(uint32_t& length, const p25::lc::LC& control, p25::defines::P2_DUID::E duid, 
+            const bool slot, const uint8_t* data, uint8_t controlByte)
+{
+    using namespace p25::defines;
+    uint8_t* buffer = new uint8_t[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+
+    // create dummy low speed data
+    p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+    // construct P25 message header
+    createP25_MessageHdr(buffer, DUID::PDU, control, lsd, FrameType::DATA_UNIT);
+
+    buffer[14U] = controlByte;
+
+    buffer[19U] = slot ? 0x00U : 0x80U;                                         // Slot Number
+    buffer[19U] |= (uint8_t)duid;                                               // Phase 2 DUID
+
+    // pack raw P25 Phase 2 bytes
+    uint32_t count = MSG_HDR_SIZE;
+
+    ::memcpy(buffer + 24U, data, P25_P2_FRAME_LENGTH_BYTES);
+    count += P25_P2_FRAME_LENGTH_BYTES;
+
+    buffer[23U] = count;
+
+    if (m_packetDump)
+        Utils::dump(1U, "BaseNetwork::createP25P2_Message(), Message, Phase 2", buffer, (count + PACKET_PAD));
 
     length = (count + PACKET_PAD);
     return UInt8Array(buffer);
@@ -1393,7 +1533,7 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 
     buffer[23U] = count;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createNXDN_Message(), Message", buffer, (NXDN_PACKET_LENGTH + PACKET_PAD));
 
     length = (NXDN_PACKET_LENGTH + PACKET_PAD);
@@ -1428,7 +1568,7 @@ UInt8Array BaseNetwork::createAnalog_Message(uint32_t& length, const uint32_t st
     // pack raw audio message bytes
     data.getAudio(buffer + 20U);
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createAnalog_Message(), Message", buffer, (ANALOG_PACKET_LENGTH + PACKET_PAD));
 
     length = (ANALOG_PACKET_LENGTH + PACKET_PAD);

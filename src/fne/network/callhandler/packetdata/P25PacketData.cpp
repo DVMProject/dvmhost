@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -16,7 +16,7 @@
 #include "common/Log.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/P25OTARService.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
 #include "HostFNE.h"
@@ -32,6 +32,7 @@ using namespace p25::sndcp;
 
 #include <cassert>
 #include <chrono>
+#include <unordered_set>
 
 #if !defined(_WIN32)
 #include <netinet/ip.h>
@@ -54,7 +55,7 @@ const uint32_t SUBSCRIBER_READY_RETRY_MS = 1000U; // milliseconds
 
 /* Initializes a new instance of the P25PacketData class. */
 
-P25PacketData::P25PacketData(FNENetwork* network, TagP25Data* tag, bool debug) :
+P25PacketData::P25PacketData(TrafficNetwork* network, TagP25Data* tag, bool debug) :
     m_network(network),
     m_tag(tag),
     m_assembler(nullptr),
@@ -63,6 +64,7 @@ P25PacketData::P25PacketData(FNENetwork* network, TagP25Data* tag, bool debug) :
     m_arpTable(),
     m_readyForNextPkt(),
     m_suSendSeq(),
+    m_suRecvSeq(),
     m_debug(debug)
 {
     assert(network != nullptr);
@@ -102,16 +104,14 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 {
     hrc::hrc_t pktTime = hrc::now();
 
+    uint8_t totalBlocks = data[20U] + 1U;
     uint32_t blockLength = GET_UINT24(data, 8U);
-
     uint8_t currentBlock = data[21U];
 
+    if (totalBlocks == 0U)
+        return false;
     if (blockLength == 0U)
         return false;
-
-    uint8_t buffer[P25_PDU_FEC_LENGTH_BYTES];
-    ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
-    ::memcpy(buffer, data + 24U, P25_PDU_FEC_LENGTH_BYTES);
 
     auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair x) { return x.second->peerId == peerId; });
     if (it == m_status.end()) {
@@ -121,6 +121,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         status->callStartTime = pktTime;
         status->streamId = streamId;
         status->peerId = peerId;
+        status->totalBlocks = totalBlocks;
         m_status.unlock();
 
         m_status.insert(peerId, status);
@@ -162,116 +163,140 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     m_status.unlock();
 
     // make sure we don't get a PDU with more blocks then we support
-    if (currentBlock >= P25_MAX_PDU_BLOCKS) {
+    if (currentBlock >= P25_MAX_PDU_BLOCKS || status->totalBlocks > P25_MAX_PDU_BLOCKS) {
         LogError(LOG_P25, P25_PDU_STR ", too many PDU blocks to process, %u > %u", currentBlock, P25_MAX_PDU_BLOCKS);
         return false;
     }
 
-    // block 0 is always the PDU header block
-    if (currentBlock == 0U) {
-        bool ret = status->assembler.disassemble(buffer, P25_PDU_FEC_LENGTH_BYTES, true);
-        if (!ret) {
-            status->streamId = 0U;
-            return false;
-        }
+    LogInfoEx(LOG_NET, P25_PDU_STR ", received block %u, peerId = %u, len = %u",
+        currentBlock, peerId, blockLength);
 
-        LogInfoEx(LOG_P25, P25_PDU_STR ", peerId = %u, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
-            peerId, status->assembler.dataHeader.getAckNeeded(), status->assembler.dataHeader.getOutbound(), status->assembler.dataHeader.getFormat(), status->assembler.dataHeader.getSAP(), status->assembler.dataHeader.getFullMessage(),
-            status->assembler.dataHeader.getBlocksToFollow(), status->assembler.dataHeader.getPadLength(), status->assembler.dataHeader.getPacketLength(), status->assembler.dataHeader.getSynchronize(), status->assembler.dataHeader.getNs(), 
-            status->assembler.dataHeader.getFSN(), status->assembler.dataHeader.getHeaderOffset(), status->assembler.dataHeader.getLLId());
+    // store the received block
+    uint8_t* blockData = new uint8_t[blockLength];
+    ::memcpy(blockData, data + 24U, blockLength);
+    status->receivedBlocks[currentBlock] = blockData;
+    status->dataBlockCnt++;
 
-        // make sure we don't get a PDU with more blocks then we support
-        if (status->assembler.dataHeader.getBlocksToFollow() >= P25_MAX_PDU_BLOCKS) {
-            LogError(LOG_P25, P25_PDU_STR ", too many PDU blocks to process, %u > %u", status->assembler.dataHeader.getBlocksToFollow(), P25_MAX_PDU_BLOCKS);
-            status->streamId = 0U;
-            return false;
-        }
-
-        status->hasRxHeader = true;
-        status->llId = status->assembler.dataHeader.getLLId();
-
-        m_readyForNextPkt[status->llId] = true;
-
-        // is this a response header?
-        if (status->assembler.dataHeader.getFormat() == PDUFormatType::RSP) {
-            dispatch(peerId);
-            status->streamId = 0U;
-            return true;
-        }
-
-        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Data Call Start, peer = %u, llId = %u, streamId = %u, fromUpstream = %u", peerId, status->llId, streamId, fromUpstream);
-        return true;
-    }
-
-    status->callBusy = true;
-    bool ret = status->assembler.disassemble(data + 24U, blockLength);
-    if (!ret) {
-        status->callBusy = false;
-        return false;
-    }
-    else {
-        if (status->hasRxHeader && status->assembler.getComplete()) {
-            // is the source ID a blacklisted ID?
-            lookups::RadioId rid = m_network->m_ridLookup->find(status->assembler.dataHeader.getLLId());
-            if (!rid.radioDefault()) {
-                if (!rid.radioEnabled()) {
-                    // report error event to InfluxDB
-                    if (m_network->m_enableInfluxDB) {
-                        influxdb::QueryBuilder()
-                            .meas("call_error_event")
-                                .tag("peerId", std::to_string(peerId))
-                                .tag("streamId", std::to_string(streamId))
-                                .tag("srcId", std::to_string(status->assembler.dataHeader.getLLId()))
-                                .tag("dstId", std::to_string(status->assembler.dataHeader.getLLId()))
-                                    .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
-                                .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                            .requestAsync(m_network->m_influxServer);
+    totalBlocks = status->totalBlocks;
+    if (status->dataBlockCnt == totalBlocks) {
+        for (uint16_t i = 0U; i < totalBlocks; i++) {
+            if (status->receivedBlocks.find(i) != status->receivedBlocks.end()) {
+                // block 0 is always the PDU header block
+                if (i == 0U) {
+                    bool ret = status->assembler.disassemble(status->receivedBlocks[i], P25_PDU_FEC_LENGTH_BYTES, true);
+                    if (!ret) {
+                        status->streamId = 0U;
+                        status->clearReceivedBlocks();
+                        return false;
                     }
 
-                    m_status.erase(peerId);
-                    delete status;
-                    status = nullptr;
+                    LogInfoEx(LOG_P25, P25_PDU_STR ", peerId = %u, ack = %u, outbound = %u, fmt = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, packetLength = %u, S = %u, n = %u, seqNo = %u, hdrOffset = %u, llId = %u",
+                        peerId, status->assembler.dataHeader.getAckNeeded(), status->assembler.dataHeader.getOutbound(), status->assembler.dataHeader.getFormat(), status->assembler.dataHeader.getSAP(), status->assembler.dataHeader.getFullMessage(),
+                        status->assembler.dataHeader.getBlocksToFollow(), status->assembler.dataHeader.getPadLength(), status->assembler.dataHeader.getPacketLength(), status->assembler.dataHeader.getSynchronize(), status->assembler.dataHeader.getNs(), 
+                        status->assembler.dataHeader.getFSN(), status->assembler.dataHeader.getHeaderOffset(), status->assembler.dataHeader.getLLId());
+
+                    // make sure we don't get a PDU with more blocks then we support
+                    if (status->assembler.dataHeader.getBlocksToFollow() >= P25_MAX_PDU_BLOCKS) {
+                        LogError(LOG_P25, P25_PDU_STR ", too many PDU blocks to process, %u > %u", status->assembler.dataHeader.getBlocksToFollow(), P25_MAX_PDU_BLOCKS);
+                        status->streamId = 0U;
+                        status->clearReceivedBlocks();
+                        return false;
+                    }
+
+                    status->hasRxHeader = true;
+                    status->llId = status->assembler.dataHeader.getLLId();
+
+                    m_readyForNextPkt[status->llId] = true;
+
+                    // is this a response header?
+                    if (status->assembler.dataHeader.getFormat() == PDUFormatType::RSP) {
+                        dispatch(peerId);
+                        status->streamId = 0U;
+                        status->clearReceivedBlocks();
+                        return true;
+                    }
+
+                    LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Data Call Start, peer = %u, llId = %u, streamId = %u, fromUpstream = %u", peerId, status->llId, streamId, fromUpstream);
+                    continue;
+                }
+
+                status->callBusy = true;
+                bool ret = status->assembler.disassemble(status->receivedBlocks[i], blockLength);
+                if (!ret) {
+                    status->callBusy = false;
+                    status->clearReceivedBlocks();
                     return false;
                 }
+                else {
+                    if (status->hasRxHeader && status->assembler.getComplete()) {
+                        // is the source ID a blacklisted ID?
+                        lookups::RadioId rid = m_network->m_ridLookup->find(status->assembler.dataHeader.getLLId());
+                        if (!rid.radioDefault()) {
+                            if (!rid.radioEnabled()) {
+                                // report error event to InfluxDB
+                                if (m_network->m_enableInfluxDB) {
+                                    influxdb::QueryBuilder()
+                                        .meas("call_error_event")
+                                            .tag("peerId", std::to_string(peerId))
+                                            .tag("streamId", std::to_string(streamId))
+                                            .tag("srcId", std::to_string(status->assembler.dataHeader.getLLId()))
+                                            .tag("dstId", std::to_string(status->assembler.dataHeader.getLLId()))
+                                                .field("message", INFLUXDB_ERRSTR_DISABLED_SRC_RID)
+                                            .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                        .requestAsync(m_network->m_influxServer);
+                                }
+
+                                m_status.erase(peerId);
+                                delete status;
+                                status = nullptr;
+                                return false;
+                            }
+                        }
+
+                        status->callBusy = true;
+
+                        // process all blocks in the data stream
+                        status->pduUserDataLength = status->assembler.getUserDataLength();
+                        status->pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
+                        ::memset(status->pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
+
+                        // dispatch the PDU data
+                        if (status->assembler.getUserData(status->pduUserData) > 0U) {
+                            if (m_network->m_dumpPacketData) {
+                                Utils::dump(1U, "P25, PDU Packet", status->pduUserData, status->pduUserDataLength);
+                            }
+                            dispatch(peerId);
+                        }
+
+                        uint64_t duration = hrc::diff(pktTime, status->callStartTime);
+                        uint32_t srcId = (status->assembler.getExtendedAddress()) ? status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
+                        uint32_t dstId = status->assembler.dataHeader.getLLId();
+                        LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Data Call End, peer = %u, srcId = %u, dstId = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
+                            peerId, srcId, dstId, status->assembler.dataHeader.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
+
+                        // report call event to InfluxDB
+                        if (m_network->m_enableInfluxDB) {
+                            influxdb::QueryBuilder()
+                                .meas("call_event")
+                                    .tag("peerId", std::to_string(peerId))
+                                    .tag("mode", "P25")
+                                    .tag("streamId", std::to_string(streamId))
+                                    .tag("srcId", std::to_string(srcId))
+                                    .tag("dstId", std::to_string(dstId))
+                                        .field("duration", duration)
+                                    .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
+                                .requestAsync(m_network->m_influxServer);
+                        }
+
+                        m_status.erase(peerId);
+                        delete status;
+                        status = nullptr;
+                        break;
+                    } else {
+                        status->callBusy = false;
+                    }
+                }
             }
-
-            status->callBusy = true;
-
-            // process all blocks in the data stream
-            status->pduUserDataLength = status->assembler.getUserDataLength();
-            status->pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
-            ::memset(status->pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
-
-            status->assembler.getUserData(status->pduUserData);
-
-            // dispatch the PDU data
-            dispatch(peerId);
-
-            uint64_t duration = hrc::diff(pktTime, status->callStartTime);
-            uint32_t srcId = (status->assembler.getExtendedAddress()) ? status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
-            uint32_t dstId = status->assembler.dataHeader.getLLId();
-            LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "P25, Data Call End, peer = %u, srcId = %u, dstId = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
-                peerId, srcId, dstId, status->assembler.dataHeader.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
-
-            // report call event to InfluxDB
-            if (m_network->m_enableInfluxDB) {
-                influxdb::QueryBuilder()
-                    .meas("call_event")
-                        .tag("peerId", std::to_string(peerId))
-                        .tag("mode", "P25")
-                        .tag("streamId", std::to_string(streamId))
-                        .tag("srcId", std::to_string(srcId))
-                        .tag("dstId", std::to_string(dstId))
-                            .field("duration", duration)
-                        .timestamp(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count())
-                    .requestAsync(m_network->m_influxServer);
-            }
-
-            m_status.erase(peerId);
-            delete status;
-            status = nullptr;
-        } else {
-            status->callBusy = false;
         }
     }
 
@@ -285,6 +310,25 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 #if !defined(_WIN32)
+    // validate minimum IPv4 header size
+    if (len < sizeof(struct ip)) {
+        LogError(LOG_P25, "VTUN packet too small: %u bytes (need minimum %u for IPv4 header)", len, (uint32_t)sizeof(struct ip));
+        return;
+    }
+
+    // check IP version (must be IPv4)
+    if ((data[0] & 0xF0) != 0x40) {
+        LogWarning(LOG_P25, "VTUN non-IPv4 packet received, version = %u", (data[0] >> 4));
+        return;
+    }
+
+    // validate Internet Header Length
+    uint8_t ihl = (data[0] & 0x0F) * 4;  // IHL in 32-bit words, convert to bytes
+    if (len < ihl || ihl < 20U) {
+        LogError(LOG_P25, "VTUN packet has invalid or truncated IP header: len=%u, IHL=%u", len, ihl);
+        return;
+    }
+
     struct ip* ipHeader = (struct ip*)data;
 
     char srcIp[INET_ADDRSTRLEN];
@@ -295,6 +339,17 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
 
     uint8_t proto = ipHeader->ip_p;
     uint16_t pktLen = Utils::reverseEndian(ipHeader->ip_len); // bryanb: this could be problematic on different endianness
+
+    // validate IP total length field against actual received length
+    if (pktLen > len) {
+        LogError(LOG_P25, "VTUN IP total length field (%u) exceeds actual packet size (%u)", pktLen, len);
+        return;
+    }
+
+    if (pktLen < ihl) {
+        LogError(LOG_P25, "VTUN IP total length (%u) is less than header length (%u)", pktLen, ihl);
+        return;
+    }
 
 #if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame() packet", data, pktLen);
@@ -308,8 +363,9 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     std::string srcIpStr = __IP_FROM_UINT(srcProtoAddr);
     std::string tgtIpStr = __IP_FROM_UINT(tgtProtoAddr);
 
-    LogInfoEx(LOG_P25, "VTUN -> PDU IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X", 
-        srcIpStr.c_str(), WUID_FNE, tgtIpStr.c_str(), llId, pktLen, proto);
+    LogInfoEx(LOG_P25, "VTUN -> PDU IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X%s, llId = %u%s", 
+        srcIpStr.c_str(), WUID_FNE, tgtIpStr.c_str(), llId, pktLen, proto, (proto == 0x01) ? " (ICMP)" : "",
+        llId, (llId == 0U) ? " (UNRESOLVED - will retry with ARP)" : "");
 
     // assemble a P25 PDU frame header for transport...
     data::DataHeader* pktHeader = new data::DataHeader();
@@ -408,6 +464,7 @@ void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t ll
 
 void P25PacketData::clock(uint32_t ms)
 {
+#if !defined(_WIN32)
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     if (m_queuedFrames.size() == 0U) {
@@ -434,8 +491,16 @@ void P25PacketData::clock(uint32_t ms)
             }
 
             std::string tgtIpStr = __IP_FROM_UINT(frame->tgtProtoAddr);
-            LogInfoEx(LOG_P25, "VTUN -> PDU IP Data, dstIp = %s (%u), userDataLen = %u, retries = %u", 
-                tgtIpStr.c_str(), frame->llId, frame->userDataLen, frame->retryCnt);
+
+            // extract protocol for logging
+            uint8_t proto = 0x00;
+            if (frame->userDataLen >= 20) {
+                struct ip* ipHeader = (struct ip*)(frame->userData);
+                proto = ipHeader->ip_p;
+            }
+
+            LogInfoEx(LOG_P25, "VTUN -> PDU IP Data (queued), dstIp = %s (%u), userDataLen = %u, proto = %02X%s, retries = %u", 
+                tgtIpStr.c_str(), frame->llId, frame->userDataLen, proto, (proto == 0x01) ? " (ICMP)" : "", frame->retryCnt);
 
             // do we have a valid target address?
             if (frame->llId == 0U) {
@@ -458,7 +523,8 @@ void P25PacketData::clock(uint32_t ms)
             auto ready = std::find_if(m_readyForNextPkt.begin(), m_readyForNextPkt.end(), [=](ReadyForNextPktPair x) { return x.first == frame->llId; });
             if (ready != m_readyForNextPkt.end()) {
                 if (!ready->second) {
-                    LogWarning(LOG_P25, P25_PDU_STR ", subscriber not ready, dstIp = %s", tgtIpStr.c_str());
+                    LogWarning(LOG_P25, P25_PDU_STR ", subscriber not ready, dstIp = %s (%u), proto = %02X%s, will retry in %ums", 
+                        tgtIpStr.c_str(), frame->llId, proto, (proto == 0x01) ? " (ICMP)" : "", SUBSCRIBER_READY_RETRY_MS);
                     processed = false;
                     frame->timestamp = now + SUBSCRIBER_READY_RETRY_MS;
                     frame->extendRetry = true;
@@ -468,6 +534,7 @@ void P25PacketData::clock(uint32_t ms)
             }
 
             m_readyForNextPkt[frame->llId] = false;
+            //LogDebugEx(LOG_P25, "P25PacketData::clock()", "dispatching queued PDU to llId %u (proto = %02X)", frame->llId, proto);
             dispatchUserFrameToFNE(*frame->header, false, false, frame->userData);
         }
     }
@@ -484,6 +551,7 @@ pkt_clock_abort:
         // requeue packet
         m_queuedFrames.push_back(frame);
     }
+#endif // !defined(_WIN32)
 }
 
 /* Helper to cleanup any call's left in a dangling state without any further updates. */
@@ -593,6 +661,12 @@ void P25PacketData::dispatch(uint32_t peerId)
 
         uint32_t fneIPv4 = __IP_FROM_STR(m_network->m_host->m_tun->getIPv4());
 
+        if (status->pduUserDataLength < P25_PDU_ARP_PCKT_LENGTH) {
+            LogError(LOG_P25, P25_PDU_STR ", ARP packet too small, %u bytes (need %u)",
+                status->pduUserDataLength, P25_PDU_ARP_PCKT_LENGTH);
+            break;
+        }
+
         uint8_t arpPacket[P25_PDU_ARP_PCKT_LENGTH];
         ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
         ::memcpy(arpPacket, status->pduUserData, P25_PDU_ARP_PCKT_LENGTH);
@@ -647,7 +721,27 @@ void P25PacketData::dispatch(uint32_t peerId)
         if (!status->assembler.getExtendedAddress())
             dstLlId = WUID_FNE;
 
+        // validate minimum IP header size
+        if (status->pduUserDataLength < sizeof(struct ip)) {
+            LogError(LOG_P25, P25_PDU_STR ", PACKET_DATA too small, %u bytes", 
+                status->pduUserDataLength);
+            break;
+        }
+
         struct ip* ipHeader = (struct ip*)(status->pduUserData);
+
+        // verify IPv4 version
+        if ((status->pduUserData[0] & 0xF0) != 0x40) {
+            LogWarning(LOG_P25, P25_PDU_STR ", PACKET_DATA non-IPv4 packet");
+            break;
+        }
+
+        // validate IP header length
+        uint8_t ihl = (status->pduUserData[0] & 0x0F) * 4;
+        if (ihl < sizeof(struct ip) || ihl > status->pduUserDataLength) {
+            LogError(LOG_P25, P25_PDU_STR ", PACKET_DATA invalid IHL, ihl = %u", ihl);
+            break;
+        }
 
         char srcIp[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(ipHeader->ip_src), srcIp, INET_ADDRSTRLEN);
@@ -696,9 +790,52 @@ void P25PacketData::dispatch(uint32_t peerId)
             }
         }
 
+        // sequence validation - check N(S) against V(R)
+        uint8_t receivedNs = status->assembler.dataHeader.getNs();
+        bool synchronize = status->assembler.dataHeader.getSynchronize();
+
+        // Initialize V(R) if first packet from this LLId
+        auto recvSeqIt = m_suRecvSeq.find(srcLlId);
+        if (recvSeqIt == m_suRecvSeq.end()) {
+            m_suRecvSeq[srcLlId] = 0U;
+        }
+
+        uint8_t expectedNs = m_suRecvSeq[srcLlId];
+        bool sequenceValid = false;
+
+        // handle synchronize flag - resets receive window per TIA-102
+        if (synchronize) {
+            //LogDebugEx(LOG_P25, "P25PacketData::dispatch()", "synchronize flag set by llId %u, resetting V(R) from %u to %u", 
+            //    srcLlId, expectedNs, (receivedNs + 1) % 8);
+            m_suRecvSeq[srcLlId] = (receivedNs + 1) % 8;
+            sequenceValid = true;
+        }
+        else if (receivedNs == expectedNs || receivedNs == (expectedNs + 1) % 8) {
+            // accept if N(S) == V(R) or V(R)+1 (allows one-ahead windowing)
+            m_suRecvSeq[srcLlId] = (receivedNs + 1) % 8;
+            sequenceValid = true;
+            //LogDebugEx(LOG_P25, "P25PacketData::dispatch()", "sequence valid, llId %u, N(S) = %u, V(R) now = %u", 
+            //    srcLlId, receivedNs, m_suRecvSeq[srcLlId]);
+        }
+        else {
+            // out of sequence - send NACK_OUT_OF_SEQ
+            LogWarning(LOG_P25, P25_PDU_STR ", NACK_OUT_OF_SEQ, llId %u, expected N(S) %u or %u, received N(S) = %u", 
+                srcLlId, expectedNs, (expectedNs + 1) % 8, receivedNs);
+            if (status->assembler.getExtendedAddress()) {
+                write_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_OUT_OF_SEQ, expectedNs, srcLlId, true, dstLlId);
+            } else {
+                write_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_OUT_OF_SEQ, expectedNs, srcLlId, false);
+            }
+            break; // don't process out-of-sequence packet
+        }
+
+        if (!sequenceValid) {
+            break; // should never reach here due to logic above, but safety check
+        }
+
         // transmit packet to IP network
-        LogInfoEx(LOG_P25, "PDU -> VTUN, IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X", 
-            srcIp, srcLlId, dstIp, dstLlId, pktLen, proto);
+        LogInfoEx(LOG_P25, "PDU -> VTUN, IP Data, srcIp = %s (%u), dstIp = %s (%u), pktLen = %u, proto = %02X%s", 
+            srcIp, srcLlId, dstIp, dstLlId, pktLen, proto, (proto == 0x01) ? " (ICMP)" : "");
 
         DECLARE_UINT8_ARRAY(ipFrame, pktLen);
         ::memcpy(ipFrame, status->pduUserData, pktLen);
@@ -711,13 +848,13 @@ void P25PacketData::dispatch(uint32_t peerId)
 
         // if the packet is unhandled and sent off to VTUN; ack the packet so the sender knows we received it
         if (!handled) {
+            //LogDebugEx(LOG_P25, "P25PacketData::dispatch()", "marking llId %u ready for next packet (proto = %02X)", srcLlId, proto);
             if (status->assembler.getExtendedAddress()) {
                 m_readyForNextPkt[srcLlId] = true;
-                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->assembler.dataHeader.getNs(), srcLlId,
-                    true, dstLlId);
+                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, receivedNs, srcLlId, true, dstLlId);
             } else {
                 m_readyForNextPkt[srcLlId] = true;
-                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, status->assembler.dataHeader.getNs(), srcLlId, false);
+                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, receivedNs, srcLlId, false);
             }
         }
 #endif // !defined(_WIN32)
@@ -900,7 +1037,198 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
             LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP context activation request, llId = %u, nsapi = %u, ipAddr = %s, nat = $%02X, dsut = $%02X, mdpco = $%02X", llId,
                 isp->getNSAPI(), __IP_FROM_UINT(isp->getIPAddress()).c_str(), isp->getNAT(), isp->getDSUT(), isp->getMDPCO());
 
-            m_arpTable[llId] = isp->getIPAddress();
+            // check if subscriber is provisioned (from RID table)
+            lookups::RadioId rid = m_network->m_ridLookup->find(llId);
+            if (rid.radioDefault() || !rid.radioEnabled()) {
+                uint8_t txPduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+                ::memset(txPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+                std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
+                osp->setNSAPI(isp->getNSAPI());
+                osp->setRejectCode(SNDCPRejectReason::SU_NOT_PROVISIONED);
+                osp->encode(txPduUserData);
+
+                // Build response header
+                data::DataHeader rspHeader;
+                rspHeader.setFormat(PDUFormatType::CONFIRMED);
+                rspHeader.setMFId(MFG_STANDARD);
+                rspHeader.setAckNeeded(true);
+                rspHeader.setOutbound(true);
+                rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
+                rspHeader.setLLId(llId);
+                rspHeader.setBlocksToFollow(1U);
+                rspHeader.calculateLength(2U);
+
+                dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+
+                LogWarning(LOG_P25, P25_PDU_STR ", SNDCP context activation reject, llId = %u, reason = SU_NOT_PROVISIONED", llId);
+                return true;
+            }
+
+            // handle different network address types
+            switch (isp->getNAT()) {
+                case SNDCPNAT::IPV4_STATIC_ADDR:
+                {
+                    // get static IP from RID table
+                    uint32_t staticIP = 0U;
+                    if (!rid.radioDefault()) {
+                        std::string addr = rid.radioIPAddress();
+                        staticIP = __IP_FROM_STR(addr);
+                    }
+
+                    if (staticIP == 0U) {
+                        // no static IP configured - reject
+                        uint8_t txPduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+                        ::memset(txPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+                        std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
+                        osp->setNSAPI(isp->getNSAPI());
+                        osp->setRejectCode(SNDCPRejectReason::STATIC_IP_ALLOCATION_UNSUPPORTED);
+                        osp->encode(txPduUserData);
+
+                        data::DataHeader rspHeader;
+                        rspHeader.setFormat(PDUFormatType::CONFIRMED);
+                        rspHeader.setMFId(MFG_STANDARD);
+                        rspHeader.setAckNeeded(true);
+                        rspHeader.setOutbound(true);
+                        rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
+                        rspHeader.setLLId(llId);
+                        rspHeader.setBlocksToFollow(1U);
+                        rspHeader.calculateLength(2U);
+
+                        dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+
+                        LogWarning(LOG_P25, P25_PDU_STR ", SNDCP context activation reject, llId = %u, reason = STATIC_IP_ALLOCATION_UNSUPPORTED", llId);
+                        return true;
+                    }
+
+                    // Accept with static IP
+                    uint8_t txPduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+                    ::memset(txPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+                    std::unique_ptr<SNDCPCtxActAccept> osp = std::make_unique<SNDCPCtxActAccept>();
+                    osp->setNSAPI(isp->getNSAPI());
+                    osp->setPriority(4U);
+                    osp->setReadyTimer(SNDCPReadyTimer::TEN_SECONDS);
+                    osp->setStandbyTimer(SNDCPStandbyTimer::ONE_MINUTE);
+                    osp->setNAT(SNDCPNAT::IPV4_STATIC_ADDR);
+                    osp->setIPAddress(staticIP);
+                    osp->setMTU(SNDCP_MTU_510);
+                    osp->setMDPCO(isp->getMDPCO());
+                    osp->encode(txPduUserData);
+
+                    data::DataHeader rspHeader;
+                    rspHeader.setFormat(PDUFormatType::CONFIRMED);
+                    rspHeader.setMFId(MFG_STANDARD);
+                    rspHeader.setAckNeeded(true);
+                    rspHeader.setOutbound(true);
+                    rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
+                    rspHeader.setLLId(llId);
+                    rspHeader.setBlocksToFollow(1U);
+                    rspHeader.calculateLength(13U);
+
+                    m_arpTable[llId] = staticIP;
+                    m_readyForNextPkt[llId] = true;
+
+                    dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+
+                    LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP context activation accept, llId = %u, ipAddr = %s (static)", 
+                        llId, __IP_FROM_UINT(staticIP).c_str());
+                }
+                break;
+
+                case SNDCPNAT::IPV4_DYN_ADDR:
+                {
+                    // allocate dynamic IP
+                    uint32_t dynamicIP = allocateIPAddress(llId);
+                    if (dynamicIP == 0U) {
+                        // IP pool exhausted - reject
+                        uint8_t txPduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+                        ::memset(txPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+                        std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
+                        osp->setNSAPI(isp->getNSAPI());
+                        osp->setRejectCode(SNDCPRejectReason::DYN_IP_POOL_EMPTY);
+                        osp->encode(txPduUserData);
+
+                        data::DataHeader rspHeader;
+                        rspHeader.setFormat(PDUFormatType::CONFIRMED);
+                        rspHeader.setMFId(MFG_STANDARD);
+                        rspHeader.setAckNeeded(true);
+                        rspHeader.setOutbound(true);
+                        rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
+                        rspHeader.setLLId(llId);
+                        rspHeader.setBlocksToFollow(1U);
+                        rspHeader.calculateLength(2U);
+
+                        dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+
+                        LogWarning(LOG_P25, P25_PDU_STR ", SNDCP context activation reject, llId = %u, reason = DYN_IP_POOL_EMPTY", llId);
+                        return true;
+                    }
+
+                    // accept with dynamic IP
+                    uint8_t txPduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+                    ::memset(txPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+
+                    std::unique_ptr<SNDCPCtxActAccept> osp = std::make_unique<SNDCPCtxActAccept>();
+                    osp->setNSAPI(isp->getNSAPI());
+                    osp->setPriority(4U);
+                    osp->setReadyTimer(SNDCPReadyTimer::TEN_SECONDS);
+                    osp->setStandbyTimer(SNDCPStandbyTimer::ONE_MINUTE);
+                    osp->setNAT(SNDCPNAT::IPV4_DYN_ADDR);
+                    osp->setIPAddress(dynamicIP);
+                    osp->setMTU(SNDCP_MTU_510);
+                    osp->setMDPCO(isp->getMDPCO());
+                    osp->encode(txPduUserData);
+
+                    data::DataHeader rspHeader;
+                    rspHeader.setFormat(PDUFormatType::CONFIRMED);
+                    rspHeader.setMFId(MFG_STANDARD);
+                    rspHeader.setAckNeeded(true);
+                    rspHeader.setOutbound(true);
+                    rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
+                    rspHeader.setLLId(llId);
+                    rspHeader.setBlocksToFollow(1U);
+                    rspHeader.calculateLength(13U);
+
+                    m_arpTable[llId] = dynamicIP;
+                    m_readyForNextPkt[llId] = true;
+
+                    dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+
+                    LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP context activation accept, llId = %u, ipAddr = %s (dynamic)", 
+                        llId, __IP_FROM_UINT(dynamicIP).c_str());
+                }
+                break;
+
+                default:
+                {
+                    // unsupported NAT type - reject
+                    uint8_t txPduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+                    ::memset(txPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+                    
+                    std::unique_ptr<SNDCPCtxActReject> osp = std::make_unique<SNDCPCtxActReject>();
+                    osp->setNSAPI(isp->getNSAPI());
+                    osp->setRejectCode(SNDCPRejectReason::ANY_REASON);
+                    osp->encode(txPduUserData);
+
+                    data::DataHeader rspHeader;
+                    rspHeader.setFormat(PDUFormatType::CONFIRMED);
+                    rspHeader.setMFId(MFG_STANDARD);
+                    rspHeader.setAckNeeded(true);
+                    rspHeader.setOutbound(true);
+                    rspHeader.setSAP(PDUSAP::SNDCP_CTRL_DATA);
+                    rspHeader.setLLId(llId);
+                    rspHeader.setBlocksToFollow(1U);
+                    rspHeader.calculateLength(2U);
+
+                    dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+
+                    LogWarning(LOG_P25, P25_PDU_STR ", SNDCP context activation reject, llId = %u, reason = UNSUPPORTED_NAT", llId);
+                }
+                break;
+            }
         }
         break;
 
@@ -911,6 +1239,11 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                 isp->getDeactType());
 
             m_arpTable.erase(llId);
+            m_readyForNextPkt.erase(llId);
+
+            // send ACK response
+            write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 
+                status->assembler.dataHeader.getNs(), llId, false);
         }
         break;
 
@@ -1148,4 +1481,65 @@ uint32_t P25PacketData::getLLIdAddress(uint32_t addr)
     }
 
     return 0U;
+}
+
+/* Helper to allocate a dynamic IP address for SNDCP. */
+
+uint32_t P25PacketData::allocateIPAddress(uint32_t llId)
+{
+    uint32_t existingIP = getIPAddress(llId);
+    if (existingIP != 0U) {
+        return existingIP;
+    }
+
+    // sequential allocation from configurable pool with uniqueness check
+    static uint32_t nextIP = 0U;
+
+    // initialize nextIP on first call
+    if (nextIP == 0U) {
+        nextIP = m_network->m_sndcpStartAddr;
+    }
+
+    // build set of already-allocated IPs to ensure uniqueness
+    std::unordered_set<uint32_t> allocatedIPs;
+    for (const auto& entry : m_arpTable) {
+        allocatedIPs.insert(entry.second);
+    }
+
+    // find next available IP not already in use
+    uint32_t candidateIP = nextIP;
+    const uint32_t poolSize = m_network->m_sndcpEndAddr - m_network->m_sndcpStartAddr + 1U;
+    uint32_t attempts = 0U;
+
+    while (allocatedIPs.find(candidateIP) != allocatedIPs.end() && attempts < poolSize) {
+        candidateIP++;
+
+        // wrap around if we exceed the end address
+        if (candidateIP > m_network->m_sndcpEndAddr) {
+            candidateIP = m_network->m_sndcpStartAddr;
+        }
+
+        attempts++;
+    }
+
+    if (attempts >= poolSize) {
+        LogError(LOG_P25, P25_PDU_STR ", SNDCP dynamic IP pool exhausted for llId = %u (pool: %s - %s)", 
+            llId, __IP_FROM_UINT(m_network->m_sndcpStartAddr).c_str(), __IP_FROM_UINT(m_network->m_sndcpEndAddr).c_str());
+        return 0U; // Pool exhausted
+    }
+
+    // allocate the unique IP
+    uint32_t allocatedIP = candidateIP;
+    nextIP = candidateIP + 1U;
+
+    // wrap around for next allocation if needed
+    if (nextIP > m_network->m_sndcpEndAddr) {
+        nextIP = m_network->m_sndcpStartAddr;
+    }
+
+    m_arpTable[llId] = allocatedIP;
+    LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP allocated dynamic IP %s to llId = %u (pool: %s - %s)", 
+        __IP_FROM_UINT(allocatedIP).c_str(), llId, __IP_FROM_UINT(m_network->m_sndcpStartAddr).c_str(), __IP_FROM_UINT(m_network->m_sndcpEndAddr).c_str());
+
+    return allocatedIP;
 }

@@ -18,6 +18,12 @@
 #include <errno.h>
 #endif
 
+ // ---------------------------------------------------------------------------
+ //  Public Class Members
+ // ---------------------------------------------------------------------------
+
+ /* Initializes a new instance of the CtsCorController class. */
+
 CtsCorController::CtsCorController(const std::string& port)
     : m_port(port), m_isOpen(false), m_ownsFd(true)
 #if defined(_WIN32)
@@ -28,10 +34,14 @@ CtsCorController::CtsCorController(const std::string& port)
 {
 }
 
+/* Finalizes a instance of the RtsPttController class. */
+
 CtsCorController::~CtsCorController()
 {
     close();
 }
+
+/* Opens the serial port for CTS control. */
 
 bool CtsCorController::open(int reuseFd)
 {
@@ -155,6 +165,8 @@ bool CtsCorController::open(int reuseFd)
     return true;
 }
 
+/* Closes the serial port. */
+
 void CtsCorController::close()
 {
     if (!m_isOpen)
@@ -180,6 +192,8 @@ void CtsCorController::close()
     ::LogInfo(LOG_HOST, "CTS COR Controller closed");
 }
 
+/* Return wether the CTS signal is high (asserted CTS) to trigger COR detection. */
+
 bool CtsCorController::isCtsAsserted()
 {
     if (!m_isOpen)
@@ -201,6 +215,12 @@ bool CtsCorController::isCtsAsserted()
     return (modemState & TIOCM_CTS) != 0;
 #endif // defined(_WIN32)
 }
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Sets the termios settings on the serial port. */
 
 bool CtsCorController::setTermios()
 {

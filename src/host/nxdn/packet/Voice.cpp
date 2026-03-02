@@ -1137,6 +1137,10 @@ bool Voice::checkNetTrafficCollision(lc::RTCH lc, uint32_t srcId, uint32_t dstId
     if (m_nxdn->m_rfLastDstId != 0U) {
         if (m_nxdn->m_rfLastDstId != dstId && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) {
             resetNet();
+            if (m_debug) {
+                LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "dropping frames, because dstId does not match and RF TG hang timer is running, rfLastDstId = %u, dstId = %u",
+                    m_nxdn->m_rfLastDstId, dstId);
+            }
             return true;
         }
 
@@ -1155,6 +1159,10 @@ bool Voice::checkNetTrafficCollision(lc::RTCH lc, uint32_t srcId, uint32_t dstId
     // the destination ID doesn't match the default net idle talkgroup
     if (m_nxdn->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_nxdn->m_rfTGHang.isRunning()) {
         if (m_nxdn->m_defaultNetIdleTalkgroup != dstId) {
+            if (m_debug) {
+                LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "dropping frames, because dstId does not match default net idle talkgroup, defaultNetIdleTalkgroup = %u, dstId = %u",
+                    m_nxdn->m_defaultNetIdleTalkgroup, dstId);
+            }
             return true;
         }
     }
@@ -1163,6 +1171,10 @@ bool Voice::checkNetTrafficCollision(lc::RTCH lc, uint32_t srcId, uint32_t dstId
     if (m_nxdn->m_authoritative) {
         if (m_nxdn->m_netLastDstId != 0U) {
             if (m_nxdn->m_netLastDstId != dstId && (m_nxdn->m_netTGHang.isRunning() && !m_nxdn->m_netTGHang.hasExpired())) {
+                if (m_debug) {
+                    LogDebugEx(LOG_NET, "Voice::checkNetTrafficCollision()", "dropping frames, because dstId does not match and network TG hang timer is running, netLastDstId = %u, dstId = %u",
+                        m_nxdn->m_netLastDstId, dstId);
+                }
                 return true;
             }
 

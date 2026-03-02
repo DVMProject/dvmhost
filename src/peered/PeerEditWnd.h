@@ -155,6 +155,13 @@ private:
     FCheckBox m_canInhibitEnabled{"Issue Inhibit", &m_configGroup};
     FCheckBox m_callPriorityEnabled{"Call Priority", &m_configGroup};
 
+    FButtonGroup m_jitterGroup{"Adaptive Jitter Buffer", this};
+    FCheckBox m_jitterEnabled{"Enabled", &m_jitterGroup};
+    FLabel m_jitterMaxFramesLabel{"Max Frames:", &m_jitterGroup};
+    FLineEdit m_jitterMaxFrames{&m_jitterGroup};
+    FLabel m_jitterMaxWaitLabel{"Max Wait (us):", &m_jitterGroup};
+    FLineEdit m_jitterMaxWait{&m_jitterGroup};
+
     /**
      * @brief Initializes the window layout.
      */
@@ -291,6 +298,78 @@ private:
             });
         }
 
+        // jitter buffer
+        {
+            m_jitterGroup.setGeometry(FPoint(2, 10), FSize(35, 5));
+
+            m_jitterEnabled.setGeometry(FPoint(2, 1), FSize(3, 1));
+            m_jitterEnabled.setChecked(false);
+            m_jitterEnabled.addCallback("toggled", [&]() {
+                m_rule.jitterBufferEnabled(m_jitterEnabled.isChecked());
+                if (m_jitterEnabled.isChecked()) {
+                    m_jitterMaxFrames.setEnable();
+                    m_jitterMaxWait.setEnable();
+                } else {
+                    m_jitterMaxFrames.setDisable();
+                    m_jitterMaxWait.setDisable();
+                }
+
+                redraw();
+            });
+
+            m_jitterMaxFramesLabel.setGeometry(FPoint(2, 2), FSize(16, 1));
+            m_jitterMaxFrames.setGeometry(FPoint(18, 2), FSize(10, 1));
+            m_jitterMaxFrames.setAlignment(finalcut::Align::Right);
+            m_jitterMaxFrames.setText(std::to_string(m_rule.jitterBufferMaxSize()));
+            m_jitterMaxFrames.setShadow(false);
+            m_jitterMaxFrames.setEnable(false);
+            m_jitterMaxFrames.addCallback("changed", [&]() {
+                if (m_jitterMaxFrames.getText().getLength() == 0) {
+                    m_rule.jitterBufferMaxSize(4U);
+                    return;
+                }
+
+                uint32_t maxSize = ::atoi(m_jitterMaxFrames.getText().c_str());
+                if (maxSize < 2U) {
+                    maxSize = 2U;
+                }
+
+                if (maxSize > 10U) {
+                    maxSize = 10U;
+                }
+
+                m_jitterMaxFrames.setText(std::to_string(maxSize));
+
+                m_rule.jitterBufferMaxSize(maxSize);
+            });
+
+            m_jitterMaxWaitLabel.setGeometry(FPoint(2, 3), FSize(16, 1));
+            m_jitterMaxWait.setGeometry(FPoint(18, 3), FSize(10, 1));
+            m_jitterMaxWait.setAlignment(finalcut::Align::Right);
+            m_jitterMaxWait.setText(std::to_string(m_rule.jitterBufferMaxWait()));
+            m_jitterMaxWait.setShadow(false);
+            m_jitterMaxWait.setEnable(false);
+            m_jitterMaxWait.addCallback("changed", [&]() {
+                if (m_jitterMaxWait.getText().getLength() == 0) {
+                    m_rule.jitterBufferMaxWait(40000U);
+                    return;
+                }
+
+                uint32_t maxWait = ::atoi(m_jitterMaxWait.getText().c_str());
+                if (maxWait < 10000U) {
+                    maxWait = 10000U;
+                }
+
+                if (maxWait > 200000U) {
+                    maxWait = 200000U;
+                }
+
+                m_jitterMaxWait.setText(std::to_string(maxWait));
+
+                m_rule.jitterBufferMaxWait(maxWait);
+            });
+        }
+
         CloseWndBase::initControls();
     }
 
@@ -305,8 +384,9 @@ private:
         bool canRequestKeys = m_rule.canRequestKeys();
         bool canIssueInhibit = m_rule.canIssueInhibit();
         bool hasCallPriority = m_rule.hasCallPriority();
+        bool jitterBufferEnabled = m_rule.jitterBufferEnabled();
 
-        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u REPLICA: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u HAS CALL PRIORITY: %u", peerAlias.c_str(), peerId, peerReplica, canRequestKeys, canIssueInhibit, hasCallPriority);
+        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u REPLICA: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u HAS CALL PRIORITY: %u JITTER BUFFER ENABLED: %u", peerAlias.c_str(), peerId, peerReplica, canRequestKeys, canIssueInhibit, hasCallPriority, jitterBufferEnabled);
     }
 
     /*
@@ -378,6 +458,10 @@ private:
                     entry.canIssueInhibit(m_rule.canIssueInhibit());
                     entry.hasCallPriority(m_rule.hasCallPriority());
 
+                    entry.jitterBufferEnabled(m_rule.jitterBufferEnabled());
+                    entry.jitterBufferMaxSize(m_rule.jitterBufferMaxSize());
+                    entry.jitterBufferMaxWait(m_rule.jitterBufferMaxWait());
+
                     g_pidLookups->addEntry(m_rule.peerId(), entry);
 
                     logRuleInfo();
@@ -414,6 +498,10 @@ private:
                 entry.canRequestKeys(m_rule.canRequestKeys());
                 entry.canIssueInhibit(m_rule.canIssueInhibit());
                 entry.hasCallPriority(m_rule.hasCallPriority());
+
+                entry.jitterBufferEnabled(m_rule.jitterBufferEnabled());
+                entry.jitterBufferMaxSize(m_rule.jitterBufferMaxSize());
+                entry.jitterBufferMaxWait(m_rule.jitterBufferMaxWait());
 
                 g_pidLookups->addEntry(m_rule.peerId(), entry);
 

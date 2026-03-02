@@ -23,7 +23,7 @@
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/lc/RTCH.h"
 #include "common/nxdn/lc/RCCH.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 
 namespace network
 {
@@ -34,17 +34,17 @@ namespace network
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Implements the NXDN call handler and data FNE networking logic.
+         * @brief Implements the NXDN call handler and data networking logic.
          * @ingroup fne_callhandler
          */
         class HOST_SW_API TagNXDNData {
         public:
             /**
              * @brief Initializes a new instance of the TagNXDNData class.
-             * @param network Instance of the FNENetwork class.
+             * @param network Instance of the TrafficNetwork class.
              * @param debug Flag indicating whether network debug is enabled.
              */
-            TagNXDNData(FNENetwork* network, bool debug);
+            TagNXDNData(TrafficNetwork* network, bool debug);
             /**
              * @brief Finalizes a instance of the TagNXDNData class.
              */
@@ -122,7 +122,7 @@ namespace network
             uint32_t lastParrotDstId() const { return m_lastParrotDstId; }
 
         private:
-            FNENetwork* m_network;
+            TrafficNetwork* m_network;
 
             /**
              * @brief Represents a stored parrot frame.

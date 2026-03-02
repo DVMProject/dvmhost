@@ -44,15 +44,24 @@
 #define RCD_FNE_GET_AFFLIST             "fne-affs"
 #define RCD_FNE_GET_RELOADTGS           "fne-reload-tgs"
 #define RCD_FNE_GET_RELOADRIDS          "fne-reload-rids"
+#define RCD_FNE_GET_RELOADPEERLIST      "fne-reload-peerlist"
+#define RCD_FNE_GET_RELOADCRYPTO        "fne-reload-crypto"
 
 #define RCD_FNE_PUT_RESETPEER           "fne-reset-peer"
 #define RCD_FNE_PUT_PEER_ACL_ADD        "fne-peer-acl-add"
 #define RCD_FNE_PUT_PEER_ACL_DELETE     "fne-peer-acl-del"
 #define RCD_FNE_PUT_PEER_RESET_CONN     "fne-peer-reset-conn"
+#define RCD_FNE_PUT_PEER_NAK_BY_PEERID  "fne-peer-nak"
+#define RCD_FNE_PUT_PEER_NAK_BY_ADDRESS "fne-peer-nak-addr"
 
 #define RCD_FNE_SAVE_RID_ACL            "fne-rid-commit"
 #define RCD_FNE_SAVE_TGID_ACL           "fne-tgid-commit"
 #define RCD_FNE_SAVE_PEER_ACL           "fne-peer-commit"
+
+#define RCD_FNE_GET_STATS               "fne-stats"
+#define RCD_FNE_PUT_RESET_TOTAL_CALLS   "fne-reset-total-calls"
+#define RCD_FNE_PUT_RESET_ACTIVE_CALLS  "fne-reset-active-calls"
+#define RCD_FNE_PUT_RESET_CALL_COLLISIONS "fne-reset-call-collisions"
 
 #define RCD_FNE_GET_SPANNINGTREE        "fne-spanning-tree"
 
@@ -214,15 +223,24 @@ void usage(const char* message, const char* arg)
     reply += "  fne-affs                    Retrieves the list of currently affiliated SUs (Converged FNE only)\r\n";
     reply += "  fne-reload-tgs              Forces the FNE to reload its TGID list from disk (Converged FNE only)\r\n";
     reply += "  fne-reload-rids             Forces the FNE to reload its RID list from disk (Converged FNE only)\r\n";
+    reply += "  fne-reload-peerlist         Forces the FNE to reload its peer list from disk (Converged FNE only)\r\n";
+    reply += "  fne-reload-crypto           Forces the FNE to reload its crypto containers from disk (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  fne-reset-peer <pid>        Forces the FNE to reset the connection of the given peer ID (Converged FNE only)\r\n";
     reply += "  fne-peer-acl-add <pid>      Adds the specified peer ID to the FNE ACL tables (Converged FNE only)\r\n";
     reply += "  fne-peer-acl-del <pid>      Removes the specified peer ID to the FNE ACL tables (Converged FNE only)\r\n";
     reply += "  fne-peer-reset-conn <pid>   Forces the FNE to reset a upstream peer connection of the given peer ID (Converged FNE only)\r\n";
+    reply += "  fne-peer-nak <pid> <tag> <rcode> Forces the FNE to send a NAK message to a upstream peer connection of the given peer ID (Converged FNE only)\r\n";
+    reply += "  fne-peer-nak-addr <pid> <tag> <rcode> <address> <port> Forces the FNE to send a NAK message to a upstream peer connection of the given peer ID (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  fne-rid-commit              Saves the current RID ACL to permenant storage (Converged FNE only)\r\n";
     reply += "  fne-tgid-commit             Saves the current TGID ACL to permenant storage (Converged FNE only)\r\n";
     reply += "  fne-peer-commit             Saves the current peer ACL to permenant storage (Converged FNE only)\r\n";
+    reply += "\r\n";
+    reply += "  fne-stats                   Retrieves current FNE statistics (Converged FNE only)\r\n";
+    reply += "  fne-reset-total-calls       Resets the total call statistics counters (Converged FNE only)\r\n";
+    reply += "  fne-reset-active-calls      Resets the active call statistics counters (Converged FNE only)\r\n";
+    reply += "  fne-reset-call-collisions   Resets the call collision statistics counters (Converged FNE only)\r\n";
     reply += "\r\n";
     reply += "  fne-spanning-tree           Retrieves the current FNE spanning tree (Converged FNE only)\r\n";
     reply += "\r\n";
@@ -350,7 +368,7 @@ int checkArgs(int argc, char* argv[])
         }
         else if (IS("-v")) {
             ::fprintf(stdout, __PROG_NAME__ " %s (built %s)\r\n", __VER__, __BUILD__);
-            ::fprintf(stdout, "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
+            ::fprintf(stdout, "Copyright (c) 2017-2026 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\n");
             ::fprintf(stdout, "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\n\n");
             if (argc == 2)
                 exit(EXIT_SUCCESS);
@@ -892,6 +910,12 @@ int main(int argc, char** argv)
         else if (rcom == RCD_FNE_GET_RELOADRIDS) {
             retCode = client->send(HTTP_GET, FNE_GET_RELOAD_RIDS, json::object(), response);
         }
+        else if (rcom == RCD_FNE_GET_RELOADPEERLIST) {
+            retCode = client->send(HTTP_GET, FNE_GET_RELOAD_PEERLIST, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_RELOADCRYPTO) {
+            retCode = client->send(HTTP_GET, FNE_GET_RELOAD_CRYPTO, json::object(), response);
+        }
         else if (rcom == RCD_FNE_PUT_RESETPEER && argCnt >= 1U) {
             uint32_t peerId = getArgUInt32(args, 0U);
             json::object req = json::object();
@@ -905,6 +929,32 @@ int main(int argc, char** argv)
             req["peerId"].set<uint32_t>(peerId);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_RESET_CONN, req, response);
+        }
+        else if (rcom == RCD_FNE_PUT_PEER_NAK_BY_PEERID && argCnt >= 3U) {
+            uint32_t peerId = getArgUInt32(args, 0U);
+            std::string tag = getArgString(args, 1U);
+            uint8_t reason = getArgUInt8(args, 2U);
+            json::object req = json::object();
+            req["peerId"].set<uint32_t>(peerId);
+            req["tag"].set<std::string>(tag);
+            req["reason"].set<uint8_t>(reason);
+
+            retCode = client->send(HTTP_PUT, FNE_PUT_PEER_NAK_PEERID, req, response);
+        }
+        else if (rcom == RCD_FNE_PUT_PEER_NAK_BY_ADDRESS && argCnt >= 5U) {
+            uint32_t peerId = getArgUInt32(args, 0U);
+            std::string tag = getArgString(args, 1U);
+            uint8_t reason = getArgUInt8(args, 2U);
+            std::string address = getArgString(args, 3U);
+            uint16_t port = getArgUInt16(args, 4U);
+            json::object req = json::object();
+            req["peerId"].set<uint32_t>(peerId);
+            req["tag"].set<std::string>(tag);
+            req["reason"].set<uint8_t>(reason);
+            req["address"].set<std::string>(address);
+            req["port"].set<uint16_t>(port);
+
+            retCode = client->send(HTTP_PUT, FNE_PUT_PEER_NAK_ADDRESS, req, response);
         }
         else if (rcom == RCD_FNE_PUT_PEER_ACL_ADD && argCnt >= 1U) {
             uint32_t peerId = getArgUInt32(args, 0U);
@@ -928,6 +978,18 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_FNE_SAVE_PEER_ACL) {
             retCode = client->send(HTTP_GET, FNE_GET_PEER_COMMIT, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_STATS) {
+            retCode = client->send(HTTP_GET, FNE_GET_STATS, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_PUT_RESET_TOTAL_CALLS) {
+            retCode = client->send(HTTP_GET, FNE_GET_RESET_TOTAL_CALLS, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_PUT_RESET_ACTIVE_CALLS) {
+            retCode = client->send(HTTP_GET, FNE_GET_RESET_ACTIVE_CALLS, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_PUT_RESET_CALL_COLLISIONS) {
+            retCode = client->send(HTTP_GET, FNE_GET_RESET_CALL_COLLISIONS, json::object(), response);
         }
         else if (rcom == RCD_FNE_GET_SPANNINGTREE) {
             retCode = client->send(HTTP_GET, FNE_GET_SPANNING_TREE, json::object(), response);

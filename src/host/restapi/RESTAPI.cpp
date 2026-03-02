@@ -369,12 +369,14 @@ bool RESTAPI::validateAuth(const HTTPPayload& request, HTTPPayload& reply)
             } else {
                 m_authTokens.erase(host); // devalidate host
                 errorPayload(reply, "invalid authentication token", HTTPPayload::UNAUTHORIZED);
+                LogError(LOG_REST, "invalid authentication token from host %s", host.c_str());
                 return false;
             }
         }
     }
 
     errorPayload(reply, "illegal authentication token", HTTPPayload::UNAUTHORIZED);
+    LogError(LOG_REST, "illegal authentication token from host %s", host.c_str());
     return false;
 }
 
@@ -439,6 +441,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
     if (::memcmp(m_passwordHash, passwordHash, 32U) != 0) {
         invalidateHostToken(host);
         errorPayload(reply, "invalid password");
+        LogError(LOG_REST, "failed authentication attempt from host %s", host.c_str());
         return;
     }
 
@@ -1166,7 +1169,7 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    if (slot == 0U && slot >= 3U) {
+    if (slot == 0U || slot >= 3U) {
         errorPayload(reply, "invalid DMR slot number (slot == 0 or slot > 3)");
         return;
     }
@@ -1212,7 +1215,7 @@ void RESTAPI::restAPI_GetDMRCCEnable(const HTTPPayload& request, HTTPPayload& re
             }
 
             m_host->m_dmrCtrlChannel = !m_host->m_dmrCtrlChannel;
-            errorPayload(reply, string_format("DMR CC is %s", m_host->m_p25CtrlChannel ? "enabled" : "disabled"), HTTPPayload::OK);
+            errorPayload(reply, string_format("DMR CC is %s", m_host->m_dmrCtrlChannel ? "enabled" : "disabled"), HTTPPayload::OK);
         }
         else {
             errorPayload(reply, "DMR control data is not enabled!");
@@ -1315,7 +1318,7 @@ void RESTAPI::restAPI_GetP25Debug(const HTTPPayload& request, HTTPPayload& reply
     setResponseDefaultStatus(response);
 
     errorPayload(reply, "OK", HTTPPayload::OK);
-    if (m_dmr != nullptr) {
+    if (m_p25 != nullptr) {
         if (match.size() <= 1) {
             bool debug = m_p25->getDebug();
             bool verbose = m_p25->getVerbose();
@@ -1689,7 +1692,7 @@ void RESTAPI::restAPI_GetNXDNDebug(const HTTPPayload& request, HTTPPayload& repl
     setResponseDefaultStatus(response);
 
     errorPayload(reply, "OK", HTTPPayload::OK);
-    if (m_dmr != nullptr) {
+    if (m_nxdn != nullptr) {
         if (match.size() <= 1) {
             bool debug = m_nxdn->getDebug();
             bool verbose = m_nxdn->getVerbose();
@@ -1726,7 +1729,7 @@ void RESTAPI::restAPI_GetNXDNDumpRCCH(const HTTPPayload& request, HTTPPayload& r
     setResponseDefaultStatus(response);
 
     errorPayload(reply, "OK", HTTPPayload::OK);
-    if (m_p25 != nullptr) {
+    if (m_nxdn != nullptr) {
         if (match.size() <= 1) {
             bool rcchDump = m_nxdn->getRCCHVerbose();
 

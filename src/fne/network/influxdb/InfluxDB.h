@@ -41,8 +41,44 @@
     typedef struct iovec { void* iov_base; size_t iov_len; } iovec;
 
     inline __int64 writev(int sock, struct iovec* iov, int cnt) {
-        __int64 r = send(sock, (const char*)iov->iov_base, iov->iov_len, 0);
-        return (r < 0 || cnt == 1) ? r : r + writev(sock, iov + 1, cnt - 1);
+        if (cnt <= 0 || iov == nullptr)
+            return -1;
+
+        __int64 totalWritten = 0;
+
+        // iterate through all iovec entries
+        for (int i = 0; i < cnt; i++) {
+            if (iov[i].iov_len == 0)
+                continue;
+
+            size_t remaining = iov[i].iov_len;
+            char* ptr = (char*)iov[i].iov_base;
+
+            // handle partial writes for this iovec entry
+            while (remaining > 0) {
+                int bytesWritten = send(sock, ptr, (int)remaining, 0);
+
+                if (bytesWritten < 0) {
+                    // error occurred
+                    if (totalWritten > 0) {
+                        // return bytes written so far
+                        return totalWritten;
+                    }
+                    return -1;
+                }
+
+                if (bytesWritten == 0) {
+                    // connection closed
+                    return totalWritten;
+                }
+
+                totalWritten += bytesWritten;
+                remaining -= bytesWritten;
+                ptr += bytesWritten;
+            }
+        }
+
+        return totalWritten;
     }
 #else
     #include <unistd.h>

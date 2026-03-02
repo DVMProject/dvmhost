@@ -37,6 +37,8 @@ const uint8_t MAX_SYNC_BYTES_ERRS = 4U;
 const uint32_t TSBK_PCH_CCH_CNT = 6U;
 const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 
+const uint32_t VOICE_CALL_TERM_TIMEOUT = 1000U;  // ms
+
 // ---------------------------------------------------------------------------
 //  Static Class Members
 // ---------------------------------------------------------------------------
@@ -83,6 +85,9 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_demandUnitRegForRefusedAff(true),
     m_dfsiFDX(false),
     m_forceAllowTG0(false),
+    m_immediateCallTerm(true),
+    m_explicitTDUGrantRelease(true),
+    m_disableDenyResponse(false),
     m_defaultNetIdleTalkgroup(0U),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
@@ -112,7 +117,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_networkWatchdog(1000U, 0U, 1500U),
     m_adjSiteUpdate(1000U, 75U),
     m_activeTGUpdate(1000U, 5U),
-    m_ccPacketInterval(1000U, 0U, 10U),
+    m_ccPacketInterval(1000U, 0U, 15U),
+    m_rfVoiceCallTermTimeout(1000U, VOICE_CALL_TERM_TIMEOUT),
     m_interval(),
     m_hangCount(3U * 8U),
     m_tduPreambleCount(8U),
@@ -364,6 +370,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_P25, "TGID 0 (P25 blackhole talkgroup) will be allowed. This is not recommended, and can cause undesired behavior, it is typically only needed by poorly behaved systems.");
     }
 
+    m_immediateCallTerm = p25Protocol["immediateCallTerm"].as<bool>(true);
+    m_explicitTDUGrantRelease = p25Protocol["explicitTDUGrantRelease"].as<bool>(true);
+    m_disableDenyResponse = p25Protocol["disableDenyResponse"].as<bool>(false);
+
     /*
     ** Voice Silence and Frame Loss Thresholds
     */
@@ -557,6 +567,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
         LogInfo("    Demand Unit Registration for Refused Affiliation: %s", m_demandUnitRegForRefusedAff ? "yes" : "no");
+
+        LogInfo("    Immediate Call Termination: %s", m_immediateCallTerm ? "yes" : "no");
+        LogInfo("    Explicit TDU Grant Release: %s", m_explicitTDUGrantRelease ? "yes" : "no");
 
         LogInfo("    Notify VCs of Active TGs: %s", m_ccNotifyActiveTG ? "yes" : "no");
 
@@ -808,7 +821,7 @@ bool Control::isQueueFull()
 
 /* Get frame data from data ring buffer. */
 
-uint32_t Control::getFrame(uint8_t* data)
+uint32_t Control::getFrame(uint8_t* data, bool *imm)
 {
     assert(data != nullptr);
 
@@ -824,12 +837,18 @@ uint32_t Control::getFrame(uint8_t* data)
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
+        if (imm != nullptr)
+            *imm = true;
+
         m_txImmQueue.get(length, 2U);
         len = (length[0U] << 8) + length[1U];
 
         m_txImmQueue.get(data, len);
     }
     else {
+        if (imm != nullptr)
+            *imm = false;
+
         m_txQueue.get(length, 2U);
         len = (length[0U] << 8) + length[1U];
 
@@ -930,6 +949,7 @@ void Control::clock()
     // handle timeouts and hang timers
     m_rfTimeout.clock(ms);
     m_netTimeout.clock(ms);
+    m_rfVoiceCallTermTimeout.clock(ms);
 
     if (m_rfTGHang.isRunning()) {
         m_rfTGHang.clock(ms);
@@ -991,6 +1011,24 @@ void Control::clock()
     }
     else {
         m_netTGHang.stop();
+    }
+
+    if (m_rfVoiceCallTermTimeout.isRunning() && m_rfVoiceCallTermTimeout.hasExpired()) {
+        m_rfVoiceCallTermTimeout.stop();
+
+
+        p25::lc::LC lc = p25::lc::LC();
+        lc.setLCO(P25DEF::LCO::GROUP);
+        lc.setDstId(m_rfCallTermDstId);
+        lc.setSrcId(m_rfCallTermSrcId);
+
+        p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
+
+        uint8_t controlByte = 0x00U;
+        m_network->writeP25TDU(lc, lsd);
+
+        m_rfCallTermDstId = 0U;
+        m_rfCallTermSrcId = 0U;
     }
 
     if (m_netState == RS_NET_AUDIO || m_netState == RS_NET_DATA) {
@@ -1218,6 +1256,12 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
             LogInfoEx(LOG_P25, "non-authoritative TG unpermit");
         else
             LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+    }
+
+    // if this a unpermit ensure we write TDUs
+    if (m_permittedDstId != 0U && dstId == 0U) {
+        for (uint8_t i = 0; i < 2; i++)
+            writeRF_TDU(true);
     }
 
     m_permittedDstId = dstId;
@@ -1460,6 +1504,7 @@ void Control::processNetwork()
         }
 
         uint32_t blockLength = GET_UINT24(buffer, 8U);
+        uint8_t totalBlocks = data[20U] + 1U;
         uint8_t currentBlock = buffer[21U];
 
         if (m_debug) {
@@ -1467,7 +1512,7 @@ void Control::processNetwork()
         }
 
         if (!m_dedicatedControl)
-            m_data->processNetwork(data.get(), frameLength, currentBlock, blockLength);
+            m_data->processNetwork(data.get(), frameLength, currentBlock, blockLength, totalBlocks);
 
         return;
     }
@@ -1620,6 +1665,32 @@ void Control::processNetwork()
                 return;
             }
 
+            // if we're a control channel and this is a TDU trying to terminate a call release the channel
+            if (duid == DUID::TDU && m_enableControl && m_dedicatedControl && m_explicitTDUGrantRelease) {
+                if (srcId == 0U && dstId == 0U) {
+                    LogError(LOG_NET, "P25, invalid call, srcId = %u, dstId = %u", srcId, dstId);
+                    return;
+                }
+
+                if (m_affiliations->isGranted(dstId)) {
+                    // validate source RID
+                    if (!acl::AccessControl::validateSrcId(srcId)) {
+                        return;
+                    }
+
+                    // validate the target ID, if the target is a talkgroup
+                    if (!acl::AccessControl::validateTGId(dstId)) {
+                        return;
+                    }
+
+                    if (m_verbose) {
+                        LogInfoEx(LOG_NET, P25_TDU_STR ", srcId = %u", srcId);
+                    }
+
+                    m_affiliations->releaseGrant(dstId, false);
+                }
+            }
+
             m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
@@ -1663,6 +1734,10 @@ void Control::processFrameLoss()
         m_rfLastDstId = 0U;
         m_rfLastSrcId = 0U;
         m_rfTGHang.stop();
+
+        m_rfVoiceCallTermTimeout.stop();
+        m_rfCallTermSrcId = 0U;
+        m_rfCallTermDstId = 0U;
 
         m_tailOnIdle = true;
 
@@ -2008,11 +2083,13 @@ void Control::RPC_activeTG(json::object& req, json::object& reply)
                 continue;
             }
 
-            m_activeTG.push_back(entry.get<uint32_t>());
+            uint32_t dstId = entry.get<uint32_t>();
+            if (dstId != 0U) {
+                ::LogInfoEx(LOG_P25, "active TG update, dstId = %u", dstId);
+                m_activeTG.push_back(dstId);
+            }
         }
     }
-
-    ::LogInfoEx(LOG_P25, "active TG update, activeCnt = %u", m_activeTG.size());
 }
 
 /* (RPC Handler) Clear active TGID list from the authoritative CC host. */

@@ -18,47 +18,45 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[32-bit Test]") {
-    SECTION("32_Sanity_Test") {
-        bool failed = false;
+TEST_CASE("CRC 32-bit Test", "[crc][32bit]") {
+    bool failed = false;
 
-        INFO("CRC 32-bit CRC Test");
+    INFO("CRC 32-bit CRC Test");
 
-        srand((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL));
 
-        const uint32_t len = 32U;
-        uint8_t* random = (uint8_t*)malloc(len);
+    const uint32_t len = 32U;
+    uint8_t* random = (uint8_t*)malloc(len);
 
-        for (size_t i = 0; i < len - 4U; i++) {
-            random[i] = rand();
-        }
+    for (size_t i = 0; i < len - 4U; i++) {
+        random[i] = rand();
+    }
 
-        CRC::addCRC32(random, len);
+    CRC::addCRC32(random, len);
 
-        uint32_t inCrc = (random[len - 4U] << 24) | (random[len - 3U] << 16) | (random[len - 2U] << 8) | (random[len - 1U] << 0);
-        ::LogInfoEx("T", "CRC::checkCRC32(), crc = $%08X", inCrc);
+    uint32_t inCrc = (random[len - 4U] << 24) | (random[len - 3U] << 16) | (random[len - 2U] << 8) | (random[len - 1U] << 0);
+    ::LogInfoEx("T", "CRC::checkCRC32(), crc = $%08X", inCrc);
 
-        Utils::dump(2U, "32_Sanity_Test CRC", random, len);
+    Utils::dump(2U, "32_Sanity_Test CRC", random, len);
 
-        bool ret = CRC::checkCRC32(random, len);
-        if (!ret) {
-            ::LogError("T", "32_Sanity_Test, failed CRC32 check");
-            failed = true;
-            goto cleanup;
-        }
+    bool ret = CRC::checkCRC32(random, len);
+    if (!ret) {
+        ::LogError("T", "32_Sanity_Test, failed CRC32 check");
+        failed = true;
+        goto cleanup;
+    }
 
-        random[10U] >>= 8;
-        random[11U] >>= 8;
+    random[10U] >>= 8;
+    random[11U] >>= 8;
 
-        ret = CRC::checkCRC32(random, len);
-        if (ret) {
-            ::LogError("T", "32_Sanity_Test, failed CRC32 error check");
-            failed = true;
-            goto cleanup;
-        }
+    ret = CRC::checkCRC32(random, len);
+    if (ret) {
+        ::LogError("T", "32_Sanity_Test, failed CRC32 error check");
+        failed = true;
+        goto cleanup;
+    }
 
 cleanup:
-        free(random);
-        REQUIRE(failed==false);
-    }
+    free(random);
+    REQUIRE(failed==false);
 }

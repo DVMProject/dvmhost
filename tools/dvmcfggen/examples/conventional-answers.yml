@@ -1,0 +1,87 @@
+#
+# Digital Voice Modem - Host Configuration Generator
+#
+# Example answers file for conventional system configuration
+# This file can be used with: dvmcfg wizard -a conventional-answers.yml
+# All fields are optional; prompts will appear for missing values
+
+# Conventional system with enhanced template
+template: enhanced
+
+# Basic Configuration (Step 2)
+config_dir: .
+system_identity: MYSITE001
+network_peer_id: 100001
+
+# Logging Configuration (Step 3)
+configure_logging: true
+log_path: /var/log/dvm
+activity_log_path: /var/log/dvm/activity
+log_root: MYSITE
+use_syslog: false
+disable_non_auth_logging: false
+
+# Modem Configuration (Step 4)
+modem_type: uart
+modem_mode: air
+serial_port: /dev/ttyUSB0
+rx_level: 50
+tx_level: 50
+
+# Uncomment and modify the sections below as needed:
+
+# RPC Configuration (Step 5a) - optional
+# rpc_config: true
+# generate_rpc_password: true
+
+# REST API Configuration (Step 5b) - optional
+# rest_enable: true
+# generate_rest_password: true
+
+# Network Lookups (Step 5c) - optional
+# update_lookups: true
+# save_lookups: true
+
+# File Transfer Settings (Step 5d) - optional
+# allow_activity_transfer: true
+# allow_diagnostic_transfer: true
+# allow_status_transfer: true
+
+# Radio ID File Settings (Step 6) - optional
+# radio_id_file: /path/to/rid.csv
+# radio_id_time: 3600
+# radio_id_acl: blacklist
+
+# Talkgroup ID File Settings (Step 7) - optional
+# talkgroup_id_file: /path/to/talkgroups.csv
+# talkgroup_id_time: 3600
+# talkgroup_id_acl: whitelist
+
+# Protocol Configuration (Step 8) - optional
+# For DMR:
+# dmr_color_code: 1
+# dmr_network_id: 1
+# dmr_site_id: 1
+# dmr_site_model: small
+
+# For P25:
+# p25_nac: 0x293
+# p25_network_id: 1
+# p25_system_id: 1
+# p25_rfss_id: 1
+# p25_site_id: 1
+
+# For NXDN:
+# nxdn_ran: 1
+# nxdn_location_id: 1
+
+# Frequency Configuration (Step 9) - optional
+# site_id: 1
+# tx_power: 50
+# tx_freq: 453.0125
+# band: uhf
+
+# Location Information (Step 10) - optional
+# latitude: 40.7128
+# longitude: -74.0060
+# location: "New York, NY"

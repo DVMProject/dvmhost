@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -24,7 +24,7 @@
 #include "common/p25/data/Assembler.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/DataBlock.h"
-#include "network/FNENetwork.h"
+#include "network/TrafficNetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/callhandler/TagP25Data.h"
 
@@ -48,11 +48,11 @@ namespace network
             public:
                 /**
                  * @brief Initializes a new instance of the P25PacketData class.
-                 * @param network Instance of the FNENetwork class.
+                 * @param network Instance of the TrafficNetwork class.
                  * @param tag Instance of the TagP25Data class.
                  * @param debug Flag indicating whether network debug is enabled.
                  */
-                P25PacketData(FNENetwork* network, TagP25Data* tag, bool debug);
+                P25PacketData(TrafficNetwork* network, TagP25Data* tag, bool debug);
                 /**
                  * @brief Finalizes a instance of the P25PacketData class.
                  */
@@ -111,7 +111,7 @@ namespace network
                 void cleanupStale();
 
             private:
-                FNENetwork* m_network;
+                TrafficNetwork* m_network;
                 TagP25Data* m_tag;
 
                 p25::data::Assembler* m_assembler;
@@ -153,19 +153,22 @@ namespace network
                  */
                 class RxStatus {
                 public:
-                    system_clock::hrc::hrc_t callStartTime;
-                    system_clock::hrc::hrc_t lastPacket;
-                    uint32_t llId;
-                    uint32_t streamId;
-                    uint32_t peerId;
+                    system_clock::hrc::hrc_t callStartTime;     //!< Data call start time
+                    system_clock::hrc::hrc_t lastPacket;        //!< Last packet time
+                    uint32_t llId;                              //!< Logical Link ID
+                    uint32_t streamId;                          //!< Stream ID
+                    uint32_t peerId;                            //!< Peer ID
 
-                    p25::data::Assembler assembler;
-                    bool hasRxHeader;
+                    std::unordered_map<uint16_t, uint8_t*> receivedBlocks;
+                    p25::data::Assembler assembler;             //!< PDU Assembler Instance
+                    bool hasRxHeader;                           //!< Flag indicating whether or not a valid Rx header has been received
+                    uint16_t dataBlockCnt;                      //!< Number of data blocks received
+                    uint16_t totalBlocks;                       //!< Total number of blocks expected
 
-                    bool callBusy;
+                    bool callBusy;                              //!< Flag indicating whether or not the call is busy
 
-                    uint8_t* pduUserData;
-                    uint32_t pduUserDataLength;
+                    uint8_t* pduUserData;                       //!< PDU user data buffer
+                    uint32_t pduUserDataLength;                 //!< Length of PDU user data buffer
 
                     /**
                      * @brief Initializes a new instance of the RxStatus class
@@ -174,8 +177,11 @@ namespace network
                         llId(0U),
                         streamId(0U),
                         peerId(0U),
+                        receivedBlocks(),
                         assembler(),
                         hasRxHeader(false),
+                        dataBlockCnt(0U),
+                        totalBlocks(0U),
                         callBusy(false),
                         pduUserData(nullptr),
                         pduUserDataLength(0U)
@@ -188,8 +194,28 @@ namespace network
                      */
                     ~RxStatus()
                     {
+                        clearReceivedBlocks();
                         if (pduUserData != nullptr)
                             delete[] pduUserData;
+                    }
+
+                    /**
+                     * @brief Clears all received blocks and frees associated memory.
+                     */
+                    void clearReceivedBlocks()
+                    {
+                        totalBlocks = 0U;
+                        dataBlockCnt = 0U;
+
+                        if (!receivedBlocks.empty()) {
+                            for (auto& it : receivedBlocks) {
+                                if (it.second != nullptr) {
+                                    delete[] it.second;
+                                    it.second = nullptr;
+                                }
+                            }
+                            receivedBlocks.clear();
+                        }
                     }
                 };
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
@@ -199,7 +225,8 @@ namespace network
                 std::unordered_map<uint32_t, uint32_t> m_arpTable;
                 typedef std::pair<const uint32_t, bool> ReadyForNextPktPair;
                 std::unordered_map<uint32_t, bool> m_readyForNextPkt;
-                std::unordered_map<uint32_t, uint8_t> m_suSendSeq;
+                std::unordered_map<uint32_t, uint8_t> m_suSendSeq;      // V(S) send state variable per LLId
+                std::unordered_map<uint32_t, uint8_t> m_suRecvSeq;      // V(R) receive state variable per LLId
 
                 bool m_debug;
 
@@ -295,6 +322,12 @@ namespace network
                  * @returns uint32_t Logical Link Address.
                  */
                 uint32_t getLLIdAddress(uint32_t addr);
+                /**
+                 * @brief Helper to allocate a dynamic IP address for SNDCP.
+                 * @param llId Logical Link Address.
+                 * @returns uint32_t Allocated IP address.
+                 */
+                uint32_t allocateIPAddress(uint32_t llId);
             };
         } // namespace packetdata
     } // namespace callhandler

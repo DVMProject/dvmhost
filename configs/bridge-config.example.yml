@@ -52,47 +52,10 @@ network:
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
 
+    # Flag indicating whether or not packet dumping is enabled.
+    packetDump: false
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
-
-    # Enable PCM audio over UDP.
-    udpAudio: false
-    # Enable meta data such as dstId and srcId in the UDP data.
-    udpMetadata: false
-    # PCM over UDP send port.
-    udpSendPort: 34001
-    # PCM over UDP send address destination.
-    udpSendAddress: "127.0.0.1"
-    # PCM over UDP receive port.
-    udpReceivePort: 32001
-    # PCM over UDP receive address.
-    udpReceiveAddress: "127.0.0.1"
-
-    # Flag indicating UDP audio should be encoded using G.711 uLaw.
-    udpUseULaw: false
-    # Flag indicating UDP audio should be transmitted without the length leader.
-    #   NOTE: This flag is only applicable when encoding G.711 uLaw.
-    udpNoIncludeLength: false
-    # Flag indicating UDP audio should be RTP framed.
-    #   NOTE: This flag is only applicable when encoding G.711 uLaw.
-    udpRTPFrames: false
-    # Flag indicating UDP audio should follow the USRP format.
-    udpUsrp: false
-
-    # Flag indicating UDP audio frame timing will be performed at the bridge.
-    #   (This allows the sending source to send audio as fast as it wants.)
-    udpFrameTiming: false
-
-    # Traffic Encryption
-    tek:
-      # Flag indicating whether or not traffic encryption is enabled.
-      enable: false
-      # Traffic Encryption Key Algorithm
-      #   aes - AES-256 Encryption
-      #   arc4 - ARC4/ADP Encryption
-      tekAlgo: "aes"
-      # Traffic Encryption Key ID
-      tekKeyId: 1
 
     # Source "Radio ID" for transmitted audio frames.
     sourceId: 1234567
@@ -119,6 +82,12 @@ system:
     # System ID.
     sysId: 001
 
+    # Flag indicating whether a network grant demand packet will be sent before audio.
+    grantDemand: false
+
+    # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog).
+    txMode: 1
+
     # PCM audio gain for received (from digital network) audio frames.
     #   - This is used to apply gain to the decoded IMBE/AMBE audio, post-decoding.
     rxAudioGain: 1.0
@@ -139,8 +108,30 @@ system:
     #   - (Not used when utilizing external USB vocoder!)
     vocoderEncoderAudioGain: 3.0
 
-    # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog).
-    txMode: 1
+    # Flag indicating whether or not trace logging is enabled.
+    trace: false
+    # Flag indicating whether or not debug logging is enabled.
+    debug: false
+
+    #
+    # Traffic Encryption Key (TEK) Configuration
+    #
+    tek:
+      # Flag indicating whether or not traffic encryption is enabled.
+      enable: false
+      # Traffic Encryption Key Algorithm
+      #   aes - AES-256 Encryption
+      #   arc4 - ARC4/ADP Encryption
+      tekAlgo: "aes"
+      # Traffic Encryption Key ID (Hex)
+      tekKeyId: 1
+
+    #
+    # Local Audio Transport
+    #
+
+    # Enable local audio over speakers.
+    localAudio: true
 
     # Relative sample level for VOX to activate.
     voxSampleLevel: 80.0
@@ -160,21 +151,58 @@ system:
     # Amount of time (ms) to transmit preamble tone.
     preambleLength: 200
 
-    # Flag indicating the detected VOX sample level should be dumped to the log (useful for setting VOX levels).
-    dumpSampleLevel: false
+    #
+    # UDP Audio Transport Configuration
+    #   NOTE: Validate the UDP Audio Configuration section below when using UDP audio. Bridge does *not*
+    #     by default, perform any timing for UDP audio, so proper configuration is required.
+    #
 
-    # Flag indicating whether a network grant demand packet will be sent before audio.
-    grantDemand: false
+    # Enable PCM audio over UDP.
+    udpAudio: false
+    # Enable meta data such as dstId and srcId in the UDP data.
+    udpMetadata: false
+    # PCM over UDP send port.
+    udpSendPort: 34001
+    # PCM over UDP send address destination.
+    udpSendAddress: "127.0.0.1"
+    # PCM over UDP receive port.
+    udpReceivePort: 32001
+    # PCM over UDP receive address.
+    udpReceiveAddress: "127.0.0.1"
 
-    # Enable local audio over speakers.
-    localAudio: true
+    #
+    # UDP Audio Configuration
+    #   NOTE: When configuring UDP audio for back-to-back transcoding, it is highly recommended to
+    #     enable 'udpRTPFrames' and 'udpUseULaw' to ensure proper timing and framing of audio packets.
+    #
 
-    # Flag indicating whether or not trace logging is enabled.
-    trace: false
-    # Flag indicating whether or not debug logging is enabled.
-    debug: false
+    # Flag indicating UDP audio should be RTP framed.
+    udpRTPFrames: true
+    # Flag indicating UDP audio RTP timing should be ignored.
+    #   (This allows the sending source to send audio as fast as it wants. This should not be used in combination
+    #    with 'udpFrameTiming', and is intended for diagnostic purposes only.)
+    udpIgnoreRTPTiming: false
+    # Flag indicating UDP audio RTP sequence numbers should be continuous across packets and only reset to 0
+    #   upon sequence rollover. (DO NOT use this option for back-to-back transcoding with another instance of the bridge, 
+    #   as it may cause issues with RTP sequence number handling, this option is intended for third-party RTP consumers
+    #   who idiotically implement RTP and do not properly adhere to marker bits.)
+    udpRTPContinuousSeq: false
+    # Flag indicating UDP audio should be encoded using G.711 uLaw.
+    #   NOTE: This flag is only applicable when sending audio via RTP.
+    udpUseULaw: false
 
+    # Flag indicating UDP audio should follow the USRP format.
+    udpUsrp: false
+
+    # Flag indicating UDP audio frame timing will be performed by the bridge.
+    #   (This allows the sending source to send audio as fast as it wants. This should not be used in combination
+    #    with 'udpRTPFrames'.)
+    udpFrameTiming: false
+
+    #
     # RTS PTT Configuration
+    #
+
     # Flag indicating whether RTS PTT control is enabled.
     rtsPttEnable: false
     # Serial port device for RTS PTT control (e.g., /dev/ttyUSB0).
@@ -182,7 +210,10 @@ system:
     # Hold-off time (ms) before clearing RTS PTT after last audio output.
     rtsPttHoldoffMs: 250
 
+    #
     # CTS COR Configuration
+    #
+
     # Flag indicating whether CTS-based COR detection is enabled.
     ctsCorEnable: false
     # Serial port device for CTS COR (e.g., /dev/ttyUSB0). Often same as RTS PTT.

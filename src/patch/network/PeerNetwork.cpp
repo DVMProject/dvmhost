@@ -199,7 +199,7 @@ bool PeerNetwork::writeConfig()
     ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
     ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
-    if (m_debug) {
+    if (m_packetDump) {
         Utils::dump(1U, "PeerNetowrk::writeConfig(), Message, Configuration", (uint8_t*)buffer, json.length() + 8U);
     }
 
@@ -278,7 +278,7 @@ UInt8Array PeerNetwork::createP25_LDU1Message_Raw(uint32_t& length, const p25::l
 
     buffer[23U] = count;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "PeerNetwork::createP25_LDU1Message_Raw(), Message, P25 LDU1", buffer, (P25_LDU1_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU1_PACKET_LENGTH + PACKET_PAD);
@@ -353,7 +353,7 @@ UInt8Array PeerNetwork::createP25_LDU2Message_Raw(uint32_t& length, const p25::l
 
     buffer[23U] = count;
 
-    if (m_debug)
+    if (m_packetDump)
         Utils::dump(1U, "PeerNetwork::createP25_LDU2Message_Raw(), Message, P25 LDU2", buffer, (P25_LDU2_PACKET_LENGTH + PACKET_PAD));
 
     length = (P25_LDU2_PACKET_LENGTH + PACKET_PAD);

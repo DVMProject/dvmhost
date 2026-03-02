@@ -65,7 +65,7 @@ using namespace modem;
 
 Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, bool pttInvert, bool dcBlocker, bool cosLockout,
     uint8_t fdmaPreamble, uint8_t dmrRxDelay, uint8_t p25CorrCount, uint32_t dmrQueueSize, uint32_t p25QueueSize, uint32_t nxdnQueueSize,
-    bool disableOFlowReset, bool ignoreModemConfigArea, bool dumpModemStatus, bool trace, bool debug) :
+    bool disableOFlowReset, bool ignoreModemConfigArea, bool dumpModemStatus, bool displayDebugMessages, bool trace, bool debug) :
     m_port(port),
     m_protoVer(0U),
     m_dmrColorCode(0U),
@@ -158,6 +158,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_flashDisabled(false),
     m_gotModemStatus(false),
     m_dumpModemStatus(dumpModemStatus),
+    m_displayModemDebugMessages(displayDebugMessages),
     m_respTrace(false),
     m_trace(trace),
     m_debug(debug)
@@ -1370,7 +1371,7 @@ void Modem::injectNXDNFrame(const uint8_t* data, uint32_t length)
 
 /* Writes DMR Slot 1 frame data to the DMR Slot 1 ring buffer. */
 
-bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
+bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length, bool imm)
 {
     assert(data != nullptr);
     assert(length > 0U);
@@ -1403,7 +1404,7 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
             if (m_trace)
                 Utils::dump(1U, "Modem::writeDMRFrame1(), Immediate TX DMR Data 1", buffer + 3U, length - 1U);
 
-            int ret = write(buffer, len);
+            int ret = write(buffer, len, imm);
             if (ret != int(len)) {
                 LogError(LOG_MODEM, "Error writing DMR slot 1 data");
                 return false;
@@ -1424,7 +1425,7 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length)
 
 /* Writes DMR Slot 2 frame data to the DMR Slot 2 ring buffer. */
 
-bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
+bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length, bool imm)
 {
     assert(data != nullptr);
     assert(length > 0U);
@@ -1457,7 +1458,7 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
             if (m_trace)
                 Utils::dump(1U, "Modem::writeDMRFrame2(), Immediate TX DMR Data 2", buffer + 3U, length - 1U);
 
-            int ret = write(buffer, len);
+            int ret = write(buffer, len, imm);
             if (ret != int(len)) {
                 LogError(LOG_MODEM, "Error writing DMR slot 2 data");
                 return false;
@@ -1478,7 +1479,7 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length)
 
 /* Writes P25 frame data to the P25 ring buffer. */
 
-bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
+bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
 {
     assert(data != nullptr);
     assert(length > 0U);
@@ -1522,7 +1523,7 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
             if (m_trace)
                 Utils::dump(1U, "Modem::writeP25Frame(), Immediate TX P25 Data", buffer + 3U, length - 3U);
 
-            int ret = write(buffer, len);
+            int ret = write(buffer, len, imm);
             if (ret != int(len)) {
                 LogError(LOG_MODEM, "Error writing P25 data");
                 return false;
@@ -1543,7 +1544,7 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length)
 
 /* Writes NXDN frame data to the NXDN ring buffer. */
 
-bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
+bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length, bool imm)
 {
     assert(data != nullptr);
     assert(length > 0U);
@@ -1576,7 +1577,7 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length)
             if (m_trace)
                 Utils::dump(1U, "Modem::writeNXDNFrame(), Immediate TX NXDN Data", buffer + 3U, length - 1U);
 
-            int ret = write(buffer, len);
+            int ret = write(buffer, len, imm);
             if (ret != int(len)) {
                 LogError(LOG_MODEM, "Error writing NXDN data");
                 return false;
@@ -1703,7 +1704,7 @@ bool Modem::setDMRIgnoreCACH_AT(uint8_t slotNo)
 
 /* Writes raw data to the air interface modem. */
 
-int Modem::write(const uint8_t* data, uint32_t length)
+int Modem::write(const uint8_t* data, uint32_t length, bool imm)
 {
     return m_port->write(data, length);
 }
@@ -1839,6 +1840,9 @@ bool Modem::getFirmwareVersion()
                         break;
                     case 2U:
                         LogInfoEx(LOG_MODEM, "ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U]);
+                        break;
+                    case 240U:
+                        LogInfoEx(LOG_MODEM, "Software SDR, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[5U], m_buffer[6U], m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U]);
                         break;
                     case 15U:
                         LogInfoEx(LOG_MODEM, "Null Modem, UDID: N/A");
@@ -2316,6 +2320,9 @@ void Modem::processFlashConfig(const uint8_t *buffer)
 
 void Modem::printDebug(const uint8_t* buffer, uint16_t len)
 {
+    if (!m_displayModemDebugMessages)
+        return;
+
     if (m_rspDoubleLength && buffer[3U] == CMD_DEBUG_DUMP) {
         uint8_t data[512U];
         ::memset(data, 0x00U, 512U);

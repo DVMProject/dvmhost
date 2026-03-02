@@ -550,7 +550,7 @@ bool Control::isQueueFull()
 
 /* Get frame data from data ring buffer. */
 
-uint32_t Control::getFrame(uint8_t* data)
+uint32_t Control::getFrame(uint8_t* data, bool* imm)
 {
     assert(data != nullptr);
 
@@ -563,10 +563,16 @@ uint32_t Control::getFrame(uint8_t* data)
 
     // tx immediate queue takes priority
     if (!m_txImmQueue.isEmpty()) {
+        if (imm != nullptr)
+            *imm = true;
+
         m_txImmQueue.get(&len, 1U);
         m_txImmQueue.get(data, len);
     }
     else {
+        if (imm != nullptr)
+            *imm = false;
+
         m_txQueue.get(&len, 1U);
         m_txQueue.get(data, len);
     }

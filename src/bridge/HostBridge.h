@@ -23,6 +23,7 @@
 #include "common/dmr/lc/PrivacyLC.h"
 #include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
+#include "common/network/RTPHeader.h"
 #include "common/yaml/Yaml.h"
 #include "common/RingBuffer.h"
 #include "common/Timer.h"
@@ -105,11 +106,13 @@ void mdcPacketDetected(int frameCount, mdc_u8_t op, mdc_u8_t arg, mdc_u16_t unit
  * @ingroup bridge
  */
 struct NetPacketRequest {
-    uint32_t srcId;                     //!< Source Address
-    uint32_t dstId;                     //!< Destination Address
+    uint32_t srcId;                         //!< Source Address
+    uint32_t dstId;                         //!< Destination Address
 
-    int pcmLength = 0U;                 //!< Length of PCM data buffer
-    uint8_t* pcm = nullptr;             //!< Raw PCM buffer
+    network::frame::RTPHeader rtpHeader;    //!< RTP Header
+
+    int pcmLength = 0U;                     //!< Length of PCM data buffer
+    uint8_t* pcm = nullptr;                 //!< Raw PCM buffer
 };
 
 // ---------------------------------------------------------------------------
@@ -149,25 +152,6 @@ private:
     network::PeerNetwork* m_network;
     network::udp::Socket* m_udpAudioSocket;
 
-    bool m_udpAudio;
-    bool m_udpMetadata;
-    uint16_t m_udpSendPort;
-    std::string m_udpSendAddress;
-    uint16_t m_udpReceivePort;
-    std::string m_udpReceiveAddress;
-    bool m_udpNoIncludeLength;
-    bool m_udpUseULaw;
-    bool m_udpRTPFrames;
-    bool m_udpUsrp;
-    bool m_udpFrameTiming;
-    uint32_t m_udpFrameCnt;
-
-    uint8_t m_tekAlgoId;
-    uint16_t m_tekKeyId;
-    bool m_requestedTek;
-
-    p25::crypto::P25Crypto* m_p25Crypto;
-
     uint32_t m_srcId;
     uint32_t m_srcIdOverride;
     bool m_overrideSrcIdFromMDC;
@@ -177,13 +161,31 @@ private:
     uint8_t m_slot;
 
     std::string m_identity;
+
+    uint32_t m_netId;
+    uint32_t m_sysId;
+
+    bool m_grantDemand;
+
+    uint8_t m_txMode;
+
     float m_rxAudioGain;
     float m_vocoderDecoderAudioGain;
     bool m_vocoderDecoderAutoGain;
+
     float m_txAudioGain;
     float m_vocoderEncoderAudioGain;
 
-    uint8_t m_txMode;
+    bool m_trace;
+    bool m_debug;
+
+    uint8_t m_tekAlgoId;
+    uint16_t m_tekKeyId;
+    bool m_requestedTek;
+
+    p25::crypto::P25Crypto* m_p25Crypto;
+
+    bool m_localAudio;
 
     float m_voxSampleLevel;
     uint16_t m_dropTimeMS;
@@ -195,10 +197,6 @@ private:
     bool m_preambleLeaderTone;
     uint16_t m_preambleTone;
     uint16_t m_preambleLength;
-
-    bool m_grantDemand;
-
-    bool m_localAudio;
 
     ma_context m_maContext;
     ma_device_info* m_maPlaybackDevices;
@@ -217,6 +215,26 @@ private:
     vocoder::MBEEncoder* m_encoder;
 
     mdc_decoder_t* m_mdcDecoder;
+    
+    bool m_udpAudio;
+    bool m_udpMetadata;
+    uint16_t m_udpSendPort;
+    std::string m_udpSendAddress;
+    uint16_t m_udpReceivePort;
+    std::string m_udpReceiveAddress;
+
+    bool m_udpRTPFrames;
+    bool m_udpIgnoreRTPTiming;
+    bool m_udpRTPContinuousSeq;
+    bool m_udpUseULaw;
+    bool m_udpUsrp;
+    bool m_udpFrameTiming;
+    uint32_t m_udpFrameTimeout;
+    uint32_t m_udpFrameCnt;
+
+    /*
+    ** Digital Mobile Radio
+    */
 
     dmr::data::EmbeddedData m_dmrEmbeddedData;
     dmr::lc::LC m_rxDMRLC;
@@ -226,36 +244,21 @@ private:
     uint32_t m_dmrSeqNo;
     uint8_t m_dmrN;
 
+    /*
+    ** Project 25
+    */
+
     p25::lc::LC m_rxP25LC;
     uint8_t* m_netLDU1;
     uint8_t* m_netLDU2;
     uint32_t m_p25SeqNo;
     uint8_t m_p25N;
 
-    uint32_t m_netId;
-    uint32_t m_sysId;
+    /*
+    ** Analog
+    */
 
     uint8_t m_analogN;
-
-    bool m_audioDetect;
-    bool m_trafficFromUDP;
-    uint32_t m_udpSrcId;
-    uint32_t m_udpDstId;
-    bool m_callInProgress;
-    bool m_ignoreCall;
-    uint8_t m_callAlgoId;
-    uint64_t m_rxStartTime;
-    uint32_t m_rxStreamId;
-    uint32_t m_txStreamId;
-
-    uint8_t m_detectedSampleCnt;
-    bool m_dumpSampleLevel;
-
-    bool m_mtNoSleep;
-
-    bool m_running;
-    bool m_trace;
-    bool m_debug;
 
     // RTS PTT Control
     bool m_rtsPttEnable;
@@ -275,8 +278,29 @@ private:
     Timer m_ctsPadTimeout; // drives silence padding while CTS is active
     uint32_t m_ctsCorHoldoffMs; // hold-off time before clearing COR after it deasserts
 
+    bool m_audioDetect;
+    bool m_trafficFromUDP;
+    uint32_t m_udpSrcId;
+    uint32_t m_udpDstId;
+    bool m_callInProgress;
+    bool m_ignoreCall;
+    uint8_t m_callAlgoId;
+    uint64_t m_rxStartTime;
+    uint32_t m_rxStreamId;
+    uint32_t m_txStreamId;
+
+    uint8_t m_detectedSampleCnt;
+
+    Timer m_networkWatchdog;
+
+    static bool s_running;
+
+    bool m_rtpInitialFrame;
     uint16_t m_rtpSeqNo;
     uint32_t m_rtpTimestamp;
+
+    uint16_t m_udpNetPktSeq;
+    uint16_t m_udpNetLastPktSeq;
 
     uint32_t m_usrpSeqNo;
 
@@ -430,6 +454,15 @@ private:
     void processUDPAudio();
 
     /**
+     * @brief Helper to write UDP audio to the UDP audio socket.
+     * @param srcId Source ID.
+     * @param dstId Destination ID.
+     * @param pcm PCM audio buffer.
+     * @param pcmLength Length of PCM audio buffer.
+     */
+    void writeUDPAudio(uint32_t srcId, uint32_t dstId, uint8_t* pcm, uint32_t pcmLength);
+
+    /**
      * @brief Helper to process an In-Call Control message.
      * @param command In-Call Control Command.
      * @param dstId Destination ID.
@@ -438,66 +471,8 @@ private:
     void processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo);
 
     /**
-     * @brief Helper to process DMR network traffic.
-     * @param buffer 
-     * @param length 
+     * @brief Helper to generate USRP end of transmission
      */
-    void processDMRNetwork(uint8_t* buffer, uint32_t length);
-    /**
-     * @brief Helper to decode DMR network traffic audio frames.
-     * @param ambe 
-     * @param srcId 
-     * @param dstId 
-     * @param dmrN 
-     */
-    void decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dstId, uint8_t dmrN);
-    /**
-     * @brief Helper to encode DMR network traffic audio frames.
-     * @param pcm 
-     * @param forcedSrcId 
-     * @param forcedDstId 
-     */
-    void encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
-
-    /**
-     * @brief Helper to process P25 network traffic.
-     * @param buffer 
-     * @param length 
-     */
-    void processP25Network(uint8_t* buffer, uint32_t length);
-    /**
-     * @brief Helper to decode P25 network traffic audio frames.
-     * @param ldu 
-     * @param srcId 
-     * @param dstId 
-     * @param p25N 
-     */
-    void decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstId, uint8_t p25N);
-    /**
-     * @brief Helper to encode P25 network traffic audio frames.
-     * @param pcm 
-     * @param forcedSrcId 
-     * @param forcedDstId 
-     */
-    void encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
-
-    /**
-     * @brief Helper to process analog network traffic.
-     * @param buffer
-     * @param length
-     */
-    void processAnalogNetwork(uint8_t* buffer, uint32_t length);
-    /**
-     * @brief Helper to encode analog network traffic audio frames.
-     * @param pcm
-     * @param forcedSrcId
-     * @param forcedDstId
-     */
-    void encodeAnalogAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
-
-    /**
-    * @brief Helper to generate USRP end of transmission
-    */
     void sendUsrpEot();
 
     /**
@@ -594,6 +569,67 @@ private:
      * @returns void* (Ignore)
      */
     static void* threadCtsCorMonitor(void* arg);
+
+    // Digital Mobile Radio (HostBridge.DMR.cpp)
+    /**
+     * @brief Helper to process DMR network traffic.
+     * @param buffer 
+     * @param length 
+     */
+    void processDMRNetwork(uint8_t* buffer, uint32_t length);
+    /**
+     * @brief Helper to decode DMR network traffic audio frames.
+     * @param ambe 
+     * @param srcId 
+     * @param dstId 
+     * @param dmrN 
+     */
+    void decodeDMRAudioFrame(uint8_t* ambe, uint32_t srcId, uint32_t dstId, uint8_t dmrN);
+    /**
+     * @brief Helper to encode DMR network traffic audio frames.
+     * @param pcm 
+     * @param forcedSrcId 
+     * @param forcedDstId 
+     */
+    void encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
+
+    // Project 25 (HostBridge.P25.cpp)
+    /**
+     * @brief Helper to process P25 network traffic.
+     * @param buffer 
+     * @param length 
+     */
+    void processP25Network(uint8_t* buffer, uint32_t length);
+    /**
+     * @brief Helper to decode P25 network traffic audio frames.
+     * @param ldu 
+     * @param srcId 
+     * @param dstId 
+     * @param p25N 
+     */
+    void decodeP25AudioFrame(uint8_t* ldu, uint32_t srcId, uint32_t dstId, uint8_t p25N);
+    /**
+     * @brief Helper to encode P25 network traffic audio frames.
+     * @param pcm 
+     * @param forcedSrcId 
+     * @param forcedDstId 
+     */
+    void encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
+
+    // Analog (HostBridge.Analog.cpp)
+    /**
+     * @brief Helper to process analog network traffic.
+     * @param buffer
+     * @param length
+     */
+    void processAnalogNetwork(uint8_t* buffer, uint32_t length);
+    /**
+     * @brief Helper to encode analog network traffic audio frames.
+     * @param pcm
+     * @param forcedSrcId
+     * @param forcedDstId
+     */
+    void encodeAnalogAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
 };
 
 #endif // __HOST_BRIDGE_H__

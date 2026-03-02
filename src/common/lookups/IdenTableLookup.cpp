@@ -156,6 +156,9 @@ bool IdenTableLookup::load()
     if (size == 0U)
         return false;
 
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_lastLoadTime = now;
+
     LogInfoEx(LOG_HOST, "Loaded %u entries into lookup table", size);
 
     return true;

@@ -29,7 +29,7 @@ using namespace compress;
 
 #define WORKER_CNT 8U
 
-const uint64_t PACKET_LATE_TIME = 200U; // 200ms
+const uint64_t PACKET_LATE_TIME = 250U; // 250ms
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -573,10 +573,10 @@ void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
             return;
 
         if (req->length > 0) {
-            // determine if this packet is late (i.e. are we processing this packet more than 200ms after it was received?)
+            // determine if this packet is late (i.e. are we processing this packet more than 250ms after it was received?)
             uint64_t dt = req->pktRxTime + PACKET_LATE_TIME;
             if (dt < now) {
-                LogWarning(LOG_PEER, "PEER %u packet processing latency >200ms, dt = %u, now = %u", req->peerId, dt, now);
+                LogWarning(LOG_PEER, "PEER %u packet processing latency >250ms, dt = %u, now = %u", req->peerId, dt, now);
             }
 
             uint16_t lastRxSeq = 0U;

@@ -22,11 +22,14 @@
 #                                       call, normal call collision rules are applied to the traffic being transmitted.
 #                                       If this flag is enabled (1), and the connected peer tries to transmit over an on going
 #                                       call, call collision rules are ignored, and the peer is given priority.
+#   * JITTER ENABLED    [OPTIONAL] - Flag indicating whether the adaptive jitter buffer is enabled.
+#   * JITTER MAX FRAMES [OPTIONAL] - Maximum buffer size in frames (range: 2-8 frames).
+#   * JITTER MAX WAIT   [OPTIONAL] - Maximum wait time in microseconds (range: 10000-200000 us).
 #
-# Entry Format: "Peer ID,Peer Password,Peer Replication (1 = Enabled / 0 = Disabled),Peer Alias (optional),Can Request Keys (1 = Enabled / 0 = Disabled),Can Issue Inhibit (1 = Enabled / 0 = Disabled),Has Call Priority (1 = Enabled / 0 = Disabled)<newline>"
+# Entry Format: "Peer ID,Peer Password,Peer Replication (1 = Enabled / 0 = Disabled),Peer Alias (optional),Can Request Keys (1 = Enabled / 0 = Disabled),Can Issue Inhibit (1 = Enabled / 0 = Disabled),Has Call Priority (1 = Enabled / 0 = Disabled),Jitter Enabled (1 = Enabled / 0 = Disabled),Jitter Max Size, Jitter Max Wait<newline>"
 # Examples:
-#1234,,0,,1,0,0,
-#5678,MYSECUREPASSWORD,0,,0,0,0,
-#9876,MYSECUREPASSWORD,1,,0,0,0,
-#5432,MYSECUREPASSWORD,,Peer Alias 1,0,0,0,
-#1012,MYSECUREPASSWORD,1,Peer Alias 2,1,0,0,
+#1234,,0,,1,0,0,0,4,40000,
+#5678,MYSECUREPASSWORD,0,,0,0,0,0,4,40000,
+#9876,MYSECUREPASSWORD,1,,0,0,0,0,4,40000,
+#5432,MYSECUREPASSWORD,,Peer Alias 1,0,0,0,0,4,40000,
+#1012,MYSECUREPASSWORD,1,Peer Alias 2,1,0,0,0,4,40000,

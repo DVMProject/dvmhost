@@ -47,8 +47,9 @@ void EMB::decode(const uint8_t* data)
     DMREMB[1U] = (data[18U] << 4) & 0xF0U;
     DMREMB[1U] |= (data[19U] >> 4) & 0x0FU;
 
-    // decode QR (16,7,6) FEC
-    edac::QR1676::decode(DMREMB);
+    // decode QR (16,7,6) FEC and get corrected data
+    uint8_t corrected = edac::QR1676::decode(DMREMB);
+    DMREMB[0U] = (corrected << 1) & 0xFEU;
 
     m_colorCode = (DMREMB[0U] >> 4) & 0x0FU;
     m_PI = (DMREMB[0U] & 0x08U) == 0x08U;

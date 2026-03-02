@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -70,6 +70,8 @@ namespace p25
              */
             LC& operator=(const LC& data);
 
+            /** Project 25 Phase I CAI (TIA-102.BAAA-B Section 4.2, 4.5) */
+
             /**
              * @brief Decode a header data unit.
              * @param[in] data Buffer containing the HDU to decode.
@@ -88,7 +90,7 @@ namespace p25
              * @brief Decode a logical link data unit 1.
              * @param[in] data Buffer containing an LDU1 to decode.
              * @param rawOnly Flag indicating only the raw bytes of the LC should be decoded.
-             * @returns True, if LDU1 decoded, otherwise false.
+             * @returns bool True, if LDU1 decoded, otherwise false.
              */
             bool decodeLDU1(const uint8_t* data, bool rawOnly = false);
             /**
@@ -100,7 +102,7 @@ namespace p25
             /**
              * @brief Decode a logical link data unit 2.
              * @param[in] data Buffer containing an LDU2 to decode.
-             * @returns True, if LDU2 decoded, otherwise false.
+             * @returns bool  True, if LDU2 decoded, otherwise false.
              */
             bool decodeLDU2(const uint8_t* data);
             /**
@@ -108,6 +110,29 @@ namespace p25
              * @param[out] data Buffer to encode an LDU2.
              */
             void encodeLDU2(uint8_t* data);
+
+            /** Project 25 Phase II (TIA-102.BBAD-D Section 2) */
+
+            /**
+             * @brief Decode a IEMI VCH MAC PDU.
+             * @param data Buffer containing the MAC PDU to decode.
+             * @param sync Flag indicating if sync is included (true=276 bits with RS, false=312 bits no RS).
+             * @return bool True, if MAC PDU decoded, otherwise false.
+             */
+            bool decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync);
+            /**
+             * @brief Decode a xOEMI VCH MAC PDU.
+             * @param data Buffer containing the MAC PDU to decode.
+             * @param sync Flag indicating if sync is included.
+             * @return bool True, if MAC PDU decoded, otherwise false.
+             */
+            bool decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync);
+            /**
+             * @brief Encode a VCH MAC PDU.
+             * @param[out] data Buffer to encode a MAC PDU.
+             * @param sync Flag indicating if sync is to be included.
+             */
+            void encodeVCH_MACPDU(uint8_t* data, bool sync);
 
             /**
              * @brief Helper to determine if the MFId is a standard MFId.
@@ -127,6 +152,20 @@ namespace p25
              * @param[out] rs Buffer to encode LC data.
              */
             void encodeLC(uint8_t* rs);
+
+            /**
+             * @brief Decode MAC PDU.
+             * @param[in] raw Buffer containing the decoded Reed-Solomon MAC PDU data.
+             * @param macLength MAC PDU length in bits (156 for IEMI/S-OEMI, 180 for I-OEMI).
+             * @returns bool True, if MAC PDU is decoded, otherwise false.
+             */
+            bool decodeMACPDU(const uint8_t* raw, uint32_t macLength = defines::P25_P2_IOEMI_MAC_LENGTH_BITS);
+            /**
+             * @brief Encode MAC PDU.
+             * @param[out] raw Buffer to encode MAC PDU data.
+             * @param macLength MAC PDU length in bits (156 for IEMI/S-OEMI, 180 for I-OEMI).
+             */
+            void encodeMACPDU(uint8_t* raw, uint32_t macLength = defines::P25_P2_IOEMI_MAC_LENGTH_BITS);
 
             /** @name Encryption data */
             /**
@@ -165,6 +204,12 @@ namespace p25
              */
             static void setSiteData(SiteData siteData) { s_siteData = siteData; }
             /** @} */
+
+            /**
+             * @brief Sets the flag indicating CRC-errors should be warnings and not errors.
+             * @param warnCRC Flag indicating CRC-errors should be treated as warnings.
+             */
+            static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
 
         public:
             /** @name Common Data */
@@ -254,6 +299,27 @@ namespace p25
              * @brief Slot Number.
              */
             DECLARE_PROPERTY(uint8_t, slotNo, SlotNo);
+
+            /**
+             * @brief Phase 2 DUID.
+             */
+            DECLARE_PROPERTY(uint8_t, p2DUID, P2DUID);
+            /**
+             * @brief Color Code.
+             */
+            DECLARE_PROPERTY(uint16_t, colorCode, ColorCode);
+            /**
+             * @brief MAC PDU Opcode.
+             */
+            DECLARE_PROPERTY(uint8_t, macPduOpcode, MACPDUOpcode);
+            /**
+             * @brief MAC PDU SACCH Offset.
+             */
+            DECLARE_PROPERTY(uint8_t, macPduOffset, MACPDUOffset);
+            /**
+             * @brief MAC Partition.
+             */
+            DECLARE_PROPERTY(uint8_t, macPartition, MACPartition);
             /** @} */
 
             /** @name Packed RS Data */
@@ -261,6 +327,10 @@ namespace p25
              * @brief Packed RS Data.
              */
             DECLARE_PROPERTY(ulong64_t, rsValue, RS);
+            /** @} */
+
+            /** @name Phase 2 Raw MCO Data */
+            uint8_t* p2MCOData; // ?? - this should probably be private with getters/setters
             /** @} */
 
         private:
@@ -279,6 +349,8 @@ namespace p25
             uint8_t* m_userAlias;
             bool m_gotUserAliasPartA;
             bool m_gotUserAlias;
+
+            static bool s_warnCRC;
 
             // Local Site data
             static SiteData s_siteData;
@@ -313,6 +385,19 @@ namespace p25
              * @param[in] raw 
              */
             void encodeHDUGolay(uint8_t* data, const uint8_t* raw);
+
+            /**
+             * @brief Decode Phase 2 DUID hamming FEC.
+             * @param[in] raw 
+             * @param[out] data 
+             */
+            void decodeP2_DUIDHamming(const uint8_t* raw, uint8_t* data);
+            /**
+             * @brief Encode Phase 2 DUID hamming FEC.
+             * @param[out] data 
+             * @param[in] raw 
+             */
+            void encodeP2_DUIDHamming(uint8_t* data, const uint8_t* raw);
         };
     } // namespace lc
 } // namespace p25

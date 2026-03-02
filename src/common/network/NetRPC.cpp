@@ -25,7 +25,7 @@ using namespace network::frame;
 #include <cmath>
 
 // ---------------------------------------------------------------------------
-//  Public Class Members
+//  Constants
 // ---------------------------------------------------------------------------
 
 #define REPLY_WAIT 200 // 200ms
@@ -96,6 +96,12 @@ void NetRPC::clock(uint32_t ms)
         if (m_debug) {
             LogDebugEx(LOG_NET, "NetRPC::clock()", "received RPC, %s:%u, func = $%04X, messageLength = %u", 
                 udp::Socket::address(address).c_str(), udp::Socket::port(address), rpcHeader.getFunction(), rpcHeader.getMessageLength());
+        }
+
+        if (length < RPC_HEADER_LENGTH_BYTES + rpcHeader.getMessageLength()) {
+            LogError(LOG_NET, "NetRPC::clock(), message received from network is malformed! %u bytes != %u bytes", 
+                RPC_HEADER_LENGTH_BYTES + rpcHeader.getMessageLength(), length);
+            return;
         }
 
         // copy message

@@ -254,8 +254,9 @@ int Host::run()
 #endif // !defined(_WIN32)
 
     ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-        "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Copyright (c) 2017-2026 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
+        HIGHLY_UNNECESSARY_DISCLAIMER_FOR_THE_MENTAL "\r\n" \
         ">> Modem Controller\r\n");
 
     // read base parameters from configuration
@@ -748,10 +749,12 @@ int Host::run()
 
         ::LogInfoEx(LOG_HOST, "[WAIT] Host is performing late initialization and warmup");
 
-        m_modem->clearNXDNFrame();
         m_modem->clearP25Frame();
-        m_modem->clearDMRFrame2();
-        m_modem->clearDMRFrame1();
+        if (!m_isModemDFSI) {
+            m_modem->clearDMRFrame2();
+            m_modem->clearDMRFrame1();
+            m_modem->clearNXDNFrame();
+        }
 
         // perform early pumping of the modem clock (this is so the DSP has time to setup its buffers),
         // and clock the network (so it may perform early connect)

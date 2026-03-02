@@ -58,7 +58,7 @@ int HostCal::run(int argc, char **argv)
     }
 
     ::LogInfo(__BANNER__ "\r\n" __PROG_NAME__ " " __VER__ " (built " __BUILD__ ")\r\n" \
-        "Copyright (c) 2017-2025 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
+        "Copyright (c) 2017-2026 Bryan Biedenkapp, N2PLL and DVMProject (https://github.com/dvmproject) Authors.\r\n" \
         "Portions Copyright (c) 2015-2021 by Jonathan Naylor, G4KLX and others\r\n" \
         ">> Modem Calibration\r\n");
 
@@ -211,6 +211,7 @@ int HostCal::run(int argc, char **argv)
         {
             m_debug = !m_debug;
             LogInfoEx(LOG_CAL, " - Modem Debug: %s", m_debug ? "On" : "Off");
+            m_modem->m_displayModemDebugMessages = m_debug;
             writeConfig();
         }
         break;

@@ -766,7 +766,6 @@ void P25Crypto::setKey(const uint8_t* key, uint8_t len)
         m_tek.reset();
 
     m_tek = std::make_unique<uint8_t[]>(len);
-    ::memset(m_tek.get(), 0x00U, MAX_ENC_KEY_LENGTH_BYTES);
     ::memset(m_tek.get(), 0x00U, m_tekLength);
     ::memcpy(m_tek.get(), key, len);
 }

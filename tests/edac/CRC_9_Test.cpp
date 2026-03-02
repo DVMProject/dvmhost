@@ -18,44 +18,42 @@ using namespace edac;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("CRC", "[9-bit Test]") {
-    SECTION("9_Sanity_Test") {
-        bool failed = false;
+TEST_CASE("CRC 9-bit Test", "[crc][9bit]") {
+    bool failed = false;
 
-        INFO("CRC 9-bit CRC Test");
+    INFO("CRC 9-bit CRC Test");
 
-        srand((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL));
 
-        const uint32_t len = 18U;
-        uint8_t* random = (uint8_t*)malloc(len);
+    const uint32_t len = 18U;
+    uint8_t* random = (uint8_t*)malloc(len);
 
-        for (size_t i = 0; i < len; i++) {
-            random[i] = rand();
-        }
+    for (size_t i = 0; i < len; i++) {
+        random[i] = rand();
+    }
 
-        random[0U] = 0;
-        random[1U] = 0;
+    random[0U] = 0;
+    random[1U] = 0;
 
-        uint16_t crc = edac::CRC::createCRC9(random, 144U);
-        ::LogInfoEx("T", "crc = %04X", crc);
+    uint16_t crc = edac::CRC::createCRC9(random, 144U);
+    ::LogInfoEx("T", "crc = %04X", crc);
 
-        random[0U] = random[0U] + ((crc >> 8) & 0x01U);
-        random[1U] = (crc & 0xFFU);
+    random[0U] = random[0U] + ((crc >> 8) & 0x01U);
+    random[1U] = (crc & 0xFFU);
 
-        Utils::dump(2U, "9_Sanity_Test CRC", random, len);
+    Utils::dump(2U, "9_Sanity_Test CRC", random, len);
 
-        random[10U] >>= 8;
-        random[11U] >>= 8;
+    random[10U] >>= 8;
+    random[11U] >>= 8;
 
-        uint16_t calculated = edac::CRC::createCRC9(random, 144U);
-        if (((crc ^ calculated) == 0)/*|| ((crc ^ calculated) == 0x1FFU)*/) {
-            ::LogError("T", "9_Sanity_Test, failed CRC9 error check");
-            failed = true;
-            goto cleanup;
-        }
+    uint16_t calculated = edac::CRC::createCRC9(random, 144U);
+    if (((crc ^ calculated) == 0)/*|| ((crc ^ calculated) == 0x1FFU)*/) {
+        ::LogError("T", "9_Sanity_Test, failed CRC9 error check");
+        failed = true;
+        goto cleanup;
+    }
 
 cleanup:
-        free(random);
-        REQUIRE(failed==false);
-    }
+    free(random);
+    REQUIRE(failed==false);
 }

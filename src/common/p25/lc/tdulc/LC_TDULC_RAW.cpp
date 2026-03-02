@@ -94,6 +94,8 @@ void LC_TDULC_RAW::setTDULC(const uint8_t* tdulc)
 {
     assert(tdulc != nullptr);
 
+    m_lco = tdulc[0U] & 0x3F;                                                       // LCO
+
     m_tdulc = new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES];
     ::memset(m_tdulc, 0x00U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
 

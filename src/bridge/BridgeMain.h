@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  * 
  */
 /**
@@ -44,6 +44,9 @@ extern bool g_killed;
 extern int g_inputDevice;
 /** @brief Audio Output Device Index. */
 extern int g_outputDevice;
+
+/** @brief (Global) Flag indicating local audio sample levels should be dumped to the log. */
+extern bool g_dumpSampleLevels;
 
 extern uint8_t* g_gitHashBytes;
 
