@@ -74,6 +74,11 @@ void HostBridge::processAnalogNetwork(uint8_t* buffer, uint32_t length)
         LogDebug(LOG_NET, "Analog, seqNo = %u, srcId = %u, dstId = %u, len = %u", seqNo, srcId, dstId, length);
     }
 
+    // ignore network traffic entirely when local audio detect or
+    //  traffic from UDP is running
+    if (m_audioDetect || m_trafficFromUDP)
+        return;
+
     if (!individual) {
         if (srcId == 0)
             return;

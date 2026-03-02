@@ -122,6 +122,11 @@ void HostBridge::processDMRNetwork(uint8_t* buffer, uint32_t length)
         ::memcpy(data.get(), buffer + 20U, DMR_FRAME_LENGTH_BYTES);
     }
 
+    // ignore network traffic entirely when local audio detect or
+    //  traffic from UDP is running
+    if (m_audioDetect || m_trafficFromUDP)
+        return;
+
     if (flco == FLCO::GROUP) {
         if (srcId == 0) {
             m_network->resetDMR(slotNo);

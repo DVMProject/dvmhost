@@ -124,13 +124,13 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
+    // ignore network traffic entirely when local audio detect or
+    //  traffic from UDP is running
+    if (m_audioDetect || m_trafficFromUDP)
+        return;
+
     if (control.getLCO() == LCO::GROUP) {
         if ((duid == DUID::TDU) || (duid == DUID::TDULC)) {
-            // ignore TDU/TDULC entirely when local audio detect or
-            //  traffic from UDP is running
-            if (m_audioDetect || m_trafficFromUDP)
-                return;
-
             // ignore TDU's that are grant demands
             if (grantDemand) {
                 m_network->resetP25();
