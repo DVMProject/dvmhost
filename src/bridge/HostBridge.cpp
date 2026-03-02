@@ -162,6 +162,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_confFile(confFile),
     m_conf(),
     m_network(nullptr),
+    m_udpAudioSocket(nullptr),
     m_srcId(P25DEF::WUID_FNE),
     m_srcIdOverride(0U),
     m_overrideSrcIdFromMDC(false),
@@ -179,6 +180,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_vocoderDecoderAutoGain(false),
     m_txAudioGain(1.0f),
     m_vocoderEncoderAudioGain(3.0),
+    m_trace(false),
+    m_debug(false),
     m_tekAlgoId(P25DEF::ALGO_UNENCRYPT),
     m_tekKeyId(0U),
     m_requestedTek(false),
@@ -203,7 +206,6 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_decoder(nullptr),
     m_encoder(nullptr),
     m_mdcDecoder(nullptr),
-    m_udpAudioSocket(nullptr),
     m_udpAudio(false),
     m_udpMetadata(false),
     m_udpSendPort(34001),
@@ -255,8 +257,6 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_txStreamId(0U),
     m_detectedSampleCnt(0U),
     m_networkWatchdog(1000U, 0U, 1500U),
-    m_trace(false),
-    m_debug(false),
     m_rtpInitialFrame(false),
     m_rtpSeqNo(0U),
     m_rtpTimestamp(INVALID_TS),
@@ -1384,17 +1384,17 @@ void HostBridge::processUDPAudio()
         return;
     }
 
-    if (length > AUDIO_SAMPLES_LENGTH_BYTES * 2U) {
+    if (length > (int)(AUDIO_SAMPLES_LENGTH_BYTES * 2U)) {
         LogWarning(LOG_NET, "UDP audio packet too large (%d bytes), dropping", length);
         return;
     }
 
     // is the recieved audio frame *at least* raw PCM length of 320 bytes?
-    if (!m_udpUseULaw && length < AUDIO_SAMPLES_LENGTH_BYTES)
+    if (!m_udpUseULaw && length < (int)AUDIO_SAMPLES_LENGTH_BYTES)
         return;
 
     // is the recieved audio frame *at least* uLaw length of 160 bytes?
-    if (m_udpUseULaw && length < AUDIO_SAMPLES_LENGTH_BYTES / 2U)
+    if (m_udpUseULaw && length < (int)(AUDIO_SAMPLES_LENGTH_BYTES / 2U))
         return;
 
     if (length > 0) {
@@ -1438,10 +1438,10 @@ void HostBridge::processUDPAudio()
                             m_udpNetPktSeq, lastRxSeq);
                     }
 
-                    m_udpNetPktSeq = m_udpNetPktSeq;
+                    m_udpNetLastPktSeq = m_udpNetPktSeq;
                 }
                 else {
-                    if (m_udpNetPktSeq < m_udpNetPktSeq) {
+                    if (m_udpNetPktSeq < m_udpNetLastPktSeq) {
                         LogWarning(LOG_NET, "audio out-of-order; got %u, expected %u", 
                             m_udpNetPktSeq, lastRxSeq);
                     }
