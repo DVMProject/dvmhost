@@ -2448,6 +2448,9 @@ bool ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
 void ModemV24::startOfStreamV24(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
+    // Start each Net->RF stream with a fresh scheduler epoch so a new call
+    // doesn't inherit a future-biased timestamp from the previous call.
+    m_lastP25Tx = 0U;
     if (m_debug) {
         m_txStartupTraceActive = true;
         m_txStartupTraceT0 = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -2576,6 +2579,9 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
     m_superFrameCnt = 1U;
+    // Start each Net->RF stream with a fresh scheduler epoch so a new call
+    // doesn't inherit a future-biased timestamp from the previous call.
+    m_lastP25Tx = 0U;
     if (m_debug) {
         m_txStartupTraceActive = true;
         m_txStartupTraceT0 = std::chrono::duration_cast<std::chrono::milliseconds>(
