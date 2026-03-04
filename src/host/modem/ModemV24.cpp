@@ -61,6 +61,7 @@ ModemV24::ModemV24(port::IModemPort* port, bool duplex, uint32_t p25QueueSize, u
     m_txStartupTraceActive(false),
     m_txStartupTraceT0(0U),
     m_txStartupTraceWritesLeft(0U),
+    m_txStartupTraceQueueLogsLeft(0U),
     m_rs(),
     m_useTIAFormat(false),
     m_txP25QueueLock()
@@ -2378,6 +2379,15 @@ bool ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
         }
     }
 
+    if (m_debug && m_txStartupTraceActive && m_txStartupTraceQueueLogsLeft > 0U) {
+        int64_t dtNow = (int64_t)now - (int64_t)m_txStartupTraceT0;
+        int64_t dtSched = (int64_t)msgTime - (int64_t)m_txStartupTraceT0;
+        LogDebugEx(LOG_MODEM, "ModemV24::queueP25Frame()",
+            "TX startup queue: frameType=$%02X, msgType=$%02X, dtNow=%lld ms, dtSched=%lld ms, lastP25Tx=%llu, txQ=%u, immQ=%u",
+            data[0U], msgType, dtNow, dtSched, m_lastP25Tx, m_txP25Queue.dataSize(), m_txImmP25Queue.dataSize());
+        m_txStartupTraceQueueLogsLeft--;
+    }
+
     len += 4U;
 
     std::lock_guard<std::mutex> lock(m_txP25QueueLock);
@@ -2456,6 +2466,7 @@ void ModemV24::startOfStreamV24(const p25::lc::LC& control)
         m_txStartupTraceT0 = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
         m_txStartupTraceWritesLeft = 8U;
+        m_txStartupTraceQueueLogsLeft = 12U;
         LogDebugEx(LOG_MODEM, "ModemV24::startOfStreamV24()",
             "TX startup trace begin, jitter=%u, txQ=%u, immQ=%u, p25Space=%u",
             m_jitter, m_txP25Queue.dataSize(), m_txImmP25Queue.dataSize(), m_p25Space);
@@ -2557,6 +2568,7 @@ void ModemV24::endOfStreamV24()
     m_txCallInProgress = false;
     m_txStartupTraceActive = false;
     m_txStartupTraceWritesLeft = 0U;
+    m_txStartupTraceQueueLogsLeft = 0U;
 }
 
 /* Helper to generate the NID value. */
@@ -2587,6 +2599,7 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
         m_txStartupTraceT0 = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
         m_txStartupTraceWritesLeft = 8U;
+        m_txStartupTraceQueueLogsLeft = 12U;
         LogDebugEx(LOG_MODEM, "ModemV24::startOfStreamTIA()",
             "TX startup trace begin, jitter=%u, txQ=%u, immQ=%u, p25Space=%u",
             m_jitter, m_txP25Queue.dataSize(), m_txImmP25Queue.dataSize(), m_p25Space);
@@ -2739,6 +2752,7 @@ void ModemV24::endOfStreamTIA()
     m_txCallInProgress = false;
     m_txStartupTraceActive = false;
     m_txStartupTraceWritesLeft = 0U;
+    m_txStartupTraceQueueLogsLeft = 0U;
 }
 
 /* Send a start of stream ACK. */

@@ -609,6 +609,7 @@ namespace modem
         bool m_txStartupTraceActive;
         uint64_t m_txStartupTraceT0;
         uint8_t m_txStartupTraceWritesLeft;
+        uint8_t m_txStartupTraceQueueLogsLeft;
 
         edac::RS634717 m_rs;
 
