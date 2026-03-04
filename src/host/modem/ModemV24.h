@@ -606,6 +606,9 @@ namespace modem
 
         uint16_t m_jitter;
         uint64_t m_lastP25Tx;
+        bool m_txStartupTraceActive;
+        uint64_t m_txStartupTraceT0;
+        uint8_t m_txStartupTraceWritesLeft;
 
         edac::RS634717 m_rs;
 
