@@ -2410,13 +2410,31 @@ bool ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
 
     std::lock_guard<std::mutex> lock(m_txP25QueueLock);
 
-    // check available ringbuffer space
+    // check available ringbuffer space.
+    //
+    // Keep one byte of headroom to avoid the ring buffer "full == empty"
+    // ambiguity (iPtr == oPtr) when a write would consume exactly all free space.
+    uint32_t needed = len + 11U;
     if (imm) {
-        if (m_txImmP25Queue.freeSpace() < (len + 11U))
+        uint32_t free = m_txImmP25Queue.freeSpace();
+        if (free <= needed) {
+            if (m_debug && m_txStartupTraceActive) {
+                LogDebugEx(LOG_MODEM, "ModemV24::queueP25Frame()",
+                    "TX startup drop: q=imm, frameType=$%02X, msgType=$%02X, need=%u, free=%u, txQ=%u, immQ=%u",
+                    data[0U], msgType, needed, free, m_txP25Queue.dataSize(), m_txImmP25Queue.dataSize());
+            }
             return false;
+        }
     } else {
-        if (m_txP25Queue.freeSpace() < (len + 11U))
+        uint32_t free = m_txP25Queue.freeSpace();
+        if (free <= needed) {
+            if (m_debug && m_txStartupTraceActive) {
+                LogDebugEx(LOG_MODEM, "ModemV24::queueP25Frame()",
+                    "TX startup drop: q=norm, frameType=$%02X, msgType=$%02X, need=%u, free=%u, txQ=%u, immQ=%u",
+                    data[0U], msgType, needed, free, m_txP25Queue.dataSize(), m_txImmP25Queue.dataSize());
+            }
             return false;
+        }
     }
 
     // convert 16-bit length to 2 bytes
