@@ -1517,7 +1517,10 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
         uint32_t len = length + 2U;
 
         // write or buffer P25 data to air interface
-        if (m_p25Space >= length) {
+        //
+        // For V.24/DFSI, the modem status space value may lag call startup; do
+        // not block initial Net->RF frames solely on stale p25Space.
+        if (m_p25Space >= length || isV24Connected()) {
             if (m_debug)
                 LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "immediate write (len %u)", length);
             if (m_trace)
@@ -1529,7 +1532,9 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
                 return false;
             }
 
-            m_p25Space -= length;
+            if (m_p25Space >= length) {
+                m_p25Space -= length;
+            }
         }
         else {
             return false;

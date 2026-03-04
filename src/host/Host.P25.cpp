@@ -255,6 +255,11 @@ void* Host::threadP25Writer(void* arg)
 
                         if (nextLen > 0U) {
                             bool ret = host->m_modem->hasP25Space(nextLen);
+                            // V.24 modem status space can lag at call start; do not block
+                            // initial Net->RF voice frames on stale p25Space accounting.
+                            if (!ret && host->m_modem->isV24Connected()) {
+                                ret = true;
+                            }
                             if (ret) {
                                 bool imm = false;
                                 uint32_t len = host->m_p25->getFrame(data, &imm);
@@ -267,7 +272,7 @@ void* Host::threadP25Writer(void* arg)
 
                                     // if the state is P25; write P25 frame data
                                     if (host->m_state == STATE_P25) {
-                                        host->m_modem->writeP25Frame(data, len);
+                                        host->m_modem->writeP25Frame(data, len, imm);
 
                                         afterWriteCallback();
 
