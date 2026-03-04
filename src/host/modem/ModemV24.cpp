@@ -2803,13 +2803,18 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length, bool imm)
         break;
 
         case DUID::TDU:
-            endOfStreamV24(); // this may incorrectly sent STOP ICW's with the VOICE payload, but it's better than nothing for now
+            if (m_txCallInProgress)
+                endOfStreamV24();
+            else if (m_debug)
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAirV24()", "P25 TDU received with no active V.24 TX call; suppressing STOP ICW");
             break;
 
         case DUID::TDULC:
         {
             if (m_txCallInProgress)
                 endOfStreamV24();
+            else if (m_debug)
+                ::LogDebugEx(LOG_MODEM, "ModemV24::convertFromAirV24()", "P25 TDULC received with no active V.24 TX call; suppressing STOP ICW");
 
             lc::tdulc::LC_TDULC_RAW tdulc = lc::tdulc::LC_TDULC_RAW();
             if (!tdulc.decode(data + 2U)) {
