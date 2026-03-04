@@ -482,6 +482,8 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
      *  |   Length    | Tag  |               int64_t timestamp in ms                 |   data     |
      */
 
+    std::lock_guard<std::mutex> lock(m_txP25QueueLock);
+
     // check empty
     if (queue->isEmpty())
         return 0U;
@@ -491,17 +493,15 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
     ::memset(length, 0x00U, 2U);
     queue->peek(length, 2U);
 
-    // convert length byets to int
+    // convert length bytes to int
     uint16_t len = 0U;
     len = (length[0U] << 8) + length[1U];
 
-    // this ensures we never get in a situation where we have length & type bytes stuck in the queue by themselves
+    // this ensures we never get in a situation where we have length bytes stuck in the queue by themselves
     if (queue->dataSize() == 2U && len > queue->dataSize()) {
         queue->get(length, 2U); // ensure we pop bytes off
         return 0U;
     }
-
-    std::lock_guard<std::mutex> lock(m_txP25QueueLock);
 
     // get current timestamp
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -525,23 +525,32 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
 
     // check if we have enough data to get everything - len + 2U (length bytes) + 1U (tag) + 8U (timestamp)
     if (queue->dataSize() >= len + 11U) {
-        // Get the length, tag and timestamp
-        uint8_t lengthTagTs[11U];
-        queue->get(lengthTagTs, 11U);
-        
-        // Get the actual data
-        DECLARE_UINT8_ARRAY(buffer, len);
-        queue->get(buffer, len);
+        // Peek the full entry so we can keep it queued if a write fails.
+        DECLARE_UINT8_ARRAY(entry, len + 11U);
+        queue->peek(entry, len + 11U);
+
+        // Get the length, tag, timestamp and payload pointers from peeked data.
+        uint8_t* lengthTagTs = entry;
+        uint8_t* buffer = entry + 11U;
         
         // Sanity check on data tag
         uint8_t tag = lengthTagTs[2U];
         if (tag != TAG_DATA) {
             LogError(LOG_MODEM, "Got unexpected data tag from TX P25 ringbuffer! %02X", tag);
+            // Drop malformed entry so we can recover queue alignment.
+            DECLARE_UINT8_ARRAY(discard, len + 11U);
+            queue->get(discard, len + 11U);
             return 0U;
         }
 
-        // we already checked the timestamp above, so we just get the data and write it
+        // we already checked the timestamp above, so we just write it
         int ret = m_port->write(buffer, len);
+        if (ret > 0) {
+            // Only remove an entry once it was written successfully.
+            DECLARE_UINT8_ARRAY(discard, len + 11U);
+            queue->get(discard, len + 11U);
+        }
+
         if (ret > 0 && m_debug && m_txStartupTraceActive && m_txStartupTraceWritesLeft > 0U) {
             uint8_t frameType = (len > 4U) ? buffer[4U] : 0xFFU;
             const char* queueName = (queue == &m_txImmP25Queue) ? "imm" : "norm";
@@ -559,6 +568,15 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
             if (m_txStartupTraceWritesLeft == 0U) {
                 m_txStartupTraceActive = false;
             }
+        } else if (ret <= 0 && m_debug && m_txStartupTraceActive) {
+            uint8_t frameType = (len > 4U) ? buffer[4U] : 0xFFU;
+            const char* queueName = (queue == &m_txImmP25Queue) ? "imm" : "norm";
+            int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            int64_t dtStart = (int64_t)(nowMs - (int64_t)m_txStartupTraceT0);
+            LogDebugEx(LOG_MODEM, "ModemV24::writeSerial()",
+                "TX startup write blocked/fail: q=%s, frameType=$%02X, dtStart=%lld ms, ret=%d, txQ=%u, immQ=%u, p25Space=%u",
+                queueName, frameType, dtStart, ret, m_txP25Queue.dataSize(), m_txImmP25Queue.dataSize(), m_p25Space);
         }
 
         return ret;
