@@ -1414,7 +1414,7 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length, bool imm)
             m_dmrSpace1 -= length;
             if ((int32_t)m_dmrSpace1 < 0U) {
                 if (m_debug)
-                    LogError(LOG_MODEM, "Modem::writeDMRFrame1()", "dmrSpace1 underflow, space = %u, length = %u", m_dmrSpace1, length);
+                    LogDebugEx(LOG_MODEM, "Modem::writeDMRFrame1()", "dmrSpace1 underflow, space = %u, length = %u", m_dmrSpace1, length);
                 m_dmrSpace1 = 0U;
             }
         }
