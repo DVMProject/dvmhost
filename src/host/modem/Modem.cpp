@@ -5,8 +5,9 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2011-2021 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2021 Nat Moore
+ *  Copyright (C) 2026 Timothy Sawyer, WD6AWP
  *
  */
 #include "Defines.h"
@@ -125,7 +126,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_nxdnFifoLength(NXDN_TX_BUFFER_LEN),
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
-    m_v24Connected(true),
+    m_v24Connected(false),
     m_modemState(STATE_IDLE),
     m_buffer(nullptr),
     m_length(0U),
@@ -754,7 +755,7 @@ void Modem::clock(uint32_t ms)
             // flag indicating if free space is being reported in 16-byte blocks instead of LDUs
             bool spaceInBlocks = (m_buffer[3U] & 0x80U) == 0x80U;
 
-            m_v24Connected = true;
+            m_v24Connected = false;
             m_modemState = (DVM_STATE)m_buffer[4U];
 
             m_tx = (m_buffer[5U] & 0x01U) == 0x01U;
@@ -1517,7 +1518,9 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
         uint32_t len = length + 2U;
 
         // write or buffer P25 data to air interface
-        if (m_p25Space >= length) {
+        // for V.24/DFSI, the modem status space value may lag call startup; do
+        // not block initial Net->RF frames solely on stale p25Space
+        if (m_p25Space >= length || isV24Connected()) {
             if (m_debug)
                 LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "immediate write (len %u)", length);
             if (m_trace)
@@ -1529,6 +1532,17 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
                 return false;
             }
 
+            /*
+            ** bryanb: this change is from Tim's fork, but it is a bit concerning, because we're not adjusting 
+            ** available modem space appropriately, if there isn't enough space for the frame being written in the first
+            ** place -- for now i've commented this out but included it, reasonably speaking m_p25Space doesn't even
+            ** matter because writeSerial() in ModemV24 doesn't even check this before writing to the port
+            */
+/*
+            if (m_p25Space >= length) {
+                m_p25Space -= length;
+            }
+*/
             m_p25Space -= length;
         }
         else {

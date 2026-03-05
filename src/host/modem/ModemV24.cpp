@@ -4,8 +4,9 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2026 Timothy Sawyer, WD6AWP
  *
  */
 #include "Defines.h"
@@ -394,6 +395,14 @@ void ModemV24::clock(uint32_t ms)
     int len = 0;
 
     // write anything waiting to the serial port
+
+    /*
+    ** bryanb: Tim's fork changes the order of this, however, this is a terrible idea becuase it will ultimately break
+    **  the intended purpose of this code which is to allow prioritized frames, reasonably speaking this code should
+    **  not cause problems for timing -- but we should keep an eye on this (if its problematic for some reason,
+    **  we can consider perhaps adding a flag that disables the immediate queue, forcing all packets in to the normal
+    **  queue)
+    */
     if (!m_txImmP25Queue.isEmpty())
         len = writeSerial(&m_txImmP25Queue);
     else
@@ -477,6 +486,8 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
      *  |   Length    | Tag  |               int64_t timestamp in ms                 |   data     |
      */
 
+    std::lock_guard<std::mutex> lock(m_txP25QueueLock);
+
     // check empty
     if (queue->isEmpty())
         return 0U;
@@ -486,24 +497,19 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
     ::memset(length, 0x00U, 2U);
     queue->peek(length, 2U);
 
-    // convert length byets to int
+    // convert length bytes to int
     uint16_t len = 0U;
     len = (length[0U] << 8) + length[1U];
 
-    // this ensures we never get in a situation where we have length & type bytes stuck in the queue by themselves
+    // this ensures we never get in a situation where we have length bytes stuck in the queue by themselves
     if (queue->dataSize() == 2U && len > queue->dataSize()) {
         queue->get(length, 2U); // ensure we pop bytes off
         return 0U;
     }
 
-    // check available modem space
-    if (m_p25Space < len)
-        return 0U;
-
-    std::lock_guard<std::mutex> lock(m_txP25QueueLock);
-
     // get current timestamp
     int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    int64_t ts = 0L;
 
     // peek the timestamp to see if we should wait
     if (queue->dataSize() >= 11U) {
@@ -512,7 +518,6 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
         queue->peek(lengthTagTs, 11U);
 
         // get the timestamp
-        int64_t ts;
         assert(sizeof ts == 8);
         ::memcpy(&ts, lengthTagTs + 3U, 8U);
 
@@ -524,23 +529,34 @@ int ModemV24::writeSerial(RingBuffer<uint8_t>* queue)
 
     // check if we have enough data to get everything - len + 2U (length bytes) + 1U (tag) + 8U (timestamp)
     if (queue->dataSize() >= len + 11U) {
-        // Get the length, tag and timestamp
-        uint8_t lengthTagTs[11U];
-        queue->get(lengthTagTs, 11U);
-        
-        // Get the actual data
-        DECLARE_UINT8_ARRAY(buffer, len);
-        queue->get(buffer, len);
-        
-        // Sanity check on data tag
+        // peek the full entry so we can keep it queued if a write fails
+        DECLARE_UINT8_ARRAY(entry, len + 11U);
+        queue->peek(entry, len + 11U);
+
+        // get the length, tag, timestamp and payload pointers from peeked data
+        uint8_t* lengthTagTs = entry;
+        uint8_t* buffer = entry + 11U;
+
+        // sanity check on data tag
         uint8_t tag = lengthTagTs[2U];
         if (tag != TAG_DATA) {
             LogError(LOG_MODEM, "Got unexpected data tag from TX P25 ringbuffer! %02X", tag);
+
+            // drop malformed entry so we can recover queue alignment
+            DECLARE_UINT8_ARRAY(discard, len + 11U);
+            queue->get(discard, len + 11U);
             return 0U;
         }
 
-        // we already checked the timestamp above, so we just get the data and write it
-        return m_port->write(buffer, len);
+        // we already checked the timestamp above, so we just write it
+        int ret = m_port->write(buffer, len);
+        if (ret > 0) {
+            // only remove an entry once it was written successfully
+            DECLARE_UINT8_ARRAY(discard, len + 11U);
+            queue->get(discard, len + 11U);
+        }
+
+        return ret;
     }
 
     return 0U;
@@ -2363,12 +2379,19 @@ bool ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
     std::lock_guard<std::mutex> lock(m_txP25QueueLock);
 
     // check available ringbuffer space
+    // keep one byte of headroom to avoid the ring buffer "full == empty"
+    // ambiguity (iPtr == oPtr) when a write would consume exactly all free space
+    uint32_t needed = len + 11U;
     if (imm) {
-        if (m_txImmP25Queue.freeSpace() < (len + 11U))
+        uint32_t free = m_txImmP25Queue.freeSpace();
+        if (free <= needed) {
             return false;
+        }
     } else {
-        if (m_txP25Queue.freeSpace() < (len + 11U))
+        uint32_t free = m_txP25Queue.freeSpace();
+        if (free <= needed) {
             return false;
+        }
     }
 
     // convert 16-bit length to 2 bytes
@@ -2428,6 +2451,10 @@ bool ModemV24::queueP25Frame(uint8_t* data, uint16_t len, SERIAL_TX_TYPE msgType
 void ModemV24::startOfStreamV24(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
+
+    // start each Net->RF stream with a fresh scheduler epoch so a new call
+    // doesn't inherit a future-biased timestamp from the previous call
+    m_lastP25Tx = 0U;
 
     MotStartOfStream start = MotStartOfStream();
     start.setOpcode(m_rtrt ? MotStartStreamOpcode::TRANSMIT : MotStartStreamOpcode::RECEIVE);
@@ -2545,6 +2572,10 @@ void ModemV24::startOfStreamTIA(const p25::lc::LC& control)
 {
     m_txCallInProgress = true;
     m_superFrameCnt = 1U;
+
+    // start each Net->RF stream with a fresh scheduler epoch so a new call
+    // doesn't inherit a future-biased timestamp from the previous call
+    m_lastP25Tx = 0U;
 
     p25::lc::LC lc = p25::lc::LC(control);
     
@@ -2806,7 +2837,8 @@ void ModemV24::convertFromAirV24(uint8_t* data, uint32_t length, bool imm)
         break;
 
         case DUID::TDU:
-            endOfStreamV24(); // this may incorrectly sent STOP ICW's with the VOICE payload, but it's better than nothing for now
+            if (m_txCallInProgress)
+                endOfStreamV24();
             break;
 
         case DUID::TDULC:
