@@ -5,6 +5,7 @@
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2026 Timothy Sawyer, WD6AWP
 *
 */
 #include "Defines.h"
@@ -511,6 +512,7 @@ bool Host::createModem()
     uint16_t dmrFifoLength = (uint16_t)modemConf["dmrFifoLength"].as<uint32_t>(DMR_TX_BUFFER_LEN);
     uint16_t p25FifoLength = (uint16_t)modemConf["p25FifoLength"].as<uint32_t>(P25_TX_BUFFER_LEN);
     uint16_t nxdnFifoLength = (uint16_t)modemConf["nxdnFifoLength"].as<uint32_t>(NXDN_TX_BUFFER_LEN);
+    uint32_t v24P25TxQueueSize = p25FifoLength;
 
     yaml::Node dfsiParams = modemConf["dfsi"];
 
@@ -645,6 +647,14 @@ bool Host::createModem()
             LogInfo("    DFSI FSC Initiator: %s", fscInitiator ? "yes" : "no");
             LogInfo("    DFSI TIA-102 Frames: %s", dfsiTIAMode ? "yes" : "no");
         }
+
+        // DFSI startup can enqueue a burst of timed frames before the modem
+        // thread starts draining; keep the TX scheduler queue larger than the
+        // raw modem FIFO to avoid clipping first-call onset.
+        uint32_t minV24TxQueueSize = m_p25QueueSizeBytes + p25FifoLength;
+        if (v24P25TxQueueSize < minV24TxQueueSize) {
+            v24P25TxQueueSize = minV24TxQueueSize;
+        }
     }
 
     if (g_remoteModemMode) {
@@ -708,6 +718,8 @@ bool Host::createModem()
         LogInfo("    NXDN Queue Size: %u (%u bytes)", nxdnQueueSize, m_nxdnQueueSizeBytes);
         LogInfo("    DMR FIFO Size: %u bytes", dmrFifoLength);
         LogInfo("    P25 FIFO Size: %u bytes", p25FifoLength);
+        if (m_isModemDFSI)
+            LogInfo("    P25 DFSI TX Queue Size: %u bytes", v24P25TxQueueSize);
         LogInfo("    NXDN FIFO Size: %u bytes", nxdnFifoLength);
 
         if (ignoreModemConfigArea) {
@@ -728,7 +740,7 @@ bool Host::createModem()
     }
 
     if (m_isModemDFSI) {
-        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, p25FifoLength, rtrt, jitter,
+        m_modem = new ModemV24(modemPort, m_duplex, m_p25QueueSizeBytes, v24P25TxQueueSize, rtrt, jitter,
             dumpModemStatus, displayModemDebugMessages, trace, debug);
         ((ModemV24*)m_modem)->setCallTimeout(dfsiCallTimeout);
         ((ModemV24*)m_modem)->setTIAFormat(dfsiTIAMode);
