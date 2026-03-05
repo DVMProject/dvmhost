@@ -1412,7 +1412,7 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_dmrSpace1 -= length;
-            if ((int32_t)m_dmrSpace1 < 0U) {
+            if ((int32_t)m_dmrSpace1 < 0) {
                 if (m_debug)
                     LogDebugEx(LOG_MODEM, "Modem::writeDMRFrame1()", "dmrSpace1 underflow, space = %u, length = %u", m_dmrSpace1, length);
                 m_dmrSpace1 = 0U;
@@ -1471,7 +1471,7 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_dmrSpace2 -= length;
-            if ((int32_t)m_dmrSpace2 < 0U) {
+            if ((int32_t)m_dmrSpace2 < 0) {
                 if (m_debug)
                     LogDebugEx(LOG_MODEM, "Modem::writeDMRFrame2()", "dmrSpace2 underflow, space = %u, length = %u", m_dmrSpace2, length);
                 m_dmrSpace2 = 0U;
@@ -1543,7 +1543,7 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_p25Space -= length;
-            if ((int32_t)m_p25Space < 0U) {
+            if ((int32_t)m_p25Space < 0) {
                 if (m_debug)
                     LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "p25Space underflow, space = %u, length = %u", m_p25Space, length);
                 m_p25Space = 0U;
@@ -1602,7 +1602,7 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_nxdnSpace -= length;
-            if ((int32_t)m_nxdnSpace < 0U) {
+            if ((int32_t)m_nxdnSpace < 0) {
                 if (m_debug)
                     LogDebugEx(LOG_MODEM, "Modem::writeNXDNFrame()", "nxdnSpace underflow, space = %u, length = %u", m_nxdnSpace, length);
                 m_nxdnSpace = 0U;
