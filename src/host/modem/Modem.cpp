@@ -1412,6 +1412,10 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_dmrSpace1 -= length;
+            if ((int32_t)m_dmrSpace1 < 0U) {
+                LogError(LOG_MODEM, "Modem::writeDMRFrame1(), dmrSpace1 underflow, space = %u, length = %u", m_dmrSpace1, length);
+                m_dmrSpace1 = 0U;
+            }
         }
         else {
             return false;
@@ -1466,6 +1470,10 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_dmrSpace2 -= length;
+            if ((int32_t)m_dmrSpace2 < 0U) {
+                LogError(LOG_MODEM, "Modem::writeDMRFrame2(), dmrSpace2 underflow, space = %u, length = %u", m_dmrSpace2, length);
+                m_dmrSpace2 = 0U;
+            }
         }
         else {
             return false;
@@ -1532,18 +1540,11 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
                 return false;
             }
 
-            /*
-            ** bryanb: this change is from Tim's fork, but it is a bit concerning, because we're not adjusting 
-            ** available modem space appropriately, if there isn't enough space for the frame being written in the first
-            ** place -- for now i've commented this out but included it, reasonably speaking m_p25Space doesn't even
-            ** matter because writeSerial() in ModemV24 doesn't even check this before writing to the port
-            */
-/*
-            if (m_p25Space >= length) {
-                m_p25Space -= length;
-            }
-*/
             m_p25Space -= length;
+            if ((int32_t)m_p25Space < 0U) {
+                LogError(LOG_MODEM, "Modem::writeP25Frame(), p25Space underflow, space = %u, length = %u", m_p25Space, length);
+                m_p25Space = 0U;
+            }
         }
         else {
             return false;
@@ -1598,6 +1599,10 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_nxdnSpace -= length;
+            if ((int32_t)m_nxdnSpace < 0U) {
+                LogError(LOG_MODEM, "Modem::writeNXDNFrame(), nxdnSpace underflow, space = %u, length = %u", m_nxdnSpace, length);
+                m_nxdnSpace = 0U;
+            }
         }
         else {
             return false;
