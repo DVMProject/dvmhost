@@ -5,8 +5,9 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2011-2021 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2021 Nat Moore
+ *  Copyright (C) 2026 Timothy Sawyer, WD6AWP
  *
  */
 #include "Defines.h"
@@ -125,7 +126,7 @@ Modem::Modem(port::IModemPort* port, bool duplex, bool rxInvert, bool txInvert, 
     m_nxdnFifoLength(NXDN_TX_BUFFER_LEN),
     m_adcOverFlowCount(0U),
     m_dacOverFlowCount(0U),
-    m_v24Connected(true),
+    m_v24Connected(false),
     m_modemState(STATE_IDLE),
     m_buffer(nullptr),
     m_length(0U),
@@ -754,7 +755,7 @@ void Modem::clock(uint32_t ms)
             // flag indicating if free space is being reported in 16-byte blocks instead of LDUs
             bool spaceInBlocks = (m_buffer[3U] & 0x80U) == 0x80U;
 
-            m_v24Connected = true;
+            m_v24Connected = false;
             m_modemState = (DVM_STATE)m_buffer[4U];
 
             m_tx = (m_buffer[5U] & 0x01U) == 0x01U;
@@ -1411,6 +1412,11 @@ bool Modem::writeDMRFrame1(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_dmrSpace1 -= length;
+            if ((int32_t)m_dmrSpace1 < 0) {
+                if (m_debug)
+                    LogDebugEx(LOG_MODEM, "Modem::writeDMRFrame1()", "dmrSpace1 underflow, space = %u, length = %u", m_dmrSpace1, length);
+                m_dmrSpace1 = 0U;
+            }
         }
         else {
             return false;
@@ -1465,6 +1471,11 @@ bool Modem::writeDMRFrame2(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_dmrSpace2 -= length;
+            if ((int32_t)m_dmrSpace2 < 0) {
+                if (m_debug)
+                    LogDebugEx(LOG_MODEM, "Modem::writeDMRFrame2()", "dmrSpace2 underflow, space = %u, length = %u", m_dmrSpace2, length);
+                m_dmrSpace2 = 0U;
+            }
         }
         else {
             return false;
@@ -1517,7 +1528,9 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
         uint32_t len = length + 2U;
 
         // write or buffer P25 data to air interface
-        if (m_p25Space >= length) {
+        // for V.24/DFSI, the modem status space value may lag call startup; do
+        // not block initial Net->RF frames solely on stale p25Space
+        if (m_p25Space >= length || isV24Connected()) {
             if (m_debug)
                 LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "immediate write (len %u)", length);
             if (m_trace)
@@ -1530,6 +1543,11 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_p25Space -= length;
+            if ((int32_t)m_p25Space < 0) {
+                if (m_debug)
+                    LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "p25Space underflow, space = %u, length = %u", m_p25Space, length);
+                m_p25Space = 0U;
+            }
         }
         else {
             return false;
@@ -1584,6 +1602,11 @@ bool Modem::writeNXDNFrame(const uint8_t* data, uint32_t length, bool imm)
             }
 
             m_nxdnSpace -= length;
+            if ((int32_t)m_nxdnSpace < 0) {
+                if (m_debug)
+                    LogDebugEx(LOG_MODEM, "Modem::writeNXDNFrame()", "nxdnSpace underflow, space = %u, length = %u", m_nxdnSpace, length);
+                m_nxdnSpace = 0U;
+            }
         }
         else {
             return false;
