@@ -71,7 +71,6 @@ bool NID::decode(const uint8_t* data)
     // handle digital "squelch" NAC
     if ((m_nac == NAC_DIGITAL_SQ) || (m_nac == NAC_REUSE_RX_NAC)) {
         uint32_t nac = ((nid[0U] << 4) + (nid[1U] >> 4)) & 0xFFFU;
-        cleanupArrays();
         createRxTxNID(nac); // bryanb: I hate this and it'll be slow
     }
 
@@ -144,7 +143,6 @@ void NID::encode(uint8_t* data, defines::DUID::E duid)
     else {
         // handle digital "squelch" NAC
         if (m_nac == NAC_DIGITAL_SQ) {
-            cleanupArrays();
             createRxTxNID(DEFAULT_NAC);
         }
 
@@ -202,49 +200,63 @@ void NID::createRxTxNID(uint32_t nac)
 {
     edac::BCH bch;
 
-    m_rxTx[DUID::HDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_rxTx[DUID::HDU] == nullptr)
+        m_rxTx[DUID::HDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_rxTx[DUID::HDU], 0, P25_NID_LENGTH_BYTES);
     m_rxTx[DUID::HDU][0U] = (nac >> 4) & 0xFFU;
     m_rxTx[DUID::HDU][1U] = (nac << 4) & 0xF0U;
     m_rxTx[DUID::HDU][1U] |= DUID::HDU;
     bch.encode(m_rxTx[DUID::HDU]);
     m_rxTx[DUID::HDU][7U] &= 0xFEU;                          // Clear the parity bit
 
-    m_rxTx[DUID::TDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_rxTx[DUID::TDU] == nullptr)
+        m_rxTx[DUID::TDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_rxTx[DUID::TDU], 0, P25_NID_LENGTH_BYTES);
     m_rxTx[DUID::TDU][0U] = (nac >> 4) & 0xFFU;
     m_rxTx[DUID::TDU][1U] = (nac << 4) & 0xF0U;
     m_rxTx[DUID::TDU][1U] |= DUID::TDU;
     bch.encode(m_rxTx[DUID::TDU]);
     m_rxTx[DUID::TDU][7U] &= 0xFEU;                          // Clear the parity bit
 
-    m_rxTx[DUID::LDU1] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_rxTx[DUID::LDU1] == nullptr)
+        m_rxTx[DUID::LDU1] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_rxTx[DUID::LDU1], 0, P25_NID_LENGTH_BYTES);
     m_rxTx[DUID::LDU1][0U] = (nac >> 4) & 0xFFU;
     m_rxTx[DUID::LDU1][1U] = (nac << 4) & 0xF0U;
     m_rxTx[DUID::LDU1][1U] |= DUID::LDU1;
     bch.encode(m_rxTx[DUID::LDU1]);
     m_rxTx[DUID::LDU1][7U] |= 0x01U;                         // Set the parity bit
 
-    m_rxTx[DUID::PDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_rxTx[DUID::PDU] == nullptr)
+        m_rxTx[DUID::PDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_rxTx[DUID::PDU], 0, P25_NID_LENGTH_BYTES);
     m_rxTx[DUID::PDU][0U] = (nac >> 4) & 0xFFU;
     m_rxTx[DUID::PDU][1U] = (nac << 4) & 0xF0U;
     m_rxTx[DUID::PDU][1U] |= DUID::PDU;
     bch.encode(m_rxTx[DUID::PDU]);
     m_rxTx[DUID::PDU][7U] &= 0xFEU;                          // Clear the parity bit
 
-    m_rxTx[DUID::TSDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_rxTx[DUID::TSDU] == nullptr)
+        m_rxTx[DUID::TSDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_rxTx[DUID::TSDU], 0, P25_NID_LENGTH_BYTES);
     m_rxTx[DUID::TSDU][0U] = (nac >> 4) & 0xFFU;
     m_rxTx[DUID::TSDU][1U] = (nac << 4) & 0xF0U;
     m_rxTx[DUID::TSDU][1U] |= DUID::TSDU;
     bch.encode(m_rxTx[DUID::TSDU]);
     m_rxTx[DUID::TSDU][7U] &= 0xFEU;                         // Clear the parity bit
 
-    m_rxTx[DUID::LDU2] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_rxTx[DUID::LDU2] == nullptr)
+        m_rxTx[DUID::LDU2] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_rxTx[DUID::LDU2], 0, P25_NID_LENGTH_BYTES);
     m_rxTx[DUID::LDU2][0U] = (nac >> 4) & 0xFFU;
     m_rxTx[DUID::LDU2][1U] = (nac << 4) & 0xF0U;
     m_rxTx[DUID::LDU2][1U] |= DUID::LDU2;
     bch.encode(m_rxTx[DUID::LDU2]);
     m_rxTx[DUID::LDU2][7U] |= 0x01U;                         // Set the parity bit
 
-    m_rxTx[DUID::TDULC] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_rxTx[DUID::TDULC] == nullptr)
+        m_rxTx[DUID::TDULC] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_rxTx[DUID::TDULC], 0, P25_NID_LENGTH_BYTES);
     m_rxTx[DUID::TDULC][0U] = (nac >> 4) & 0xFFU;
     m_rxTx[DUID::TDULC][1U] = (nac << 4) & 0xF0U;
     m_rxTx[DUID::TDULC][1U] |= DUID::TDULC;
@@ -258,49 +270,63 @@ void NID::createTxNID(uint32_t nac)
 {
     edac::BCH bch;
 
-    m_tx[DUID::HDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_tx[DUID::HDU] == nullptr)
+        m_tx[DUID::HDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_tx[DUID::HDU], 0, P25_NID_LENGTH_BYTES);
     m_tx[DUID::HDU][0U] = (nac >> 4) & 0xFFU;
     m_tx[DUID::HDU][1U] = (nac << 4) & 0xF0U;
     m_tx[DUID::HDU][1U] |= DUID::HDU;
     bch.encode(m_tx[DUID::HDU]);
     m_tx[DUID::HDU][7U] &= 0xFEU;                            // Clear the parity bit
 
-    m_tx[DUID::TDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_tx[DUID::TDU] == nullptr)
+        m_tx[DUID::TDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_tx[DUID::TDU], 0, P25_NID_LENGTH_BYTES);
     m_tx[DUID::TDU][0U] = (nac >> 4) & 0xFFU;
     m_tx[DUID::TDU][1U] = (nac << 4) & 0xF0U;
     m_tx[DUID::TDU][1U] |= DUID::TDU;
     bch.encode(m_tx[DUID::TDU]);
     m_tx[DUID::TDU][7U] &= 0xFEU;                            // Clear the parity bit
 
-    m_tx[DUID::LDU1] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_tx[DUID::LDU1] == nullptr)
+        m_tx[DUID::LDU1] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_tx[DUID::LDU1], 0, P25_NID_LENGTH_BYTES);
     m_tx[DUID::LDU1][0U] = (nac >> 4) & 0xFFU;
     m_tx[DUID::LDU1][1U] = (nac << 4) & 0xF0U;
     m_tx[DUID::LDU1][1U] |= DUID::LDU1;
     bch.encode(m_tx[DUID::LDU1]);
     m_tx[DUID::LDU1][7U] |= 0x01U;                           // Set the parity bit
 
-    m_tx[DUID::PDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_tx[DUID::PDU] == nullptr)
+        m_tx[DUID::PDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_tx[DUID::PDU], 0, P25_NID_LENGTH_BYTES);
     m_tx[DUID::PDU][0U] = (nac >> 4) & 0xFFU;
     m_tx[DUID::PDU][1U] = (nac << 4) & 0xF0U;
     m_tx[DUID::PDU][1U] |= DUID::PDU;
     bch.encode(m_tx[DUID::PDU]);
     m_tx[DUID::PDU][7U] &= 0xFEU;                            // Clear the parity bit
 
-    m_tx[DUID::TSDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_tx[DUID::TSDU] == nullptr)
+        m_tx[DUID::TSDU] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_tx[DUID::TSDU], 0, P25_NID_LENGTH_BYTES);
     m_tx[DUID::TSDU][0U] = (nac >> 4) & 0xFFU;
     m_tx[DUID::TSDU][1U] = (nac << 4) & 0xF0U;
     m_tx[DUID::TSDU][1U] |= DUID::TSDU;
     bch.encode(m_tx[DUID::TSDU]);
     m_tx[DUID::TSDU][7U] &= 0xFEU;                           // Clear the parity bit
 
-    m_tx[DUID::LDU2] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_tx[DUID::LDU2] == nullptr)
+        m_tx[DUID::LDU2] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_tx[DUID::LDU2], 0, P25_NID_LENGTH_BYTES);
     m_tx[DUID::LDU2][0U] = (nac >> 4) & 0xFFU;
     m_tx[DUID::LDU2][1U] = (nac << 4) & 0xF0U;
     m_tx[DUID::LDU2][1U] |= DUID::LDU2;
     bch.encode(m_tx[DUID::LDU2]);
     m_tx[DUID::LDU2][7U] |= 0x01U;                           // Set the parity bit
 
-    m_tx[DUID::TDULC] = new uint8_t[P25_NID_LENGTH_BYTES];
+    if (m_tx[DUID::TDULC] == nullptr)
+        m_tx[DUID::TDULC] = new uint8_t[P25_NID_LENGTH_BYTES];
+    ::memset(m_tx[DUID::TDULC], 0, P25_NID_LENGTH_BYTES);
     m_tx[DUID::TDULC][0U] = (nac >> 4) & 0xFFU;
     m_tx[DUID::TDULC][1U] = (nac << 4) & 0xF0U;
     m_tx[DUID::TDULC][1U] |= DUID::TDULC;
