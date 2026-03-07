@@ -1,0 +1,78 @@
+name: Feature request
+description: Suggest a new feature, enhancement, or quality-of-life improvement for dvmhost or related components
+title: "[FEATURE] "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for feature requests, enhancements, and roadmap suggestions.
+
+        Please be specific about the problem you're trying to solve, how you think it should work, and any relevant implementation details.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Select the component this request applies to
+      options:
+        - dvmhost
+        - dvmfne
+        - dvmbridge
+        - dvmpatch
+        - dvmcmd
+        - sysview
+        - tged
+        - peered
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: component_other
+    attributes:
+      label: If "Other", specify component
+      placeholder: "Describe the affected component"
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What problem does this request solve?
+      placeholder: |
+        Describe the current limitation, pain point, or missing functionality.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed solution
+      description: Describe how you think this should work
+      placeholder: |
+        Explain the feature or change you would like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternative solutions or workarounds you've considered
+      placeholder: |
+        List any other approaches, current workarounds, or reasons they are insufficient.
+
+  - type: textarea
+    id: implementation_notes
+    attributes:
+      label: Implementation notes
+      description: Optional technical details, design ideas, or example configs
+      render: text
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add any other context, screenshots, logs, or references here

@@ -7,8 +7,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Issues are for reproducible bugs only.  
-        Feature requests and roadmap suggestions will be closed.**
+        **Issues in this form are for reproducible bugs only.**
+
+        If you want to suggest a feature, enhancement, or roadmap idea, please use the Feature Request form instead.
 
         Please provide enough detail for us to reproduce the issue.
         Full logs are strongly preferred over screenshots or partial snippets.
