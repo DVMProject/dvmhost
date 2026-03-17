@@ -1833,8 +1833,12 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
                     uint32_t missedMetadataUpdates = peer->missedMetadataUpdates();
                     peerObj["missedMetadataUpdates"].set<uint32_t>(missedMetadataUpdates);
 
-                    bool isNeighbor = peer->isNeighborFNEPeer();
+                    bool isNeighbor = (peer->peerClass() == PEER_CONN_CLASS_NEIGHBOR);
                     bool isReplica = peer->isReplica();
+                    bool isSysView = (peer->peerClass() == PEER_CONN_CLASS_SYSVIEW);
+                    bool isConsole = (peer->peerClass() == PEER_CONN_CLASS_CONSOLE);
+                    peerObj["isConsole"].set<bool>(isConsole);
+                    peerObj["isSysView"].set<bool>(isSysView);
                     peerObj["isNeighbor"].set<bool>(isNeighbor);
                     peerObj["isReplica"].set<bool>(isReplica);
 

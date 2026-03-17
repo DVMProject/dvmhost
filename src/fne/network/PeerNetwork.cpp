@@ -521,13 +521,9 @@ bool PeerNetwork::writeConfig()
     rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    // Flags
-    /*
-    ** bryanb: don't change externalPeer to neighborPeer -- this will break backward
-    **  compat with older FNE versions (we're stuck with this naming :()
-    */
-    bool external = true;
-    config["externalPeer"].set<bool>(external);                                     // External FNE Neighbor Peer Marker
+    uint32_t peerClass = (uint32_t)PEER_CONN_CLASS::PEER_CONN_CLASS_NEIGHBOR;
+    config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
+
     config["masterPeerId"].set<uint32_t>(m_masterPeerId);                           // Master Peer ID
 
     config["software"].set<std::string>(std::string(software));                     // Software ID

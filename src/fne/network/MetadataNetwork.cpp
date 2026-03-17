@@ -210,7 +210,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                             if (network->m_peers.find(req->rtpHeader.getSSRC()) != network->m_peers.end()) {
                                 FNEPeerConnection* connection = network->m_peers[req->rtpHeader.getSSRC()];
                                 if (connection != nullptr) {
-                                    if (connection->isNeighborFNEPeer() && connection->isReplica()) {
+                                    if (connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR && connection->isReplica()) {
                                         validPeerId = true;
                                         pktPeerId = req->rtpHeader.getSSRC();
                                     }
@@ -252,7 +252,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (network->m_peers.size() > 0U) {
                                                 for (auto peer : network->m_peers) {
                                                     if (peer.second != nullptr) {
-                                                        if (peer.second->isSysView()) {
+                                                        if (peer.second->peerClass() == PEER_CONN_CLASS_SYSVIEW) {
                                                             sockaddr_storage addr = peer.second->socketStorage();
                                                             uint32_t addrLen = peer.second->sockStorageLen();
 
@@ -338,7 +338,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                                             // attempt to repeat status traffic to SysView clients
                                             for (auto peer : network->m_peers) {
                                                 if (peer.second != nullptr) {
-                                                    if (peer.second->isSysView()) {
+                                                    if (peer.second->peerClass() == PEER_CONN_CLASS_SYSVIEW) {
                                                         sockaddr_storage addr = peer.second->socketStorage();
                                                         uint32_t addrLen = peer.second->sockStorageLen();
 
@@ -391,7 +391,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                             std::string ip = udp::Socket::address(req->address);
 
                             // validate peer (simple validation really)
-                            if (connection->connected() && connection->address() == ip && connection->isNeighborFNEPeer() &&
+                            if (connection->connected() && connection->address() == ip && connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR &&
                                 connection->isReplica()) {
                                 DECLARE_UINT8_ARRAY(rawPayload, req->length);
                                 ::memcpy(rawPayload, req->buffer, req->length);
@@ -496,7 +496,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                             std::string ip = udp::Socket::address(req->address);
 
                             // validate peer (simple validation really)
-                            if (connection->connected() && connection->address() == ip && connection->isNeighborFNEPeer() &&
+                            if (connection->connected() && connection->address() == ip && connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR &&
                                 connection->isReplica()) {
                                 DECLARE_UINT8_ARRAY(rawPayload, req->length);
                                 ::memcpy(rawPayload, req->buffer, req->length);
@@ -581,7 +581,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                             std::string ip = udp::Socket::address(req->address);
 
                             // validate peer (simple validation really)
-                            if (connection->connected() && connection->address() == ip && connection->isNeighborFNEPeer()) {
+                            if (connection->connected() && connection->address() == ip && connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                                 DECLARE_UINT8_ARRAY(rawPayload, req->length);
                                 ::memcpy(rawPayload, req->buffer, req->length);
 
@@ -695,7 +695,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                 break;
 
             default:
-                // diagostic network ignores unknowns for everything else...
+                // metadata network ignores unknowns for everything else...
                 break;
             }
         }

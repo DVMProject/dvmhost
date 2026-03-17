@@ -155,6 +155,26 @@ namespace network
     };
 
     /**
+     * @brief Peer Connection Class Enumerations
+     * @note These values define which connection class a peer connection belongs to. This is used for determining how 
+     *  to handle traffic from the peer.
+     * @ingroup network_core
+     */
+    enum PEER_CONN_CLASS {
+        PEER_CONN_CLASS_UNKNOWN,            //!< Unknown
+
+        PEER_CONN_CLASS_NEIGHBOR,           //!< Neighbor FNE Peer
+
+        PEER_CONN_CLASS_STANDARD,           //!< Standard Peer
+
+        PEER_CONN_CLASS_SYSVIEW,            //!< SysView Peer
+        PEER_CONN_CLASS_CONSOLE,            //!< Console Peer
+
+        // this should always be last
+        PEER_CONN_CLASS_INVALID
+    };
+
+    /**
      * @brief RTP Stream Multiplex Validation Return Codes
      * @ingroup network_core
      */

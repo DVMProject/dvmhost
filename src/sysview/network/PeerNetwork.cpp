@@ -277,14 +277,8 @@ bool PeerNetwork::writeConfig()
     rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    // Flags
-    bool external = true;
-    config["externalPeer"].set<bool>(external);                                     // External Peer Marker
-    config["masterPeerId"].set<uint32_t>(m_peerId);                                 // Master Peer ID
-    bool convPeer = true;
-    config["conventionalPeer"].set<bool>(convPeer);                                 // Conventional Peer Marker
-    bool sysView = true;
-    config["sysView"].set<bool>(sysView);                                           // SysView Peer Marker
+    uint32_t peerClass = PEER_CONN_CLASS::PEER_CONN_CLASS_SYSVIEW;
+    config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
 
     config["software"].set<std::string>(std::string(software));                     // Software ID
 

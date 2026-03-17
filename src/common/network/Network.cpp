@@ -1531,6 +1531,9 @@ bool Network::writeConfig()
     rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
+    uint32_t peerClass = PEER_CONN_CLASS::PEER_CONN_CLASS_STANDARD;
+    config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
+
     // Flags
     config["conventionalPeer"].set<bool>(m_metadata->isConventional);               // Conventional Peer Marker
 

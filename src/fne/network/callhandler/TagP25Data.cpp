@@ -580,7 +580,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             if (peerId != peer.first) {
                                 FNEPeerConnection* conn = peer.second;
                                 if (conn != nullptr) {
-                                    if (conn->isNeighborFNEPeer()) {
+                                    if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                                         continue;
                                     }
                                 }
@@ -620,7 +620,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
-                            neighbor = conn->isNeighborFNEPeer();
+                            neighbor = conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
                         }
 
                         // is this a private call?
@@ -1460,18 +1460,18 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
     // is this peer a conventional peer?
     if (m_network->m_allowConvSiteAffOverride) {
         if (connection != nullptr) {
-            if (connection->isConventionalPeer()) {
+            if (connection->peerClass() == PEER_CONN_CLASS_STANDARD && connection->isConventional()) {
                 fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
                                      // for conventional peers
             }
         }
     }
 
-    // is this peer a SysView peer?
+    // is this peer a SysView or console peer?
     if (connection != nullptr) {
-        if (connection->isSysView()) {
+        if (connection->peerClass() == PEER_CONN_CLASS_SYSVIEW || connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
             fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
-                                 // for SysView peers
+                                 // for SysView or console peers
         }
     }
 

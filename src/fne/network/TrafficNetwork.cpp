@@ -559,7 +559,7 @@ void TrafficNetwork::clock(uint32_t ms)
             FNEPeerConnection* connection = peer.second;
             if (connection != nullptr) {
                 uint64_t dt = 0U;
-                if (connection->isNeighborFNEPeer() || connection->isReplica())
+                if (connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR || connection->isReplica())
                     dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * (m_host->m_maxMissedPings * 2U));
                 else
                     dt = connection->lastPing() + ((m_host->m_pingTime * 1000) * m_host->m_maxMissedPings);
@@ -1405,12 +1405,67 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                             LogInfoEx(LOG_MASTER, "PEER %u >> Software Version [%s]", peerId, software.c_str());
                                         }
 
-                                        // is the peer reporting it is a SysView peer?
-                                        if (peerConfig["sysView"].is<bool>()) {
-                                            bool sysView = peerConfig["sysView"].get<bool>();
-                                            connection->isSysView(sysView);
-                                            if (sysView)
+                                        /*
+                                        ** bryanb: this is support for older configuration structs, newer peers should
+                                        **  send the peerClass value
+                                        */
+                                        {
+                                            // is the peer reporting it is a SysView peer?
+                                            if (peerConfig["sysView"].is<bool>()) {
+                                                bool sysView = peerConfig["sysView"].get<bool>();
+                                                if (sysView)
+                                                    connection->peerClass(PEER_CONN_CLASS_SYSVIEW);
+                                                if (sysView)
+                                                    LogInfoEx(LOG_MASTER, "PEER %u >> SysView Peer", peerId);
+                                            }
+
+                                            // is the peer reporting it is a downstream FNE neighbor peer?
+                                            if (peerConfig["externalPeer"].is<bool>()) {
+                                                bool externalPeer = peerConfig["externalPeer"].get<bool>();
+                                                if (externalPeer)
+                                                    connection->peerClass(PEER_CONN_CLASS_NEIGHBOR);
+                                            }
+                                        }
+
+                                        // determine the peer class
+                                        if (peerConfig["peerClass"].is<uint32_t>()) {
+                                            uint32_t peerClass = peerConfig["peerClass"].get<uint32_t>();
+                                            if (peerClass >= PEER_CONN_CLASS_INVALID)
+                                                peerClass = PEER_CONN_CLASS_STANDARD;
+                                            connection->peerClass((PEER_CONN_CLASS)peerClass);
+                                        } else {
+                                            if (connection->peerClass() == PEER_CONN_CLASS_UNKNOWN) {
+                                                connection->peerClass(PEER_CONN_CLASS_STANDARD);
+                                            }
+                                        }
+
+                                        // is the peer reporting it is a conventional peer?
+                                        if (peerConfig["conventionalPeer"].is<bool>()) {
+                                            if (network->m_allowConvSiteAffOverride) {
+                                                bool convPeer = peerConfig["conventionalPeer"].get<bool>();
+                                                connection->isConventional(convPeer);
+                                            }
+                                        }
+
+                                        // report peer class in log
+                                        switch (connection->peerClass()) {
+                                            case PEER_CONN_CLASS_NEIGHBOR:
+                                                LogInfoEx(LOG_MASTER, "PEER %u >> Downstream Neighbor FNE Peer", peerId);
+                                                break;
+                                            case PEER_CONN_CLASS_SYSVIEW:
                                                 LogInfoEx(LOG_MASTER, "PEER %u >> SysView Peer", peerId);
+                                                connection->isReplica(true);
+                                                break;
+                                            case PEER_CONN_CLASS_CONSOLE:
+                                                LogInfoEx(LOG_MASTER, "PEER %u >> Console Peer", peerId);
+                                                break;
+                                            case PEER_CONN_CLASS_STANDARD:
+                                            default:
+                                                if (connection->isConventional())
+                                                    LogInfoEx(LOG_MASTER, "PEER %u >> Conventional Peer", peerId);
+                                                else
+                                                    LogInfoEx(LOG_MASTER, "PEER %u >> Standard Peer", peerId);
+                                                break;
                                         }
 
                                         // is the peer reporting it is an downstream FNE neighbor peer?
@@ -1418,12 +1473,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                         ** bryanb: don't change externalPeer to neighborPeer -- this will break backward
                                         **  compat with older FNE versions (we're stuck with this naming :()
                                         */
-                                        if (peerConfig["externalPeer"].is<bool>()) {
-                                            bool neighbor = peerConfig["externalPeer"].get<bool>();
-                                            connection->isNeighborFNEPeer(neighbor);
-                                            if (neighbor)
-                                                LogInfoEx(LOG_MASTER, "PEER %u >> Downstream Neighbor FNE Peer", peerId);
-
+                                        if (connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                                             uint32_t masterPeerId = 0U;
                                             if (peerConfig["masterPeerId"].is<uint32_t>()) {
                                                 masterPeerId = peerConfig["masterPeerId"].get<uint32_t>();
@@ -1442,12 +1492,11 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (!peerEntry.peerDefault()) {
                                                 if (peerEntry.peerReplica()) {
                                                     connection->isReplica(true);
-                                                    if (neighbor)
-                                                        LogInfoEx(LOG_MASTER, "PEER %u >> Participates in Peer Replication", peerId);
+                                                    LogInfoEx(LOG_MASTER, "PEER %u >> Participates in Peer Replication", peerId);
                                                 }
                                             }
 
-                                            if (network->m_enableSpanningTree && !connection->isSysView()) {
+                                            if (network->m_enableSpanningTree) {
                                                 network->m_treeLock.lock();
 
                                                 // check if this peer is already connected via another peer
@@ -1485,16 +1534,6 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                         network->writePeerACK(peerId, streamId, buffer, 1U);
                                         LogInfoEx(LOG_MASTER, "PEER %u RPTC ACK, completed the configuration exchange", peerId);
-
-                                        // is the peer reporting it is a conventional peer?
-                                        if (peerConfig["conventionalPeer"].is<bool>()) {
-                                            if (network->m_allowConvSiteAffOverride) {
-                                                bool convPeer = peerConfig["conventionalPeer"].get<bool>();
-                                                connection->isConventionalPeer(convPeer);
-                                                if (convPeer)
-                                                    LogInfoEx(LOG_MASTER, "PEER %u >> Conventional Peer", peerId);
-                                            }
-                                        }
 
                                         // setup the affiliations list for this peer
                                         std::stringstream peerName;
@@ -1587,7 +1626,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                 // ensure STP sanity, when we receive a ping from a downstream leaf
                                 //  this check ensures a STP entry for a downstream leaf isn't accidentally blown off
                                 //  the tree during a fast reconnect
-                                if (network->m_enableSpanningTree && connection->isNeighborFNEPeer() && !connection->isSysView()) {
+                                if (network->m_enableSpanningTree && connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                                     std::lock_guard<std::mutex> guard(network->m_treeLock);
 
                                     if ((connection->masterId() != peerId) && (connection->masterId() != 0U)) {
@@ -2211,7 +2250,7 @@ void TrafficNetwork::erasePeer(uint32_t peerId)
     {
         auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
         if (it != m_peers.end()) {
-            neighborFNE = it->second->isNeighborFNEPeer();
+            neighborFNE = it->second->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
             m_peers.erase(peerId);
         }
     }
@@ -2481,7 +2520,7 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                             continue;
                         }
 
-                        if (conn->isNeighborFNEPeer()) {
+                        if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                             LogInfoEx(LOG_MASTER, "PEER %u In-Call Control Request to Neighbors, peerId = %u, dstId = %u, slot = %u, ssrc = %u, streamId = %u", peerId, peer.first, dstId, slotNo, ssrc, streamId);
 
                             // send ICC request to local peer
@@ -2567,7 +2606,7 @@ void TrafficNetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
 
                 // if the connection is a downstream neighbor FNE peer, and peer is participating in peer link,
                 // send the peer proper configuration data
-                if (connection->isNeighborFNEPeer() && connection->isReplica()) {
+                if (connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR && connection->isReplica()) {
                     LogInfoEx(LOG_MASTER, "PEER %u (%s) sending replica network metadata updates", req->peerId, peerIdentity.c_str());
 
                     network->writeWhitelistRIDs(req->peerId, streamId, true);
@@ -3213,7 +3252,7 @@ bool TrafficNetwork::writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, 
             if (m_maskOutboundPeerID)
                 ssrc = m_peerId; // mask the source SSRC to our own peer ID
             else {
-                if ((connection->isNeighborFNEPeer() && !connection->isReplica()) && m_maskOutboundPeerIDForNonPL) {
+                if ((connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR && !connection->isReplica()) && m_maskOutboundPeerIDForNonPL) {
                     // if the peer is a downstream FNE neighbor peer, and not a replica peer, we need to send the packet
                     // to the neighbor FNE peer with our peer ID as the source instead of the originating peer
                     // because we have routed it

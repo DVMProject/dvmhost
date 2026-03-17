@@ -189,7 +189,10 @@ bool PeerNetwork::writeConfig()
     rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    config["software"].set<std::string>(std::string(software));                 // Software ID
+    uint32_t peerClass = PEER_CONN_CLASS::PEER_CONN_CLASS_STANDARD;
+    config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
+
+    config["software"].set<std::string>(std::string(software));                     // Software ID
 
     json::value v = json::value(config);
     std::string json = v.serialize();

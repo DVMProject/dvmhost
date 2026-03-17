@@ -609,18 +609,18 @@ bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32
         // is this peer a conventional peer?
         if (m_network->m_allowConvSiteAffOverride) {
             if (connection != nullptr) {
-                if (connection->isConventionalPeer()) {
+                if (connection->peerClass() == PEER_CONN_CLASS_STANDARD && connection->isConventional()) {
                     fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
                                          // for conventional peers
                 }
             }
         }
 
-        // is this peer a SysView peer?
+        // is this peer a SysView or console peer?
         if (connection != nullptr) {
-            if (connection->isSysView()) {
+            if (connection->peerClass() == PEER_CONN_CLASS_SYSVIEW || connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
                 fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
-                                     // for SysView peers
+                                     // for SysView or console peers
             }
         }
 

@@ -59,10 +59,9 @@ namespace network
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
             m_hasCallPriority(false),
-            m_isNeighborFNEPeer(false),
+            m_peerClass(PEER_CONN_CLASS_UNKNOWN),
             m_isReplica(false),
-            m_isConventionalPeer(false),
-            m_isSysView(false),
+            m_isConventional(false),
             m_config(),
             m_peerLockMtx(),
             m_jitterBuffers(),
@@ -95,10 +94,9 @@ namespace network
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
             m_hasCallPriority(false),
-            m_isNeighborFNEPeer(false),
+            m_peerClass(PEER_CONN_CLASS_UNKNOWN),
             m_isReplica(false),
-            m_isConventionalPeer(false),
-            m_isSysView(false),
+            m_isConventional(false),
             m_config(),
             m_peerLockMtx(),
             m_jitterBuffers(),
@@ -119,11 +117,13 @@ namespace network
          */
         std::string identWithQualifier() const 
         {
-            if (isSysView())
+            if (m_peerClass == PEER_CONN_CLASS_CONSOLE)
+                return "!" + identity();
+            if (m_peerClass == PEER_CONN_CLASS_SYSVIEW)
                 return "@" + identity();
             if (isReplica())
                 return "%" + identity();
-            if (isNeighborFNEPeer())
+            if (m_peerClass == PEER_CONN_CLASS_NEIGHBOR)
                 return "+" + identity();
 
             return " " + m_identity;
@@ -245,22 +245,17 @@ namespace network
         DECLARE_PROPERTY_PLAIN(bool, hasCallPriority);
 
         /**
-         * @brief Flag indicating this connection is from an downstream neighbor FNE peer.
+         * @brief Peer class for this connection.
          */
-        DECLARE_PROPERTY_PLAIN(bool, isNeighborFNEPeer);
+        DECLARE_PROPERTY_PLAIN(PEER_CONN_CLASS, peerClass);
         /**
          * @brief Flag indicating this connection is from a neighbor FNE peer that is replica enabled.
          */
         DECLARE_PROPERTY_PLAIN(bool, isReplica);
-
         /**
          * @brief Flag indicating this connection is from an conventional peer.
          */
-        DECLARE_PROPERTY_PLAIN(bool, isConventionalPeer);
-        /**
-         * @brief Flag indicating this connection is from an SysView peer.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, isSysView);
+        DECLARE_PROPERTY_PLAIN(bool, isConventional);
 
         /**
          * @brief JSON objecting containing peer configuration information.
