@@ -849,10 +849,16 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
         connection = m_network->m_peers[peerId];
     }
 
-    // is this peer a replica peer?
     if (connection != nullptr) {
+        // is this peer a replica peer?
         if (connection->isReplica()) {
             return true; // replica peers are *always* allowed to receive traffic and no other rules may filter
+                         // these peers
+        }
+
+        // is this peer a SysView peer?
+        if (connection->peerClass() == PEER_CONN_CLASS_SYSVIEW) {
+            return true; // SysView peers are *always* allowed to receive traffic and no other rules may filter
                          // these peers
         }
     }
@@ -899,11 +905,11 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
             }
         }
 
-        // is this peer a SysView or console peer?
+        // is this peer a console peer?
         if (connection != nullptr) {
-            if (connection->peerClass() == PEER_CONN_CLASS_SYSVIEW || connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
+            if (connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
                 fromUpstream = true; // we'll just set the fromUpstream flag to disable the affiliation check
-                                     // for SysView or console peers
+                                     // for console peers
             }
         }
 
