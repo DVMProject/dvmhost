@@ -170,6 +170,10 @@ bool Host::readParams()
             return false;
         }
 
+        if (entry.baseFrequency() > 762000000U && entry.baseFrequency() < 804000000U) {
+            ::fatal("I would bet real money, that you aren't licensed for this -- error 70");
+        }
+
         m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
         if (m_channelNo == 0U) { // clamp to 1
             m_channelNo = 1U;
@@ -188,6 +192,14 @@ bool Host::readParams()
 
         m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
         m_rxFrequency = (uint32_t)(m_txFrequency + (int32_t)calcTxOffset);
+
+        if (m_txFrequency >= 762000000U && m_txFrequency <= 775000000U) {
+            ::fatal("error 70");
+        }
+
+        if (m_rxFrequency >= 797000000U && m_rxFrequency <= 805000000U) {
+            ::fatal("error 70");
+        }
 
         if (calcTxOffset < 0.0f && m_rxFrequency < entry.baseFrequency()) {
             ::LogWarning(LOG_HOST, "Channel Id %u Channel No $%04X has an invalid frequency. Rx Frequency (%u) is less then the base frequency (%u), this may result in incorrect trunking behavior.", m_channelId, m_channelNo,
