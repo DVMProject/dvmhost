@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -523,8 +523,18 @@ bool PeerNetwork::writeConfig()
 
     uint32_t peerClass = (uint32_t)PEER_CONN_CLASS::PEER_CONN_CLASS_NEIGHBOR;
     config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
-
     config["masterPeerId"].set<uint32_t>(m_masterPeerId);                           // Master Peer ID
+
+    /*
+    ** bryanb: this is deprecated -- it remains here for backwards compatibility with older master versions, 
+    **  but is no longer used by the master and have no effect on R05A06 systems, and may be removed in a future release
+    ** {
+    */
+    bool external = true;
+    config["externalPeer"].set<bool>(external);                                     // External Peer Marker
+    /*
+    ** }
+    */
 
     config["software"].set<std::string>(std::string(software));                     // Software ID
 

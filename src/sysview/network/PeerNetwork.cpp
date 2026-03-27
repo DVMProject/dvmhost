@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "sysview/Defines.h"
@@ -279,6 +279,23 @@ bool PeerNetwork::writeConfig()
 
     uint32_t peerClass = PEER_CONN_CLASS::PEER_CONN_CLASS_SYSVIEW;
     config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
+    config["masterPeerId"].set<uint32_t>(m_peerId);                                 // Master Peer ID
+
+    bool convPeer = true;
+    config["conventionalPeer"].set<bool>(convPeer);                                 // Conventional Peer Marker
+
+    /*
+    ** bryanb: these are all deprecated -- they remain here for backwards compatibility with older master versions, 
+    **  but they are no longer used by the master and have no effect on R05A06 systems, and may be removed in a future release
+    ** {
+    */
+    bool external = true;
+    config["externalPeer"].set<bool>(external);                                     // External Peer Marker
+    bool sysView = true;
+    config["sysView"].set<bool>(sysView);                                           // SysView Peer Marker
+    /*
+    ** }
+    */
 
     config["software"].set<std::string>(std::string(software));                     // Software ID
 

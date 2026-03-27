@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -20,6 +20,7 @@
 #include "common/Log.h"
 
 #include <array>
+#include <vector>
 #include <memory>
 #include <utility>
 #include <iterator>
@@ -54,6 +55,9 @@ namespace restapi
             explicit ClientConnection(asio::ip::tcp::socket socket, RequestHandlerType& handler) :
                 m_socket(std::move(socket)),
                 m_requestHandler(handler),
+                m_sizeToTransfer(0U),
+                m_bytesTransferred(0U),
+                m_fullBuffer(65536),
                 m_lexer(HTTPLexer(true))
             {
                 /* stub */
@@ -121,39 +125,42 @@ namespace restapi
 
                         try
                         {
-                            if (m_sizeToTransfer > 0U && (m_bytesTransferred + bytes_transferred) < m_sizeToTransfer) {
-                                ::memcpy(m_fullBuffer.data() + m_bytesTransferred, m_buffer.data(), bytes_transferred);
-                                m_bytesTransferred += bytes_transferred;
+                            // grow accumulation buffer as needed
+                            if (m_bytesTransferred + bytes_transferred > m_fullBuffer.size()) {
+                                m_fullBuffer.resize(m_bytesTransferred + bytes_transferred);
+                            }
 
+                            // always accumulate into m_fullBuffer
+                            ::memcpy(m_fullBuffer.data() + m_bytesTransferred, m_buffer.data(), bytes_transferred);
+                            m_bytesTransferred += bytes_transferred;
+
+                            if (m_sizeToTransfer > 0U && m_bytesTransferred < m_sizeToTransfer) {
+                                // still waiting for more data
                                 read();
                             }
                             else {
-                                if (m_sizeToTransfer > 0U) {
-                                    // final copy
-                                    ::memcpy(m_fullBuffer.data() + m_bytesTransferred, m_buffer.data(), bytes_transferred);
-                                    m_bytesTransferred += bytes_transferred;
+                                bool wasMultiRead = (m_sizeToTransfer > 0U);
+                                m_sizeToTransfer = 0U;
 
-                                    m_sizeToTransfer = 0U;
-                                    bytes_transferred = m_bytesTransferred;
-
-                                    // reset lexer and re-parse the full content
+                                if (wasMultiRead) {
+                                    // re-parse the full reassembled response from the beginning
                                     m_lexer.reset();
-                                    std::tie(result, content) = m_lexer.parse(m_request, m_fullBuffer.data(), m_fullBuffer.data() + bytes_transferred);
-                                } else {
-                                    ::memcpy(m_fullBuffer.data() + m_bytesTransferred, m_buffer.data(), bytes_transferred);
-                                    m_bytesTransferred += bytes_transferred;
-
-                                    std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + bytes_transferred);
                                 }
+
+                                // always parse from m_fullBuffer so content pointer is always valid
+                                std::tie(result, content) = m_lexer.parse(m_request, m_fullBuffer.data(), m_fullBuffer.data() + m_bytesTransferred);
 
                                 // determine content length
                                 std::string contentLength = m_request.headers.find("Content-Length");
                                 if (contentLength != "") {
                                     size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
 
-                                    // setup a full read if necessary
-                                    if (length > bytes_transferred && m_sizeToTransfer == 0U) {
-                                        m_sizeToTransfer = length;
+                                    // body bytes available: distance from parsed body start to end of accumulated data
+                                    // content and m_fullBuffer.data() are in the same allocation, so this arithmetic is valid
+                                    size_t bodyBytesAvailable = (size_t)((m_fullBuffer.data() + m_bytesTransferred) - content);
+                                    if (length > bodyBytesAvailable) {
+                                        // total bytes we need = current accumulated + remaining body bytes
+                                        m_sizeToTransfer = m_bytesTransferred + (length - bodyBytesAvailable);
                                     }
 
                                     if (m_sizeToTransfer > 0U) {
@@ -225,7 +232,7 @@ namespace restapi
 
             std::size_t m_sizeToTransfer;
             std::size_t m_bytesTransferred;
-            std::array<char, 65535> m_fullBuffer;
+            std::vector<char> m_fullBuffer;
 
             std::array<char, 4096> m_buffer;
 

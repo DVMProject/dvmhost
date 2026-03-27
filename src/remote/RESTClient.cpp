@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -68,11 +68,13 @@ bool parseResponseBody(const HTTPPayload& response, json::object& obj)
     json::value v;
     std::string err = json::parse(v, response.content);
     if (!err.empty()) {
+        LogError(LOG_REST, "Failed to parse REST API response body: %s", err.c_str());
         return false;
     }
 
     // ensure parsed JSON is an object
     if (!v.is<json::object>()) {
+        LogError(LOG_REST, "Failed to parse REST API response body: expected JSON object");
         return false;
     }
 
