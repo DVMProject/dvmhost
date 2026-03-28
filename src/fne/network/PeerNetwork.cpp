@@ -481,7 +481,7 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
 
 /* User overrideable handler that allows user code to process NAKs received from the master. */
 
-bool Network::userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
+bool PeerNetwork::userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
     switch (reason) {
     case NET_CONN_NAK_FNE_UNAUTHORIZED:
