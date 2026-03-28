@@ -35,7 +35,7 @@ log:
     # Full path for the directory to store the log files.
     filePath: .
     # Flag indicating file logs should be sent to syslog instead of a file.
-    useSyslog: false
+    useSyslog: true
     # Full path for the directory to store the activity log files.
     activityFilePath: .
     # Log filename prefix.

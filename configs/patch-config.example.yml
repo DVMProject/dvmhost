@@ -21,7 +21,7 @@ log:
     # File logging level.
     fileLevel: 1
     # Flag indicating file logs should be sent to syslog instead of a file.
-    useSyslog: false
+    useSyslog: true
     # Full path for the directory to store the log files.
     filePath: .
     # Full path for the directory to store the activity log files.
