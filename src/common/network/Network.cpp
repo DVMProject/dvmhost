@@ -1101,7 +1101,7 @@ void Network::clock(uint32_t ms)
             {
                 // DVM 3.6 adds support to respond with a NAK reason, as such we just check if the NAK response is greater
                 // then 10 bytes and process the reason value
-                uint16_t reason = 0U;
+                uint16_t reason = NET_CONN_NAK_GENERAL_FAILURE;
                 if (length > 10) {
                     reason = GET_UINT16(buffer, 10U);
                     switch (reason) {
@@ -1150,19 +1150,22 @@ void Network::clock(uint32_t ms)
                     }
                 }
 
-                if (m_status == NET_STAT_RUNNING && (reason == NET_CONN_NAK_FNE_MAX_CONN)) {
-                    LogWarning(LOG_NET, "PEER %u master NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
-                    m_status = NET_STAT_WAITING_LOGIN;
-                    m_timeoutTimer.start();
-                    m_retryTimer.start();
-                }
-                else {
-                    if (m_enabled) {
-                        LogError(LOG_NET, "PEER %u master NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
-                        close();
-                        open();
+                // if the NAK reason is unhandled by the user code, perform default handling
+                if (!userNakHandler(m_peerId, reason, fneHeader, rtpHeader)) {
+                    if (m_status == NET_STAT_RUNNING && (reason == NET_CONN_NAK_FNE_MAX_CONN)) {
+                        LogWarning(LOG_NET, "PEER %u master NAK; attemping to relogin, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                        m_status = NET_STAT_WAITING_LOGIN;
+                        m_timeoutTimer.start();
+                        m_retryTimer.start();
                     }
-                    return;
+                    else {
+                        if (m_enabled) {
+                            LogError(LOG_NET, "PEER %u master NAK; network reconnect, remotePeerId = %u", m_peerId, rtpHeader.getSSRC());
+                            close();
+                            open();
+                        }
+                        return;
+                    }
                 }
             }
             break;
@@ -1431,6 +1434,13 @@ void Network::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, 
     const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
 {
     Utils::dump("Unknown opcode from the master", data, length);
+}
+
+/* User overrideable handler that allows user code to process NAKs received from the master. */
+
+bool Network::userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
+{
+    return false; // return false to perform default handling of the NAK
 }
 
 /* Writes login request to the network. */

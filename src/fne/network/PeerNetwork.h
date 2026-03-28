@@ -303,6 +303,14 @@ namespace network
          */
         void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
             uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader()) override;
+        /**
+         * @brief User overrideable handler that allows user code to process NAKs received from the master.
+         * @param peerId Peer ID.
+         * @param reason Reason code.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
+         */
+        bool userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader()) override;
 
         /**
          * @brief Writes configuration to the network.

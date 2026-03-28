@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -421,6 +421,14 @@ namespace network
          */
         virtual void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
             uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader());
+        /**
+         * @brief User overrideable handler that allows user code to process NAKs received from the master.
+         * @param peerId Peer ID.
+         * @param reason Reason code.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
+         */
+        virtual bool userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader());
 
         /**
          * @brief Writes login request to the network.
