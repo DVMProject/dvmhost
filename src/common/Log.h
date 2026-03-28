@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -839,22 +839,22 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
                 if (sourceLoc.filename != nullptr && sourceLoc.line > 0) {
                     // if we have a function name add that to the log entry
                     if (sourceLoc.funcname != nullptr) {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s)[%s:%u][%s] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s)[%s:%u][%s] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.module, sourceLoc.filename, sourceLoc.line, sourceLoc.funcname);
                     }
                     else {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s)[%s:%u] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s)[%s:%u] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.module, sourceLoc.filename, sourceLoc.line);
                     }
                 } else {
-                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
+                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
                         tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                         sourceLoc.module);
                 }
             } else {
-                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
+                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
                     tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                     sourceLoc.module);
             }
@@ -866,21 +866,21 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
                 if (sourceLoc.filename != nullptr && sourceLoc.line > 0) {
                     // if we have a function name add that to the log entry
                     if (sourceLoc.funcname != nullptr) {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu [%s:%u][%s] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu [%s:%u][%s] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.filename, sourceLoc.line, sourceLoc.funcname);
                     }
                     else {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu [%s:%u] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu [%s:%u] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.filename, sourceLoc.line);
                     }
                 } else {
-                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LOG_LEVELS[level], tm->tm_year + 1900, 
+                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu ", LOG_LEVELS[level], tm->tm_year + 1900, 
                         tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
                 }
             } else {
-                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LOG_LEVELS[level], 
+                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu ", LOG_LEVELS[level], 
                     tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
             }
         }
