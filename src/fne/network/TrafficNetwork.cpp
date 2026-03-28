@@ -1444,7 +1444,13 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                             if (network->m_allowConvSiteAffOverride) {
                                                 bool convPeer = peerConfig["conventionalPeer"].get<bool>();
                                                 connection->isConventional(convPeer);
+                                            } else {
+                                                bool conventionalPeer = false;
+                                                peerConfig["conventionalPeer"].set<bool>(conventionalPeer);
                                             }
+                                        } else {
+                                            bool conventionalPeer = false;
+                                            peerConfig["conventionalPeer"].set<bool>(conventionalPeer);
                                         }
 
                                         // report peer class in log
@@ -1467,6 +1473,19 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                                     LogInfoEx(LOG_MASTER, "PEER %u >> Standard Peer", peerId);
                                                 break;
                                         }
+
+                                        // for the purposes of maintaining backward compat with REST API users,
+                                        //  we will report the peer class via the old externalPeer and sysView boolean 
+                                        //  fields as well (consolePeer doesn't have a legacy field, but that's ok since 
+                                        //  it's only used for console connections which should be new enough to support 
+                                        //  the new peerClass field)
+                                        bool externalPeer = connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
+                                        peerConfig["externalPeer"].set<bool>(externalPeer);
+                                        bool sysViewPeer = connection->peerClass() == PEER_CONN_CLASS_SYSVIEW;
+                                        peerConfig["sysView"].set<bool>(sysViewPeer);
+                                        bool consolePeer = connection->peerClass() == PEER_CONN_CLASS_CONSOLE;
+                                        peerConfig["consolePeer"].set<bool>(consolePeer);
+                                        connection->config(peerConfig);
 
                                         // is the peer reporting it is an downstream FNE neighbor peer?
                                         /*
