@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -13,6 +13,7 @@
 #include "common/Clock.h"
 #include "common/Log.h"
 #include "common/Utils.h"
+#include "lookups/AffiliationLookup.h"
 #include "network/TrafficNetwork.h"
 #include "network/callhandler/TagAnalogData.h"
 #include "HostFNE.h"
@@ -120,6 +121,8 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                         m_network->m_parrotDelayTimer.start();
                     }
                 }
+
+                m_network->m_globalAff->releaseGrant(dstId);
 
                 #define CALL_END_LOG "Analog, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, duration / 1000, streamId, fromUpstream
                 if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
@@ -278,6 +281,9 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     m_network->m_totalCallsProcessed++;
                     m_network->m_totalActiveCalls++;
                 }
+
+                if (!m_network->m_globalAff->isGranted(dstId))
+                    m_network->m_globalAff->grantCh(dstId, srcId, ssrc, fne_lookups::GRANT_TIMER_TIMEOUT, true);
 
                 #define CALL_START_LOG "Analog, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream
                 if (m_network->m_logUpstreamCallStartEnd && fromUpstream)

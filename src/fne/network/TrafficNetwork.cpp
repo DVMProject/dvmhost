@@ -99,6 +99,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_peerAffiliations(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
+    m_globalAff(nullptr),
     m_treeRoot(nullptr),
     m_treeLock(),
     m_peerReplicaHAParams(),
@@ -168,6 +169,8 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_tagAnalog = new TagAnalogData(this, debug);
 
     m_p25OTARService = new P25OTARService(this, m_tagP25->packetData(), kmfDebug, verbose);
+
+    m_globalAff = new fne_lookups::AffiliationLookup("GlobalAffiliations", nullptr, false);
 
     SpanningTree::s_maxUpdatesBeforeReparent = (uint8_t)host->m_maxMissedPings;
     m_treeRoot = new SpanningTree(peerId, peerId, nullptr);
@@ -673,6 +676,8 @@ void TrafficNetwork::clock(uint32_t ms)
 
         m_updateLookupTimer.start();
     }
+
+    m_globalAff->clock(ms);
 
     // if HA is enabled perform HA parameter updates
     if (m_haEnabled) {
@@ -1928,6 +1933,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->unitReg(srcId, ssrc);
+                                        network->m_globalAff->unitReg(srcId, ssrc);
 
                                         // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
@@ -1964,6 +1970,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->unitDereg(srcId);
+                                        network->m_globalAff->unitDereg(srcId);
 
                                         // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
@@ -2001,6 +2008,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                     if (connection->connected() && connection->address() == ip && aff != nullptr) {
                                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                                         aff->groupUnaff(srcId);
+                                        network->m_globalAff->groupUnaff(srcId);
 
                                         // attempt to repeat traffic to replica masters
                                         if (network->m_host->m_peerNetworks.size() > 0) {
@@ -2048,6 +2056,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                                 uint32_t dstId = GET_UINT24(req->buffer, offs + 4U);
 
                                                 aff->groupAff(srcId, dstId);
+                                                network->m_globalAff->groupAff(srcId, dstId);
                                                 offs += 8U;
                                             }
                                             LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u affiliations", peerId, connection->identWithQualifier().c_str(), len);

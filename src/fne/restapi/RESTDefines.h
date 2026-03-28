@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -63,7 +63,9 @@
 #define FNE_GET_RESET_TOTAL_CALLS       "/stat-reset-total-calls"
 #define FNE_GET_RESET_ACTIVE_CALLS      "/stat-reset-active-calls"
 #define FNE_GET_RESET_CALL_COLLISIONS   "/stat-reset-call-collisions"
+#define FNE_GET_UNIT_REG_LIST           "/report-unit-regs"
 #define FNE_GET_AFF_LIST                "/report-affiliations"
+#define FNE_GET_GRANT_LIST              "/report-grants"
 
 #define FNE_GET_SPANNING_TREE           "/spanning-tree"
 

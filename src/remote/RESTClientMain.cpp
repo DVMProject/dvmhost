@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "remote/RESTClient.h"
@@ -41,7 +41,9 @@
 #define RCD_FNE_GET_PEERCOUNT           "fne-peercount"
 #define RCD_FNE_GET_TGIDLIST            "fne-tgidlist"
 #define RCD_FNE_GET_FORCEUPDATE         "fne-force-update"
+#define RCD_FNE_GET_UNITREGS            "fne-unitregs"
 #define RCD_FNE_GET_AFFLIST             "fne-affs"
+#define RCD_FNE_GET_GRANTLIST           "fne-grants"
 #define RCD_FNE_GET_RELOADTGS           "fne-reload-tgs"
 #define RCD_FNE_GET_RELOADRIDS          "fne-reload-rids"
 #define RCD_FNE_GET_RELOADPEERLIST      "fne-reload-peerlist"
@@ -220,7 +222,9 @@ void usage(const char* message, const char* arg)
     reply += "  fne-peercount               Retrieves the count of connected peers (Converged FNE only)\r\n";
     reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Converged FNE only)\r\n";
     reply += "  fne-force-update            Forces the FNE to send list update (Converged FNE only)\r\n";
+    reply += "  fne-unitregs                Retrieves the list of currently registered unit IDs (Converged FNE only)\r\n";
     reply += "  fne-affs                    Retrieves the list of currently affiliated SUs (Converged FNE only)\r\n";
+    reply += "  fne-grants                  Retrieves the list of currently granted talkgroups (Converged FNE only)\r\n";
     reply += "  fne-reload-tgs              Forces the FNE to reload its TGID list from disk (Converged FNE only)\r\n";
     reply += "  fne-reload-rids             Forces the FNE to reload its RID list from disk (Converged FNE only)\r\n";
     reply += "  fne-reload-peerlist         Forces the FNE to reload its peer list from disk (Converged FNE only)\r\n";
@@ -901,8 +905,14 @@ int main(int argc, char** argv)
         else if (rcom == RCD_FNE_GET_FORCEUPDATE) {
             retCode = client->send(HTTP_GET, FNE_GET_FORCE_UPDATE, json::object(), response);
         }
+        else if (rcom == RCD_FNE_GET_UNITREGS) {
+            retCode = client->send(HTTP_GET, FNE_GET_UNIT_REG_LIST, json::object(), response);
+        }
         else if (rcom == RCD_FNE_GET_AFFLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_AFF_LIST, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_GRANTLIST) {
+            retCode = client->send(HTTP_GET, FNE_GET_GRANT_LIST, json::object(), response);
         }
         else if (rcom == RCD_FNE_GET_RELOADTGS) {
             retCode = client->send(HTTP_GET, FNE_GET_RELOAD_TGS, json::object(), response);

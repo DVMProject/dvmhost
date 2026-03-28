@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -401,12 +401,28 @@ private:
     void restAPI_GetResetCallCollisions(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
+     * @brief REST API endpoint; implements get unit registration list request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetUnitRegList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
      * @brief REST API endpoint; implements get affiliation list request.
      * @param request HTTP request.
      * @param reply HTTP reply.
      * @param match HTTP request matcher.
      */
     void restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+    /**
+     * @brief REST API endpoint; implements get talkgroup grant list request.
+     * @param request HTTP request.
+     * @param reply HTTP reply.
+     * @param match HTTP request matcher.
+     */
+    void restAPI_GetGrantList(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
     /**
      * @brief REST API endpoint; implements get spanning tree list request.

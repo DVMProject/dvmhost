@@ -15,6 +15,7 @@
 #include "common/Log.h"
 #include "common/Thread.h"
 #include "common/Utils.h"
+#include "lookups/AffiliationLookup.h"
 #include "network/TrafficNetwork.h"
 #include "network/callhandler/TagP25Data.h"
 #include "HostFNE.h"
@@ -29,12 +30,6 @@ using namespace p25::defines;
 
 #include <cassert>
 #include <chrono>
-
-// ---------------------------------------------------------------------------
-//  Constants
-// ---------------------------------------------------------------------------
-
-const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -282,6 +277,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         });
                         if (it != m_statusPVCall.end()) {
                             m_statusPVCall[dstId].reset();
+
+                            m_network->m_globalAff->releaseGrant(dstId);
+
                             #define PRV_CALL_END_LOG "P25, Private Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, fromUpstream
                             if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                                 LogInfoEx(LOG_PEER, PRV_CALL_END_LOG);
@@ -289,6 +287,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 LogInfoEx(LOG_MASTER, PRV_CALL_END_LOG);
                         }
                         else {
+                            m_network->m_globalAff->releaseGrant(dstId);
+
                             #define CALL_END_LOG "P25, Call End, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, duration / 1000, streamId, fromUpstream
                             if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                                 LogInfoEx(LOG_PEER, CALL_END_LOG);
@@ -493,6 +493,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         m_statusPVCall[dstId].dstPeerId = regSSRC;
                         m_statusPVCall.unlock();
 
+                        if (!m_network->m_globalAff->isGranted(dstId))
+                            m_network->m_globalAff->grantCh(dstId, srcId, ssrc, fne_lookups::GRANT_TIMER_TIMEOUT, false);
+
                         #define PRV_CALL_START_LOG "P25, Private Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
                         if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                             LogInfoEx(LOG_PEER, PRV_CALL_START_LOG);
@@ -500,6 +503,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                             LogInfoEx(LOG_MASTER, PRV_CALL_START_LOG);
                     }
                     else {
+                        if (!m_network->m_globalAff->isGranted(dstId))
+                            m_network->m_globalAff->grantCh(dstId, srcId, ssrc, fne_lookups::GRANT_TIMER_TIMEOUT, true);
+
                         #define CALL_START_LOG "P25, Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
                         if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                             LogInfoEx(LOG_PEER, CALL_START_LOG);
@@ -782,7 +788,13 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
     }
     m_network->m_peers.shared_unlock();
 
-    return true;
+    if (!m_network->m_globalAff->isGranted(dstId)) {
+        if (m_network->m_globalAff->grantCh(dstId, srcId, peerId, fne_lookups::GRANT_TIMER_TIMEOUT, !unitToUnit)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* Helper to trigger a call takeover from a In-Call control event. */

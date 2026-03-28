@@ -345,6 +345,8 @@ namespace network
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
 
+        fne_lookups::AffiliationLookup* m_globalAff;
+
         SpanningTree* m_treeRoot;
         std::mutex m_treeLock;
 

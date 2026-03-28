@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -16,6 +16,7 @@
 #include "common/Clock.h"
 #include "common/Log.h"
 #include "common/Utils.h"
+#include "lookups/AffiliationLookup.h"
 #include "network/TrafficNetwork.h"
 #include "network/callhandler/TagDMRData.h"
 #include "HostFNE.h"
@@ -193,6 +194,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 });
                 if (it != m_statusPVCall.end()) {
                     m_statusPVCall[dstId].reset();
+
+                    m_network->m_globalAff->releaseGrant(dstId);
+
                     #define PRV_CALL_END_LOG "DMR, Private Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream
                     if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                         LogInfoEx(LOG_PEER, PRV_CALL_END_LOG);
@@ -200,6 +204,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         LogInfoEx(LOG_MASTER, PRV_CALL_END_LOG);
                 }
                 else {
+                    m_network->m_globalAff->releaseGrant(dstId);
+
                     #define CALL_END_LOG "DMR, Call End, peer = %u, ssrc = %u, srcId = %u, dstId = %u, slot = %u, duration = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, slotNo, duration / 1000, streamId, fromUpstream
                     if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                         LogInfoEx(LOG_PEER, CALL_END_LOG);
@@ -407,6 +413,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_statusPVCall[dstId].dstPeerId = regSSRC;
                     m_statusPVCall.unlock();
 
+                    if (!m_network->m_globalAff->isGranted(dstId))
+                        m_network->m_globalAff->grantCh(dstId, srcId, ssrc, fne_lookups::GRANT_TIMER_TIMEOUT, false);
+
                     #define PRV_CALL_START_LOG "DMR, Private Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream
                     if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                         LogInfoEx(LOG_PEER, PRV_CALL_START_LOG);
@@ -414,6 +423,9 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         LogInfoEx(LOG_MASTER, PRV_CALL_START_LOG);
                 }
                 else {
+                    if (!m_network->m_globalAff->isGranted(dstId))
+                        m_network->m_globalAff->grantCh(dstId, srcId, ssrc, fne_lookups::GRANT_TIMER_TIMEOUT, true);
+
                     #define CALL_START_LOG "DMR, Call Start, peer = %u, ssrc = %u, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, srcId, dstId, streamId, fromUpstream
                     if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
                         LogInfoEx(LOG_PEER, CALL_START_LOG);
@@ -673,7 +685,13 @@ bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, b
         }
     }
 
-    return true;
+    if (!m_network->m_globalAff->isGranted(dstId)) {
+        if (m_network->m_globalAff->grantCh(dstId, srcId, peerId, fne_lookups::GRANT_TIMER_TIMEOUT, !unitToUnit)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* Helper to trigger a call takeover from a In-Call control event. */

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -676,7 +676,9 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_RESET_TOTAL_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetTotalCalls, this));
     m_dispatcher.match(FNE_GET_RESET_ACTIVE_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetActiveCalls, this));
     m_dispatcher.match(FNE_GET_RESET_CALL_COLLISIONS).get(REST_API_BIND(RESTAPI::restAPI_GetResetCallCollisions, this));
+    m_dispatcher.match(FNE_GET_UNIT_REG_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetUnitRegList, this));
     m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
+    m_dispatcher.match(FNE_GET_GRANT_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetGrantList, this));
 
     m_dispatcher.match(FNE_GET_SPANNING_TREE).get(REST_API_BIND(RESTAPI::restAPI_GetSpanningTree, this));
 
@@ -2033,6 +2035,34 @@ void RESTAPI::restAPI_GetResetCallCollisions(const HTTPPayload& request, HTTPPay
     reply.payload(response);
 }
 
+/* REST API endpoint; implements get unit registration list request. */
+
+void RESTAPI::restAPI_GetUnitRegList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array units = json::array();
+    if (m_network != nullptr) {
+        std::vector<uint32_t> unitRegTable = m_network->m_globalAff->unitRegTable();
+
+        for (auto entry : unitRegTable) {
+            uint32_t srcId = entry;
+            units.push_back(json::value((double)srcId));
+        }
+
+        uint32_t totalUnits = unitRegTable.size();
+        response["totalUnits"].set<uint32_t>(totalUnits);
+    }
+
+    response["units"].set<json::array>(units);
+    reply.payload(response);
+}
+
 /* REST API endpoint; implements get affiliation list request. */
 
 void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
@@ -2046,6 +2076,7 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
 
     json::array affs = json::array();
     if (m_network != nullptr) {
+        uint32_t totalAffiliations = 0U;
         if (m_network->m_peers.size() > 0) {
             for (auto entry : m_network->m_peers) {
                 uint32_t peerId = entry.first;
@@ -2073,13 +2104,55 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
 
                         peerObj["affiliations"].set<json::array>(peerAffs);
                         affs.push_back(json::value(peerObj));
+                        ++totalAffiliations;
                     }
                 }
             }
         }
+
+        response["totalAffiliations"].set<uint32_t>(totalAffiliations);
     }
 
     response["affiliations"].set<json::array>(affs);
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get talkgroup grant list request. */
+
+void RESTAPI::restAPI_GetGrantList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array grants = json::array();
+    if (m_network != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> grantSrcIdTable = m_network->m_globalAff->grantSrcIdTable();
+        std::unordered_map<uint32_t, uint32_t> grantSSRCTable = m_network->m_globalAff->grantSSRCTable();
+
+        for (auto entry : grantSrcIdTable) {
+            uint32_t dstId = entry.first;
+            uint32_t srcId = entry.second;
+
+            json::object grantObj = json::object();
+            grantObj["srcId"].set<uint32_t>(srcId);
+            grantObj["dstId"].set<uint32_t>(dstId);
+
+            uint32_t ssrc = 0U;
+            grantSSRCTable.find(dstId) != grantSSRCTable.end() ? ssrc = grantSSRCTable[dstId] : ssrc = 0U;
+            grantObj["ssrc"].set<uint32_t>(ssrc);
+
+            grants.push_back(json::value(grantObj));
+        }
+
+        uint32_t totalGrants = grantSrcIdTable.size();
+        response["totalGrants"].set<uint32_t>(totalGrants);
+    }
+
+    response["grants"].set<json::array>(grants);
     reply.payload(response);
 }
 
