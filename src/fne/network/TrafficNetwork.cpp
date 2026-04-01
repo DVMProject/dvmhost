@@ -116,6 +116,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_callCollisionTimeout(5U),
     m_disallowAdjStsBcast(false),
     m_disallowExtAdjStsBcast(true),
+    m_disallowRadioMonitor(true),
     m_allowConvSiteAffOverride(false),
     m_disallowCallTerm(false),
     m_restrictGrantToAffOnly(false),
@@ -205,6 +206,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
 {
     m_disallowAdjStsBcast = conf["disallowAdjStsBcast"].as<bool>(false);
     m_disallowExtAdjStsBcast = conf["disallowExtAdjStsBcast"].as<bool>(true);
+    m_disallowRadioMonitor = conf["disallowRadioMonitor"].as<bool>(true);
     m_allowConvSiteAffOverride = conf["allowConvSiteAffOverride"].as<bool>(true);
     m_enableRIDInCallCtrl = conf["enableRIDInCallCtrl"].as<bool>(false);
     m_disallowInCallCtrl = conf["disallowInCallCtrl"].as<bool>(false);
@@ -355,6 +357,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Disable Packet Data: %s", m_disablePacketData ? "yes" : "no");
         LogInfo("    Dump Packet Data: %s", m_dumpPacketData ? "yes" : "no");
         LogInfo("    Disable P25 ADJ_STS_BCAST to neighbor peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
+        LogInfo("    Disable P25 Radio Monitor to any peers: %s", m_disallowRadioMonitor ? "yes" : "no");
         LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
         LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
         LogInfo("    Enable RID In-Call Control: %s", m_enableRIDInCallCtrl ? "yes" : "no");

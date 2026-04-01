@@ -1210,6 +1210,11 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                     }
                 }
                 break;
+            case TSBKO::IOSP_RAD_MON:
+            case TSBKO::IOSP_RAD_MON_ENH:
+                if (m_network->m_disallowRadioMonitor)
+                    return false;
+                break;
             default:
                 break;
             }
@@ -1299,6 +1304,11 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                         }
                     }
                 }
+                break;
+            case TSBKO::IOSP_RAD_MON:
+            case TSBKO::IOSP_RAD_MON_ENH:
+                if (m_network->m_disallowRadioMonitor)
+                    return false;
                 break;
             default:
                 break;
