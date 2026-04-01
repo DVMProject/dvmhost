@@ -42,8 +42,6 @@ AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* chan
     m_disableUnitRegTimeout(false),
     m_verbose(verbose)
 {
-    assert(channelLookup != nullptr);
-
     m_name = name;
 
     m_unitRegTable.clear();
@@ -338,6 +336,10 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
         return false;
     }
 
+    if (m_chLookup == nullptr) {
+        return false;
+    }
+
     if (!m_chLookup->isRFChAvailable()) {
         return false;
     }
@@ -446,7 +448,10 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         m_grantSrcIdTable.erase(dstId);
         m_uuGrantedTable.erase(dstId);
         m_netGrantedTable.erase(dstId);
-        m_chLookup->addRFCh(chNo, true);
+
+        if (m_chLookup != nullptr) {
+            m_chLookup->addRFCh(chNo, true);
+        }
 
         if (m_rfGrantChCnt > 0U) {
             m_rfGrantChCnt--;
