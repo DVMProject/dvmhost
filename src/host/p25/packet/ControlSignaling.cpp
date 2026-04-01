@@ -901,8 +901,6 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         VERBOSE_LOG_TSBK_NET(tsbk->toString(true), srcId, dstId);
 
                         ::ActivityLog("P25" , true , "radio monitor request from %u to %u" , srcId , dstId);
-
-                        writeRF_TSDU_Radio_Mon(srcId , dstId , iosp->getTxMult());
                     }
                     break;
                     case TSBKO::IOSP_CALL_ALRT:
