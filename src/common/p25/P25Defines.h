@@ -389,6 +389,9 @@ namespace p25
                 DYN_REGRP_CANCEL_ACK = 0x0281U,         //!< MFID $90 (Motorola) Dynamic Regroup IR Cancellation Ack
                 DYN_REGRP_LOCK_ACK = 0x0282U,           //!< MFID $90 (Motorola) Lock Selector Ack
                 DYN_REGRP_UNLOCK_ACK = 0x0283U,         //!< MFID $90 (Motorola) Unlock Selector Ack
+
+                HARRIS_UNINHIBIT = 0x0084U,             //!< MFID $A4 (Harris) Radio Uninhibit
+                HARRIS_INHIBIT = 0xFF84U                //!< MFID $A4 (Harris) Radio Inhibit
             };
         }
 
