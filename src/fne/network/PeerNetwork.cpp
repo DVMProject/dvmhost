@@ -13,6 +13,7 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "fne/network/PeerNetwork.h"
+#include "FNEMain.h"
 
 using namespace network;
 using namespace compress;
@@ -55,7 +56,10 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_ridPkt(true, "Peer Replication, RID List"),
     m_pidPkt(true, "Peer Replication, PID List"),
     m_threadPool(WORKER_CNT, "peer"),
-    m_prevSpanningTreeChildren(0U)
+    m_prevSpanningTreeChildren(0U),
+    m_nakFallOver(false),
+    m_nakFallOverCount(0U),
+    m_nakFallOverCountThreshold(10U)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -96,6 +100,8 @@ bool PeerNetwork::open()
 {
     if (!m_enabled)
         return false;
+
+    m_nakFallOverCount = 0U;
 
     return Network::open();
 }
@@ -321,6 +327,9 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 if (m_peerReplicaCallback != nullptr)
                     m_peerReplicaCallback(this);
 
+                // reset NAK count on reception of a replica TG
+                m_nakFallOverCount = 0U;
+
                 // cleanup temporary file
                 ::remove(filename.c_str());
                 m_tgidPkt.clear();
@@ -380,6 +389,9 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 if (m_peerReplicaCallback != nullptr)
                     m_peerReplicaCallback(this);
 
+                // reset NAK count on reception of a replica TG
+                m_nakFallOverCount = 0U;
+
                 // cleanup temporary file
                 ::remove(filename.c_str());
                 m_ridPkt.clear();
@@ -438,6 +450,9 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_peerReplica = true;
                 if (m_peerReplicaCallback != nullptr)
                     m_peerReplicaCallback(this);
+
+                // reset NAK count on reception of a replica TG
+                m_nakFallOverCount = 0U;
 
                 // cleanup temporary file
                 ::remove(filename.c_str());
@@ -500,6 +515,18 @@ bool PeerNetwork::userNakHandler(uint32_t peerId, uint16_t reason, const frame::
 
     default:
         break;
+    }
+
+    // if NAK fall over is enabled, track the count of NAKs received from the master and fall over (restart) if too 
+    //  many are received, this is to help mitigate cases where the master is repeatedly sending NAKs to this peer
+    if (m_nakFallOver) {
+        m_nakFallOverCount++;
+        LogWarning(LOG_PEER, "PEER %u received NAK from master, reason = %u, nakFallOverCount = %u", peerId, reason, m_nakFallOverCount);
+
+        if (m_nakFallOverCount >= m_nakFallOverCountThreshold) {
+            LogError(LOG_PEER, "PEER %u received too many NAKs from master, nakFallOverCount = %u exceeds threshold of %u, falling over (restart)", peerId, m_nakFallOverCount, m_nakFallOverCountThreshold);
+            g_killed = true;
+        }
     }
 
     return false; // return false to perform default handling of the NAK

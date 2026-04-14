@@ -281,6 +281,15 @@ peers:
       # Textual location for this host.
       location: Anywhere, USA
 
+      # Flag indicating whether or not NAKs sent from the master to this peer will cause this peer to fall over (restart).
+      #  (NOTE: Restarting is not handled by the FNE itself, this is simply a flag to indicate that if the master sends 
+      #   too many NAKs to this peer, this FNE instance will stop, and should be restarted by an external watchdog process.)
+      nakFallOver: false
+      # Amount of NAKs from the master to this peer that will cause this peer to fall over (restart).
+      #  (This is only applicable if nakFallOver is true. This is a protection mechanism to prevent a bad network connection 
+      #   from causing instability in the FNE master.)
+      nakFallOverCount: 10
+
       # Flag indicating whether or not packet dumping is enabled.
       packetDump: false
       # Flag indicating whether or not verbose debug logging is enabled.

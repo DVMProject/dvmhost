@@ -857,7 +857,10 @@ bool HostFNE::createPeerNetworks()
             float longitude = peerConf["longitude"].as<float>(0.0F);
             std::string location = peerConf["location"].as<std::string>();
 
-            ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Enabled %u Encrypted %u", id, masterAddress.c_str(), masterPort, enabled, encrypted);
+            bool nakFallOver = peerConf["nakFallOver"].as<bool>(false);
+            uint32_t nakFallOverCount = peerConf["nakFallOverCount"].as<uint32_t>(10U);
+
+            ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Enabled %u Encrypted %u NAK Fall Over %u", id, masterAddress.c_str(), masterPort, enabled, encrypted, nakFallOver);
 
             std::string identOverride = peerConf["identity"].as<std::string>();
             if (identOverride != "") {
@@ -879,6 +882,7 @@ bool HostFNE::createPeerNetworks()
             network->setMasterPeerId(masterPeerId);
             network->setPeerLookups(m_peerListLookup);
             network->setPeerReplicationSaveACL(m_peerReplicaSavesACL);
+            network->setNakFallOver(nakFallOver, nakFallOverCount);
             if (encrypted) {
                 network->setPresharedKey(presharedKey);
             }

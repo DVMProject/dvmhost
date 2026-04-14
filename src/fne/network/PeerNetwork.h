@@ -249,6 +249,14 @@ namespace network
         void setPeerReplicationSaveACL(bool enabled) { m_peerReplicaSavesACL = enabled; }
 
         /**
+         * @brief Set whether or not this peer has NAK fall-over enabled, and the amount of NAKs that will cause 
+         * this peer to fall over (restart).
+         * @param enabled Flag to enable NAK fall-over.
+         * @param count Number of NAKs that will trigger fall-over.
+         */
+        void setNakFallOver(bool enabled, uint32_t count) { m_nakFallOver = enabled; m_nakFallOverCountThreshold = count; }
+
+        /**
          * @brief Gets the remote peer ID.
          * @returns uint32_t Remote Peer ID.
          */
@@ -332,6 +340,10 @@ namespace network
         ThreadPool m_threadPool;
 
         uint32_t m_prevSpanningTreeChildren;
+
+        bool m_nakFallOver;
+        uint32_t m_nakFallOverCount;
+        uint32_t m_nakFallOverCountThreshold;
 
         /**
          * @brief Entry point to process a given network packet.
