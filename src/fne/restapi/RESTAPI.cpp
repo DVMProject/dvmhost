@@ -805,6 +805,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         invalidateHostToken(host);
         errorPayload(reply, "invalid password");
         LogError(LOG_REST, "failed authentication attempt from host %s", host.c_str());
+        delete[] passwordHash;
         return;
     }
 
@@ -875,18 +876,20 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
     json::array peers = json::array();
     if (m_network != nullptr) {
         if (m_network->m_peers.size() > 0) {
+            m_network->m_peers.shared_lock();
             for (auto entry : m_network->m_peers) {
                 uint32_t peerId = entry.first;
                 network::FNEPeerConnection* peer = entry.second;
                 if (peer != nullptr) {
                     if (m_debug) {
-                        LogDebug(LOG_REST, "preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
+                        LogDebug(LOG_REST, "preparing PEER %u (%s) for REST API query", peerId, peer->address().c_str());
                     }
 
                     json::object peerObj = m_network->fneConnObject(peerId, peer);
                     peers.push_back(json::value(peerObj));
                 }
             }
+            m_network->m_peers.shared_unlock();
         }
         else {
             LogError(LOG_REST, "peer query failed, no peers connected to this FNE");
@@ -1798,6 +1801,7 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
         // peer statistics (right now this is just a list of connected peers)
         json::array peerStats = json::array();
         if (m_network->m_peers.size() > 0) {
+            m_network->m_peers.shared_lock();
             for (auto entry : m_network->m_peers) {
                 uint32_t peerId = entry.first;
                 network::FNEPeerConnection* peer = entry.second;
@@ -1847,6 +1851,7 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
                     peerStats.push_back(json::value(peerObj));
                 }
             }
+            m_network->m_peers.shared_unlock();
         }
         response["peerStats"].set<json::array>(peerStats);
 
@@ -2078,6 +2083,8 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
     if (m_network != nullptr) {
         uint32_t totalAffiliations = 0U;
         if (m_network->m_peers.size() > 0) {
+            m_network->m_peers.shared_lock();
+            m_network->m_peerAffiliations.lock(false);
             for (auto entry : m_network->m_peers) {
                 uint32_t peerId = entry.first;
                 network::FNEPeerConnection* peer = entry.second;
@@ -2108,6 +2115,8 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
                     }
                 }
             }
+            m_network->m_peerAffiliations.unlock();
+            m_network->m_peers.shared_unlock();
         }
 
         response["totalAffiliations"].set<uint32_t>(totalAffiliations);

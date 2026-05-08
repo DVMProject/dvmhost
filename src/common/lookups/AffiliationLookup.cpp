@@ -108,8 +108,9 @@ bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
         m_unitRegTable.unlock();
         m_unitRegTable.erase(it);
         ret = true;
+    } else {
+        m_unitRegTable.unlock();
     }
-    m_unitRegTable.unlock();
 
     if (ret) {
         if (m_unitDereg != nullptr) {

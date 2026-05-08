@@ -186,13 +186,13 @@ int HostFNE::run()
     m_ridLookup = new RadioIdLookup(ridLookupFile, ridReloadTime, true);
     m_ridLookup->read();
 
-    // initialize REST API
-    initializeRESTAPI();
-
     // initialize master networking
     ret = createMasterNetwork();
     if (!ret)
         return EXIT_FAILURE;
+
+    // initialize REST API
+    initializeRESTAPI();
 
     // initialize peer networking
     ret = createPeerNetworks();
@@ -274,6 +274,11 @@ int HostFNE::run()
     }
 
     // shutdown threads
+    if (m_RESTAPI != nullptr) {
+        m_RESTAPI->close();
+        delete m_RESTAPI;
+    }
+
     if (m_network != nullptr) {
         m_network->close();
         delete m_network;
@@ -290,11 +295,6 @@ int HostFNE::run()
             peerNetwork->close();
     }
     m_peerNetworks.clear();
-
-    if (m_RESTAPI != nullptr) {
-        m_RESTAPI->close();
-        delete m_RESTAPI;
-    }
 
     if (m_tidLookup != nullptr) {
         m_tidLookup->setReloadTime(0U); // no reload
@@ -519,6 +519,7 @@ bool HostFNE::initializeRESTAPI()
     if (restApiEnable) {
         m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
         m_RESTAPI->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_adjSiteMapLookup, m_cryptoLookup);
+        m_RESTAPI->setNetwork(m_network);
         bool ret = m_RESTAPI->open();
         if (!ret) {
             delete m_RESTAPI;
@@ -655,10 +656,6 @@ bool HostFNE::createMasterNetwork()
     m_network->setPacketDump(packetDump);
 
     m_network->setLookups(m_ridLookup, m_tidLookup, m_peerListLookup, m_cryptoLookup, m_adjSiteMapLookup);
-
-    if (m_RESTAPI != nullptr) {
-        m_RESTAPI->setNetwork(m_network);
-    }
 
     bool ret = m_network->open();
     if (!ret) {

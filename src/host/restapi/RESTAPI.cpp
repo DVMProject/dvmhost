@@ -442,6 +442,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         invalidateHostToken(host);
         errorPayload(reply, "invalid password");
         LogError(LOG_REST, "failed authentication attempt from host %s", host.c_str());
+        delete[] passwordHash;
         return;
     }
 
