@@ -1,8 +1,8 @@
 # DVM Network Stack Technical Documentation
 
-**Version:** 1.0  
-**Date:** December 3, 2025  
-**Author:** AI Assistant (based on source code analysis)
+**Version:** 1.1  
+**Date:** May 8, 2026  
+**Author:** AI Assistant (updated based on current source code analysis)
 
 AI WARNING: This document was mainly generated using AI assistance. As such, there is the possibility of some error or inconsistency.
 
@@ -137,14 +137,12 @@ The DVM network stack is organized into a hierarchical class structure with clea
 
 #### Common/Core Network Classes (dvmhost/src/common/network/)
 
-These classes provide the foundational networking functionality used by all DVM components (dvmhost, dvmbridge, dvmpatch, dvmfne):
+These classes provide the foundational networking functionality used by all DVM components (dvmhost, dvmbridge, dvmpatch, and dvmfne):
 
 ```
 BaseNetwork (Abstract Base Class)
     │
     ├── Network (Peer Implementation - for dvmhost, dvmbridge, dvmpatch)
-    │
-    └── FNENetwork (Master Implementation - for dvmfne only)
 
 Core Supporting Classes:
     ├── FrameQueue (RTP Frame Management)
@@ -156,18 +154,22 @@ Core Supporting Classes:
     │
     ├── RTPStreamMultiplex (Multi-Stream Management)
     ├── PacketBuffer (Fragmentation/Reassembly)
+    ├── NetRPC / RPCHeader (RPC Transport and Framing Helpers)
+    ├── AdaptiveJitterBuffer (Per-Stream Reordering/Jitter Management)
     └── udp::Socket (UDP Transport Layer)
 ```
 
 #### FNE-Specific Network Classes (dvmhost/src/fne/network/)
 
-These classes extend the core functionality specifically for FNE master operations:
+These classes extend the core functionality specifically for current FNE runtime operations:
 
 ```
-FNENetwork (Extends BaseNetwork)
+TrafficNetwork (Extends BaseNetwork)
     │
-    ├── DiagNetwork (Diagnostic Port Handler)
-    │   └── Uses BaseNetwork functionality on alternate port
+    ├── MetadataNetwork (Metadata / Activity / Diagnostic Transfer Listener)
+    ├── PeerNetwork (Extends Network for Upstream/Neighbor FNE Links)
+    ├── FNEPeerConnection (Per-Peer Session State, RTPStreamMultiplex)
+    ├── SpanningTree (Peer Topology State)
     │
     └── Call Handlers (Traffic Routing & Management):
         ├── TagDMRData (DMR Protocol Handler)
@@ -179,15 +181,17 @@ FNENetwork (Extends BaseNetwork)
 #### Class Usage by Component:
 
 | Class | dvmhost | dvmbridge | dvmpatch | dvmfne |
-|-------|---------|-----------|----------|--------|
+|-------|---------|-----------|----------|--------------------|
 | BaseNetwork | ✓ | ✓ | ✓ | ✓ |
 | Network | ✓ | ✓ | ✓ | ✗ |
-| FNENetwork | ✗ | ✗ | ✗ | ✓ |
+| TrafficNetwork | ✗ | ✗ | ✗ | ✓ |
+| MetadataNetwork | ✗ | ✗ | ✗ | ✓ |
+| PeerNetwork | ✗ | ✗ | ✗ | ✓ |
 | FrameQueue | ✓ | ✓ | ✓ | ✓ |
 | RTPHeader/FNEHeader | ✓ | ✓ | ✓ | ✓ |
-| DiagNetwork | ✗ | ✗ | ✗ | ✓ |
 | TagXXXData | ✗ | ✗ | ✗ | ✓ |
 | FNEPeerConnection | ✗ | ✗ | ✗ | ✓ |
+| SpanningTree | ✗ | ✗ | ✗ | ✓ |
 
 ### BaseNetwork Class
 
@@ -251,34 +255,49 @@ private:
 };
 ```
 
-### FNENetwork Class (Master)
+### TrafficNetwork / MetadataNetwork / PeerNetwork Classes
 
-The `FNENetwork` class implements master-side functionality for managing connected peers:
+Current FNE runtime networking is split across multiple classes rather than a single `FNENetwork` implementation:
 
-- **Peer Management**: Track connected peers, their capabilities, and metadata
-- **Call Routing**: Route traffic between peers based on talkgroup affiliations
-- **Access Control**: Whitelist/blacklist management for RIDs and talkgroups
-- **Network Replication**: Distribute peer lists, talkgroup rules, and RID lookups
-- **Spanning Tree**: Optional spanning tree protocol for complex network topologies
-- **Thread Pool**: Worker threads for asynchronous packet processing
+- **TrafficNetwork**: Primary master-side traffic/control plane. Manages connected peers, routing, affiliations, ACL distribution, spanning tree state, HA state, and protocol call handlers.
+- **MetadataNetwork**: Separate metadata/activity/diagnostic/status listener bound to `master.port + 1`, sharing the same peer/runtime context as `TrafficNetwork`.
+- **PeerNetwork**: Upstream or neighbor FNE client link implementation used when this FNE also peers to other masters.
+
+Representative current layout:
 
 ```cpp
-class FNENetwork : public BaseNetwork {
+class TrafficNetwork : public BaseNetwork {
 private:
-    std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-    std::unordered_map<uint32_t, uint32_t> m_ccPeerMap;
-    
+    concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+    concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
+    concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
+
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
     lookups::PeerListLookup* m_peerListLookup;
-    
-    ThreadPool m_threadPool;        // Worker threads
-    Timer m_maintainenceTimer;      // Peer maintenance timer
-    
-    bool m_enableSpanningTree;      // Spanning tree enabled
-    bool m_disallowU2U;             // Disallow unit-to-unit calls
+
+    SpanningTree* m_treeRoot;
+    ThreadPool m_threadPool;
+    Timer m_maintainenceTimer;
+
+    bool m_enableSpanningTree;
+    bool m_disallowU2U;
+};
+
+class MetadataNetwork : public BaseNetwork {
+private:
+    TrafficNetwork* m_trafficNetwork;
+    ThreadPool m_threadPool;
+};
+
+class PeerNetwork : public Network {
+private:
+    lookups::PeerListLookup* m_pidLookup;
+    ThreadPool m_threadPool;
 };
 ```
+
+At the application level, `HostFNE` owns `m_network` (`TrafficNetwork`), `m_mdNetwork` (`MetadataNetwork`), and `m_peerNetworks` (`PeerNetwork` map). Startup order is `createMasterNetwork()`, then `initializeRESTAPI()`, then `createPeerNetworks()`.
 
 ---
 
@@ -291,7 +310,7 @@ The DVM network stack implements a layered protocol architecture:
 - **Socket Operations**: Standard UDP datagram socket (IPv4/IPv6)
 - **Buffer Sizes**: Configurable send/receive buffers (default 512KB)
 - **Non-Blocking**: Asynchronous I/O for high-throughput scenarios
-- **Encryption**: Optional AES-256 encryption at transport layer
+- **Encryption**: Optional AES-256-ECB UDP payload wrapping with preshared key and `0xC0FE` packet leader
 
 ### Layer 2: RTP (Real-time Transport Protocol)
 
@@ -647,6 +666,7 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 | 6 | PEER_RESET | Warning | FNE demands connection reset | Reset connection and re-login |
 | 7 | PEER_ACL | **Fatal** | Peer rejected by Access Control List | **Disable network - peer is banned** |
 | 8 | FNE_MAX_CONN | Warning | FNE has reached maximum permitted connections | Wait and retry later |
+| 9 | FNE_DUPLICATE_CONN | Warning | FNE detected this peer as a duplicate connection | Disconnect, clear remote peer state, and retry with duplicate-connection backoff |
 
 **Severity Levels:**
 
@@ -663,6 +683,8 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 
 - `FNE_MAX_CONN` (Code 8): If received while in `NET_STAT_RUNNING` state, indicates the FNE is overloaded or shutting down. Peer should implement exponential backoff before reconnecting.
 
+- `FNE_DUPLICATE_CONN` (Code 9): The peer transitions to `NET_STAT_WAITING_CONNECT`, clears `m_remotePeerId`, sets the duplicate-connection flag, reduces retry count thresholds, and uses the extended duplicate-connection reconnect delay (`DUPLICATE_CONN_RETRY_TIME`) to avoid rapid reconnect storms.
+
 ### NET_SUBFUNC: Secondary Function Codes
 
 #### Protocol Sub-Functions (PROTOCOL)
@@ -672,6 +694,7 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 | 0x00 | PROTOCOL_SUBFUNC_DMR | DMR protocol data |
 | 0x01 | PROTOCOL_SUBFUNC_P25 | P25 protocol data |
 | 0x02 | PROTOCOL_SUBFUNC_NXDN | NXDN protocol data |
+| 0x03 | PROTOCOL_SUBFUNC_P25_P2 | P25 Phase 2 protocol data |
 | 0x0F | PROTOCOL_SUBFUNC_ANALOG | Analog audio data |
 
 #### Master Sub-Functions (MASTER)
@@ -883,7 +906,7 @@ Byte Offset | Field              | Size      | Description
 
 **RPTC Configuration JSON Schema:**
 
-The RPTC configuration uses a nested JSON structure with three main object groups: `info` (system information), `channel` (RF parameters), and `rcon` (remote control/REST API).
+The RPTC configuration uses a nested JSON structure with three main object groups: `info` (system information), `channel` (RF parameters), and `rcon` (remote control/REST API). Current peers also include the top-level `peerClass` field, which is the canonical way to describe the peer connection class.
 
 ```json
 {
@@ -915,13 +938,25 @@ The RPTC configuration uses a nested JSON structure with three main object group
     "password": "string",        // REST API password
     "port": 0                    // REST API port
   },
+ 
+    "peerClass": 2,               // Canonical peer connection class enum
   
-  "externalPeer": false,         // External network peer flag (optional)
+    "externalPeer": false,         // Legacy compatibility flag for neighbor peers
   "conventionalPeer": false,     // Conventional (non-trunked) mode (optional)
-  "sysView": false,              // SysView monitoring peer flag (optional)
+    "sysView": false,              // Legacy compatibility flag for SysView peers
+    "consolePeer": false,          // Reporting flag for console peers
   "software": "string"           // Software identifier (optional)
 }
 ```
+
+**PEER_CONN_CLASS Enumeration:**
+
+- **0 (`PEER_CONN_CLASS_UNKNOWN`)**: Unknown class. The FNE normalizes this to `PEER_CONN_CLASS_STANDARD` when processing RPTC.
+- **1 (`PEER_CONN_CLASS_NEIGHBOR`)**: Downstream neighbor FNE peer used for FNE-to-FNE interconnects.
+- **2 (`PEER_CONN_CLASS_STANDARD`)**: Standard RF site peer. This is the default value emitted by current peer implementations.
+- **3 (`PEER_CONN_CLASS_SYSVIEW`)**: SysView monitoring peer.
+- **4 (`PEER_CONN_CLASS_CONSOLE`)**: Console client peer.
+- **5 (`PEER_CONN_CLASS_INVALID`)**: Sentinel only. Values greater than or equal to this are treated as invalid and normalized to `PEER_CONN_CLASS_STANDARD` by the FNE.
 
 **Example RPTC Configuration:**
 
@@ -955,10 +990,13 @@ The RPTC configuration uses a nested JSON structure with three main object group
     "password": "api_secret",
     "port": 9990
   },
+ 
+  "peerClass": 2,
   
   "externalPeer": false,
   "conventionalPeer": false,
   "sysView": false,
+  "consolePeer": false,
   "software": "DVMHOST_R04A00"
 }
 ```
@@ -968,9 +1006,11 @@ The RPTC configuration uses a nested JSON structure with three main object group
 **Top-Level Fields:**
 - **identity**: Unique identifier for the peer (callsign, site name, etc.)
 - **rxFrequency/txFrequency**: Operating frequencies in Hertz
-- **externalPeer**: Indicates peer is outside the primary network (affects routing)
+- **peerClass**: Canonical peer connection class. Current peers should send this field rather than relying on legacy boolean flags.
+- **externalPeer**: Legacy compatibility flag indicating `PEER_CONN_CLASS_NEIGHBOR`
 - **conventionalPeer**: Indicates non-trunked operation mode (affects grant behavior)
-- **sysView**: Indicates monitoring-only peer (affiliation viewer, no traffic routing)
+- **sysView**: Legacy compatibility flag indicating `PEER_CONN_CLASS_SYSVIEW`
+- **consolePeer**: Reporting flag indicating `PEER_CONN_CLASS_CONSOLE`
 - **software**: Software version string (e.g., `DVMHOST_R04A00`) for compatibility checking
 
 **System Information Object (`info`):**
@@ -998,9 +1038,12 @@ The RPTC configuration uses a nested JSON structure with three main object group
 The FNE master stores the complete configuration JSON in the peer connection object (`FNEPeerConnection::config`) and extracts specific fields for connection management:
 - `identity` → Used for peer identification in logs and routing tables
 - `software` → Logged for version tracking and compatibility checks
-- `sysView` → Determines if peer is monitoring-only (no traffic routing)
-- `externalPeer` → Used for spanning tree routing decisions (external peers have special routing rules)
+- `peerClass` → Primary peer classification used to determine routing and peer behavior
+- `sysView` / `externalPeer` → Accepted for backward compatibility with older peers and translated into the corresponding `peerClass`
+- `consolePeer` → Emitted by the FNE when reporting a console-class peer configuration
 - `conventionalPeer` → Affects talkgroup affiliation and grant behavior (conventional peers don't require grants)
+
+If `peerClass` is absent, the FNE falls back to legacy `sysView` and `externalPeer` booleans. If `peerClass` is `PEER_CONN_CLASS_UNKNOWN` or greater than or equal to `PEER_CONN_CLASS_INVALID`, the FNE normalizes it to `PEER_CONN_CLASS_STANDARD`. After parsing, the FNE reports the resolved class back through the stored configuration JSON and backfills the legacy boolean fields for compatibility with older REST API consumers.
 
 **Step 4: ACK/NAK Response**
 
@@ -1551,6 +1594,63 @@ The difference between **TDU** and **TDULC**:
 - **TDU:** Simple terminator, no additional payload (24 bytes total)
 - **TDULC:** Terminator with embedded link control (78 bytes total), provides complete call metadata at termination
 
+**P25 Phase 2 (TDMA Voice/Data) Network Format:**
+
+P25 Phase 2 traffic is carried under its own network subfunction, `NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 (0x03)`, rather than the classic `PROTOCOL_SUBFUNC_P25` path. `BaseNetwork::writeP25P2()` creates the encapsulated packet and `Network::clock()` handles it in a dedicated receive branch with separate per-slot receive stream tracking.
+
+The encapsulated Phase 2 format is fixed-length:
+
+| Offset | Length | Field | Description |
+|--------|--------|-------|-------------|
+| 0-23 | 24 | Message Header | Standard P25 network header created by `createP25_MessageHdr()` |
+| 24-63 | 40 | P25 Phase 2 Frame Data | Raw Phase 2 payload (`P25_P2_FRAME_LENGTH_BYTES = 40U`) |
+
+**Total P25 Phase 2 Size:** 66 bytes (`P25_P2_PACKET_LENGTH = 66U`)
+
+**Constants:**
+- `PROTOCOL_SUBFUNC_P25_P2 = 0x03U` (defined in `RTPFNEHeader.h`)
+- `P25_P2_PACKET_LENGTH = 66U` (defined in `BaseNetwork.h`)
+- `P25_P2_FRAME_LENGTH_BYTES = 40U` (defined in `P25Defines.h`)
+- `MSG_HDR_SIZE = 24U`
+- `PACKET_PAD = 8U`
+- Total allocated size: 66 + 8 = 74 bytes
+
+**Header Semantics:**
+
+`createP25P2_Message()` starts from the normal P25 message header, then overlays Phase 2-specific metadata:
+
+- The common P25 header is created with `DUID::PDU` and `FrameType::DATA_UNIT`.
+- `buffer[14]` carries the DVM control byte.
+- `buffer[19]` carries Phase 2 signaling:
+    - Bit 7 is the slot marker inspected by the receive path.
+    - The low bits carry the `p25::defines::P2_DUID` value.
+- `buffer[23]` contains the encapsulated data count, which is `0x40` (64 bytes: 24-byte header + 40-byte Phase 2 payload).
+
+**Receive-Side Behavior in `Network.cpp`:**
+
+- `Network::clock()` routes `PROTOCOL_SUBFUNC_P25_P2` into `m_rxP25P2Data`, separate from classic `m_rxP25Data`.
+- The receive path derives the slot from bit 7 of byte 19 and maintains one active receive stream per slot in `m_rxP25P2StreamId[2]`.
+- Promiscuous peers validate multiplexed RTP sequencing per stream using `RTPStreamMultiplex::verifyStream()`.
+- Non-promiscuous peers lock a slot to the first active Phase 2 stream until an end-of-call RTP sequence is observed.
+- Oversized frames are logged when they exceed `P25_P2_PACKET_LENGTH + PACKET_PAD`.
+
+**Raw P25 Phase 2 Packet Example (layout):**
+
+```
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 Phase 2: 66 bytes]
+
+Complete Packet (98 bytes):
+[RTP 12] [FNE 20] [P25 header 24 with slot/DUID in byte 19] [40 bytes raw P25 P2 payload] [packet pad]
+├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────────── P25 P2 (66) ────────────────────────────┤
+
+P25 Phase 2 payload breakdown:
+"P25D" | common P25 header fields | controlByte @ 14 | slot/DUID @ 19 | count=0x40 @ 23 | 40 bytes raw P25 Phase 2 payload
+```
+
+**Implementation Note:**
+
+P25 Phase 2 is a separate transport lane in DVM documentation because it has its own subfunction code, receive buffer, reset path (`resetP25P2(slotNo)`), and per-slot stream tracking even though it reuses the generic P25 message header builder.
+
 #### NXDN Message Format
 
 NXDN frames use a fixed-length network format created by `createNXDN_Message()` in `BaseNetwork.cpp`. The frame size is 70 bytes as defined by `NXDN_PACKET_LENGTH = 70U`.
@@ -1629,7 +1729,7 @@ The actual NXDN frame data (48 bytes) contains the over-the-air NXDN frame struc
 
 #### Analog Message Format
 
-Analog audio frames use G.711 μ-law encoding and are created by `createAnalog_Message()` in `BaseNetwork.cpp`. The frame size is 324 bytes as defined by `ANALOG_PACKET_LENGTH = 324U`.
+Analog audio frames are created by `createAnalog_Message()` in `BaseNetwork.cpp`. The current network frame size is 344 bytes as defined by `ANALOG_PACKET_LENGTH = 344U`.
 
 ```cpp
 bool BaseNetwork::writeAnalog(const analog::AnalogData& data) {
@@ -1646,11 +1746,11 @@ bool BaseNetwork::writeAnalog(const analog::AnalogData& data) {
 
 **Analog Packet Structure:**
 
-The analog audio packet uses the TAG_ANALOG_DATA identifier and contains 300 bytes of audio samples (calculated as 324 - 20 header - 4 trailer).
+The analog audio packet uses the `TAG_ANALOG_DATA` identifier (`"ANOD"`) and contains 320 bytes of audio payload (`AUDIO_SAMPLES_LENGTH_BYTES = 320U`). The inline comments in current analog code describe this as 20 ms of audio at 8 kHz, while `analog::data::NetData` still notes that the audio buffer is expected to be MuLaw encoded. The network builder itself follows the 320-byte payload constant.
 
 | Offset | Length | Field | Description |
 |--------|--------|-------|-------------|
-| 0-3 | 4 | Analog Tag | "ADIO" (0x4144494F) or similar ASCII identifier |
+| 0-3 | 4 | Analog Tag | "ANOD" (`TAG_ANALOG_DATA`) |
 | 4 | 1 | Sequence Number | Packet sequence number for audio ordering (0-255) |
 | 5-7 | 3 | Source ID | Radio ID of transmitting station |
 | 8-10 | 3 | Destination ID | Target radio ID or conference ID |
@@ -1658,51 +1758,33 @@ The analog audio packet uses the TAG_ANALOG_DATA identifier and contains 300 byt
 | 14 | 1 | Control Byte | Network control flags |
 | 15 | 1 | Frame Type / Group | Bit 7: Group flag (0=private, 1=group)<br/>Bits 0-6: Audio frame type |
 | 16-19 | 4 | Reserved | Reserved for future use (0x00000000) |
-| 20-319 | 300 | Audio Data | G.711 μ-law encoded audio samples (300 bytes @ 8kHz) |
-| 320-323 | 4 | Trailer | Reserved trailer bytes |
+| 20-339 | 320 | Audio Data | Analog network audio payload (`AUDIO_SAMPLES_LENGTH_BYTES`) |
+| 340-343 | 4 | Trailer | Reserved trailer bytes |
 
-**Total Analog Payload Size:** 324 bytes (`ANALOG_PACKET_LENGTH`)
+**Total Analog Payload Size:** 344 bytes (`ANALOG_PACKET_LENGTH`)
 
 **Constants:**
-- `ANALOG_PACKET_LENGTH = 324U` (defined in `BaseNetwork.h`: 20 byte header + 300 byte audio + 4 byte trailer)
-- Audio sample size: 300 bytes (AUDIO_SAMPLES_LENGTH_BYTES, calculated as 324 - 20 - 4)
+- `ANALOG_PACKET_LENGTH = 344U` (defined in `BaseNetwork.h`: 20 byte header + `AUDIO_SAMPLES_LENGTH_BYTES` + 4 byte trailer)
+- `AUDIO_SAMPLES_LENGTH_BYTES = 320U`
 - `PACKET_PAD = 8U`
-- Total allocated size: 324 + 8 = 332 bytes
+- Total allocated size: 344 + 8 = 352 bytes
 
 **Audio Encoding Details:**
-- **Codec:** G.711 μ-law (ITU-T G.711)
+- **Payload Length:** 320 bytes
 - **Sample Rate:** 8 kHz (8000 samples per second)
-- **Bit Depth:** 8 bits per sample (1 byte per sample)
-- **Frame Duration:** 37.5 ms (300 samples ÷ 8000 samples/sec = 0.0375 sec)
-- **Samples per Frame:** 300 samples
-- **Bandwidth:** 64 kbit/s (8000 samples/sec × 8 bits/sample)
+- **Implementation Note:** `AnalogDefines.h` describes this as 20 ms of 16-bit audio at 8 kHz; `NetData.h` describes the buffer passed into `setAudio()` as MuLaw encoded. The network packetizer currently uses the 320-byte constant and copies that payload verbatim.
 
-**Raw Analog Packet Example (hexadecimal):**
+**Raw Analog Packet Example (layout):**
 
 ```
-[RTP Header: 12 bytes] [FNE Header: 20 bytes] [Analog Payload: 324 bytes]
+[RTP Header: 12 bytes] [FNE Header: 20 bytes] [Analog Payload: 344 bytes]
 
-Complete Packet (356 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 03 12 34 56 78 00 00 4E 20 01 44 00 00 00 00 00 00 | 41 44 49 4F 05 00 10 00 00 20 00 00 01 00 00 00 80 00 00 00 [300 bytes G.711 audio...] 00 00 00 00
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── Analog (324) ──────────────────────────────────┤
+Complete Packet (376 bytes):
+[RTP 12] [FNE 20] ["ANOD" + header bytes + 320 bytes audio + 4 byte trailer]
+├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── Analog (344) ──────────────────────────────────┤
 
 Analog Payload breakdown:
-41 44 49 4F 05 00 10 00 00 20 00 00 01 00 00 00 80 00 00 00 [300 bytes audio data...] 00 00 00 00
-│        │  │  │        │  │        │  │  │  │  │  └──────┴─ Reserved (4 bytes)
-│        │  │  │        │  │        │  │  │  │  └─────────────── Frame Type/Group: 0x80 (group call, frame type 0)
-│        │  │  │        │  │        │  │  │  └──────────────────── Control: 0x01
-│        │  │  │        │  │        │  └──┴────────────────────── Reserved (3 bytes)
-│        │  │  │        │  └─[DestID 3rd]──────────────────────── Dest ID: 0x200000 (2097152, conference)
-│        │  │  │        └─[DestID 2nd]
-│        │  │  └─[DestID 1st]
-│        │  └─[SrcID 3rd]──────────────────────────────────────── Src ID: 0x001000 (4096)
-│        └─[SrcID 2nd]
-│        └─[SrcID 1st]
-│        └──────────────────────────────────────────────────────── Sequence: 0x05 (5)
-└───────────────────────────────────────────────────────────────── Tag: "ADIO" (0x4144494F)
-       └────────────────────────────────────────────────────────── Reserved (4 bytes)
-                                                                   └────── Audio samples (300 bytes)
-                                                                           └─── Trailer (4 bytes)
+"ANOD" | Seq | SrcID | DstID | Reserved | Control | FrameType/Group | Reserved | 320 bytes audio | 4 byte trailer
 
 G.711 μ-law Audio Sample Example (first 16 bytes of audio data shown):
 FF FE FD FC FB FA F9 F8 F7 F6 F5 F4 F3 F2 F1 F0 ...
@@ -1710,15 +1792,9 @@ FF FE FD FC FB FA F9 F8 F7 F6 F5 F4 F3 F2 F1 F0 ...
 └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴─── Each byte is one 8kHz audio sample (μ-law encoded)
 ```
 
-**G.711 μ-law Encoding:**
+The current analog network payload is sized for 320 bytes per frame, with the packetizer copying the application-provided buffer directly into the on-wire message.
 
-G.711 μ-law is a logarithmic audio compression standard that provides toll-quality voice at 64 kbit/s:
-- **Range:** ±8159 linear PCM values compressed to 256 μ-law values (0x00-0xFF)
-- **Characteristics:** Non-linear quantization favoring lower amplitude signals (human speech)
-- **Compatibility:** Standard telephony codec, widely supported
-- **Signal-to-Noise Ratio:** ~37 dB for speech signals
-
-The 300-byte audio payload represents 37.5 milliseconds of continuous audio, allowing for smooth real-time voice transmission with minimal latency.
+G.711 μ-law details, if used by the source audio path, remain codec-layer behavior above the network framing described here.
 
 ### Ring Buffer Architecture
 
@@ -1925,7 +2001,7 @@ sha256.buffer(hash, 40U, hash);
 
 ### Encryption
 
-Optional AES-256-ECB encryption at transport layer:
+Optional AES-256-ECB encryption is implemented as UDP payload wrapping at the socket layer:
 
 ```cpp
 void Network::setPresharedKey(const uint8_t* presharedKey) {
@@ -1946,7 +2022,10 @@ The implementation uses AES-256-ECB (Electronic Codebook mode):
 - **Key Size**: 256 bits (32 bytes)
 - **Block Size**: 128 bits (16 bytes)
 - **Mode**: ECB - each 16-byte block encrypted independently
-- **Padding**: PKCS#7 padding for variable-length payloads
+- **Padding**: Zero-padding to the AES block boundary
+- **Packet Leader**: `0xC0FE` (`AES_WRAPPED_PCKT_MAGIC`) is prepended before encrypted payloads
+
+**Runtime Behavior:** When preshared-key wrapping is enabled, receive logic drops datagrams that do not carry the `0xC0FE` leader. This is transport wrapping around the existing RTP/FNE payload, not SRTP.
 
 **Note**: ECB mode is used for simplicity and performance in this implementation. While ECB has known cryptographic weaknesses (identical plaintext blocks produce identical ciphertext), the primary goal is to provide basic confidentiality for network traffic between trusted peers rather than military-grade security. For high-security deployments, additional network-layer security (IPsec, VPN) should be used.
 
@@ -2199,28 +2278,30 @@ bool BaseNetwork::writePeerStatus(json::object obj) {
 }
 ```
 
-### Diagnostic Network Port
+### Metadata Network Port
 
-FNE master uses separate port for diagnostics:
+Current FNE runtime uses a separate `MetadataNetwork` listener for activity log transfer, diagnostic transfer, status transfer, and packet-buffered replication metadata:
 
 ```cpp
-class DiagNetwork : public BaseNetwork {
+class MetadataNetwork : public BaseNetwork {
 private:
-    FNENetwork* m_fneNetwork;
-    uint16_t m_port;              // Separate diagnostic port
+    TrafficNetwork* m_trafficNetwork;
+    uint16_t m_port;              // Bound to master port + 1
     ThreadPool m_threadPool;
-    
+
 public:
-    void processNetwork();        // Process diagnostic packets
+    void processNetwork();        // Process metadata / transfer packets
 };
 ```
+
+`HostFNE::createMasterNetwork()` creates `TrafficNetwork` on the configured master port and `MetadataNetwork` on `master.port + 1`.
 
 **Benefits:**
 
 - Isolate diagnostic traffic from operational traffic
 - Different QoS/priority handling
 - Optional firewall rules
-- Reduced congestion on main port
+- Reduced congestion on main traffic port
 
 ### Network Statistics
 
@@ -2329,7 +2410,7 @@ Key metrics tracked:
 
 - BaseNetwork: ~20KB
 - Network (Peer): ~50KB
-- FNENetwork (Master): ~100KB base
+- TrafficNetwork + MetadataNetwork (FNE runtime): ~100KB base before peer/session maps and call-handler state
 - Per-peer state: ~1-2KB
 - **Total for 100 peers: ~300-400MB**
 
@@ -2462,15 +2543,11 @@ Peer A (Initiator)          FNE Master              Peer B (Recipient)
 ```
 Peer A (Initiator)          FNE Master              Peer B (Recipient)
     |                           |                           |
-    | P25 PROTOCOL (HDU)        |                           |
-    | Header Data Unit          |                           |
-    |-------------------------->|-------------------------->|
-    |                           | (Route based on TG)       |
-    |                           |                           |
     | P25 PROTOCOL (LDU1)       |                           |
     | Logical Data Unit 1       |                           |
-    | [Voice + LC + LSD]        |                           |
+    | [Voice + LC + LSD + ESS]  |                           |
     |-------------------------->|-------------------------->|
+    |                           | (Route based on TG)       |
     |                           |                           |
     | P25 PROTOCOL (LDU2)       |                           |
     | Logical Data Unit 2       |                           |
@@ -2562,7 +2639,7 @@ Peer (dvmhost)           FNE (Child)              FNE (Parent/KMS)
     |                        |                           |
     | KEY_REQ                |                           |
     | KeyID=0x1234           |                           |
-    | AlgID=0x81 (AES-256)   |                           |
+    | AlgID=0x84 (AES-256)   |                           |
     | SrcID=123456           |                           |
     |----------------------->|                           |
     |                        | KEY_REQ (forwarded)       |
@@ -2599,12 +2676,10 @@ Offset | Length | Field        | Description
 
 **Algorithm IDs:**
 - `0x80`: Unencrypted (cleartext)
-- `0x81`: AES-256
-- `0x82`: DES-OFB
-- `0x83`: DES-XL
-- `0x84`: ADP (Motorola Advanced Digital Privacy)
-- `0x9F`: AES-256-GCM (custom)
-- Other values: Vendor-specific or reserved
+- `0x81`: DES-OFB
+- `0x84`: AES-256
+- `0xAA`: ARC4
+- Other values: Vendor-specific, implementation-specific, or reserved
 
 **KEY_RSP Message Structure:**
 
@@ -2650,7 +2725,7 @@ Offset | Length | Field         | Description
 **Important Notes:**
 
 - KEY_REQ/KEY_RSP are for **call data encryption** (voice/data payload), not network transport encryption
-- Network transport uses AES-256-ECB (see Section 7)
+- Network transport uses the optional AES-256-ECB UDP wrapper described in Section 9
 - Keys are transmitted encrypted over the already-secured network connection
 - Only authorized peers (verified during RPTK) can request keys
 - Key material format is algorithm-specific (AES keys, DES keys, etc.)
@@ -2751,16 +2826,21 @@ network:
 ### Master Configuration (YAML)
 
 ```yaml
-fne:
-  port: 62031
-  diagPort: 62032       # Separate diagnostic port
-  
-  # Authentication
-  password: "SecurePassword123"
-  
-  # Scaling
-  workers: 8            # Thread pool size
-  softConnLimit: 100    # Soft connection limit
+master:
+    peerId: 9000100
+    address: 0.0.0.0
+    port: 62031           # Traffic port; metadata listener uses port + 1
+
+    # Authentication
+    password: "SecurePassword123"
+
+    # Scaling
+    workers: 8
+    connectionLimit: 100
+
+    # Transport security
+    encrypted: false
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
   
   # Network Features
   spanningTree: true
@@ -2825,7 +2905,7 @@ fne:
 **Enable Packet Dumps:**
 
 ```cpp
-m_debug = true;  // In Network or FNENetwork constructor
+m_debug = true;  // In Network, TrafficNetwork, or MetadataNetwork constructor/config
 ```
 
 **Wireshark Capture:**
@@ -2842,7 +2922,7 @@ wireshark capture.pcap
 grep "peerId = 1234567" /var/log/dvm/dvmhost.log
 
 # Search for NAK messages
-grep "NAK" /var/log/dvm/dvmfne.log
+grep "NAK" /var/log/dvm/dvmhost.log
 
 # Monitor in real-time
 tail -f /var/log/dvm/dvmhost.log | grep "NET"
@@ -2889,6 +2969,7 @@ tail -f /var/log/dvm/dvmhost.log | grep "NET"
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | Dec 3, 2025 | Initial documentation based on source code analysis |
+| 1.1 | May 8, 2026 | Update to match current state of the codebase |
 
 ---
 

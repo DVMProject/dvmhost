@@ -1,8 +1,8 @@
 # DVM FNE REST API Technical Documentation
 
-**Version:** 1.1  
-**Date:** December 6, 2025  
-**Author:** AI Assistant (based on source code analysis)
+**Version:** 1.2  
+**Date:** May 8, 2026  
+**Author:** AI Assistant (updated based on current source code analysis)
 
 AI WARNING: This document was mainly generated using AI assistance. As such, there is the possibility of some error or inconsistency. Examples in Section 14 and Appendix C are *strictly* examples only for how the API *could* be used.
 
@@ -33,9 +33,9 @@ The DVM (Digital Voice Modem) FNE (Fixed Network Equipment) REST API provides a 
 
 ### 1.1 Base Configuration
 
-**Default Ports:**
-- HTTP: User-configurable (typically 9990)
-- HTTPS: User-configurable (typically 9443)
+**Default Port:**
+- REST API listener: User-configurable via `system.restPort` (typically `9990`)
+- The same configured port is used for HTTP or HTTPS depending on `system.restSsl`
 
 **Transport:**
 - Protocol: HTTP/1.1 or HTTPS
@@ -44,7 +44,7 @@ The DVM (Digital Voice Modem) FNE (Fixed Network Equipment) REST API provides a 
 
 **SSL/TLS Support:**
 - Optional HTTPS with certificate-based security
-- Configurable via `keyFile` and `certFile` parameters
+- Configurable via `restSslKey` and `restSslCertificate`
 - Uses OpenSSL when `ENABLE_SSL` is defined
 
 ### 1.2 API Architecture
@@ -52,8 +52,10 @@ The DVM (Digital Voice Modem) FNE (Fixed Network Equipment) REST API provides a 
 The REST API is built on:
 - **Request Dispatcher:** Routes HTTP requests to appropriate handlers
 - **HTTP/HTTPS Server:** Handles network connections
-- **Authentication Layer:** Token-based authentication using SHA-256
+- **Authentication Layer:** Token-based authentication using SHA-256 password hashes sent by the client
+- **Traffic Network Integration:** Connected peer state, grants, affiliations, spanning tree, and protocol command routing come from `TrafficNetwork`
 - **Lookup Tables:** Radio ID, Talkgroup Rules, Peer List, Adjacent Site Map
+- **Crypto Container:** REST reload and stats support for encrypted key container state
 
 ---
 
@@ -108,16 +110,18 @@ Content-Type: application/json
 ```
 
 **Error Conditions:**
-- `400 Bad Request`: Invalid password, malformed auth string, or invalid characters
-- `401 Unauthorized`: Authentication failed
+- `400 Bad Request`: Invalid password, malformed auth field, empty auth string, auth longer than 64 characters, or invalid hex characters
 
 **Notes:**
 - Password must be pre-hashed with SHA-256 on client side
+- The configured FNE password in YAML is plain text (`system.restPassword`); the server hashes it internally at startup and compares the client-supplied hex digest against that hash
 - Token is a 64-bit unsigned integer represented as a string
 - Tokens are invalidated when:
   - Client authenticates again
   - Server explicitly invalidates the token
   - Server restarts
+- Authentication tokens are bound to the request's `RemoteHost` value
+- FNE truncates configured REST passwords longer than 64 characters before hashing
 
 **Example (bash with curl):**
 ```bash
@@ -311,6 +315,7 @@ Content-Type: application/json
 ```
 
 **Notes:**
+- Returns active connected peers plus any peer objects learned from upstream replica peer state
 - Forces peer disconnect and requires re-authentication
 - Useful for recovering from stuck connections
 - Peer will need to complete RPTL/RPTK/RPTC sequence again
@@ -357,6 +362,91 @@ Content-Type: application/json
 - Disconnects from specified upstream peer and attempts reconnection
 - Used for recovering from upstream connection issues
 - The `peerId` must match an upstream peer connection configured in the FNE
+
+---
+
+### 4.5 Endpoint: PUT /peer/nak/byPeerId
+
+**Method:** `PUT`
+
+**Description:** Send a connection NAK to a currently known peer using its peer ID.
+
+**Request Headers:**
+```
+X-DVM-Auth-Token: {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "peerId": 10001,
+  "tag": "RPTL",
+  "reason": 6
+}
+```
+
+**Request Fields:**
+- `peerId` (required): Target peer identifier
+- `tag` (required): Four-character or related network tag identifying the exchange being rejected, such as `RPTL`, `RPTK`, or `RPTC`
+- `reason` (required): Numeric `NET_CONN_NAK_REASON` value
+
+**Response:**
+```json
+{
+  "status": 200,
+  "message": "OK"
+}
+```
+
+**Notes:**
+- This endpoint sends a wire-level peer NAK through `TrafficNetwork::writePeerNAK()`
+- Common reason codes include general failure, unauthorized, bad connection state, invalid config data, peer reset, peer ACL, max connections, and duplicate connection
+- The handler validates only the JSON types; the caller must supply a semantically valid `tag` and `reason`
+
+---
+
+### 4.6 Endpoint: PUT /peer/nak/byAddress
+
+**Method:** `PUT`
+
+**Description:** Send a connection NAK to a peer by explicit network address/port rather than by current tracked connection object.
+
+**Request Headers:**
+```
+X-DVM-Auth-Token: {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "address": "192.168.1.100",
+  "port": 54321,
+  "peerId": 10001,
+  "tag": "RPTK",
+  "reason": 8
+}
+```
+
+**Request Fields:**
+- `address` (required): Destination IP address or hostname
+- `port` (required): Destination UDP port
+- `peerId` (required): Peer identifier to encode in the NAK
+- `tag` (required): Network tag associated with the rejected exchange
+- `reason` (required): Numeric `NET_CONN_NAK_REASON` value
+
+**Response:**
+```json
+{
+  "status": 200,
+  "message": "OK"
+}
+```
+
+**Notes:**
+- The endpoint resolves the supplied address and port before sending the NAK
+- Useful for forcing a specific rejection even when a full tracked peer object is not available locally
 
 ---
 
@@ -1287,6 +1377,8 @@ X-DVM-Auth-Token: {token}
       "lastPing": "Fri Dec  6 10:30:45 2025",
       "pingsReceived": 1234,
       "missedMetadataUpdates": 0,
+      "isConsole": false,
+      "isSysView": false,
       "isNeighbor": false,
       "isReplica": false
     }
@@ -1299,6 +1391,8 @@ X-DVM-Auth-Token: {token}
     "cryptoKeyLastLoadTime": "Fri Dec  6 08:15:30 2025"
   },
   "totalCallsProcessed": 5678,
+  "totalCallCollisions": 12,
+  "totalActiveCalls": 1,
   "ridTotalEntries": 150,
   "tgTotalEntries": 45,
   "peerListTotalEntries": 8,
@@ -1317,6 +1411,8 @@ X-DVM-Auth-Token: {token}
 - `lastPing`: Last ping timestamp (human-readable format)
 - `pingsReceived`: Total pings received from this peer
 - `missedMetadataUpdates`: Number of missed metadata updates
+- `isConsole`: Whether this peer is classified as a console peer
+- `isSysView`: Whether this peer is classified as a SysView peer
 - `isNeighbor`: Whether this is a neighbor FNE peer
 - `isReplica`: Whether this peer participates in replication
 
@@ -1329,6 +1425,8 @@ X-DVM-Auth-Token: {token}
 
 **Statistics Totals:**
 - `totalCallsProcessed`: Total number of calls processed since FNE startup
+- `totalCallCollisions`: Total number of tracked call collisions since FNE startup
+- `totalActiveCalls`: Current internal active-call counter value
 - `ridTotalEntries`: Total entries in radio ID lookup table
 - `tgTotalEntries`: Total entries in talkgroup rules table
 - `peerListTotalEntries`: Total entries in authorized peer list
@@ -1344,7 +1442,106 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.7 Endpoint: GET /report-affiliations
+### 9.7 Endpoint: GET /stat-reset-total-calls
+
+**Method:** `GET`
+
+**Description:** Reset the `totalCallsProcessed` counter exposed by `/stats`.
+
+**Request Headers:**
+```
+X-DVM-Auth-Token: {token}
+```
+
+**Response:**
+```json
+{
+  "status": 200
+}
+```
+
+**Notes:**
+- Resets only the total-calls counter
+- Does not restart the FNE or affect peer connectivity
+
+---
+
+### 9.8 Endpoint: GET /stat-reset-active-calls
+
+**Method:** `GET`
+
+**Description:** Reset the `totalActiveCalls` counter exposed by `/stats`.
+
+**Request Headers:**
+```
+X-DVM-Auth-Token: {token}
+```
+
+**Response:**
+```json
+{
+  "status": 200
+}
+```
+
+**Notes:**
+- Resets the active-call counter maintained by `TrafficNetwork`
+
+---
+
+### 9.9 Endpoint: GET /stat-reset-call-collisions
+
+**Method:** `GET`
+
+**Description:** Reset the `totalCallCollisions` counter exposed by `/stats`.
+
+**Request Headers:**
+```
+X-DVM-Auth-Token: {token}
+```
+
+**Response:**
+```json
+{
+  "status": 200
+}
+```
+
+**Notes:**
+- Resets the call-collision counter only
+
+---
+
+### 9.10 Endpoint: GET /report-unit-regs
+
+**Method:** `GET`
+
+**Description:** Return the current global unit registration table.
+
+**Request Headers:**
+```
+X-DVM-Auth-Token: {token}
+```
+
+**Response:**
+```json
+{
+  "status": 200,
+  "totalUnits": 3,
+  "units": [123456, 234567, 345678]
+}
+```
+
+**Response Fields:**
+- `totalUnits`: Count of registered units returned
+- `units[]`: Flat array of registered source IDs
+
+**Notes:**
+- Data is sourced from the global affiliation/unit registration table maintained by `TrafficNetwork`
+
+---
+
+### 9.11 Endpoint: GET /report-affiliations
 
 **Method:** `GET`
 
@@ -1359,6 +1556,7 @@ X-DVM-Auth-Token: {token}
 ```json
 {
   "status": 200,
+  "totalAffiliations": 2,
   "affiliations": [
     {
       "peerId": 10001,
@@ -1387,6 +1585,7 @@ X-DVM-Auth-Token: {token}
 ```
 
 **Response Fields:**
+- `totalAffiliations`: Count of peer affiliation groups returned by the API
 - `affiliations[]`: Array of peer affiliation records
   - `peerId`: Peer ID where affiliations are registered
   - `affiliations[]`: Array of affiliation records for this peer
@@ -1400,7 +1599,50 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.8 Endpoint: GET /spanning-tree
+### 9.12 Endpoint: GET /report-grants
+
+**Method:** `GET`
+
+**Description:** Return the currently active talkgroup grant table.
+
+**Request Headers:**
+```
+X-DVM-Auth-Token: {token}
+```
+
+**Response:**
+```json
+{
+  "status": 200,
+  "totalGrants": 2,
+  "grants": [
+    {
+      "srcId": 123456,
+      "dstId": 1,
+      "ssrc": 305419896
+    },
+    {
+      "srcId": 234567,
+      "dstId": 2,
+      "ssrc": 2271560481
+    }
+  ]
+}
+```
+
+**Response Fields:**
+- `totalGrants`: Count of grant entries returned
+- `grants[]`: Array of active grant records
+  - `srcId`: Current granted source radio ID
+  - `dstId`: Destination talkgroup or unit ID holding the grant
+  - `ssrc`: RTP SSRC associated with the active grant when present, otherwise `0`
+
+**Notes:**
+- Data is built from the global grant source-ID and SSRC tables
+
+---
+
+### 9.13 Endpoint: GET /spanning-tree
 
 **Method:** `GET`
 
@@ -1718,13 +1960,7 @@ Error responses include HTTP status code and JSON error object:
 
 **Invalid Content-Type:**
 
-When Content-Type is not `application/json`, the server returns a plain text error response:
-```
-HTTP/1.1 400 Bad Request
-Content-Type: text/plain
-
-Invalid Content-Type. Expected: application/json
-```
+When `Content-Type` is not `application/json`, the server returns an HTTP 400 status payload rather than processing the request body as JSON.
 
 **Not a JSON Object:**
 ```json
@@ -1762,21 +1998,19 @@ Examples of field validation errors:
 }
 ```
 
-### 12.3 Resource Errors
+Additional authentication request validation errors include:
+- `"password was not a valid string"`
+- `"auth cannot be empty"`
+- `"auth cannot be longer than 64 characters"`
+- `"auth contains invalid characters"`
 
-**Peer Not Found:**
-```json
-{
-  "status": 400,
-  "message": "cannot find peer"
-}
-```
+### 12.3 Resource Errors
 
 **Talkgroup Not Found:**
 ```json
 {
   "status": 400,
-  "message": "cannot find talkgroup"
+  "message": "failed to find specified TGID to delete"
 }
 ```
 
@@ -1784,9 +2018,13 @@ Examples of field validation errors:
 ```json
 {
   "status": 400,
-  "message": "cannot find RID"
+  "message": "failed to find specified RID to delete"
 }
 ```
+
+**Notes:**
+- `PUT /peer/delete` returns `200 OK` even when the peer ID does not exist
+- `PUT /peer/reset` also returns `200 OK` before the internal reset attempt is evaluated; missing peers are primarily visible in server logs
 
 **Invalid Command:**
 ```json
@@ -2168,6 +2406,8 @@ if __name__ == "__main__":
 | GET | /peer/count | Get peer count | Yes |
 | PUT | /peer/reset | Reset peer connection | Yes |
 | PUT | /peer/connreset | Reset upstream connection | Yes |
+| PUT | /peer/nak/byPeerId | Send peer NAK by peer ID | Yes |
+| PUT | /peer/nak/byAddress | Send peer NAK by address | Yes |
 | GET | /rid/query | Query radio IDs | Yes |
 | PUT | /rid/add | Add radio ID | Yes |
 | PUT | /rid/delete | Delete radio ID | Yes |
@@ -2190,7 +2430,12 @@ if __name__ == "__main__":
 | GET | /reload-peers | Reload peer list from disk | Yes |
 | GET | /reload-crypto | Reload crypto keys from disk | Yes |
 | GET | /stats | Get FNE statistics | Yes |
+| GET | /stat-reset-total-calls | Reset total calls counter | Yes |
+| GET | /stat-reset-active-calls | Reset active calls counter | Yes |
+| GET | /stat-reset-call-collisions | Reset call collisions counter | Yes |
+| GET | /report-unit-regs | Get registered units | Yes |
 | GET | /report-affiliations | Get affiliations | Yes |
+| GET | /report-grants | Get active grants | Yes |
 | GET | /spanning-tree | Get network topology | Yes |
 | PUT | /dmr/rid | DMR radio operations | Yes |
 | PUT | /p25/rid | P25 radio operations | Yes |
@@ -2202,27 +2447,27 @@ if __name__ == "__main__":
 ### REST API Configuration (YAML)
 
 ```yaml
-restApi:
+system:
   # Enable REST API
-  enable: true
-  
+  restEnable: true
+
   # Bind address (0.0.0.0 = all interfaces)
-  address: 0.0.0.0
-  
-  # Port number
-  port: 9990
-  
-  # SHA-256 hashed password (pre-hash before putting in config)
-  password: "your_secure_password"
-  
+  restAddress: 127.0.0.1
+
+  # Port number used for HTTP or HTTPS depending on restSsl
+  restPort: 9990
+
   # SSL/TLS Configuration (optional)
-  ssl:
-    enable: false
-    keyFile: /path/to/private.key
-    certFile: /path/to/certificate.crt
-  
-  # Enable debug logging
-  debug: false
+  restSsl: false
+  restSslCertificate: web.crt
+  restSslKey: web.key
+
+  # REST API authentication password stored in plain text;
+  # clients must still send SHA-256(password) to /auth
+  restPassword: "PASSWORD"
+
+  # Enable verbose REST API logging
+  restDebug: false
 ```
 
 ---
@@ -2344,6 +2589,7 @@ monitor_affiliations("fne.example.com", 9990, "your_token", 1)
 |---------|------|---------|
 | 1.0 | Dec 3, 2025 | Initial documentation based on source code analysis |
 | 1.1 | Dec 6, 2025 | Added missing endpoints: `/reload-peers`, `/reload-crypto`, `/stats` |
+| 1.2 | May 8, 2026 | Updated for current FNE REST implementation, added peer NAK endpoints, stats reset/report endpoints, and corrected REST config/auth details |
 
 ---
 
