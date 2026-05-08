@@ -939,12 +939,12 @@ The RPTC configuration uses a nested JSON structure with three main object group
     "port": 0                    // REST API port
   },
  
-    "peerClass": 2,               // Canonical peer connection class enum
+  "peerClass": 2,               // Canonical peer connection class enum
   
-    "externalPeer": false,         // Legacy compatibility flag for neighbor peers
+  "externalPeer": false,         // Legacy compatibility flag for neighbor peers
   "conventionalPeer": false,     // Conventional (non-trunked) mode (optional)
-    "sysView": false,              // Legacy compatibility flag for SysView peers
-    "consolePeer": false,          // Reporting flag for console peers
+  "sysView": false,              // Legacy compatibility flag for SysView peers
+  "consolePeer": false,          // Reporting flag for console peers
   "software": "string"           // Software identifier (optional)
 }
 ```
