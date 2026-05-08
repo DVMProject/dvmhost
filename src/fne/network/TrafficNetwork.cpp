@@ -545,13 +545,15 @@ void TrafficNetwork::clock(uint32_t ms)
         if (connection != nullptr && connection->jitterBufferEnabled()) {
             connection->checkJitterTimeouts();
         }
-    }
-    m_peers.unlock();
 
-    if (m_forceListUpdate) {
-        for (auto& peer : m_peers) {
+        if (m_forceListUpdate && connection != nullptr) {
             peerMetadataUpdate(peer.first);
         }
+    }
+    m_peers.shared_unlock();
+
+    // reset force flag
+    if (m_forceListUpdate) {
         m_forceListUpdate = false;
     }
 
@@ -2454,13 +2456,16 @@ void TrafficNetwork::setPeerReplica(bool replica)
 
 std::string TrafficNetwork::resolvePeerIdentity(uint32_t peerId)
 {
+    m_peers.shared_lock();
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
         if (it->second != nullptr) {
             FNEPeerConnection* peer = it->second;
+            m_peers.shared_unlock();
             return peer->identWithQualifier();
         }
     }
+    m_peers.shared_unlock();
 
     return std::string();
 }
@@ -3266,6 +3271,7 @@ bool TrafficNetwork::writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, 
         LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a streamId of 0?", peerId);
     }
 
+    m_peers.shared_lock();
     auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
     if (it != m_peers.end()) {
         FNEPeerConnection* connection = m_peers.at(peerId);
@@ -3296,14 +3302,17 @@ bool TrafficNetwork::writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, 
                 }
             }
 
-            if (buffers == nullptr)
+            if (buffers == nullptr) {
+                m_peers.shared_unlock();
                 return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
-            else {
+            } else {
+                m_peers.shared_unlock();
                 m_frameQueue->enqueueMessage(buffers, data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
                 return true;
             }
         }
     }
+    m_peers.shared_unlock();
 
     return false;
 }
