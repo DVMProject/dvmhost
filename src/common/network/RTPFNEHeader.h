@@ -100,6 +100,7 @@ namespace network
             TRANSFER_SUBFUNC_ACTIVITY = 0x01U,      //!< Activity Log Transfer
             TRANSFER_SUBFUNC_DIAG = 0x02U,          //!< Diagnostic Log Transfer
             TRANSFER_SUBFUNC_STATUS = 0x03U,        //!< Status Transfer
+            TRANSFER_SUBFUNC_PATCH_STATUS = 0x04U,  //!< Console Patch Status Transfer
 
             ANNC_SUBFUNC_GRP_AFFIL = 0x00U,         //!< Announce Group Affiliation
             ANNC_SUBFUNC_UNIT_REG = 0x01U,          //!< Announce Unit Registration

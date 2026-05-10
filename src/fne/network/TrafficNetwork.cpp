@@ -109,6 +109,8 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_maintainenceTimer(1000U, pingTime),
     m_updateLookupTimer(1000U, (updateLookupTime * 60U)),
     m_haUpdateTimer(1000U, FIXED_HA_UPDATE_INTERVAL),
+    m_patchStatusRegistry(),
+    m_patchStatusEnabled(true),
     m_softConnLimit(0U),
     m_enableSpanningTree(true),
     m_logSpanningTreeChanges(false),
@@ -228,6 +230,13 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_logSpanningTreeChanges = conf["logSpanningTreeChanges"].as<bool>(false);
     m_spanningTreeFastReconnect = conf["spanningTreeFastReconnect"].as<bool>(true);
+
+    yaml::Node patchStatusConf = conf["patchStatus"];
+    m_patchStatusEnabled = patchStatusConf["enabled"].as<bool>(true);
+    uint32_t patchStatusDefaultTtl = patchStatusConf["defaultTtlSeconds"].as<uint32_t>(PatchStatusRegistry::DEFAULT_TTL_SECONDS);
+    uint32_t patchStatusMinTtl = patchStatusConf["minTtlSeconds"].as<uint32_t>(PatchStatusRegistry::MIN_TTL_SECONDS);
+    uint32_t patchStatusMaxTtl = patchStatusConf["maxTtlSeconds"].as<uint32_t>(PatchStatusRegistry::MAX_TTL_SECONDS);
+    m_patchStatusRegistry.configure(patchStatusDefaultTtl, patchStatusMinTtl, patchStatusMaxTtl);
 
     // always force disable ADJ_STS_BCAST to neighbor FNE peers if the all option
     // is enabled
@@ -350,6 +359,12 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    Enable Peer Spanning Tree: %s", m_enableSpanningTree ? "yes" : "no");
         LogInfo("    Log Spanning Tree Changes: %s", m_logSpanningTreeChanges ? "yes" : "no");
         LogInfo("    Spanning Tree Allow Fast Reconnect: %s", m_spanningTreeFastReconnect ? "yes" : "no");
+        LogInfo("    Console Patch Status Enabled: %s", m_patchStatusEnabled ? "yes" : "no");
+        if (m_patchStatusEnabled) {
+            LogInfo("    Console Patch Status Default TTL: %us", m_patchStatusRegistry.defaultTtlSeconds());
+            LogInfo("    Console Patch Status Minimum TTL: %us", m_patchStatusRegistry.minTtlSeconds());
+            LogInfo("    Console Patch Status Maximum TTL: %us", m_patchStatusRegistry.maxTtlSeconds());
+        }
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
             LogWarning(LOG_MASTER, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
@@ -636,6 +651,8 @@ void TrafficNetwork::clock(uint32_t ms)
         }
 
         // cleanup possibly stale data calls
+        if (m_patchStatusEnabled && m_patchStatusRegistry.cleanupExpired() > 0U)
+            writePatchStatusToConsoles(m_patchStatusRegistry.snapshot());
         m_tagDMR->packetData()->cleanupStale();
         m_tagP25->packetData()->cleanupStale();
 
@@ -1571,6 +1588,8 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                         // spin up a thread and send metadata over to peer
                                         network->peerMetadataUpdate(peerId);
+                                        if (network->m_patchStatusEnabled && connection->peerClass() == PEER_CONN_CLASS_CONSOLE)
+                                            network->writePatchStatusToPeer(peerId, network->patchStatusRegistry().snapshot());
                                     }
                                 }
                             }
@@ -2304,6 +2323,10 @@ void TrafficNetwork::erasePeer(uint32_t peerId)
         }
     }
 
+    // erase any console patch status records for this peer
+    if (m_patchStatusEnabled && m_patchStatusRegistry.removePeer(peerId))
+        writePatchStatusToConsoles(m_patchStatusRegistry.snapshot());
+
     // erase any HA parameters for this peer
     {
         auto it = std::find_if(m_peerReplicaHAParams.begin(), m_peerReplicaHAParams.end(), [&](auto& x) { return x.peerId == peerId; });
@@ -2406,6 +2429,88 @@ json::object TrafficNetwork::fneConnObject(uint32_t peerId, FNEPeerConnection *c
     peerObj["voiceChannels"].set<json::array>(voiceChannels);
 
     return peerObj;
+}
+
+/* Helper to send patch status state to one console peer. */
+
+bool TrafficNetwork::writePatchStatusToPeer(uint32_t peerId, json::object obj)
+{
+    if (peerId == 0U)
+        return false;
+    if (!m_patchStatusEnabled)
+        return false;
+
+    bool ret = false;
+    m_peers.shared_lock();
+    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
+    if (it != m_peers.end() && it->second != nullptr)
+        ret = writePatchStatusPayload(it->second, obj);
+    m_peers.shared_unlock();
+
+    return ret;
+}
+
+/* Helper to broadcast patch status state to connected console peers. */
+
+void TrafficNetwork::writePatchStatusToConsoles(json::object obj, uint32_t exceptPeerId)
+{
+    if (!m_patchStatusEnabled)
+        return;
+
+    m_peers.shared_lock();
+    if (m_peers.size() == 0U) {
+        m_peers.shared_unlock();
+        return;
+    }
+
+    for (auto peer : m_peers) {
+        if (peer.first == exceptPeerId)
+            continue;
+        if (peer.second == nullptr)
+            continue;
+        if (!peer.second->connected() || peer.second->peerClass() != PEER_CONN_CLASS_CONSOLE)
+            continue;
+
+        writePatchStatusPayload(peer.second, obj);
+    }
+    m_peers.shared_unlock();
+}
+
+/* Helper to serialize and queue a patch status transfer payload. */
+
+bool TrafficNetwork::writePatchStatusPayload(FNEPeerConnection* connection, json::object obj)
+{
+    if (connection == nullptr)
+        return false;
+    if (!m_patchStatusEnabled)
+        return false;
+    if (!connection->connected())
+        return false;
+    if (connection->peerClass() != PEER_CONN_CLASS_CONSOLE)
+        return false;
+
+    obj["type"].set<std::string>("registry");
+    json::value v = json::value(obj);
+    std::string payload = std::string(v.serialize());
+    uint32_t len = static_cast<uint32_t>(payload.length());
+    if ((len + 11U) > DATA_PACKET_LENGTH) {
+        LogError(LOG_MASTER, "PEER %u (%s) patch status registry payload too large, len = %u", connection->id(), connection->identWithQualifier().c_str(), len);
+        return false;
+    }
+
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
+    ::memcpy(buffer + 11U, payload.c_str(), len);
+
+    sockaddr_storage addr = connection->socketStorage();
+    uint32_t addrLen = connection->sockStorageLen();
+
+    if (m_debug) {
+        LogDebug(LOG_MASTER, "PEER %u (%s) sending patch status registry, len = %u", connection->id(), connection->identWithQualifier().c_str(), len);
+    }
+
+    return m_frameQueue->write(buffer, len + 11U, createStreamId(), connection->id(), m_peerId,
+        { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_PATCH_STATUS }, RTP_END_OF_CALL_SEQ, addr, addrLen);
 }
 
 /* Helper to reset a peer connection. */

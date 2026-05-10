@@ -120,6 +120,17 @@ master:
     #    spanning tree updates.)
     spanningTreeFastReconnect: true
 
+    # Console patch status registry configuration.
+    patchStatus:
+        # Flag indicating whether or not console patch status publishing is enabled.
+        enabled: true
+        # Default TTL, in seconds, for console patch status updates that do not specify one.
+        defaultTtlSeconds: 15
+        # Minimum accepted TTL, in seconds, for console patch status updates.
+        minTtlSeconds: 5
+        # Maximum accepted TTL, in seconds, for console patch status updates.
+        maxTtlSeconds: 300
+
     # Flag indicating whether or not peer pinging will be reported.
     reportPeerPing: true
 

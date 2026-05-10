@@ -12,6 +12,7 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "network/MetadataNetwork.h"
+#include "common/json/json.h"
 #include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
@@ -375,6 +376,69 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                         }
                         break;
 
+                    case NET_SUBFUNC::TRANSFER_SUBFUNC_PATCH_STATUS:    // Console Patch Status Transfer
+                        {
+                            if (pktPeerId > 0 && validPeerId) {
+                                FNEPeerConnection* connection = network->m_peers[pktPeerId];
+                                if (connection != nullptr) {
+                                    if (!network->patchStatusEnabled()) {
+                                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                        break;
+                                    }
+
+                                    std::string ip = udp::Socket::address(req->address);
+
+                                    // Only authenticated console peers may publish or request patch registry state.
+                                    if (req->length <= 11U) {
+                                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                                        break;
+                                    }
+
+                                    if (connection->connected() && connection->address() == ip && connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
+                                        DECLARE_UINT8_ARRAY(rawPayload, req->length - 11U);
+                                        ::memcpy(rawPayload, req->buffer + 11U, req->length - 11U);
+                                        std::string payload(rawPayload, rawPayload + (req->length - 11U));
+
+                                        json::value v;
+                                        std::string err = json::parse(v, payload);
+                                        if (!err.empty() || !v.is<json::object>()) {
+                                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                                            break;
+                                        }
+
+                                        json::object reqObj = v.get<json::object>();
+                                        std::string type = "snapshot";
+                                        if (reqObj["type"].is<std::string>())
+                                            type = reqObj["type"].get<std::string>();
+
+                                        if (type == "request") {
+                                            json::object snapshot = network->patchStatusRegistry().snapshot();
+                                            network->writePatchStatusToPeer(pktPeerId, snapshot);
+                                            break;
+                                        }
+
+                                        // The authenticated peer identity is authoritative; do not allow spoofed peer IDs.
+                                        reqObj["peerId"].set<uint32_t>(pktPeerId);
+                                        if (!reqObj["peerName"].is<std::string>() || reqObj["peerName"].get<std::string>().empty())
+                                            reqObj["peerName"].set<std::string>(connection->identity());
+
+                                        json::object response = json::object();
+                                        std::string errorMessage;
+                                        if (!network->patchStatusRegistry().publish(reqObj, response, errorMessage)) {
+                                            LogWarning(LOG_MASTER, "PEER %u (%s) invalid patch status payload, %s", pktPeerId, connection->identWithQualifier().c_str(), errorMessage.c_str());
+                                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                                            break;
+                                        }
+
+                                        network->writePatchStatusToConsoles(response);
+                                    }
+                                    else {
+                                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                                    }
+                                }
+                            }
+                        }
+                        break;
                     default:
                         network->writePeerNAK(peerId, network->createStreamId(), TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
                         Utils::dump("Unknown transfer opcode from the peer", req->buffer, req->length);
