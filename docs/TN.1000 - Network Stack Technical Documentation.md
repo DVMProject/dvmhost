@@ -1177,25 +1177,21 @@ The DMR network packet uses the TAG_DMR_DATA identifier (`0x444D5244` or ASCII "
 
 Complete Packet (87 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 00 12 34 56 78 00 00 4E 20 00 23 00 00 00 00 00 00 | 44 4D 52 44 05 00 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR data...] 00 7F
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── DMR (55) ────────────────────────────────┤
+├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── DMR (55) ─────────────────────────────────────────────────┤
 
 DMR Payload breakdown:
-44 4D 52 44 05 00 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR frame...] 00 7F
-│        │  │  │        │  │        │  │  │  │  │  │               │  │
-│        │  │  │        │  │        │  │  │  │  │  └─[Reserved 4]──┤  │
-│        │  │  │        │  │        │  │  │  │  └─ Slot/FLCO/DataType: 0x02
-│        │  │  │        │  │        │  │  │  └──── Control: 0x01
-│        │  │  │        │  │        │  └─[Reserved 3]
-│        │  │  │        │  └─[DestID 3rd byte]──── Dest ID: 0x00CCDD (52445)
-│        │  │  │        └─[DestID 2nd byte]
-│        │  │  └─[DestID 1st byte]
-│        │  └─[SrcID 3rd byte]────────────────── Src ID: 0x0000AABB (43707)
-│        └─[SrcID 2nd byte]
-│        └─[SrcID 1st byte]
-│        └─────────────────────────────────────── Sequence: 5
-└──────────────────────────────────────────────── Tag: "DMRD" (0x444D5244)
-       └─ (DMR frame at offset 20)──────────────── BER: 0x00
-                                                    └─ RSSI: 0x7F (127)
+44 4D 52 44 05 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR frame...] 00 7F
+│        │  │  │     │  │     │   │     │  │  │  │       │                          │  │
+│        │  │  │     │  │     │   │     │  │  │  └───────┴ Reserved                 │  │
+│        │  │  │     │  │     │   │     │  │  └─────────── Slot/FLCO/DataType: 0x02 │  │
+│        │  │  │     │  │     │   │     │  └────────────── Control: 0x01            │  │ 
+│        │  │  │     │  │     │   └─────┴───────────────── Reserved                 │  │
+│        │  │  │     │  └─────┴─────────────────────────── Dest ID: 0x00CCDD (52445)│  │
+│        │  │  └─────┴──────────────────────────────────── Src ID: 0x00AABB (43707) │  │
+│        │  └───────────────────────────────────────────── Sequence: 5              │  │
+└────────┴──────────────────────────────────────────────── Tag: "DMRD" (0x444D5244) │  │
+                                                                                    └─── BER: 0x00
+                                                                                       └─ RSSI: 0x7F (127)
 ```
 
 #### P25 Message Formats
@@ -1219,6 +1215,61 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control,
                        buffer, P25_LDU1_PACKET_LENGTH + PACKET_PAD,
                        pktSeq, m_p25StreamId);
 }
+```
+
+**P25 Message Header Structure (24 bytes):**
+
+**Control Byte (`CONTROL_BYTE`) Flags:**
+
+The Control Byte at offset 14 is a bitmask defined by `enum CONTROL_BYTE` in `BaseNetwork.h`. It is passed as the `controlByte` parameter to `writeP25TDU()` and stored in the TDU packet to signal in-band network control to the receiving endpoint. Multiple flags may be OR'd together. A value of `0x00` means no control operation is requested.
+
+| Bit Mask | Name | Description |
+|----------|------|-------------|
+| `0x80` | `NET_CTRL_GRANT_DEMAND` | Grant demand — peer is requesting a channel grant for an ongoing call |
+| `0x40` | `NET_CTRL_GRANT_DENIAL` | Grant denial — FNE is denying a channel grant request |
+| `0x20` | `NET_CTRL_SWITCH_OVER` | Call source RID switch over — the originating radio ID changed mid-call |
+| `0x08` | `NET_CTRL_GRANT_ENCRYPT` | Encrypted grant — the associated channel grant is for an encrypted call |
+| `0x01` | `NET_CTRL_U2U` | Unit-to-unit — this is a unit-to-unit (private) call, not a group call |
+
+**P25 Message Header Structure (24 bytes):**
+
+The message header created by `createP25_MessageHdr()` contains:
+
+| Offset | Length | Field | Description |
+|--------|--------|-------|-------------|
+| 0-3 | 4 | P25 Tag | "P25D" (0x50323544) |
+| 4 | 1 | LCO | Link Control Opcode |
+| 5-7 | 3 | Source ID | Calling radio ID |
+| 8-10 | 3 | Destination ID | Target talkgroup/radio |
+| 11-12 | 2 | System ID | Site system ID |
+| 13 | 1 | Reserved | Reserved (0x00) |
+| 14 | 1 | Control Byte | Network control flags (`CONTROL_BYTE` bitmask) |
+| 15 | 1 | MFId | Manufacturer ID |
+| 16-18 | 3 | Network ID | FNE network/WACN ID |
+| 19 | 1 | Slot / Reserved | Bit 7: slot number; bits 4–0: P2 DUID (if Phase 2, else 0x00) |
+| 20 | 1 | LSD1 | Low Speed Data byte 1 |
+| 21 | 1 | LSD2 | Low Speed Data byte 2 |
+| 22 | 1 | DUID | Data Unit ID (0x05 LDU1, 0x0A LDU2, 0x03 TDU, 0x07 TSDU, 0x0F TDULC) |
+| 23 | 1 | Frame Length | Payload data length in bytes (0x00 for LDU1/LDU2; set for TDU/TSDU/TDULC) |
+
+```
+P25 Message Header (first 24 bytes):
+50 32 35 44 00 00 AA BB 00 CC DD 00 01 00 00 00 00 00 01 00 00 00 05 00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  │  │  │
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  │  │  └─────── Frame Length: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  │  └────────── DUID: 0x05 (LDU1)
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  └───────────── LSD2: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  └──────────────── LSD1: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  └─────────────────── Slot/Reserved: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  └─────┴────────────────────── Net ID: 0x000001 (1)
+│        │  │  │     │  │     │  │  │  │  │  └─────────────────────────────── MFId: 0x00 (Standard)
+│        │  │  │     │  │     │  │  │  │  └────────────────────────────────── Control Byte: 0x00
+│        │  │  │     │  │     │  │  │  └───────────────────────────────────── Reserved: 0x00
+│        │  │  │     │  │     │  └──┴──────────────────────────────────────── Sys ID: 0x0001 (1)
+│        │  │  │     │  └─────┴────────────────────────────────────────────── Dst ID: 0x00CCDD (52445)
+│        │  │  └─────┴─────────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
+│        │  └──────────────────────────────────────────────────────────────── LCO: 0x00 (Group Voice)
+└────────┴─────────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
 ```
 
 **P25 LDU1 Packet Structure:**
@@ -1245,25 +1296,6 @@ The P25 LDU1 message uses DFSI encoding to pack 9 IMBE voice frames with link co
 
 **Total P25 LDU1 Size:** 193 bytes (`P25_LDU1_PACKET_LENGTH`)
 
-**P25 Message Header Structure (24 bytes):**
-
-The message header created by `createP25_MessageHdr()` contains:
-
-| Offset | Length | Field | Description |
-|--------|--------|-------|-------------|
-| 0 | 4 | P25 Tag | "P25D" (0x50323544) |
-| 4 | 1 | DUID | Data Unit ID (e.g., 0x05 for LDU1, 0x0A for LDU2) |
-| 5 | 1 | Control Byte | Network control flags |
-| 6 | 1 | LCO | Link Control Opcode |
-| 7 | 1 | MFId | Manufacturer ID |
-| 8-10 | 3 | Source ID | Calling radio ID |
-| 11-13 | 3 | Destination ID | Target (talkgroup/radio) |
-| 14-16 | 3 | Reserved | Reserved bytes |
-| 17 | 1 | RSSI | Signal strength |
-| 18 | 1 | BER | Bit error rate |
-| 19-22 | 4 | Reserved | Reserved bytes |
-| 23 | 1 | Count | Total payload size |
-
 **DFSI Encoding Details:**
 
 The Digital Fixed Station Interface (DFSI) encoding is a TIA-102.BAHA standard for transporting P25 voice over IP. Each IMBE voice frame (11 bytes of raw IMBE data) is encoded using the `p25::dfsi::LC::encodeLDU1()` method with a specific frame type:
@@ -1285,21 +1317,7 @@ The DFSI frames embed the Link Control (LC) and Low Speed Data (LSD) information
 ```
 [RTP: 12 bytes] [FNE: 20 bytes] [P25 LDU1 Payload: 193 bytes]
 
-P25 Message Header (first 24 bytes):
-50 32 35 44 05 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 A9
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  └─ Count: 0xA9 (169)
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──── Reserved
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴────────────────────── Reserved
-│        │  │  │  │  │  │        └──┴───────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └───────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └──────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └─────────────────────────────────────────────────────── LCO: 0x03 (Group Voice Channel User)
-│        │  │  └────────────────────────────────────────────────────────── Control: 0x00
-│        │  └───────────────────────────────────────────────────────────── DUID: 0x05 (LDU1)
-└────────┴──────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
+[P25 Message Header 24 bytes]
 
 DFSI Voice Frames (offsets 24-177):
 Offset 24: [22 bytes] LDU1_VOICE1 (DFSI frame type 0x62)
@@ -1323,7 +1341,7 @@ Additional Data (offsets 178-192):
 - `MSG_HDR_SIZE = 24U`
 - Total allocated size: 193 + 8 = 201 bytes
 
-**LDU2 (Link Data Unit 2) with DFSI Encoding:**
+**P25 LDU2 Packet Structure:**
 
 LDU2 has a similar structure to LDU1 but uses different DFSI frame types and contains Encryption Sync (ESS) data instead of Link Control in frames 3-8. Total size is 181 bytes (`P25_LDU2_PACKET_LENGTH = 181U`).
 
@@ -1358,56 +1376,23 @@ The TDU packet consists of:
 
 **Total TDU Payload Size (after FNE):** 24 bytes (`MSG_HDR_SIZE = 24U`)
 
+**Raw TDU Packet Example (hexadecimal):**
+
+```
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 TSDU: 24 bytes]
+
+Complete Packet (101 bytes):
+90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 45 00 00 00 00 00 00 | 50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D
+├─────────── RTP (12) ────────────┤   ├────────────────────── FNE (20) ─────────────────────────┤   ├───────────────────────────────── P25 TSDU (24) ────────────────────────┤
+```
+
 **Constants:**
 - `MSG_HDR_SIZE = 24U` (defined in `BaseNetwork.h`)
 - `PACKET_PAD = 8U`
 - Total allocated size: 24 + 8 = 32 bytes
 - DUID value: `0x03` (TDU - Terminator Data Unit)
 
-**P25 Message Header Structure (24 bytes):**
-
-| Offset | Length | Field | Description |
-|--------|--------|-------|-------------|
-| 0-3 | 4 | P25 Tag | "P25D" (0x50323544) |
-| 4 | 1 | DUID | 0x03 (TDU) |
-| 5 | 1 | Control Byte | Network control flags (at offset 14 in buffer) |
-| 6 | 1 | LCO | Link Control Opcode (from last transmission) |
-| 7 | 1 | MFId | Manufacturer ID |
-| 8-10 | 3 | Source ID | Radio ID that ended transmission |
-| 11-13 | 3 | Destination ID | Target talkgroup/radio |
-| 14-16 | 3 | Reserved | Reserved bytes |
-| 17 | 1 | RSSI | Signal strength |
-| 18 | 1 | BER | Bit error rate |
-| 19-22 | 4 | Reserved | Reserved bytes |
-| 23 | 1 | Count | 0x18 (24) - header size only, no payload follows |
-
-**Raw TDU Packet Example (hexadecimal):**
-
-```
-[RTP Header: 12 bytes] [FNE Header: 20 bytes] [P25 Header: 24 bytes] [NO PAYLOAD]
-
-Complete Packet (56 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 18 00 00 00 00 00 00 | 50 32 35 44 03 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 18
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────── P25 (24) ─────────────────────────┤
-
-P25 Message Header (NO PAYLOAD FOLLOWS):
-50 32 35 44 03 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 18
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──┴─ Count: 0x18 (24) - header only
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── Reserved (4 bytes)
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  └──────────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴───────────────────── Reserved (3 bytes)
-│        │  │  │  │  │  │        └──┴────────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └───────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └──────────────────────────────────────────────────────── LCO: 0x03 (Group Voice)
-│        │  │  └─────────────────────────────────────────────────────────── Control: 0x00
-│        │  └────────────────────────────────────────────────────────────── DUID: 0x03 (TDU)
-└────────┴───────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
-
 Total packet ends at byte 56 - no additional payload bytes after the P25 header.
-```
 
 **Important Note:**
 
@@ -1463,28 +1448,12 @@ The 45-byte TSDU frame data at offset 24 is **transmitted in its raw over-the-ai
 
 Complete Packet (101 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 45 00 00 00 00 00 00 | 50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D [45 bytes raw TSDU frame...]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├───────────────────────────────── P25 TSDU (69) ────────────────────────────────┤
-
-TSDU Message Header (24 bytes):
-50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──┴─ Count: 0x2D (45)
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── Reserved
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  └──────────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴───────────────────── Reserved
-│        │  │  │  │  │  │        └──┴────────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └───────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └──────────────────────────────────────────────────────── LCO: 0x00 (not applicable for TSDU)
-│        │  │  └─────────────────────────────────────────────────────────── Control: 0x00
-│        │  └────────────────────────────────────────────────────────────── DUID: 0x07 (TSDU)
-└────────┴───────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├───────────────────────────────── P25 TSDU (69) ─────────────────────────────────────────────────────┤
 
 TSDU Frame Data (45 bytes starting at offset 24):
 55 75 F7 FF 5D 7F [NID: 2 bytes] [TSBK: 25 bytes FEC encoded] [Status: 12 bytes]
 │              │  └────────────┴────────────────────┴──────────────────────── Raw over-the-air P25 TSDU frame
-└──────────────┴────────────────────────────────────────────────────────────── Frame Sync pattern
+└──────────────┴───────────────────────────────────────────────────────────── Frame Sync pattern
 ```
 
 **TSDU Content Types:**
@@ -1544,28 +1513,12 @@ The 54-byte TDULC frame data at offset 24 is **transmitted in its raw over-the-a
 
 Complete Packet (110 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 4E 00 00 00 00 00 00 | 50 32 35 44 0F 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 36 [54 bytes raw TDULC frame...]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────────────── P25 TDULC (78) ─────────────────────────────────┤
-
-TDULC Message Header (24 bytes):
-50 32 35 44 0F 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 36
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──┴─ Count: 0x36 (54)
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── Reserved
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  └──────────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴───────────────────── Reserved
-│        │  │  │  │  │  │        └──┴────────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └───────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └──────────────────────────────────────────────────────── LCO: 0x03 (Group Voice)
-│        │  │  └─────────────────────────────────────────────────────────── Control: 0x00
-│        │  └────────────────────────────────────────────────────────────── DUID: 0x0F (TDULC)
-└────────┴───────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├──────────────────────────────── P25 TDULC (78) ──────────────────────────────────────────────────────┤
 
 TDULC Frame Data (54 bytes starting at offset 24):
 55 75 F7 FF 5D 7F [NID: 2 bytes] [LC: 36 bytes FEC encoded] [Status: 10 bytes]
 │              │  └────────────┴──────────────────────┴─────────────────────── Raw over-the-air P25 TDULC frame
-└──────────────┴──────────────────────────────────────────────────────────────── Frame Sync pattern
+└──────────────┴────────────────────────────────────────────────────────────── Frame Sync pattern
 ```
 
 **TDULC Link Control Content:**
@@ -1639,10 +1592,6 @@ The encapsulated Phase 2 format is fixed-length:
 ```
 [RTP: 12 bytes] [FNE: 20 bytes] [P25 Phase 2: 66 bytes]
 
-Complete Packet (98 bytes):
-[RTP 12] [FNE 20] [P25 header 24 with slot/DUID in byte 19] [40 bytes raw P25 P2 payload] [packet pad]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────────── P25 P2 (66) ────────────────────────────┤
-
 P25 Phase 2 payload breakdown:
 "P25D" | common P25 header fields | controlByte @ 14 | slot/DUID @ 19 | count=0x40 @ 23 | 40 bytes raw P25 Phase 2 payload
 ```
@@ -1700,25 +1649,19 @@ The NXDN network packet uses the TAG_NXDN_DATA identifier and includes the 48-by
 
 Complete Packet (102 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 00 12 34 56 78 00 00 4E 20 00 46 00 00 00 00 00 00 | 4E 58 44 44 02 00 10 00 00 20 00 00 01 00 00 00 00 00 00 00 00 00 00 30 [48 bytes NXDN frame...]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├─────────────────────────────────── NXDN (70) ─────────────────────────────────┤
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├─────────────────────────────────── NXDN (70) ────────────────────────────────────────────────┤
 
 NXDN Payload breakdown:
-4E 58 44 44 02 00 10 00 00 20 00 00 01 00 00 00 00 00 00 00 00 00 00 30 [48 bytes NXDN frame data...]
-│        │  │  │        │  │        │  │  │  └──────────┴──────────┴─────┤
-│        │  │  │        │  │        │  │  └───────────────────────────────── Group: 0x00 (private call)
-│        │  │  │        │  │        │  └──────────────────────────────────── Control: 0x01
-│        │  │  │        │  └─[Reserved 3]
-│        │  │  │        └─[DestID 3rd byte]──────────────────────────────── Dest ID: 0x200000 (2097152)
-│        │  │  └─[DestID 2nd byte]
-│        │  └─[DestID 1st byte]
-│        └─[SrcID 3rd byte]──────────────────────────────────────────────── Src ID: 0x001000 (4096)
-│        └─[SrcID 2nd byte]
-│        └─[SrcID 1st byte]
-│        └──────────────────────────────────────────────────────────────── Msg Type: 0x02 (RTCH)
-└───────────────────────────────────────────────────────────────────────── Tag: "NXDD" (0x4E584444)
-       └──────────────────────────────────────────────────────────────────  Reserved (7 bytes)
-                                                                           └─ Count: 0x30 (48)
-                                                                              (NXDN frame at offset 24)
+4E 58 44 44 02 00 10 00 00 20 00 00 00 00 00 01 00 00 00 00 00 00 00 30 [48 bytes NXDN frame data...]
+│        │  │  │     │  │     │  │     │  │  │  │                  │ └──── NXDN Count: 0x30 (48)
+│        │  │  │     │  │     │  │     │  │  │  └──────────────────┴────── Reserved
+│        │  │  │     │  │     │  │     │  │  └──────────────────────────── Group: 0x01 (group call)
+│        │  │  │     │  │     │  │     │  └─────────────────────────────── Control: 0x00
+│        │  │  │     │  │     │  └─────┴────────────────────────────────── Reserved
+│        │  │  │     │  └─────┴─────────────────────────────────────────── Dest ID: 0x002000 (8192)
+│        │  │  └─────┴──────────────────────────────────────────────────── Src ID: 0x001000 (4096)
+│        │  └───────────────────────────────────────────────────────────── Msg Type: 0x02 (RTCH)
+└────────┴──────────────────────────────────────────────────────────────── Tag: "NXDD" (0x4E584444)
 ```
 
 **NXDN Message Types:**
@@ -1781,7 +1724,6 @@ The analog audio packet uses the `TAG_ANALOG_DATA` identifier (`"ANOD"`) and con
 
 Complete Packet (376 bytes):
 [RTP 12] [FNE 20] ["ANOD" + header bytes + 320 bytes audio + 4 byte trailer]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── Analog (344) ──────────────────────────────────┤
 
 Analog Payload breakdown:
 "ANOD" | Seq | SrcID | DstID | Reserved | Control | FrameType/Group | Reserved | 320 bytes audio | 4 byte trailer
