@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017,2018 Andy Uribe, CA6JAU
- *  Copyright (C) 2021-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/dmr/DMRDefines.h"
@@ -23,6 +23,7 @@
 #include "common/edac/CRC.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
+#include "modem/port/PseudoPTYPort.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "setup/HostSetup.h"
@@ -122,6 +123,7 @@ HostSetup::HostSetup(const std::string& confFile) :
     m_p25TduTest(false),
     m_nxdnEnabled(false),
     m_isHotspot(false),
+    m_isPTY(false),
     m_isConnected(false),
     m_debug(false),
     m_mode(STATE_DMR_CAL_1K),
@@ -800,7 +802,7 @@ bool HostSetup::createModem(bool consoleDisplay)
     if (portType == NULL_PORT) {
         modemPort = new port::ModemNullPort();
     }
-    else if (portType == UART_PORT) {
+    else if (portType == UART_PORT || portType == PTY_PORT) {
         port::SERIAL_SPEED serialSpeed = port::SERIAL_115200;
         switch (uartSpeed) {
         case 1200:
@@ -837,14 +839,22 @@ bool HostSetup::createModem(bool consoleDisplay)
             break;
         }
 
-        if (modemMode == MODEM_MODE_DFSI) {
-                modemPort = new port::UARTPort(uartPort, serialSpeed, false, true);
-                LogInfo("    RTS/DTR boot flags enabled");
-        } else {
-            modemPort = new port::UARTPort(uartPort, serialSpeed, true, false);
+        if (portType == PTY_PORT) {
+            modemPort = new port::UARTPort(uartPort, serialSpeed, false, false);
+            LogInfo("    PTY Port: %s", uartPort.c_str());
+            LogInfo("    PTY Speed: %u", uartSpeed);
+            m_isPTY = true;
         }
-        LogInfo("    UART Port: %s", uartPort.c_str());
-        LogInfo("    UART Speed: %u", uartSpeed);
+        else {
+            if (modemMode == MODEM_MODE_DFSI) {
+                    modemPort = new port::UARTPort(uartPort, serialSpeed, false, true);
+                    LogInfo("    RTS/DTR boot flags enabled");
+            } else {
+                modemPort = new port::UARTPort(uartPort, serialSpeed, true, false);
+            }
+            LogInfo("    UART Port: %s", uartPort.c_str());
+            LogInfo("    UART Speed: %u", uartSpeed);
+        }
     }
 
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");

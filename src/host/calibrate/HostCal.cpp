@@ -137,12 +137,17 @@ int HostCal::run(int argc, char **argv)
     writeRFParams();
 
     getStatus();
-    uint8_t timeout = 0U;
+    uint32_t timeout = 0U;
+    uint32_t maxTimeout = 75U; // ~375ms
+    if (m_isPTY) {
+        maxTimeout = 2000U; // ~10s for PTY which can be slower to respond depending on SDR startup
+    }
+
     while (!m_hasFetchedStatus) {
         m_modem->clock(0U);
 
         timeout++;
-        if (timeout >= 75U) {
+        if (timeout >= maxTimeout) {
             break;
         }
 
