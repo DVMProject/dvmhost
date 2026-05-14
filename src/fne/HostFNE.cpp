@@ -1058,6 +1058,12 @@ void HostFNE::processPeerDMRInCallCtrl(network::NET_ICC::ENUM command, uint32_t 
 {
     switch (command) {
     case network::NET_ICC::REJECT_TRAFFIC:
+    case network::NET_ICC::DMR_RC_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_REQUEST_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_MAXIMUM_POWER:
+    case network::NET_ICC::DMR_RC_MINIMUM_POWER:
+    case network::NET_ICC::DMR_RC_POWER_INCREASE_ONE_STEP:
+    case network::NET_ICC::DMR_RC_POWER_DECREASE_ONE_STEP:
         m_network->processDownstreamInCallCtrl(command, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, dstId, slot, peerId, ssrc, streamId);
         break;
 

@@ -19,6 +19,7 @@
 
 #include "Defines.h"
 #include "common/dmr/data/NetData.h"
+#include "common/dmr/data/EMB.h"
 #include "common/dmr/data/EmbeddedData.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
@@ -131,6 +132,15 @@ namespace dmr
              * @param[in] data Buffer containing GPS data.
              */
             void logGPSPosition(const uint32_t srcId, const uint8_t* data);
+
+            /**
+             * @brief Helper to apply a DMR reverse channel command received via in-call control.
+             * @param command The reverse channel command.
+             * @param data Buffer containing command data.
+             * @param emb Embedded data associated with the command.
+             * @return bool True if the command was successfully applied, otherwise false.
+             */
+            bool applyReverseChannelCommand(network::NET_ICC::ENUM command, uint8_t* data, dmr::data::EMB& emb);
 
             /**
              * @brief Helper to insert AMBE null frames for missing audio.

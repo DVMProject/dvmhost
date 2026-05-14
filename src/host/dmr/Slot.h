@@ -445,6 +445,8 @@ namespace dmr
         bool m_verbose;
         bool m_debug;
 
+        network::NET_ICC::ENUM m_reverseChannelCommand;
+
         static Control* s_dmr;
 
         static bool s_authoritative;

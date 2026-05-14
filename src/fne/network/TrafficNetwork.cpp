@@ -2508,7 +2508,15 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
 
     switch (command) {
     case network::NET_ICC::REJECT_TRAFFIC:
+    case network::NET_ICC::DMR_RC_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_REQUEST_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_MAXIMUM_POWER:
+    case network::NET_ICC::DMR_RC_MINIMUM_POWER:
+    case network::NET_ICC::DMR_RC_POWER_INCREASE_ONE_STEP:
+    case network::NET_ICC::DMR_RC_POWER_DECREASE_ONE_STEP:
         {
+            const bool callTakeover = (command == network::NET_ICC::REJECT_TRAFFIC);
+
             // is this a local peer?
             if (ssrc > 0 && (m_peers.find(ssrc) != m_peers.end())) {
                 FNEPeerConnection* connection = m_peers[ssrc];
@@ -2520,26 +2528,28 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                         // send ICC request to local peer
                         writePeerICC(ssrc, streamId, subFunc, command, dstId, slotNo, true);
 
-                        // flag the protocol call handler to allow call takeover on the next audio frame
-                        switch (subFunc) {
-                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:             // Encapsulated DMR data frame
-                            m_tagDMR->triggerCallTakeover(dstId);
-                            break;
+                        if (callTakeover) {
+                            // flag the protocol call handler to allow call takeover on the next audio frame
+                            switch (subFunc) {
+                            case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:             // Encapsulated DMR data frame
+                                m_tagDMR->triggerCallTakeover(dstId);
+                                break;
 
-                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:             // Encapsulated P25 data frame
-                            m_tagP25->triggerCallTakeover(dstId);
-                            break;
+                            case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:             // Encapsulated P25 data frame
+                                m_tagP25->triggerCallTakeover(dstId);
+                                break;
 
-                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:            // Encapsulated NXDN data frame
-                            m_tagNXDN->triggerCallTakeover(dstId);
-                            break;
+                            case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:            // Encapsulated NXDN data frame
+                                m_tagNXDN->triggerCallTakeover(dstId);
+                                break;
 
-                        case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
-                            m_tagAnalog->triggerCallTakeover(dstId);
-                            break;
+                            case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
+                                m_tagAnalog->triggerCallTakeover(dstId);
+                                break;
 
-                        default:
-                            break;
+                            default:
+                                break;
+                            }
                         }
                     }
                 }
@@ -2566,26 +2576,28 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                 }
                 m_peers.shared_unlock();
 
-                // flag the protocol call handler to allow call takeover on the next audio frame
-                switch (subFunc) {
-                case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:             // Encapsulated DMR data frame
-                    m_tagDMR->triggerCallTakeover(dstId);
-                    break;
+                if (callTakeover) {
+                    // flag the protocol call handler to allow call takeover on the next audio frame
+                    switch (subFunc) {
+                    case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:             // Encapsulated DMR data frame
+                        m_tagDMR->triggerCallTakeover(dstId);
+                        break;
 
-                case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:             // Encapsulated P25 data frame
-                    m_tagP25->triggerCallTakeover(dstId);
-                    break;
+                    case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25:             // Encapsulated P25 data frame
+                        m_tagP25->triggerCallTakeover(dstId);
+                        break;
 
-                case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:            // Encapsulated NXDN data frame
-                    m_tagNXDN->triggerCallTakeover(dstId);
-                    break;
+                    case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:            // Encapsulated NXDN data frame
+                        m_tagNXDN->triggerCallTakeover(dstId);
+                        break;
 
-                case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
-                    m_tagAnalog->triggerCallTakeover(dstId);
-                    break;
+                    case NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG:          // Encapsulated analog data frame
+                        m_tagAnalog->triggerCallTakeover(dstId);
+                        break;
 
-                default:
-                    break;
+                    default:
+                        break;
+                    }
                 }
 
                 // send further up the network tree (only if ICC request came from a local peer)

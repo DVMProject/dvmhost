@@ -130,6 +130,14 @@ namespace network
 
             BUSY_DENY = 0x00U,                      //!< Busy Deny
             REJECT_TRAFFIC = 0x01U,                 //!< Reject Active Traffic
+
+            // DMR Reverse Channel Commands
+            DMR_RC_CEASE_TRANSMIT = 0xD2U,          //!< DMR Reverse Channel: Cease Transmission
+            DMR_RC_REQUEST_CEASE_TRANSMIT = 0xD3U,  //!< DMR Reverse Channel: Request Cease Transmission
+            DMR_RC_MAXIMUM_POWER = 0xD4U,           //!< DMR Reverse Channel: Maximum Power
+            DMR_RC_MINIMUM_POWER = 0xD5U,           //!< DMR Reverse Channel: Minimum Power
+            DMR_RC_POWER_INCREASE_ONE_STEP = 0xD6U, //!< DMR Reverse Channel: Increase Power One Step
+            DMR_RC_POWER_DECREASE_ONE_STEP = 0xD7U, //!< DMR Reverse Channel: Decrease Power One Step
         };
     };
 

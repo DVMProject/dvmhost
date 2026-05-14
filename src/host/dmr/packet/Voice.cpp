@@ -471,6 +471,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // Regenerate the EMB
             emb.setColorCode(m_slot->s_colorCode);
             emb.setLCSS(lcss);
+
+            // Emit reverse-channel data in the final voice burst of a superframe
+            if (m_rfN == 5U) {
+                applyReverseChannelCommand(m_slot->m_reverseChannelCommand, data, emb);
+            }
+
             emb.encode(data + 2U);
 
             if (!m_slot->m_rfTimeout) {
@@ -1313,6 +1319,45 @@ void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
     latitude *= float(latitudeVal);
 
     LogInfoEx(LOG_DMR, "GPS position for %u [lat %f, long %f] (Position error %s)", srcId, latitude, longitude, error);
+}
+
+/* Helper to apply a DMR reverse channel command received via in-call control. */
+
+bool Voice::applyReverseChannelCommand(network::NET_ICC::ENUM command, uint8_t* data, dmr::data::EMB& emb)
+{
+    const uint8_t* payload = nullptr;
+    switch (command) {
+    case network::NET_ICC::DMR_RC_CEASE_TRANSMIT:
+        payload = RC_CEASE_TRANSMIT;
+        break;
+    case network::NET_ICC::DMR_RC_REQUEST_CEASE_TRANSMIT:
+        payload = RC_REQUEST_CEASE_TRANSMIT;
+        break;
+    case network::NET_ICC::DMR_RC_MAXIMUM_POWER:
+        payload = RC_MAX_POWER;
+        break;
+    case network::NET_ICC::DMR_RC_MINIMUM_POWER:
+        payload = RC_MIN_POWER;
+        break;
+    case network::NET_ICC::DMR_RC_POWER_INCREASE_ONE_STEP:
+        payload = RC_POWER_INCREASE;
+        break;
+    case network::NET_ICC::DMR_RC_POWER_DECREASE_ONE_STEP:
+        payload = RC_POWER_DECREASE;
+        break;
+    default:
+        return false;
+    }
+
+    data[16U] = (data[16U] & 0xF0U) | (payload[0U] & 0x0FU);
+    data[17U] = payload[1U];
+    data[18U] = payload[2U];
+    data[19U] = payload[3U];
+    data[20U] = (data[20U] & 0x0FU) | (payload[4U] & 0xF0U);
+
+    // Reverse-channel command data is indicated via PI in EMB.
+    emb.setPI(true);
+    return true;
 }
 
 /* Helper to insert AMBE null frames for missing audio. */

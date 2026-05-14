@@ -130,6 +130,15 @@ namespace dmr
         const uint32_t  RAW_AMBE_LENGTH_BYTES = 9U;
         /** @} */
 
+        /** @name Reverse Channel Commands */
+        const uint8_t   RC_CEASE_TRANSMIT[5U] = { 0x07U, 0x0DU, 0x04U, 0xF1U, 0xF0U };
+        const uint8_t   RC_REQUEST_CEASE_TRANSMIT[5U] = { 0x02U, 0x7BU, 0x4EU, 0x48U, 0x70U };
+        const uint8_t   RC_MAX_POWER[5U] = { 0x01U, 0xC3U, 0xDDU, 0x3CU, 0x10U };
+        const uint8_t   RC_MIN_POWER[5U] = { 0x04U, 0xB5U, 0x97U, 0x85U, 0x90U };
+        const uint8_t   RC_POWER_INCREASE[5U] = { 0x04U, 0x5BU, 0xA7U, 0x58U, 0xA0U };
+        const uint8_t   RC_POWER_DECREASE[5U] = { 0x01U, 0x2DU, 0xEDU, 0xE1U, 0x20U };
+        /** @} */
+
         /** @name Thresholds */
         /** @brief TSCC maximum CSC count */
         const uint16_t  TSCC_MAX_CSC_CNT = 511U;

@@ -168,7 +168,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_notifyCC(true),
     m_ccDebug(debug),
     m_verbose(verbose),
-    m_debug(debug)
+    m_debug(debug),
+    m_reverseChannelCommand(network::NET_ICC::NOP)
 {
     m_interval.start();
 
@@ -550,6 +551,27 @@ void Slot::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
                 m_rfLastSrcId = 0U;
                 m_rfTGHang.stop();
                 m_rfState = RS_RF_REJECTED;
+                m_reverseChannelCommand = network::NET_ICC::NOP;
+            }
+        }
+        break;
+
+    case network::NET_ICC::DMR_RC_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_REQUEST_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_MAXIMUM_POWER:
+    case network::NET_ICC::DMR_RC_MINIMUM_POWER:
+    case network::NET_ICC::DMR_RC_POWER_INCREASE_ONE_STEP:
+    case network::NET_ICC::DMR_RC_POWER_DECREASE_ONE_STEP:
+        {
+            if (m_rfState == RS_RF_AUDIO && m_rfLC != nullptr && (dstId == 0U || m_rfLC->getDstId() == dstId)) {
+                m_reverseChannelCommand = command;
+
+                if (m_verbose) {
+                    LogInfoEx(LOG_DMR, "Slot %u, set DMR reverse channel command = $%02X, dstId = %u", m_slotNo, command, dstId);
+                }
+            }
+            else if (m_verbose) {
+                LogInfoEx(LOG_DMR, "Slot %u, ignored DMR reverse channel command = $%02X, no active matching RF audio call, dstId = %u", m_slotNo, command, dstId);
             }
         }
         break;
