@@ -211,6 +211,18 @@ namespace p25
             void resetWithNullAudio(uint8_t* data, bool encrypted);
 
             /**
+             * @brief Helper to determine the next active talkgroup in a active multi-group scenario,
+             *  this is intended to update the GROUP_UPDT LC field for the next transmission.
+             * @param activeTG Vector of active talkgroups.
+             * @param groupUpdtIndex Index of the current group update.
+             * @param dstId Destination ID of the current talkgroup.
+             * @param dstIdB Destination ID of the secondary talkgroup.
+             * @param hasDstIdB Flag indicating whether a secondary talkgroup exists.
+             * @return bool True if there is a next active talkgroup, otherwise false.
+             */
+            bool nextActiveTalkgroups(const std::vector<uint32_t>& activeTG, uint8_t& groupUpdtIndex, uint32_t& dstId, uint32_t& dstIdB, bool& hasDstIdB);
+
+            /**
              * @brief Given the last MI, generate the next MI using LFSR.
              * @param lastMI Last MI received.
              * @param nextMI Next MI.
