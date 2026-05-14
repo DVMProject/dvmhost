@@ -84,7 +84,7 @@ namespace dmr
                  * @param[in] data Buffer containing CSBK packet data to decode.
                  * @returns CSBK* Instance of a CSBK representing the decoded data.
                  */
-                static std::unique_ptr<CSBK> decode(CSBK* csbk, const uint8_t* data);
+                static std::unique_ptr<CSBK> decode(CSBK* csbk, const uint8_t* data, defines::DataType::E dataType);
             };
         } // namespace csbk
     } // namespace lc

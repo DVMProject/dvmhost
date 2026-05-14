@@ -115,6 +115,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
@@ -136,6 +138,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
@@ -150,6 +154,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
@@ -166,6 +172,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
@@ -245,6 +253,8 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::decode(), unhandled dataType = $%02X", m_dataType);
             break;
@@ -265,6 +275,8 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::decode(), unhandled dataType = $%02X", m_dataType);
@@ -318,6 +330,8 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::encoded(), unhandled dataType = $%02X", m_dataType);
             break;
@@ -333,6 +347,8 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::encode(), unhandled dataType = $%02X", m_dataType);

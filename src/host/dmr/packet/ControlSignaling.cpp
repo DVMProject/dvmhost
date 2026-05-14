@@ -121,7 +121,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
     slotType.setColorCode(m_slot->s_colorCode);
     slotType.setDataType(dataType);
 
-    if (dataType == DataType::CSBK) {
+    if (dataType == DataType::CSBK || dataType == DataType::MBC_HEADER || dataType == DataType::MBC_DATA) {
         // generate a new CSBK and check validity
         std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U, dataType);
         if (csbk == nullptr)
@@ -369,7 +369,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             if (m_slot->s_duplex)
                 m_slot->addFrame(data);
 
-            m_slot->writeNetwork(data, DataType::CSBK, gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId, 0U, 0U, true);
+            m_slot->writeNetwork(data, dataType, gi ? FLCO::GROUP : FLCO::PRIVATE, srcId, dstId, 0U, 0U, true);
         }
 
         return true;
@@ -387,7 +387,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
     uint8_t data[DMR_FRAME_LENGTH_BYTES + 2U];
     dmrData.getData(data + 2U);
 
-    if (dataType == DataType::CSBK) {
+    if (dataType == DataType::CSBK || dataType == DataType::MBC_HEADER || dataType == DataType::MBC_DATA) {
         std::unique_ptr<lc::CSBK> csbk = CSBKFactory::createCSBK(data + 2U, dataType);
         if (csbk == nullptr) {
             LogError(LOG_NET, "DMR Slot %u, CSBK, unable to decode the network CSBK", m_slot->m_slotNo);

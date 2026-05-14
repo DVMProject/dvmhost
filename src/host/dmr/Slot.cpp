@@ -289,7 +289,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     if (dataSync) {
         DataType::E dataType = (DataType::E)(data[1U] & 0x0FU);
 
-        if (dataType == DataType::CSBK) {
+        if (dataType == DataType::CSBK || dataType == DataType::MBC_HEADER || dataType == DataType::MBC_DATA) {
             return m_control->process(data, len);
         }
 
@@ -495,7 +495,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
         // if *this slot* is the TSCC slot, stop processing after this point
         if (m_enableTSCC && m_dedicatedTSCC)
         {
-            if (dataType != DataType::CSBK)
+            if (dataType != DataType::CSBK && dataType != DataType::MBC_HEADER && dataType != DataType::MBC_DATA)
                 return;
             else {
                 if (m_slotNo != s_dmr->m_tsccSlotNo)
@@ -507,6 +507,8 @@ void Slot::processNetwork(const data::NetData& dmrData)
     switch (dataType)
     {
     case DataType::CSBK:
+    case DataType::MBC_HEADER:
+    case DataType::MBC_DATA:
         m_control->processNetwork(dmrData);
         break;
     case DataType::VOICE_LC_HEADER:
