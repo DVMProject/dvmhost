@@ -66,7 +66,7 @@ private:
      */
     void initLayout() override
     {
-        FDialog::setText("Hotspot Gain & AFC Adjustment");
+        FDialog::setText("AFC & Hotspot Gain Adjustment");
         FDialog::setSize(FSize{50, 22});
 
         AdjustWndBase::initLayout();
@@ -181,6 +181,10 @@ private:
                 Thread::sleep(2);
                 m_setup->writeRFParams();
             });
+        }
+
+        if (m_setup->m_isPTY) {
+            m_gainButtonGroup.setDisable();
         }
 
         AdjustWndBase::initControls();

@@ -600,9 +600,38 @@ system:
         nxdnFifoLength: 538
 
         #
-        # Hotspot Modem Configuration
+        # Hotspot/SDR-based Modem Configuration
         #
         hotspot:
+            #
+            # Automatic Frequency Control Configuration
+            #   (This applies to both the ADF7021 based hotspots and SDR based modems, as the same AFC algorithm is 
+            #     applied to both types of modems in DVM.)
+            #
+            # Flag indicating whether the ADF7021's automatic frequency correction is enabled.
+            afcEnable: true
+            # Don't change this. See the ADF7021 datasheet for more information.
+            afcKI: 13
+            # Don't change this. See the ADF7021 datasheet for more information.
+            afcKP: 5
+            # Sets the maximum frequency correction range of the ADF7021.
+            # (It is highly recommended *not* to alter this.)
+            afcRange: 1
+
+            #
+            # Frequency Offset Configuration
+            #   (This applies to both the ADF7021 based hotspots and SDR based modems, as the same frequency offset 
+            #     is applied to both types of modems in DVM.)
+            #
+            # Sets the transmit frequency offset. (in Hz)
+            txTuning: 0
+            # Sets the receive frequency offset. (in Hz)
+            rxTuning: 0
+
+            #
+            # Discriminator and Post Demodulator Bandwidth Adjustment Configuration
+            #   (ADF7021 Hotspot only, this does not apply to SDR based modems.)
+            #
             # DMR Discriminator Bandwidth Adjustment.
             dmrDiscBWAdj: 0 # Valid values between -128 and 128
             # DMR Post Demodulator Bandwidth Adjustment.
@@ -615,22 +644,14 @@ system:
             nxdnDiscBWAdj: 0 # Valid values between -128 and 128
             # NXDN Post Demodulator Bandwidth Adjustment.
             nxdnPostBWAdj: 0 # Valid values between -128 and 128
+
+            #
+            # LNA Gain Mode Configuration
+            #   (ADF7021 Hotspot only, this does not apply to SDR based modems.)
+            #
             # LNA Gain Mode.
             adfGainMode: 2 # 0 - Auto, 1 - Auto High Lin, 2 - Low, 3 - High
-            # Flag indicating whether the ADF7021's automatic frequency correction is enabled.
-            afcEnable: true
-            # Don't change this. See the ADF7021 datasheet for more information.
-            afcKI: 13
-            # Don't change this. See the ADF7021 datasheet for more information.
-            afcKP: 5
-            # Sets the maximum frequency correction range of the ADF7021.
-            # (It is highly recommended *not* to alter this.)
-            afcRange: 1
-            # Sets the transmit frequency offset. (in Hz)
-            txTuning: 0
-            # Sets the receive frequency offset. (in Hz)
-            rxTuning: 0
-
+        
         #
         # Repeater Modem Configuration
         #

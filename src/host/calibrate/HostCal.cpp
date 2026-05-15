@@ -798,11 +798,11 @@ void HostCal::displayHelp()
     if (!m_isHotspot) {
         LogInfoEx(LOG_CAL, "    w        Set P25 Correlation Count");
     }
-    if (m_isHotspot) {
+    if (m_isHotspot || m_isPTY) {
         LogInfoEx(LOG_CAL, "    F        Set Rx Frequency Adjustment");
         LogInfoEx(LOG_CAL, "    f        Set Tx Frequency Adjustment");
     }
-    if (!m_isHotspot) {
+    if (!m_isHotspot && !m_isPTY) {
         LogInfoEx(LOG_CAL, "    1/2      Increase/Decrease receive coarse level");
         LogInfoEx(LOG_CAL, "    3/4      Increase/Decrease receive fine level");
         LogInfoEx(LOG_CAL, "    5/6      Increase/Decrease transmit coarse level");
@@ -1055,6 +1055,12 @@ void HostCal::printStatus()
                     m_modem->m_nxdnSymLevel3Adj, m_modem->m_nxdnSymLevel1Adj);
             }
         }
+
+        if (m_isHotspot || m_isPTY) {
+            LogInfoEx(LOG_CAL, " - AFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
+                m_modem->m_afcEnable, m_modem->m_afcKI, m_modem->m_afcKP, m_modem->m_afcRange);
+        }
+
         if (m_isHotspot) {
             LogInfoEx(LOG_CAL, " - DMR Disc. BW: %d, P25 Disc. BW: %d, DMR Post Demod BW: %d, P25 Post Demod BW: %d",
                 m_modem->m_dmrDiscBWAdj, m_modem->m_p25DiscBWAdj, m_modem->m_dmrPostBWAdj, m_modem->m_p25PostBWAdj);
@@ -1063,9 +1069,6 @@ void HostCal::printStatus()
             if (m_modem->getVersion() >= 3U) {
                 LogInfoEx(LOG_CAL, " - NXDN Disc. BW: %d, NXDN Post Demod BW: %d",
                     m_modem->m_nxdnDiscBWAdj, m_modem->m_nxdnPostBWAdj);
-
-                LogInfoEx(LOG_CAL, " - AFC Enabled: %u, AFC KI: %u, AFC KP: %u, AFC Range: %u",
-                    m_modem->m_afcEnable, m_modem->m_afcKI, m_modem->m_afcKP, m_modem->m_afcRange);
             }
 
             switch (m_modem->m_adfGainMode) {
