@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/Log.h"
@@ -62,7 +62,7 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
     }
 
     if (getAvailableSlotForChannel(chNo) == 0U || chNo == m_tsccChNo) {
-        m_chLookup->removeRFCh(chNo);
+        m_chLookup->allocRFCh(chNo);
     }
 
     __lock();
@@ -136,7 +136,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         m_grantChSlotTable.erase(dstId);
         m_netGrantedTable.erase(dstId);
 
-        m_chLookup->addRFCh(chNo);
+        m_chLookup->freeRFCh(chNo);
 
         if (m_rfGrantChCnt > 0U) {
             m_rfGrantChCnt--;

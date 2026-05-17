@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "lookups/AffiliationLookup.h"
@@ -341,12 +341,8 @@ bool AffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t grantTi
         return false;
     }
 
-    if (!m_chLookup->isRFChAvailable()) {
-        return false;
-    }
-
-    uint32_t chNo = m_chLookup->getFirstRFChannel();
-    if (!m_chLookup->removeRFCh(chNo)) {
+    uint32_t chNo = 0U;
+    if (!m_chLookup->takeFirstRFChannel(chNo)) {
         return false;
     }
 
@@ -451,7 +447,7 @@ bool AffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         m_netGrantedTable.erase(dstId);
 
         if (m_chLookup != nullptr) {
-            m_chLookup->addRFCh(chNo, true);
+            m_chLookup->freeRFCh(chNo);
         }
 
         if (m_rfGrantChCnt > 0U) {

@@ -4,7 +4,7 @@
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-*  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
 *
 */
 /**
@@ -21,11 +21,14 @@
 #define __CHANNEL_LOOKUP_H__
 
 #include "common/Defines.h"
-#include "common/concurrent/vector.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/Timer.h"
 
 #include <cstdio>
+#include <cstdint>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
 
 namespace lookups
 {
@@ -232,40 +235,84 @@ namespace lookups
          * @brief Helper to get first available channel number.
          * @returns uint32_t First available channel number.
          */
-        uint32_t getFirstRFChannel() const { return m_rfChTable.at(0); }
+        uint32_t getFirstRFChannel() const;
+        /**
+         * @brief Helper to atomically acquire the first available channel number.
+         * @param chNo Acquired channel number.
+         * @returns bool True, if a channel was acquired, otherwise false.
+         */
+        bool takeFirstRFChannel(uint32_t& chNo);
 
         /**
          * @brief Gets the count of RF channels.
          * @returns uint8_t Total count of RF channels.
          */
-        uint8_t rfChSize() const { return m_rfChTable.size(); }
+        uint8_t rfChSize() const;
         /**
          * @brief Gets the RF channels table.
          * @returns std::vector<uint32_t> RF channel table.
          */
-        std::vector<uint32_t> rfChTable() const { return m_rfChTable.get(); }
+        std::vector<uint32_t> rfChTable() const;
         /**
-         * @brief Helper to add a RF channel.
+         * @brief Helper to initialize a RF channel.
          * @param chNo Channel Number.
-         * @param force Flag indicating the channel should be forcibly added.
-         * @returns bool True, if channel added, otherwise false.
+         * @returns bool True, if channel initialized, otherwise false.
          */
-        bool addRFCh(uint32_t chNo, bool force = false);
+        bool initializeRFCh(uint32_t chNo);
         /**
-         * @brief Helper to remove a RF channel.
+         * @brief Helper to mark a RF channel allocated for use.
          * @param chNo Channel Number.
-         * @returns bool True, if channel remove, otherwise false.
+         * @returns bool True, if channel allocated, otherwise false.
          */
-        bool removeRFCh(uint32_t chNo);
+        bool allocRFCh(uint32_t chNo);
+        /**
+         * @brief Helper to mark a RF channel as free for use.
+         * @param chNo Channel Number.
+         * @returns bool True, if channel freed, otherwise false.
+         */
+        bool freeRFCh(uint32_t chNo);
         /**
          * @brief Helper to determine if there are any RF channels available..
          * @returns bool True, if any RF channels are available for use, otherwise false.
          */
-        bool isRFChAvailable() const { return !m_rfChTable.empty(); }
+        bool isRFChAvailable() const;
         /** @} */
 
     private:
-        concurrent::vector<uint32_t> m_rfChTable;
+        static constexpr uint32_t BITS_PER_WORD = 64U;
+
+        /**
+         * @brief Ensures bitset has enough words for the given index.
+         * @param idx Index of the bit.
+         */
+        void ensureBitCapacity(uint32_t idx);
+        /**
+         * @brief Determines if the bit for index is currently set (allocated).
+         * @param idx Bit index.
+         * @returns bool True, if the bit is set, otherwise false.
+         */
+        bool isBitSet(uint32_t idx) const;
+        /**
+         * @brief Sets the bit for index.
+         * @param idx Bit index.
+         */
+        void setBit(uint32_t idx);
+        /**
+         * @brief Clears the bit for index.
+         * @param idx Bit index.
+         */
+        void clearBit(uint32_t idx);
+        /**
+         * @brief Finds the first available (clear) channel bit index.
+         * @param idx Index of the first clear bit.
+         * @returns bool True, if an available channel bit was found, otherwise false.
+         */
+        bool findFirstClearBit(uint32_t& idx) const;
+
+        mutable std::mutex m_rfChMutex;
+        std::vector<uint32_t> m_idxToCh;
+        std::unordered_map<uint32_t, uint32_t> m_chToIdx;
+        std::vector<uint64_t> m_freeBits;
         concurrent::unordered_map<uint32_t, VoiceChData> m_rfChDataTable;
     };
 } // namespace lookups

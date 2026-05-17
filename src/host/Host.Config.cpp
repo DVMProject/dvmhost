@@ -304,13 +304,13 @@ bool Host::readParams()
 
                 VoiceChData data = VoiceChData(chId, chNo, rxChId, rxChNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
                 m_channelLookup->setRFChData(chNo, data);
-                m_channelLookup->addRFCh(chNo);
+                m_channelLookup->initializeRFCh(chNo);
             } else {
                 ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X (%u-%u) RPC Address %s:%u", chId, chNo, chId, chNo, rpcApiAddress.c_str(), rpcApiPort);
 
                 VoiceChData data = VoiceChData(chId, chNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
                 m_channelLookup->setRFChData(chNo, data);
-                m_channelLookup->addRFCh(chNo);
+                m_channelLookup->initializeRFCh(chNo);
             }
         }
 
