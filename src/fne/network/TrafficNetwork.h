@@ -46,6 +46,7 @@
 #include <string>
 #include <cstdint>
 #include <unordered_map>
+#include <memory>
 #include <mutex>
 
 // ---------------------------------------------------------------------------
@@ -339,8 +340,9 @@ namespace network
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
         concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
         concurrent::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
-        typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
-        concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
+        typedef std::pair<const uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
+        concurrent::unordered_map<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> m_peerAffiliations;
+        mutable std::mutex m_peerAffiliationsMutex;
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
@@ -470,6 +472,17 @@ namespace network
          * @returns bool True, if the peer affiliations were deleted, otherwise false.
          */
         bool erasePeerAffiliations(uint32_t peerId);
+        /**
+         * @brief Helper to get the peer affiliations entry for a peer.
+         * @param peerId Peer ID.
+         * @returns std::shared_ptr<fne_lookups::AffiliationLookup> Shared affiliations lookup instance.
+         */
+        std::shared_ptr<fne_lookups::AffiliationLookup> getPeerAffiliations(uint32_t peerId) const;
+        /**
+         * @brief Helper to create a snapshot of all peer affiliation entries.
+         * @returns std::vector<PeerAffiliationMapPair> Snapshot of peer affiliation entries.
+         */
+        std::vector<PeerAffiliationMapPair> peerAffiliationsSnapshot() const;
         /**
          * @brief Helper to disconnect a downstream peer.
          * @param peerId Peer ID.

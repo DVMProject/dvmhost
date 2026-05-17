@@ -1286,7 +1286,7 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                             }
 
                             // check the affiliations for this peer to see if we can repeat the TSDU
-                            lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
+                            std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(lookupPeerId);
                             if (aff == nullptr) {
                                 std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
                                 //LogError(LOG_P25, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
@@ -1513,7 +1513,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         }
 
         // check the affiliations for this peer to see if we can repeat traffic
-        lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
+        std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(lookupPeerId);
         if (aff == nullptr) {
             std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
             //LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());
@@ -1889,7 +1889,7 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
     }
 
     // check the affiliations for this peer to see if we can grant traffic
-    lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[peerId];
+    std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(peerId);
     if (aff == nullptr) {
         std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
         LogError(LOG_MASTER, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, peerIdentity.c_str());

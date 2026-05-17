@@ -407,9 +407,9 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         return;
     }
 
-    if (auth.size() > 64) {
+    if (auth.size() != 64) {
         invalidateHostToken(host);
-        errorPayload(reply, "auth cannot be longer than 64 characters");
+        errorPayload(reply, "auth must be 64 characters");
         return;
     }
 

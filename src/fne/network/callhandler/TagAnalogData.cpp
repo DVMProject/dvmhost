@@ -646,7 +646,7 @@ bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32
             }
 
             // check the affiliations for this peer to see if we can repeat traffic
-            lookups::AffiliationLookup* aff = m_network->m_peerAffiliations[lookupPeerId];
+            std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(lookupPeerId);
             if (aff == nullptr) {
                 std::string peerIdentity = m_network->resolvePeerIdentity(lookupPeerId);
                 //LogError(LOG_NET, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", lookupPeerId, peerIdentity.c_str());

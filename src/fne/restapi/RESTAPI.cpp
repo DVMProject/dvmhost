@@ -770,9 +770,9 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         return;
     }
 
-    if (auth.size() > 64) {
+    if (auth.size() != 64) {
         invalidateHostToken(host);
-        errorPayload(reply, "auth cannot be longer than 64 characters");
+        errorPayload(reply, "auth must be 64 characters");
         return;
     }
 
@@ -2083,40 +2083,44 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
     if (m_network != nullptr) {
         uint32_t totalAffiliations = 0U;
         if (m_network->m_peers.size() > 0) {
+            std::vector<uint32_t> peerIds = std::vector<uint32_t>();
+
             m_network->m_peers.shared_lock();
-            m_network->m_peerAffiliations.lock(false);
             for (auto entry : m_network->m_peers) {
                 uint32_t peerId = entry.first;
                 network::FNEPeerConnection* peer = entry.second;
                 if (peer != nullptr) {
-                    lookups::AffiliationLookup* affLookup = m_network->m_peerAffiliations[peerId];
-                    if (affLookup != nullptr) {
-                        std::unordered_map<uint32_t, uint32_t> affTable = affLookup->grpAffTable();
-
-                        json::object peerObj = json::object();
-                        peerObj["peerId"].set<uint32_t>(peerId);
-
-                        json::array peerAffs = json::array();
-                        if (affLookup->grpAffSize() > 0U) {
-                            for (auto entry : affTable) {
-                                uint32_t srcId = entry.first;
-                                uint32_t dstId = entry.second;
-
-                                json::object affObj = json::object();
-                                affObj["srcId"].set<uint32_t>(srcId);
-                                affObj["dstId"].set<uint32_t>(dstId);
-                                peerAffs.push_back(json::value(affObj));
-                            }
-                        }
-
-                        peerObj["affiliations"].set<json::array>(peerAffs);
-                        affs.push_back(json::value(peerObj));
-                        ++totalAffiliations;
-                    }
+                    peerIds.push_back(peerId);
                 }
             }
-            m_network->m_peerAffiliations.unlock();
             m_network->m_peers.shared_unlock();
+
+            for (uint32_t peerId : peerIds) {
+                std::shared_ptr<fne_lookups::AffiliationLookup> affLookup = m_network->getPeerAffiliations(peerId);
+                if (affLookup != nullptr) {
+                    std::unordered_map<uint32_t, uint32_t> affTable = affLookup->grpAffTable();
+
+                    json::object peerObj = json::object();
+                    peerObj["peerId"].set<uint32_t>(peerId);
+
+                    json::array peerAffs = json::array();
+                    if (affLookup->grpAffSize() > 0U) {
+                        for (auto entry : affTable) {
+                            uint32_t srcId = entry.first;
+                            uint32_t dstId = entry.second;
+
+                            json::object affObj = json::object();
+                            affObj["srcId"].set<uint32_t>(srcId);
+                            affObj["dstId"].set<uint32_t>(dstId);
+                            peerAffs.push_back(json::value(affObj));
+                        }
+                    }
+
+                    peerObj["affiliations"].set<json::array>(peerAffs);
+                    affs.push_back(json::value(peerObj));
+                    ++totalAffiliations;
+                }
+            }
         }
 
         response["totalAffiliations"].set<uint32_t>(totalAffiliations);
