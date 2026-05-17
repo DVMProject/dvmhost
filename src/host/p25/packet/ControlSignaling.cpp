@@ -2267,7 +2267,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            if (!m_disableGrantSrcIdCheck && !net) {
+            if (!m_disableGrantSrcIdCheck) {
                 // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
                 // different source from the original grant
                 uint32_t grantedSrcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
