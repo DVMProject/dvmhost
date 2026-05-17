@@ -22,6 +22,8 @@ constexpr uint32_t PatchStatusRegistry::MIN_TTL_SECONDS;
 constexpr uint32_t PatchStatusRegistry::MAX_TTL_SECONDS;
 constexpr uint32_t PatchStatusRegistry::MAX_WAIT_MS;
 
+/* Initializes a new instance of the PatchStatusRegistry class. */
+
 PatchStatusRegistry::PatchStatusRegistry() :
     m_mutex(),
     m_revisionChanged(),
@@ -33,6 +35,8 @@ PatchStatusRegistry::PatchStatusRegistry() :
 {
     /* stub */
 }
+
+/* Configures the accepted TTL range for patch status records. */
 
 void PatchStatusRegistry::configure(uint32_t defaultTtlSeconds, uint32_t minTtlSeconds, uint32_t maxTtlSeconds)
 {
@@ -46,6 +50,8 @@ void PatchStatusRegistry::configure(uint32_t defaultTtlSeconds, uint32_t minTtlS
     m_maxTtlSeconds = maxTtlSeconds;
     m_defaultTtlSeconds = std::max(m_minTtlSeconds, std::min(defaultTtlSeconds, m_maxTtlSeconds));
 }
+
+/* Publishes a complete patch snapshot for one console peer. */
 
 bool PatchStatusRegistry::publish(json::object& request, json::object& response, std::string& errorMessage)
 {
@@ -68,6 +74,9 @@ bool PatchStatusRegistry::publish(json::object& request, json::object& response,
 
     if (request["peerName"].is<std::string>())
         incoming.peerName = request["peerName"].get<std::string>();
+
+    if (request["originFnePeerId"].is<uint32_t>())
+        incoming.originFnePeerId = request["originFnePeerId"].get<uint32_t>();
 
     if (request["sequence"].is<uint32_t>())
         incoming.sequence = request["sequence"].get<uint32_t>();
@@ -99,6 +108,14 @@ bool PatchStatusRegistry::publish(json::object& request, json::object& response,
 
     {
         std::lock_guard<std::mutex> guard(m_mutex);
+        auto existing = m_peerPatches.find(incoming.peerId);
+        if (existing != m_peerPatches.end() && incoming.sequence > 0U && existing->second.sequence > incoming.sequence) {
+            response = snapshotLocked();
+            response["acceptedPeerId"].set<uint32_t>(incoming.peerId);
+            response["ttlSeconds"].set<uint32_t>(ttlSeconds);
+            return true;
+        }
+
         if (incoming.patches.empty())
             m_peerPatches.erase(incoming.peerId);
         else
@@ -113,6 +130,8 @@ bool PatchStatusRegistry::publish(json::object& request, json::object& response,
     m_revisionChanged.notify_all();
     return true;
 }
+
+/* Removes all patch records associated with a console peer. */
 
 bool PatchStatusRegistry::removePeer(uint32_t peerId)
 {
@@ -132,6 +151,8 @@ bool PatchStatusRegistry::removePeer(uint32_t peerId)
 
     return removed;
 }
+
+/* Removes expired patch status records. */
 
 uint32_t PatchStatusRegistry::cleanupExpired()
 {
@@ -162,6 +183,8 @@ uint32_t PatchStatusRegistry::cleanupExpired()
     return removed;
 }
 
+/* Creates a complete JSON snapshot of the registry. */
+
 json::object PatchStatusRegistry::snapshot()
 {
     cleanupExpired();
@@ -169,6 +192,8 @@ json::object PatchStatusRegistry::snapshot()
     std::lock_guard<std::mutex> guard(m_mutex);
     return snapshotLocked();
 }
+
+/* Waits for registry changes after the supplied revision. */
 
 json::object PatchStatusRegistry::waitForChanges(uint64_t sinceRevision, uint32_t waitMs)
 {
@@ -185,11 +210,15 @@ json::object PatchStatusRegistry::waitForChanges(uint64_t sinceRevision, uint32_
     return snapshotLocked();
 }
 
+/* Gets the current registry revision. */
+
 uint64_t PatchStatusRegistry::revision() const
 {
     std::lock_guard<std::mutex> guard(m_mutex);
     return m_revision;
 }
+
+/* Gets the configured default patch status TTL. */
 
 uint32_t PatchStatusRegistry::defaultTtlSeconds() const
 {
@@ -197,11 +226,15 @@ uint32_t PatchStatusRegistry::defaultTtlSeconds() const
     return m_defaultTtlSeconds;
 }
 
+/* Gets the configured minimum patch status TTL. */
+
 uint32_t PatchStatusRegistry::minTtlSeconds() const
 {
     std::lock_guard<std::mutex> guard(m_mutex);
     return m_minTtlSeconds;
 }
+
+/* Gets the configured maximum patch status TTL. */
 
 uint32_t PatchStatusRegistry::maxTtlSeconds() const
 {
@@ -209,11 +242,15 @@ uint32_t PatchStatusRegistry::maxTtlSeconds() const
     return m_maxTtlSeconds;
 }
 
+/* Gets the current system time in milliseconds. */
+
 uint64_t PatchStatusRegistry::nowMs()
 {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 }
+
+/* Normalizes a mode string for key generation. */
 
 std::string PatchStatusRegistry::normalizeMode(const std::string& mode)
 {
@@ -224,12 +261,16 @@ std::string PatchStatusRegistry::normalizeMode(const std::string& mode)
     return normalized;
 }
 
+/* Builds a stable talkgroup lookup key for a patch member. */
+
 std::string PatchStatusRegistry::buildTalkgroupKey(const PatchMember& member)
 {
     std::ostringstream ss;
     ss << normalizeMode(member.mode) << ':' << member.tgid << ':' << static_cast<uint32_t>(member.slot);
     return ss.str();
 }
+
+/* Serializes a patch member to JSON. */
 
 json::object PatchStatusRegistry::memberToJson(const PatchMember& member)
 {
@@ -241,6 +282,8 @@ json::object PatchStatusRegistry::memberToJson(const PatchMember& member)
     obj["key"].set<std::string>(buildTalkgroupKey(member));
     return obj;
 }
+
+/* Serializes a patch record to JSON. */
 
 json::object PatchStatusRegistry::patchToJson(const PatchRecord& patch)
 {
@@ -257,10 +300,13 @@ json::object PatchStatusRegistry::patchToJson(const PatchRecord& patch)
     return obj;
 }
 
+/* Serializes a peer patch snapshot to JSON. */
+
 json::object PatchStatusRegistry::peerSnapshotToJson(const PeerPatchSnapshot& peer)
 {
     json::object obj = json::object();
     obj["peerId"].set<uint32_t>(peer.peerId);
+    obj["originFnePeerId"].set<uint32_t>(peer.originFnePeerId);
     obj["peerName"].set<std::string>(peer.peerName);
     obj["sequence"].set<uint32_t>(peer.sequence);
     obj["updatedAt"].set<uint64_t>(peer.updatedAt);
@@ -273,6 +319,8 @@ json::object PatchStatusRegistry::peerSnapshotToJson(const PeerPatchSnapshot& pe
 
     return obj;
 }
+
+/* Parses one patch record from JSON. */
 
 bool PatchStatusRegistry::parsePatch(json::object& obj, PatchRecord& patch, std::string& errorMessage) const
 {
@@ -307,6 +355,8 @@ bool PatchStatusRegistry::parsePatch(json::object& obj, PatchRecord& patch, std:
 
     return true;
 }
+
+/* Parses one patch member from JSON. */
 
 bool PatchStatusRegistry::parseMember(json::object& obj, PatchMember& member, std::string& errorMessage) const
 {
@@ -343,11 +393,15 @@ bool PatchStatusRegistry::parseMember(json::object& obj, PatchMember& member, st
     return true;
 }
 
+/* Clamps a TTL value into the configured TTL range. */
+
 uint32_t PatchStatusRegistry::clampTtl(uint32_t ttlSeconds) const
 {
     std::lock_guard<std::mutex> guard(m_mutex);
     return std::max(m_minTtlSeconds, std::min(ttlSeconds, m_maxTtlSeconds));
 }
+
+/* Creates a registry snapshot while the registry mutex is held. */
 
 json::object PatchStatusRegistry::snapshotLocked() const
 {
@@ -365,6 +419,7 @@ json::object PatchStatusRegistry::snapshotLocked() const
         for (const PatchRecord& patch : peer.patches) {
             json::object patchObj = patchToJson(patch);
             patchObj["peerId"].set<uint32_t>(peer.peerId);
+            patchObj["originFnePeerId"].set<uint32_t>(peer.originFnePeerId);
             patchObj["peerName"].set<std::string>(peer.peerName);
             patchObj["updatedAt"].set<uint64_t>(peer.updatedAt);
             patchObj["expiresAt"].set<uint64_t>(peer.expiresAt);
@@ -378,6 +433,7 @@ json::object PatchStatusRegistry::snapshotLocked() const
 
                 json::object tgPatch = json::object();
                 tgPatch["peerId"].set<uint32_t>(peer.peerId);
+                tgPatch["originFnePeerId"].set<uint32_t>(peer.originFnePeerId);
                 tgPatch["peerName"].set<std::string>(peer.peerName);
                 tgPatch["patchId"].set<std::string>(patch.patchId);
                 tgPatch["active"].set<bool>(patch.active);
@@ -396,6 +452,8 @@ json::object PatchStatusRegistry::snapshotLocked() const
     response["byTalkgroup"].set<json::object>(byTalkgroup);
     return response;
 }
+
+/* Advances the registry revision while the registry mutex is held. */
 
 void PatchStatusRegistry::bumpRevisionLocked()
 {

@@ -237,6 +237,12 @@ namespace network
          * @param offendingPeerId Offending Peer ID.
          */
         void processNetworkTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId);
+        /**
+         * @brief Processes a replicated console patch status update.
+         * @param peerId Peer ID that delivered the replication update.
+         * @param obj Patch status JSON payload.
+         */
+        void processReplicatedPatchStatus(uint32_t peerId, json::object obj);
 
         /**
          * @brief Helper to process an downstream peer In-Call Control message.
@@ -298,6 +304,12 @@ namespace network
          * @param exceptPeerId Optional peer ID to skip.
          */
         void writePatchStatusToConsoles(json::object obj, uint32_t exceptPeerId = 0U);
+        /**
+         * @brief Replicates patch status state to neighboring FNE peers.
+         * @param obj Patch status JSON payload.
+         * @param exceptPeerId Optional peer ID to skip.
+         */
+        void replicatePatchStatus(json::object obj, uint32_t exceptPeerId = 0U);
 
         /**
          * @brief Helper to reset a peer connection.
@@ -827,6 +839,13 @@ namespace network
          * @returns bool True, if message was queued, otherwise false.
          */
         bool writePatchStatusPayload(FNEPeerConnection* connection, json::object obj);
+        /**
+         * @brief Serializes and queues a patch status replication payload.
+         * @param connection Destination neighbor connection.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if message was queued, otherwise false.
+         */
+        bool writePatchStatusReplicationPayload(FNEPeerConnection* connection, json::object obj);
 
         /*
         ** Internal KMM Callback.

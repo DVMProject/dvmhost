@@ -115,6 +115,7 @@ namespace network
 
             REPL_ACT_PEER_LIST = 0xA2U,             //!< FNE Replication Active Peer List Transfer
             REPL_HA_PARAMS = 0xA3U,                 //!< FNE Replication HA Parameters
+            REPL_PATCH_STATUS = 0xA4U,              //!< FNE Replication Patch Status Transfer
 
             NET_TREE_LIST = 0x00U,                  //!< FNE Network Tree List
             NET_TREE_DISC = 0x01U                   //!< FNE Network Tree Disconnect

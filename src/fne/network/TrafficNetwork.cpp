@@ -532,6 +532,27 @@ void TrafficNetwork::processNetworkTreeDisconnect(uint32_t peerId, uint32_t offe
     }
 }
 
+/* Processes a replicated console patch status update. */
+
+void TrafficNetwork::processReplicatedPatchStatus(uint32_t peerId, json::object obj)
+{
+    if (!m_patchStatusEnabled)
+        return;
+
+    if (!obj["peerId"].is<uint32_t>() || !obj["patches"].is<json::array>())
+        return;
+
+    json::object response = json::object();
+    std::string errorMessage;
+    if (!m_patchStatusRegistry.publish(obj, response, errorMessage)) {
+        LogWarning(LOG_MASTER, "PEER %u invalid replicated patch status payload, %s", peerId, errorMessage.c_str());
+        return;
+    }
+
+    writePatchStatusToConsoles(response);
+    replicatePatchStatus(obj, peerId);
+}
+
 /* Helper to process an downstream peer In-Call Control message. */
 
 void TrafficNetwork::processDownstreamInCallCtrl(network::NET_ICC::ENUM command, network::NET_SUBFUNC::ENUM subFunc, uint32_t dstId, 
@@ -2324,8 +2345,18 @@ void TrafficNetwork::erasePeer(uint32_t peerId)
     }
 
     // erase any console patch status records for this peer
-    if (m_patchStatusEnabled && m_patchStatusRegistry.removePeer(peerId))
+    if (m_patchStatusEnabled && m_patchStatusRegistry.removePeer(peerId)) {
+        json::object clearPatchStatus = json::object();
+        uint32_t originFnePeerId = m_peerId;
+        uint32_t ttlSeconds = m_patchStatusRegistry.defaultTtlSeconds();
+        clearPatchStatus["type"].set<std::string>("publish");
+        clearPatchStatus["peerId"].set<uint32_t>(peerId);
+        clearPatchStatus["originFnePeerId"].set<uint32_t>(originFnePeerId);
+        clearPatchStatus["ttlSeconds"].set<uint32_t>(ttlSeconds);
+        clearPatchStatus["patches"].set<json::array>(json::array());
         writePatchStatusToConsoles(m_patchStatusRegistry.snapshot());
+        replicatePatchStatus(clearPatchStatus);
+    }
 
     // erase any HA parameters for this peer
     {
@@ -2476,6 +2507,38 @@ void TrafficNetwork::writePatchStatusToConsoles(json::object obj, uint32_t excep
     m_peers.shared_unlock();
 }
 
+/* Helper to replicate patch status state to neighboring FNE peers. */
+
+void TrafficNetwork::replicatePatchStatus(json::object obj, uint32_t exceptPeerId)
+{
+    if (!m_patchStatusEnabled)
+        return;
+
+    obj["type"].set<std::string>("publish");
+
+    if (m_host->m_peerNetworks.size() > 0U) {
+        for (auto peer : m_host->m_peerNetworks) {
+            if (peer.first == exceptPeerId)
+                continue;
+            if (peer.second != nullptr && peer.second->isEnabled() && peer.second->isReplica())
+                peer.second->writePatchStatus(obj);
+        }
+    }
+
+    m_peers.shared_lock();
+    for (auto peer : m_peers) {
+        if (peer.first == exceptPeerId)
+            continue;
+        if (peer.second == nullptr)
+            continue;
+        if (!peer.second->connected() || peer.second->peerClass() != PEER_CONN_CLASS_NEIGHBOR || !peer.second->isReplica())
+            continue;
+
+        writePatchStatusReplicationPayload(peer.second, obj);
+    }
+    m_peers.shared_unlock();
+}
+
 /* Helper to serialize and queue a patch status transfer payload. */
 
 bool TrafficNetwork::writePatchStatusPayload(FNEPeerConnection* connection, json::object obj)
@@ -2511,6 +2574,47 @@ bool TrafficNetwork::writePatchStatusPayload(FNEPeerConnection* connection, json
 
     return m_frameQueue->write(buffer, len + 11U, createStreamId(), connection->id(), m_peerId,
         { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_PATCH_STATUS }, RTP_END_OF_CALL_SEQ, addr, addrLen);
+}
+
+/* Helper to serialize and queue a patch status replication payload. */
+
+bool TrafficNetwork::writePatchStatusReplicationPayload(FNEPeerConnection* connection, json::object obj)
+{
+    if (connection == nullptr)
+        return false;
+    if (!m_patchStatusEnabled)
+        return false;
+    if (!connection->connected())
+        return false;
+    if (connection->peerClass() != PEER_CONN_CLASS_NEIGHBOR || !connection->isReplica())
+        return false;
+
+    obj["type"].set<std::string>("publish");
+    json::value v = json::value(obj);
+    std::string json = std::string(v.serialize());
+
+    size_t len = json.length() + 9U;
+    DECLARE_CHAR_ARRAY(buffer, len);
+
+    ::memcpy(buffer + 0U, TAG_PEER_REPLICA, 4U);
+    ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
+
+    PacketBuffer pkt(true, "Peer Replication, Patch Status");
+    pkt.encode((uint8_t*)buffer, len);
+
+    uint32_t streamId = createStreamId();
+    LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, Patch Status, blocks %u, streamId = %u", connection->id(),
+        connection->identWithQualifier().c_str(), pkt.fragments.size(), streamId);
+    if (pkt.fragments.size() > 0U) {
+        for (auto frag : pkt.fragments) {
+            writePeer(connection->id(), m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_PATCH_STATUS },
+                frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId);
+            Thread::sleep(60U); // pace block transmission
+        }
+    }
+
+    pkt.clear();
+    return true;
 }
 
 /* Helper to reset a peer connection. */
