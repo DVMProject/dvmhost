@@ -682,6 +682,27 @@ namespace network
         virtual bool announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs);
 
         /**
+         * @brief Writes a complete update of the peer's unit registration list to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is variable bytes in length.
+         * 
+         *  Each unit registration update entry is 3 bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Source ID                                |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
+         * @param regs Complete list of unit registrations.
+         * @returns bool True, if unit registration update announcement was sent, otherwise false. 
+         */
+        virtual bool announceUnitRegUpdate(const std::vector<uint32_t> regs);
+
+        /**
          * @brief Writes a complete update of the peer's voice channel list to the network.
          * \code{.unparsed}
          *  Below is the representation of the data layout for the repeater/end point login message.

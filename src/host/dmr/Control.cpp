@@ -152,6 +152,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot1->setNotifyCC(notifyCC);
     m_slot2->setNotifyCC(notifyCC);
 
+    bool disableGrpAffTimeout = dmrProtocol["disableGrpAffTimeout"].as<bool>(false);
+    m_slot1->s_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
+    m_slot2->s_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
     bool disableUnitRegTimeout = dmrProtocol["disableUnitRegTimeout"].as<bool>(false);
     m_slot1->s_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
     m_slot2->s_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
@@ -229,6 +232,14 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
 
         if (defaultNetIdleTalkgroup != 0U) {
             LogInfo("    Default Network Idle Talkgroup: %u", defaultNetIdleTalkgroup);
+        }
+
+        if (disableGrpAffTimeout) {
+            LogInfo("    Disable Group Affiliation Timeout: yes");
+        }
+
+        if (disableUnitRegTimeout) {
+            LogInfo("    Disable Unit Registration Timeout: yes");
         }
 
         LogInfo("    Ignore Affiliation Check: %s", ignoreAffiliationCheck ? "yes" : "no");

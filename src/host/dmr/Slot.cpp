@@ -813,6 +813,13 @@ void Slot::clockSiteData(uint32_t ms)
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 m_control->writeAdjSSNetwork();
                 if (s_network != nullptr) {
+                    // network announce our unit registration table if we have one
+                    if (s_affiliations->unitRegSize() > 0) {
+                        auto regs = s_affiliations->unitRegTable();
+                        s_network->announceUnitRegUpdate(regs);
+                    }
+
+                    // network announce our affiliation table if we have one
                     if (s_affiliations->grpAffSize() > 0) {
                         auto affs = s_affiliations->grpAffTable();
                         s_network->announceAffiliationUpdate(affs);

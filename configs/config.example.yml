@@ -185,6 +185,8 @@ protocols:
         dumpCsbkData: false
         # Flag indicating unit registration will be verified after some operations.
         verifyReg: false
+        # Flag indicating automated 12-hour idle group affiliation timeout is disabled.
+        disableGrpAffTimeout: false
         # Flag indicating automated 12-hour idle unit registration timeout is disabled.
         disableUnitRegTimeout: false
         # Specifies the random wait delay for a subscriber.
@@ -286,6 +288,8 @@ protocols:
         verifyAff: false
         # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating automated 12-hour idle group affiliation timeout is disabled.
+        disableGrpAffTimeout: false
         # Flag indicating automated 12-hour idle unit registration timeout is disabled.
         disableUnitRegTimeout: false
         # Flag indicating the host requires LLA verification before allowing unit registration.
@@ -361,6 +365,8 @@ protocols:
         verifyAff: false
         # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating automated 12-hour idle group affiliation timeout is disabled.
+        disableGrpAffTimeout: false
         # Flag indicating automated 12-hour idle unit registration timeout is disabled.
         disableUnitRegTimeout: false
         # Flag indicating whether verbose dumping of NXDN RCCH data is enabled.

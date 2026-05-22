@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -274,6 +274,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_controlChData = controlChData;
 
+    bool disableGrpAffTimeout = nxdnProtocol["disableGrpAffTimeout"].as<bool>(false);
+    m_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
     bool disableUnitRegTimeout = nxdnProtocol["disableUnitRegTimeout"].as<bool>(false);
     m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
 
@@ -341,6 +343,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Notify Control: %s", m_notifyCC ? "yes" : "no");
         LogInfo("    Verify Affiliation: %s", m_control->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");
+
+        if (disableGrpAffTimeout) {
+            LogInfo("    Disable Group Affiliation Timeout: yes");
+        }
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
@@ -634,6 +640,13 @@ void Control::clock()
         if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 if (m_network != nullptr) {
+                    // network announce our unit registration table if we have one
+                    if (m_affiliations->unitRegSize() > 0) {
+                        auto regs = m_affiliations->unitRegTable();
+                        m_network->announceUnitRegUpdate(regs);
+                    }
+
+                    // network announce our affiliation table if we have one
                     if (m_affiliations->grpAffSize() > 0) {
                         auto affs = m_affiliations->grpAffTable();
                         m_network->announceAffiliationUpdate(affs);

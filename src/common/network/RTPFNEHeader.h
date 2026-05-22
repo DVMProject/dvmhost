@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -106,6 +106,7 @@ namespace network
             ANNC_SUBFUNC_UNIT_DEREG = 0x02U,        //!< Announce Unit Deregistration
             ANNC_SUBFUNC_GRP_UNAFFIL = 0x03U,       //!< Announce Group Affiliation Removal
             ANNC_SUBFUNC_AFFILS = 0x90U,            //!< Update All Affiliations
+            ANNC_SUBFUNC_UNIT_REGS = 0x91U,         //!< Update All Unit Registrations
             ANNC_SUBFUNC_SITE_VC = 0x9AU,           //!< Announce Site VCs
 
             REPL_TALKGROUP_LIST = 0x00U,            //!< FNE Replication Talkgroup Transfer

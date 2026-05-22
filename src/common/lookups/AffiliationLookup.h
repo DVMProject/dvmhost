@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -265,6 +265,17 @@ namespace lookups
         void setDisableUnitRegTimeout(bool disabled) { m_disableUnitRegTimeout = disabled; }
 
         /**
+         * @brief Helper to determine if the group affiliation timeout is enabled or not.
+         * @returns bool True, if idle group affiliation timeouts are disabled, otherwise false.
+         */
+        virtual bool isDisableGrpAffTimeout() const { return m_disableGrpAffTimeout; }
+        /**
+         * @brief Disables the group affiliation timeout.
+         * @param disable Flag indicating idle group affiliation timeout should be disabled.
+         */
+        void setDisableGrpAffTimeout(bool disabled) { m_disableGrpAffTimeout = disabled; }
+
+        /**
          * @brief Helper to set the release grant callback.
          * @note Do not call AffiliationLookup get functions from within this callback, deadlock protection
          *  is not guaranteed.
@@ -285,6 +296,7 @@ namespace lookups
         concurrent::vector<uint32_t> m_unitRegTable;
         concurrent::unordered_map<uint32_t, Timer> m_unitRegTimers;
         concurrent::unordered_map<uint32_t, uint32_t> m_grpAffTable;
+        concurrent::unordered_map<uint32_t, Timer> m_grpAffTimers;
 
         concurrent::unordered_map<uint32_t, uint32_t> m_grantChTable;
         concurrent::unordered_map<uint32_t, uint32_t> m_grantSrcIdTable;
@@ -301,8 +313,16 @@ namespace lookups
         ChannelLookup* m_chLookup;
 
         bool m_disableUnitRegTimeout;
+        bool m_disableGrpAffTimeout;
 
         bool m_verbose;
+
+        /**
+         * @brief Helper to determine if the source ID has group affiliations.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the source ID has group affiliations, otherwise false.
+         */
+        bool isSrcIdGrpAff(uint32_t srcId) const;
     };
 } // namespace lookups
 
