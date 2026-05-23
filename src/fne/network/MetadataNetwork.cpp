@@ -377,8 +377,11 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                         break;
 
                     default:
-                        network->writePeerNAK(peerId, network->createStreamId(), TAG_TRANSFER, NET_CONN_NAK_ILLEGAL_PACKET);
-                        Utils::dump("Unknown transfer opcode from the peer", req->buffer, req->length);
+                        {
+                            LogWarning(LOG_MASTER, "PEER %u, unknown/unsupported transfer opcode %u", peerId, req->fneHeader.getSubFunction());
+                            if (network->m_debug)
+                                Utils::dump("Unknown/unsupported transfer opcode from the peer", req->buffer, req->length);
+                        }
                         break;
                     }
                 }
@@ -691,8 +694,12 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                         }
                         break;
                     default:
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_ILLEGAL_PACKET);
-                        Utils::dump("Unknown announcement opcode from the peer", req->buffer, req->length);
+                        {
+                            LogWarning(LOG_MASTER, "PEER %u, unknown/unsupported announcement opcode %u", peerId, req->fneHeader.getSubFunction());
+                            if (network->m_debug)
+                                Utils::dump("Unknown/unsupported announcement opcode from the peer", req->buffer, req->length);
+                        }
+                        break;
                     }
                 }
                 break;
