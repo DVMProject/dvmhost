@@ -2336,8 +2336,12 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                     }
                 }
             } else {
-                // send ICC request to any peers connected to us that are neighbor FNEs
+                // collect target neighbors while holding the peers lock, then send after unlock
+                // to avoid lock re-entry via writePeerICC() -> writePeerQueue().
+                std::vector<uint32_t> neighborPeers;
+                bool localRequestPeer = false;
                 m_peers.shared_lock();
+                localRequestPeer = (m_peers.find(peerId) != m_peers.end());
                 for (auto& peer : m_peers) {
                     if (peer.second == nullptr)
                         continue;
@@ -2349,14 +2353,19 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                         }
 
                         if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
-                            LogInfoEx(LOG_MASTER, "PEER %u In-Call Control Request to Neighbors, peerId = %u, dstId = %u, slot = %u, ssrc = %u, streamId = %u", peerId, peer.first, dstId, slotNo, ssrc, streamId);
-
-                            // send ICC request to local peer
-                            writePeerICC(peer.first, streamId, subFunc, command, dstId, slotNo, true, false, ssrc);
+                            neighborPeers.push_back(peer.first);
                         }
                     }
                 }
                 m_peers.shared_unlock();
+
+                // send ICC request to any peers connected to us that are neighbor FNEs
+                for (auto& neighborPeerId : neighborPeers) {
+                    LogInfoEx(LOG_MASTER, "PEER %u In-Call Control Request to Neighbors, peerId = %u, dstId = %u, slot = %u, ssrc = %u, streamId = %u", peerId, neighborPeerId, dstId, slotNo, ssrc, streamId);
+
+                    // send ICC request to local peer
+                    writePeerICC(neighborPeerId, streamId, subFunc, command, dstId, slotNo, true, false, ssrc);
+                }
 
                 if (callTakeover) {
                     // flag the protocol call handler to allow call takeover on the next audio frame
@@ -2383,7 +2392,7 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                 }
 
                 // send further up the network tree (only if ICC request came from a local peer)
-                if (m_host->m_peerNetworks.size() > 0 && m_peers.find(peerId) != m_peers.end()) {
+                if (m_host->m_peerNetworks.size() > 0 && localRequestPeer) {
                     writePeerICC(peerId, streamId, subFunc, command, dstId, slotNo, true, true, ssrc);
                 }
             }
