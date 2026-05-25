@@ -106,11 +106,9 @@ namespace restapi
              */
             void handshake()
             {
-                if (!m_persistent) {
-                    auto self(this->shared_from_this());
-                }
+                auto self = this->shared_from_this();
 
-                m_socket.async_handshake(asio::ssl::stream_base::server, [this](asio::error_code ec) {
+                m_socket.async_handshake(asio::ssl::stream_base::server, [this, self](asio::error_code ec) {
                     if (!ec) {
                         read();
                     }
@@ -122,11 +120,8 @@ namespace restapi
              */
             void read()
             {
-                if (!m_persistent) {
-                    auto self(this->shared_from_this());
-                }
-
-                m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t recvLength) {
+                auto self = this->shared_from_this();
+                m_socket.async_read_some(asio::buffer(m_buffer), [this, self](asio::error_code ec, std::size_t recvLength) {
                     if (!ec) {
                         HTTPLexer::ResultType result = HTTPLexer::GOOD;
                         char* content;
@@ -211,7 +206,7 @@ namespace restapi
                         if (ec) {
                             ::LogError(LOG_REST, "SecureServerConnection::read(), %s, code = %u", ec.message().c_str(), ec.value());
                         }
-                        m_connectionManager.stop(this->shared_from_this());
+                        m_connectionManager.stop(self);
                         m_continue = false;
                     }
                 });
@@ -222,14 +217,14 @@ namespace restapi
              */
             void write()
             {
-                if (!m_persistent) {
-                    auto self(this->shared_from_this());
-                } else {
+                auto self = this->shared_from_this();
+
+                if (m_persistent) {
                     m_reply.headers.add("Connection", "keep-alive");
                 }
 
                 auto buffers = m_reply.toBuffers();
-                asio::async_write(m_socket, buffers, [=](asio::error_code ec, std::size_t) {
+                asio::async_write(m_socket, buffers, [this, self](asio::error_code ec, std::size_t) {
                     if (m_persistent) {
                         m_lexer.reset();
                         m_reply.headers = HTTPHeaders();
@@ -253,7 +248,7 @@ namespace restapi
                             if (ec) {
                                 ::LogError(LOG_REST, "SecureServerConnection::write(), %s, code = %u", ec.message().c_str(), ec.value());
                             }
-                            m_connectionManager.stop(this->shared_from_this());
+                            m_connectionManager.stop(self);
                         }
                     }
                 });
