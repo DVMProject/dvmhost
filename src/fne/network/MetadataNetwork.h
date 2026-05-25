@@ -115,6 +115,7 @@ namespace network
             PacketBuffer* buffer;
 
             bool locked;
+            uint32_t timeout;
         };
         concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerReplicaActPkt;
         concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerTreeListPkt;

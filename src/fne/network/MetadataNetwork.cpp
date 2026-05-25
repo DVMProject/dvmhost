@@ -22,6 +22,12 @@ using namespace compress;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint32_t TIMEOUT_MAX_REPL = 5000U; // 5 seconds
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -744,11 +750,23 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 MetadataNetwork::PacketBufferEntry& pkt = mdNetwork->m_peerReplicaActPkt[peerId];
                                 if (pkt.locked) {
-                                    while (pkt.locked)
+                                    while (pkt.locked && pkt.timeout < TIMEOUT_MAX_REPL) {
+                                        pkt.timeout++;
                                         Thread::sleep(1U);
+                                    }
+
+                                    if (pkt.timeout >= TIMEOUT_MAX_REPL) {
+                                        LogError(LOG_STP, "PEER %u (%s) Peer Replication, Active Peer List, timeout waiting for packet buffer to unlock", peerId,
+                                            connection->identWithQualifier().c_str());
+                                        pkt.buffer->clear();
+                                        pkt.streamId = 0U;
+                                        mdNetwork->m_peerReplicaActPkt.erase(peerId);
+                                        break;
+                                    }
                                 }
 
                                 pkt.locked = true;
+                                pkt.timeout = 0U;
 
                                 uint32_t decompressedLen = 0U;
                                 uint8_t* decompressed = nullptr;
@@ -933,11 +951,23 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 MetadataNetwork::PacketBufferEntry& pkt = mdNetwork->m_peerTreeListPkt[peerId];
                                 if (pkt.locked) {
-                                    while (pkt.locked)
+                                    while (pkt.locked && pkt.timeout < TIMEOUT_MAX_REPL) {
+                                        pkt.timeout++;
                                         Thread::sleep(1U);
+                                    }
+
+                                    if (pkt.timeout >= TIMEOUT_MAX_REPL) {
+                                        LogError(LOG_STP, "PEER %u (%s) Network Tree, Tree List, timeout waiting for packet buffer to unlock", peerId,
+                                            connection->identWithQualifier().c_str());
+                                        pkt.buffer->clear();
+                                        pkt.streamId = 0U;
+                                        mdNetwork->m_peerTreeListPkt.erase(peerId);
+                                        break;
+                                    }
                                 }
 
                                 pkt.locked = true;
+                                pkt.timeout = 0U;
 
                                 uint32_t decompressedLen = 0U;
                                 uint8_t* decompressed = nullptr;
