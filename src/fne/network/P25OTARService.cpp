@@ -78,39 +78,66 @@ P25OTARService::~P25OTARService()
 
 /* Helper used to process KMM frames from PDU data. */
 
-bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId, uint8_t n, bool encrypted)
+bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId, uint8_t n, bool encrypted,
+    uint8_t algoId, uint16_t kid, const uint8_t* mi)
 {
+    uint8_t resolvedAlgoId = algoId;
+    uint16_t resolvedKId = kid;
+    uint8_t resolvedMI[MI_LENGTH_BYTES];
+    ::memset(resolvedMI, 0x00U, MI_LENGTH_BYTES);
+
     m_packetData->write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, n, llId, false);
 
     if (m_debug)
         Utils::dump(1U, "P25OTARService::processDLD(), KMM Network Message", data, len);
 
+    UInt8Array kmmPayload = std::make_unique<uint8_t[]>(len);
+    ::memset(kmmPayload.get(), 0x00U, len);
+    ::memcpy(kmmPayload.get(), data, len);
+
+    if (encrypted) {
+        // prefer metadata provided from decoded Auxiliary ES header
+        if (mi != nullptr) {
+            ::memcpy(resolvedMI, mi, MI_LENGTH_BYTES);
+        }
+        else {
+            // legacy fallback for payload-embedded KMM encryption parameters
+            if (len < 11U) {
+                LogError(LOG_P25, P25_KMM_STR ", encrypted KMM payload too short, len = %u", len);
+                return false;
+            }
+
+            for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
+                resolvedMI[i] = data[i];
+            }
+
+            resolvedAlgoId = data[9U];
+            resolvedKId = GET_UINT16(data, 10U);
+        }
+
+        kmmPayload = cryptKMM(resolvedAlgoId, resolvedKId, resolvedMI, data, len, false);
+        if (kmmPayload == nullptr) {
+            LogError(LOG_P25, P25_KMM_STR ", unable to decrypt KMM, algoId = $%02X, kID = $%04X", resolvedAlgoId, resolvedKId);
+            return false;
+        }
+    }
+
     uint32_t payloadSize = 0U;
-    UInt8Array pduUserData = processKMM(data, len, llId, encrypted, &payloadSize);
+    UInt8Array pduUserData = processKMM(kmmPayload.get(), len, llId, false, &payloadSize);
     if (pduUserData == nullptr)
         return false;
 
     // handle DLD encrypted KMM frame
     if (encrypted) {
-        // read crypto parameters from KMM header
-        uint8_t mi[MI_LENGTH_BYTES];
-        ::memset(mi, 0x00U, MI_LENGTH_BYTES);
-        for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
-            mi[i] = data[i];
-        }
-
-        uint8_t algoId = data[9U];
-        uint16_t kid = GET_UINT16(data, 10U);
-
         // re-encrypt the KMM response
-        pduUserData = cryptKMM(algoId, kid, mi, pduUserData.get(), payloadSize, true);
+        pduUserData = cryptKMM(resolvedAlgoId, resolvedKId, resolvedMI, pduUserData.get(), payloadSize, true);
         if (pduUserData == nullptr) {
-            LogError(LOG_P25, P25_KMM_STR ", unable to encrypt KMM response, algoId = $%02X, kID = $%04X", algoId, kid);
+            LogError(LOG_P25, P25_KMM_STR ", unable to encrypt KMM response, algoId = $%02X, kID = $%04X", resolvedAlgoId, resolvedKId);
             return false;
         }
     }
 
-    m_packetData->write_PDU_KMM(pduUserData.get(), payloadSize, llId, encrypted);
+    m_packetData->write_PDU_KMM(pduUserData.get(), payloadSize, llId, encrypted, resolvedAlgoId, resolvedKId, resolvedMI);
     return true;
 }
 
@@ -234,6 +261,15 @@ void P25OTARService::taskNetworkRx(OTARPacketRequest* req)
 
             uint32_t payloadSize = 0U;
             UInt8Array pduUserData = network->processKMM(buffer.get(), req->length - 13U, 0U, false, &payloadSize);
+            if (pduUserData == nullptr || payloadSize == 0U) {
+                if (network->m_debug)
+                    LogDebug(LOG_P25, P25_KMM_STR ", no KMM response generated for network request");
+
+                if (req->buffer != nullptr)
+                    delete[] req->buffer;
+                delete req;
+                return;
+            }
 
             if (encrypted) {
                 // re-encrypt the KMM response
@@ -312,7 +348,8 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
 
 /* Helper used to process KMM frames. */
 
-UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize)
+UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize,
+    uint8_t algoId, uint16_t kid, const uint8_t* mi)
 {
     if (payloadSize != nullptr)
         *payloadSize = 0U;
@@ -323,20 +360,36 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 
     // handle DLD encrypted KMM frame
     if (encrypted) {
-        // read crypto parameters from KMM header
-        uint8_t mi[MI_LENGTH_BYTES];
-        ::memset(mi, 0x00U, MI_LENGTH_BYTES);
-        for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
-            mi[i] = data[i];
+        uint8_t resolvedAlgoId = algoId;
+        uint16_t resolvedKId = kid;
+
+        uint8_t resolvedMI[MI_LENGTH_BYTES];
+        ::memset(resolvedMI, 0x00U, MI_LENGTH_BYTES);
+
+        // prefer metadata provided from decoded Auxiliary ES header
+        if (mi != nullptr) {
+            ::memcpy(resolvedMI, mi, MI_LENGTH_BYTES);
+            buffer = cryptKMM(algoId, kid, resolvedMI, data, len, false);
+        }
+        else {
+            // legacy fallback for payload-embedded KMM encryption parameters
+            if (len < 11U) {
+                LogError(LOG_P25, P25_KMM_STR ", encrypted KMM payload too short, len = %u", len);
+                return nullptr;
+            }
+
+            for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
+                resolvedMI[i] = data[i];
+            }
+
+            resolvedAlgoId = data[9U];
+            resolvedKId = GET_UINT16(data, 10U);
+
+            buffer = cryptKMM(resolvedAlgoId, resolvedKId, resolvedMI, data + 10U, len - 10U, false);
         }
 
-        uint8_t algoId = data[9U];
-        uint16_t kid = GET_UINT16(data, 10U);
-
-        // decrypt frame before processing
-        buffer = cryptKMM(algoId, kid, mi, data + 10U, len - 10U, false);
         if (buffer == nullptr) {
-            LogError(LOG_P25, P25_KMM_STR ", unable to decrypt KMM, algoId = $%02X, kID = $%04X", algoId, kid);
+            LogError(LOG_P25, P25_KMM_STR ", unable to decrypt KMM, algoId = $%02X, kID = $%04X", resolvedAlgoId, resolvedKId);
             return nullptr;
         }
 
@@ -369,6 +422,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         case KMM_MessageType::HELLO:
         {
             KMMHello* kmm = static_cast<KMMHello*>(frame.get());
+            uint8_t respKind = kmm->getResponseKind();
             if (m_verbose) {
                 LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, flag = $%02X", kmm->toString().c_str(),
                     llId, kmm->getFlag());
@@ -380,6 +434,20 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
                     LogInfoEx(LOG_P25, P25_KMM_STR ", %s, rekey requested with no UKEK, llId = %u", kmm->toString().c_str(), llId);
                     break;
                 }
+            }
+
+            // ignore Response Kind 2 command requests initiated from a SU
+            if (respKind == KMM_ResponseKind::DELAYED) {
+                LogWarning(LOG_P25, P25_KMM_STR ", %s, discarding SU initiated Response Kind 2 command, llId = %u", kmm->toString().c_str(), llId);
+                return nullptr;
+            }
+
+            // response Kind 1 requests no OTAR response message
+            if (respKind == KMM_ResponseKind::NONE) {
+                if (m_verbose) {
+                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, Response Kind 1 request, no OTAR response sent, llId = %u", kmm->toString().c_str(), llId);
+                }
+                return nullptr;
             }
 
             // respond with No-Service if KMF services are disabled
@@ -432,8 +500,23 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         case KMM_MessageType::DEREG_CMD:
         {
             KMMDeregistrationCommand* kmm = static_cast<KMMDeregistrationCommand*>(frame.get());
+            uint8_t respKind = kmm->getResponseKind();
             LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u", kmm->toString().c_str(),
                 llId);
+
+            // ignore Response Kind 2 command requests initiated from a SU
+            if (respKind == KMM_ResponseKind::DELAYED) {
+                LogWarning(LOG_P25, P25_KMM_STR ", %s, discarding SU initiated Response Kind 2 command, llId = %u", kmm->toString().c_str(), llId);
+                return nullptr;
+            }
+
+            // response Kind 1 requests no OTAR response message
+            if (respKind == KMM_ResponseKind::NONE) {
+                if (m_verbose) {
+                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, Response Kind 1 request, no OTAR response sent, llId = %u", kmm->toString().c_str(), llId);
+                }
+                return nullptr;
+            }
 
             // respond with No-Service if KMF services are disabled
             if (!m_network->m_kmfServicesEnabled)

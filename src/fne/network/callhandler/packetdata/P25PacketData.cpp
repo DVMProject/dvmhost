@@ -439,7 +439,7 @@ void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, ui
 
 /* Helper used to return a KMM to the calling SU. */
 
-void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted)
+void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint8_t algId, uint16_t kId, const uint8_t* mi)
 {
     // assemble a P25 PDU frame header for transport...
     data::DataHeader dataHeader = data::DataHeader();
@@ -447,9 +447,23 @@ void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t ll
     dataHeader.setMFId(MFG_STANDARD);
     dataHeader.setAckNeeded(true);
     dataHeader.setOutbound(true);
-    dataHeader.setSAP((encrypted) ? PDUSAP::ENC_KMM : PDUSAP::UNENC_KMM);
+    dataHeader.setSAP((encrypted) ? PDUSAP::ENC_USER_DATA : PDUSAP::UNENC_KMM);
     dataHeader.setLLId(llId);
     dataHeader.setBlocksToFollow(1U);
+
+    bool auxiliaryES = false;
+    if (encrypted) {
+        if (mi == nullptr) {
+            LogError(LOG_P25, P25_PDU_STR ", missing MI for encrypted KMM, llId = %u", llId);
+            return;
+        }
+
+        dataHeader.setEXSAP(PDUSAP::UNENC_KMM);
+        dataHeader.setAlgId(algId);
+        dataHeader.setKId(kId);
+        dataHeader.setMI(mi);
+        auxiliaryES = true;
+    }
 
     dataHeader.calculateLength(len);
     uint32_t pduLength = dataHeader.getPDULength();
@@ -457,7 +471,7 @@ void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t ll
     DECLARE_UINT8_ARRAY(pduUserData, pduLength);
     ::memcpy(pduUserData, data, len);
 
-    dispatchUserFrameToFNE(dataHeader, false, false, pduUserData);
+    dispatchUserFrameToFNE(dataHeader, false, auxiliaryES, pduUserData);
 }
 
 /* Updates the timer by the passed number of milliseconds. */
@@ -882,9 +896,23 @@ void P25PacketData::dispatch(uint32_t peerId)
         LogInfoEx(LOG_P25, P25_PDU_STR ", KMM (Key Management Message), peer = %u, blocksToFollow = %u",
             peerId, status->assembler.dataHeader.getBlocksToFollow());
 
-        bool encrypted = (sap == PDUSAP::ENC_KMM);
+        bool encrypted = (status->assembler.dataHeader.getSAP() == PDUSAP::ENC_KMM ||
+            status->assembler.dataHeader.getSAP() == PDUSAP::ENC_USER_DATA);
+        uint8_t algId = P25DEF::ALGO_UNENCRYPT;
+        uint16_t kId = 0U;
+        uint8_t mi[MI_LENGTH_BYTES];
+        ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+
+        // if this was transported as encrypted user data with auxiliary ES,
+        // the KMM appears as UNENC_KMM via EXSAP but is still encrypted
+        if (status->assembler.getAuxiliaryES() && status->assembler.dataHeader.getSAP() == PDUSAP::ENC_USER_DATA) {
+            algId = status->assembler.dataHeader.getAlgId();
+            kId = status->assembler.dataHeader.getKId();
+            status->assembler.dataHeader.getMI(mi);
+        }
+
         m_network->m_p25OTARService->processDLD(status->pduUserData, status->pduUserDataLength, status->llId, 
-            status->assembler.dataHeader.getNs(), encrypted);
+            status->assembler.dataHeader.getNs(), encrypted, algId, kId, encrypted ? mi : nullptr);
     }
     break;
     default:

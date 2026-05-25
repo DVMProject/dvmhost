@@ -75,7 +75,8 @@ namespace network
          * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
          * @returns bool True, if KMM processed, otherwise false.
          */
-        bool processDLD(const uint8_t* data, uint32_t len, uint32_t llId, uint8_t n, bool encrypted);
+        bool processDLD(const uint8_t* data, uint32_t len, uint32_t llId, uint8_t n, bool encrypted,
+            uint8_t algoId = P25DEF::ALGO_UNENCRYPT, uint16_t kid = 0U, const uint8_t* mi = nullptr);
 
         /**
          * @brief Updates the timer by the passed number of milliseconds.
@@ -139,7 +140,8 @@ namespace network
          * @param[out] payloadSize Size of the returned KMM payload.
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
-        UInt8Array processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize);
+        UInt8Array processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize,
+            uint8_t algoId = P25DEF::ALGO_UNENCRYPT, uint16_t kid = 0U, const uint8_t* mi = nullptr);
 
         /**
          * @brief Helper used to return a Rekey-Command KMM to the calling SU.

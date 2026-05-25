@@ -96,8 +96,12 @@ namespace network
                  * @param len Length of data.
                  * @param llId Logical Link ID.
                  * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
+                 * @param algId Encryption Algorithm ID.
+                 * @param kId Encryption Key ID.
+                 * @param mi 9-byte Encryption Message Indicator.
                  */
-                void write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted);
+                void write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted,
+                    uint8_t algId = P25DEF::ALGO_UNENCRYPT, uint16_t kId = 0U, const uint8_t* mi = nullptr);
 
                 /**
                  * @brief Updates the timer by the passed number of milliseconds.
