@@ -1194,7 +1194,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                 if (connection->connectionState() == NET_STAT_RUNNING) {
                                     LogInfoEx(LOG_MASTER, "PEER %u (%s) resetting peer connection, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                         connection->connectionState());
-                                    delete connection;
+                                    network->disconnectPeer(peerId, connection);
 
                                     connection = new FNEPeerConnection(peerId, req->address, req->addrLen);
                                     connection->lastPing(now);
