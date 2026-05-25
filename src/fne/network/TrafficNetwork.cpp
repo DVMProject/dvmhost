@@ -957,8 +957,6 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                             streamId, pktSeq, lastRxSeq);
                     }
                 }
-
-                network->m_peers[peerId] = connection;
             }
 
             // if we don't have a stream ID and are receiving call data -- throw an error and discard
@@ -1644,7 +1642,6 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                                 payload[6U] = (uint8_t)((now >> 8) & 0xFFU);
                                 payload[7U] = (uint8_t)((now >> 0) & 0xFFU);
 
-                                network->m_peers[peerId] = connection;
                                 network->writePeerCommand(peerId, { NET_FUNC::PONG, NET_SUBFUNC::NOP }, payload, 8U, streamId, false);
 
                                 if (network->m_reportPeerPing) {
