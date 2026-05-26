@@ -212,8 +212,9 @@ namespace lookups
          * @param filename Full-path to the list file.
          * @param reloadTime Interval of time to reload the lookup table.
          * @param peerAcl Flag indicating these rules are enabled for enforcing access control.
+         * @param verbose Flag indicating if logging should be enabled for this lookup table.
          */
-        PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl);
+        PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl, bool verbose = true);
 
         /**
          * @brief Clears all entries from the list.
@@ -282,6 +283,8 @@ namespace lookups
 
     protected:
         bool m_acl;
+
+        bool m_verbose;
 
         /**
          * @brief Loads the table from the passed lookup table file.

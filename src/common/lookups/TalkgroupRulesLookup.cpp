@@ -50,12 +50,13 @@ bool TalkgroupRulesLookup::s_locked = false;
 
 /* Initializes a new instance of the TalkgroupRulesLookup class. */
 
-TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl) : Thread(),
+TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl, bool verbose) : Thread(),
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
     m_rules(),
     m_lastLoadTime(0U),
     m_acl(acl),
+    m_verbose(verbose),
     m_stop(false),
     m_groupHangTime(5U),
     m_sendTalkgroups(false),
@@ -345,29 +346,31 @@ bool TalkgroupRulesLookup::load()
         TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice(groupVoiceList[i]);
         m_groupVoice.push_back(groupVoice);
 
-        std::string groupName = groupVoice.name();
-        uint32_t tgId = groupVoice.source().tgId();
-        uint8_t tgSlot = groupVoice.source().tgSlot();
-        bool active = groupVoice.config().active();
-        bool parrot = groupVoice.config().parrot();
-        bool affil = groupVoice.config().affiliated();
+        if (m_verbose) {
+            std::string groupName = groupVoice.name();
+            uint32_t tgId = groupVoice.source().tgId();
+            uint8_t tgSlot = groupVoice.source().tgSlot();
+            bool active = groupVoice.config().active();
+            bool parrot = groupVoice.config().parrot();
+            bool affil = groupVoice.config().affiliated();
 
-        uint32_t incCount = groupVoice.config().inclusion().size();
-        uint32_t excCount = groupVoice.config().exclusion().size();
-        uint32_t rewrCount = groupVoice.config().rewrite().size();
-        uint32_t alwyCount = groupVoice.config().alwaysSend().size();
-        uint32_t prefCount = groupVoice.config().preferred().size();
-        uint32_t permRIDCount = groupVoice.config().permittedRIDs().size();
+            uint32_t incCount = groupVoice.config().inclusion().size();
+            uint32_t excCount = groupVoice.config().exclusion().size();
+            uint32_t rewrCount = groupVoice.config().rewrite().size();
+            uint32_t alwyCount = groupVoice.config().alwaysSend().size();
+            uint32_t prefCount = groupVoice.config().preferred().size();
+            uint32_t permRIDCount = groupVoice.config().permittedRIDs().size();
 
-        if (incCount > 0 && excCount > 0) {
-            ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusion rules take precedence and exclusion rules will be ignored.", groupName.c_str());
+            if (incCount > 0 && excCount > 0) {
+                ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusion rules take precedence and exclusion rules will be ignored.", groupName.c_str());
+            }
+
+            if (alwyCount > 0 && affil) {
+                ::LogWarning(LOG_HOST, "Talkgroup (%s) is marked as affiliation required and has a defined always send list! Always send peers take rule precedence and defined peers will always receive traffic.", groupName.c_str());
+            }
+
+            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u AFFILIATED: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u ALWAYS: %u PREFERRED: %u PERMITTED RIDS: %u", groupName.c_str(), tgId, tgSlot, active, parrot, affil, incCount, excCount, rewrCount, alwyCount, prefCount, permRIDCount);
         }
-
-        if (alwyCount > 0 && affil) {
-            ::LogWarning(LOG_HOST, "Talkgroup (%s) is marked as affiliation required and has a defined always send list! Always send peers take rule precedence and defined peers will always receive traffic.", groupName.c_str());
-        }
-
-        ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u AFFILIATED: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u ALWAYS: %u PREFERRED: %u PERMITTED RIDS: %u", groupName.c_str(), tgId, tgSlot, active, parrot, affil, incCount, excCount, rewrCount, alwyCount, prefCount, permRIDCount);
     }
 
     __UNLOCK_TABLE();

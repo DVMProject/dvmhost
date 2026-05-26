@@ -240,6 +240,8 @@ master:
         file: talkgroup_rules.yml
         # Amount of time between updates of talkgroup rules file. (minutes)
         time: 30
+        # Flag indicating whether or not the talkgroup rules updates are logged.
+        verbose: true
 
     #
     # Adj. Site Map Configuration
@@ -345,6 +347,8 @@ system:
         file: rid_acl.dat
         # Amount of time between updates of Radio ID ACL file. (minutes)
         time: 2
+        # Flag indicating whether or not the Radio ID ACL updates are logged.
+        verbose: false
 
     #
     # Peer ACL configuration
@@ -356,6 +360,8 @@ system:
         file: peer_list.dat
         # Amount of time between updates of peer ACL file. (minutes)
         time: 2
+        # Flag indicating whether or not the peer ACL updates are logged.
+        verbose: true
 
 #
 # Packet Data Virtual Network Tunnel Configuration

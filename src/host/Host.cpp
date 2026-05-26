@@ -326,28 +326,32 @@ int Host::run()
     std::string ridLookupFile = systemConf["radio_id"]["file"].as<std::string>();
     uint32_t ridReloadTime = systemConf["radio_id"]["time"].as<uint32_t>(0U);
     bool ridAcl = systemConf["radio_id"]["acl"].as<bool>(false);
+    bool verboseRIDRules = systemConf["radio_id"]["verbose"].as<bool>(false);
 
     LogInfo("Radio Id Lookups");
     LogInfo("    File: %s", ridLookupFile.length() > 0U ? ridLookupFile.c_str() : "None");
     if (ridReloadTime > 0U)
         LogInfo("    Reload: %u mins", ridReloadTime);
     LogInfo("    ACL: %s", ridAcl ? "yes" : "no");
+    LogInfo("    Verbose: %s", verboseRIDRules ? "true" : "false");
 
-    m_ridLookup = new RadioIdLookup(ridLookupFile, ridReloadTime, ridAcl);
+    m_ridLookup = new RadioIdLookup(ridLookupFile, ridReloadTime, ridAcl, verboseRIDRules);
     m_ridLookup->read();
 
     // try to load talkgroup IDs table
     std::string tidLookupFile = systemConf["talkgroup_id"]["file"].as<std::string>();
     uint32_t tidReloadTime = systemConf["talkgroup_id"]["time"].as<uint32_t>(0U);
     bool tidAcl = systemConf["talkgroup_id"]["acl"].as<bool>(false);
+    bool verboseTalkgroupRules = systemConf["talkgroup_id"]["verbose"].as<bool>(true);
 
     LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", tidLookupFile.length() > 0U ? tidLookupFile.c_str() : "None");
     if (tidReloadTime > 0U)
         LogInfo("    Reload: %u mins", tidReloadTime);
     LogInfo("    ACL: %s", tidAcl ? "yes" : "no");
+    LogInfo("    Verbose: %s", verboseTalkgroupRules ? "true" : "false");
 
-    m_tidLookup = new TalkgroupRulesLookup(tidLookupFile, tidReloadTime, tidAcl);
+    m_tidLookup = new TalkgroupRulesLookup(tidLookupFile, tidReloadTime, tidAcl, verboseTalkgroupRules);
     m_tidLookup->read();
 
     // initialize networking

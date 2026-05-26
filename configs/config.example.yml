@@ -762,6 +762,8 @@ system:
         time: 2
         # Flag indicating whether or not RID ACLs are enforced.
         acl: false
+        # Flag indicating whether or not the RID ACL updates are logged.
+        verbose: false
 
     #
     # Talkgroupd ID ACL Configuration
@@ -775,3 +777,5 @@ system:
         time: 2
         # Flag indicating whether or not TGID ACLs are enforced.
         acl: false
+        # Flag indicating whether or not the talkgroup rules updates are logged.
+        verbose: true

@@ -50,8 +50,9 @@ bool PeerListLookup::s_locked = false;
 
 /* Initializes a new instance of the PeerListLookup class. */
 
-PeerListLookup::PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl) : LookupTable(filename, reloadTime),
-    m_acl(peerAcl)
+PeerListLookup::PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl, bool verbose) : LookupTable(filename, reloadTime),
+    m_acl(peerAcl),
+    m_verbose(verbose)
 {
     /* stub */
 }
@@ -275,14 +276,16 @@ bool PeerListLookup::load()
             m_table[id] = entry;
 
             // log depending on what was loaded
-            LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s", id,
-                (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
-                (!password.empty() ? "using unique peer password" : "using master password"),
-                (peerReplica) ? ", Replication Enabled" : "",
-                (canRequestKeys) ? ", Can Request Keys" : "",
-                (canIssueInhibit) ? ", Can Issue Inhibit" : "",
-                (hasCallPriority) ? ", Has Call Priority" : "",
-                (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "");
+            if (m_verbose) {
+                LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s", id,
+                    (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
+                    (!password.empty() ? "using unique peer password" : "using master password"),
+                    (peerReplica) ? ", Replication Enabled" : "",
+                    (canRequestKeys) ? ", Can Request Keys" : "",
+                    (canIssueInhibit) ? ", Can Issue Inhibit" : "",
+                    (hasCallPriority) ? ", Has Call Priority" : "",
+                    (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "");
+            }
         }
     }
 

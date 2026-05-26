@@ -52,8 +52,9 @@ bool RadioIdLookup::s_locked = false;
 
 /* Initializes a new instance of the RadioIdLookup class. */
 
-RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl) : LookupTable(filename, reloadTime),
-    m_acl(ridAcl)
+RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl, bool verbose) : LookupTable(filename, reloadTime),
+    m_acl(ridAcl),
+    m_verbose(verbose)
 {
     /* stub */
 }
@@ -223,7 +224,10 @@ bool RadioIdLookup::load()
             }
 
             m_table[id] = RadioId(radioEnabled, false, alias, ipAddress);
-            //::LogInfoEx(LOG_HOST, "Radio NAME: %s RID: %u ENABLED: %u IPADDR: %s", alias.c_str(), id, radioEnabled, ipAddress.c_str());
+
+            if (m_verbose) {
+                LogInfoEx(LOG_HOST, "Radio NAME: %s RID: %u ENABLED: %u IPADDR: %s", alias.c_str(), id, radioEnabled, ipAddress.c_str());
+            }
         }
     }
 

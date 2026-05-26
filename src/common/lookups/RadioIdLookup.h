@@ -147,8 +147,9 @@ namespace lookups
          * @param filename Full-path to the radio ID table file.
          * @param reloadTime Interval of time to reload the radio ID table.
          * @param ridAcl Flag indicating whether radio ID access control is enabled.
+         * @param verbose Flag indicating if logging should be enabled for this lookup table.
          */
-        RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl);
+        RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl, bool verbose = false);
 
         /**
          * @brief Clears all entries from the lookup table.
@@ -206,6 +207,8 @@ namespace lookups
 
     protected:
         bool m_acl;
+
+        bool m_verbose;
 
         /**
          * @brief Loads the table from the passed lookup table file.

@@ -537,8 +537,9 @@ namespace lookups
          * @param filename Full-path to the routing rules file.
          * @param reloadTime Interval of time to reload the routing rules.
          * @param acl Flag indicating these rules are enabled for enforcing access control.
+         * @param verbose Flag indicating if logging should be enabled for this lookup table.
          */
-        TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl);
+        TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl, bool verbose = true);
         /**
          * @brief Finalizes a instance of the TalkgroupRulesLookup class.
          */
@@ -651,6 +652,8 @@ namespace lookups
 
         bool m_acl;
         bool m_stop;
+
+        bool m_verbose;
 
         static std::mutex s_mutex;  //!< Mutex used for change locking.
         static bool s_locked;       //!< Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
