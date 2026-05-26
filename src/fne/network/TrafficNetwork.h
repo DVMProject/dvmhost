@@ -404,6 +404,24 @@ namespace network
         uint32_t m_jitterMaxWait;
 
         ThreadPool m_threadPool;
+        ThreadPool m_metadataUpdateThreadPool;
+
+        /**
+         * @brief Represents the state of a metadata update for a given peer ID.
+         * @ingroup fne_network
+         */
+        struct MetadataUpdateState {
+            /**
+             * @brief Flag indicating whether a metadata update is currently in flight for this peer ID.
+             */
+            bool inFlight = false;
+            /**
+             * @brief Flag indicating whether a metadata update is pending for this peer ID.
+             */
+            bool pending = false;
+        };
+        std::mutex m_metadataUpdateMutex;
+        std::unordered_map<uint32_t, MetadataUpdateState> m_metadataUpdateState;
 
         bool m_disablePacketData;
         bool m_dumpPacketData;

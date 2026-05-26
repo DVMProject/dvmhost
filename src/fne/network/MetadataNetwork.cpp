@@ -42,7 +42,7 @@ MetadataNetwork::MetadataNetwork(HostFNE* host, TrafficNetwork* trafficNetwork, 
     m_status(NET_STAT_INVALID),
     m_peerReplicaActPkt(),
     m_peerTreeListPkt(),
-    m_threadPool(workerCnt, "diag")
+    m_threadPool(workerCnt, "meta")
 {
     assert(trafficNetwork != nullptr);
     assert(host != nullptr);
