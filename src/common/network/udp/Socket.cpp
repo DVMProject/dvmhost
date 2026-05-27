@@ -548,9 +548,9 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
     }
 
     int sent = 0, msgs = 0;
-    struct sockaddr_storage* addresses[MAX_BUFFER_COUNT];
-    struct mmsghdr headers[MAX_BUFFER_COUNT];
-    struct iovec chunks[MAX_BUFFER_COUNT];
+    struct sockaddr_storage* addresses[MAX_BUFFER_COUNT] = { nullptr };
+    struct mmsghdr headers[MAX_BUFFER_COUNT] = { 0 };
+    struct iovec chunks[MAX_BUFFER_COUNT] = { 0 };
 
     // create mmsghdrs from input buffers and send them at once
     for (size_t i = 0U; i < currentQueueSize; ++i) {
@@ -644,21 +644,30 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
             continue;
         }
 
-        addresses[i] = new sockaddr_storage;
-        ::memcpy(addresses[i], &address, sizeof(sockaddr_storage));
+        int msgIdx = msgs;
 
-        chunks[i].iov_len = iov_length;
-        chunks[i].iov_base = iov_buffer;
+        addresses[msgIdx] = new sockaddr_storage;
+        ::memcpy(addresses[msgIdx], &address, sizeof(sockaddr_storage));
+
+        chunks[msgIdx].iov_len = iov_length;
+        chunks[msgIdx].iov_base = iov_buffer;
         sent += iov_length;
 
-        headers[i].msg_hdr.msg_name = (void*)addresses[i];
-        headers[i].msg_hdr.msg_namelen = addrLen;
-        headers[i].msg_hdr.msg_iov = &chunks[i];
-        headers[i].msg_hdr.msg_iovlen = 1;
-        headers[i].msg_hdr.msg_control = 0;
-        headers[i].msg_hdr.msg_controllen = 0;
+        headers[msgIdx].msg_hdr.msg_name = (void*)addresses[msgIdx];
+        headers[msgIdx].msg_hdr.msg_namelen = addrLen;
+        headers[msgIdx].msg_hdr.msg_iov = &chunks[msgIdx];
+        headers[msgIdx].msg_hdr.msg_iovlen = 1;
+        headers[msgIdx].msg_hdr.msg_control = 0;
+        headers[msgIdx].msg_hdr.msg_controllen = 0;
 
         ++msgs;
+    }
+
+    if (msgs == 0) {
+        if (lenWritten != nullptr) {
+            *lenWritten = -1;
+        }
+        return false;
     }
 
     if (sendmmsg(m_fd, headers, msgs, 0) < 0) {
@@ -690,7 +699,7 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
     }
 
     // cleanup buffers
-    for (size_t i = 0U; i < currentQueueSize; i++) {
+    for (int i = 0; i < msgs; i++) {
         if (addresses[i] != nullptr) {
             delete addresses[i];
             addresses[i] = nullptr;
