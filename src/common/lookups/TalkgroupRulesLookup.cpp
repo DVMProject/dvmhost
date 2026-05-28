@@ -56,8 +56,8 @@ TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t
     m_rules(),
     m_lastLoadTime(0U),
     m_acl(acl),
-    m_verbose(verbose),
     m_stop(false),
+    m_verbose(verbose),
     m_groupHangTime(5U),
     m_sendTalkgroups(false),
     m_groupVoice()
