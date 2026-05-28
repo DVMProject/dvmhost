@@ -594,8 +594,9 @@ uint32_t AffiliationLookup::getGrantedCh(uint32_t dstId)
         m_grantChTable.lock(false);
         auto it = m_grantChTable.find(dstId);
         if (it != m_grantChTable.end()) {
+            uint32_t chNo = it->second;
             m_grantChTable.unlock();
-            return m_grantChTable[dstId];
+            return chNo;
         }
         m_grantChTable.unlock();
     }
@@ -660,8 +661,9 @@ uint32_t AffiliationLookup::getGrantedSrcId(uint32_t dstId)
         m_grantSrcIdTable.lock(false);
         auto it = m_grantSrcIdTable.find(dstId);
         if (it != m_grantSrcIdTable.end()) {
+            uint32_t srcId = it->second;
             m_grantSrcIdTable.unlock();
-            return m_grantSrcIdTable[dstId];
+            return srcId;
         }
         m_grantSrcIdTable.unlock();
     }
