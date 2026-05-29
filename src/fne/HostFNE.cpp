@@ -416,6 +416,7 @@ bool HostFNE::readParams()
     std::string cryptoContainerEKC = cryptoContainer["file"].as<std::string>();
     std::string cryptoContainerPassword = cryptoContainer["password"].as<std::string>();
     std::string cryptoContainerRemotePassword = cryptoContainer["remoteAccessPassword"].as<std::string>();
+    bool cryptoContainerRemoteAccess = cryptoContainer["remoteAccess"].as<bool>(false);
     uint32_t cryptoContainerReload = cryptoContainer["time"].as<uint32_t>(30U);
 
     std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
@@ -458,8 +459,10 @@ bool HostFNE::readParams()
     LogInfo("    File: %s", cryptoContainerEKC.length() > 0U ? cryptoContainerEKC.c_str() : "None");
     if (cryptoContainerReload > 0U)
         LogInfo("    Reload: %u mins", cryptoContainerReload);
+    LogInfo("    Remote Access Enabled: %s", cryptoContainerRemoteAccess ? "yes" : "no");
 
-    m_cryptoLookup = new CryptoContainer(cryptoContainerEKC, cryptoContainerPassword, cryptoContainerRemotePassword, cryptoContainerReload, cryptoContainerEnabled);
+    m_cryptoLookup = new CryptoContainer(cryptoContainerEKC, cryptoContainerPassword, 
+        cryptoContainerRemotePassword, cryptoContainerRemoteAccess, cryptoContainerReload, cryptoContainerEnabled);
     m_cryptoLookup->read();
 
     return true;

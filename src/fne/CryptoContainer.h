@@ -168,10 +168,12 @@ public:
      * @param filename Full-path to the crypto container file.
      * @param password Crypto container file access password.
      * @param remotePassword Remote access password for the crypto container.
+     * @param remoteAccessEnabled Flag indicating if remote access is enabled.
      * @param reloadTime Interval of time to reload the crypto container.
      * @param enabled Flag indicating if crypto container is enabled.
      */
-    CryptoContainer(const std::string& filename, const std::string& password, const std::string& remotePassword, uint32_t reloadTime, bool enabled);
+    CryptoContainer(const std::string& filename, const std::string& password, 
+        const std::string& remotePassword, bool remoteAccessEnabled, uint32_t reloadTime, bool enabled);
     /**
      * @brief Finalizes a instance of the CryptoContainer class.
      */
@@ -257,16 +259,23 @@ public:
      * @return const std::string& Filename of this lookup table.
      */
     const std::string& filename() const { return m_file; }
+    
     /**
      * @brief Returns the remote access password for the crypto container.
      * @return const std::string& Remote access password.
      */
     const std::string& getRemotePassword() const { return m_remotePassword; }
+    /**
+     * @brief Returns the flag indicating whether or not the crypto container remote access is enabled.
+     * @return const bool True, if remote access is enabled, otherwise false.
+     */
+    const bool isRemoteAccessEnabled() const { return m_remoteAccessEnabled; }
 
 private:
     std::string m_file;
     std::string m_password;
     std::string m_remotePassword;
+    bool m_remoteAccessEnabled;
     uint32_t m_reloadTime;
 
     uint64_t m_lastLoadTime;

@@ -229,6 +229,8 @@ master:
         file: key_container.ekc
         # Container password.
         password: "PASSWORD"
+        # Flag indicating whether or not the crypto container remove access is enabled.
+        remoteAccess: false
         # Remote access password for the crypto container.
         remoteAccessPassword: "PASSWORD"
         # Amount of time between updates of crypto container file. (minutes)

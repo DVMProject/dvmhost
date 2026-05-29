@@ -474,6 +474,9 @@ system:
 
         #
         # Voice Channels
+        # Note: This is a list, these parameters are used by a control channel to communicate back to a voice channel
+        # for authoritative voice channel control. (Additionally this list is used to define the voice channels that are 
+        # available for use by the host.)
         #
         voiceChNo:
               # Channel Identity (corresponds to the appropriate entry in the iden_table file).

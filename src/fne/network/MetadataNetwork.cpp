@@ -713,6 +713,11 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
             case NET_FUNC::KEYS_INVENTORY:                              // Encryption Key Container Inventory
                 {
+                    if (!network->m_host->m_cryptoLookup->isRemoteAccessEnabled()) {
+                        LogError(LOG_MASTER, "PEER %u requested enc. key inventory, but remote access is disabled, no response", peerId);
+                        break;
+                    }
+
                     lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
                     if (peerEntry.peerDefault()) {
                         LogError(LOG_MASTER, "PEER %u requested enc. key inventory but is not allowed, no response", peerId);
@@ -895,6 +900,11 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
             case NET_FUNC::KEYS_UPDATE:                                 // Encryption Key Container Update
                 {
+                    if (!network->m_host->m_cryptoLookup->isRemoteAccessEnabled()) {
+                        LogError(LOG_MASTER, "PEER %u requested enc. key update, but remote access is disabled, no response", peerId);
+                        break;
+                    }
+
                     lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
                     if (peerEntry.peerDefault()) {
                         LogError(LOG_MASTER, "PEER %u requested enc. key update but is not allowed, no response", peerId);
