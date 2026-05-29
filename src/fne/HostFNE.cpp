@@ -415,6 +415,7 @@ bool HostFNE::readParams()
 #endif // ENABLE_SSL
     std::string cryptoContainerEKC = cryptoContainer["file"].as<std::string>();
     std::string cryptoContainerPassword = cryptoContainer["password"].as<std::string>();
+    std::string cryptoContainerRemotePassword = cryptoContainer["remoteAccessPassword"].as<std::string>();
     uint32_t cryptoContainerReload = cryptoContainer["time"].as<uint32_t>(30U);
 
     std::string peerListLookupFile = systemConf["peer_acl"]["file"].as<std::string>();
@@ -458,7 +459,7 @@ bool HostFNE::readParams()
     if (cryptoContainerReload > 0U)
         LogInfo("    Reload: %u mins", cryptoContainerReload);
 
-    m_cryptoLookup = new CryptoContainer(cryptoContainerEKC, cryptoContainerPassword, cryptoContainerReload, cryptoContainerEnabled);
+    m_cryptoLookup = new CryptoContainer(cryptoContainerEKC, cryptoContainerPassword, cryptoContainerRemotePassword, cryptoContainerReload, cryptoContainerEnabled);
     m_cryptoLookup->read();
 
     return true;

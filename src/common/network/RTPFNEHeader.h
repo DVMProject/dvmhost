@@ -68,6 +68,9 @@ namespace network
             ACK = 0x7EU,                            //!< Packet Acknowledge
             NAK = 0x7FU,                            //!< Packet Negative Acknowledge
 
+            KEYS_INVENTORY = 0x8EU,                 //!< Encryption Key Container Inventory
+            KEYS_UPDATE = 0x8FU,                    //!< Encryption Key Container Update
+
             TRANSFER = 0x90U,                       //!< Network Transfer Function
 
             ANNOUNCE = 0x91U,                       //!< Network Announce Function

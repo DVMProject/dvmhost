@@ -141,9 +141,11 @@ std::mutex CryptoContainer::s_mutex;
 
 /* Initializes a new instance of the CryptoContainer class. */
 
-CryptoContainer::CryptoContainer(const std::string& filename, const std::string& password, uint32_t reloadTime, bool enabled) : Thread(),
+CryptoContainer::CryptoContainer(const std::string& filename, const std::string& password, const std::string& remotePassword, 
+    uint32_t reloadTime, bool enabled) : Thread(),
     m_file(filename),
     m_password(password),
+    m_remotePassword(remotePassword),
     m_reloadTime(reloadTime),
     m_lastLoadTime(0U),
 #if !defined(ENABLE_SSL)
