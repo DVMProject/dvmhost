@@ -904,51 +904,104 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                         }
                     }
 
-                    // keys inventory operates differently from the rest of the network opcodes...and does not require
-                    // an established connection to the master, so we will not validate the peer connection state here
+                    // keys update operates differently from the rest of the network opcodes...and does not require
+                    // an established connection to the master, so we will not validate the peer connection state here.
+                    // update is a two-phase flow: (1) auth request frame (80 bytes), then (2) chunked PacketBuffer frames.
                     if (peerId > 0 && !peerEntry.peerDefault()) {
-                        // scope intentional
-                        {
-                            // get the peer password hash from the frame message
-                            DECLARE_UINT8_ARRAY(peerHash, 32U);
-                            ::memcpy(peerHash, req->buffer + 8U, 32U);
+                        if (mdNetwork->m_peerKeyUpdatePkt.find(peerId) == mdNetwork->m_peerKeyUpdatePkt.end()) {
+                            if (req->length < 80) {
+                                LogError(LOG_MASTER, "PEER %u requested enc. key update, but payload length was invalid (%u bytes), no response", peerId, req->length);
+                                break;
+                            }
 
-                            uint8_t peerSalt[4U];
-                            ::memset(peerSalt, 0x00U, 4U);
-                            ::memcpy(peerSalt, req->buffer + 40U, 4U);
+                            // scope intentional
+                            {
+                                // get the peer password hash from the frame message
+                                DECLARE_UINT8_ARRAY(peerHash, 32U);
+                                ::memcpy(peerHash, req->buffer + 8U, 32U);
 
-                            std::string passwordForPeer = network->m_password;
+                                uint8_t peerSalt[4U];
+                                ::memset(peerSalt, 0x00U, 4U);
+                                ::memcpy(peerSalt, req->buffer + 40U, 4U);
 
-                            // check if the peer is in the peer ACL list
-                            bool validAcl = true;
-                            if (network->m_peerListLookup->getACL()) {
-                                if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
-                                    LogWarning(LOG_MASTER, "PEER %u RPTK, failed peer ACL check", peerId);
-                                    validAcl = false;
-                                } else {
-                                    lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
-                                    if (peerEntry.peerDefault()) {
-                                        validAcl = false; // default peer IDs are a no-no as they have no data thus fail ACL check
+                                std::string passwordForPeer = network->m_password;
+
+                                // check if the peer is in the peer ACL list
+                                bool validAcl = true;
+                                if (network->m_peerListLookup->getACL()) {
+                                    if (!network->m_peerListLookup->isPeerAllowed(peerId) && !network->m_peerListLookup->isPeerListEmpty()) {
+                                        LogWarning(LOG_MASTER, "PEER %u RPTK, failed peer ACL check", peerId);
+                                        validAcl = false;
                                     } else {
-                                        passwordForPeer = peerEntry.peerPassword();
-                                        if (passwordForPeer.length() == 0) {
-                                            passwordForPeer = network->m_password;
+                                        lookups::PeerId peerEntry = network->m_peerListLookup->find(peerId);
+                                        if (peerEntry.peerDefault()) {
+                                            validAcl = false; // default peer IDs are a no-no as they have no data thus fail ACL check
+                                        } else {
+                                            passwordForPeer = peerEntry.peerPassword();
+                                            if (passwordForPeer.length() == 0) {
+                                                passwordForPeer = network->m_password;
+                                            }
                                         }
+                                    }
+
+                                    if (network->m_peerListLookup->isPeerListEmpty()) {
+                                        LogWarning(LOG_MASTER, "Peer List ACL enabled, but we have an empty peer list? Passing all peers.");
+                                        validAcl = true;
                                     }
                                 }
 
-                                if (network->m_peerListLookup->isPeerListEmpty()) {
-                                    LogWarning(LOG_MASTER, "Peer List ACL enabled, but we have an empty peer list? Passing all peers.");
-                                    validAcl = true;
+                                if (validAcl) {
+                                    size_t size = passwordForPeer.size();
+                                    uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
+                                    ::memcpy(in, peerSalt, sizeof(uint32_t));
+                                    for (size_t i = 0U; i < size; i++)
+                                        in[i + sizeof(uint32_t)] = passwordForPeer.at(i);
+
+                                    uint8_t out[32U];
+                                    edac::SHA256 sha256;
+                                    sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out);
+
+                                    delete[] in;
+
+                                    // validate hash
+                                    bool validHash = false;
+                                    if (req->length >= 80) {
+                                        validHash = true;
+                                        for (uint8_t i = 0; i < 32U; i++) {
+                                            if (peerHash[i] != out[i]) {
+                                                validHash = false;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if (!validHash) {
+                                        LogError(LOG_MASTER, "PEER %u requested enc. key update, but had invalid authentication, no response", peerId);
+                                        break;
+                                    }
+                                } else {
+                                    LogError(LOG_MASTER, "PEER %u requested enc. key update, but had invalid ACL, no response", peerId);
+                                    break;
                                 }
                             }
 
-                            if (validAcl) {
-                                size_t size = passwordForPeer.size();
+                            // scope intentional
+                            {
+                                // get remote access password hash from the frame message
+                                DECLARE_UINT8_ARRAY(remoteAccessHash, 32U);
+                                ::memcpy(remoteAccessHash, req->buffer + 44U, 32U);
+
+                                uint8_t remoteSalt[4U];
+                                ::memset(remoteSalt, 0x00U, 4U);
+                                ::memcpy(remoteSalt, req->buffer + 76U, 4U);
+
+                                std::string remoteAccessPassword = network->m_host->m_cryptoLookup->getRemotePassword();
+
+                                size_t size = remoteAccessPassword.size();
                                 uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
-                                ::memcpy(in, peerSalt, sizeof(uint32_t));
+                                ::memcpy(in, remoteSalt, sizeof(uint32_t));
                                 for (size_t i = 0U; i < size; i++)
-                                    in[i + sizeof(uint32_t)] = passwordForPeer.at(i);
+                                    in[i + sizeof(uint32_t)] = remoteAccessPassword.at(i);
 
                                 uint8_t out[32U];
                                 edac::SHA256 sha256;
@@ -958,10 +1011,10 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
                                 // validate hash
                                 bool validHash = false;
-                                if (req->length - 8U == 32U) {
+                                if (req->length >= 80) {
                                     validHash = true;
                                     for (uint8_t i = 0; i < 32U; i++) {
-                                        if (peerHash[i] != out[i]) {
+                                        if (remoteAccessHash[i] != out[i]) {
                                             validHash = false;
                                             break;
                                         }
@@ -969,55 +1022,20 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                                 }
 
                                 if (!validHash) {
-                                    LogError(LOG_MASTER, "PEER %u requested enc. key update, but had invalid authentication, no response", peerId);
+                                    LogError(LOG_MASTER, "PEER %u requested enc. key update, but had invalid access authentication, no response", peerId);
                                     break;
                                 }
-                            } else {
-                                LogError(LOG_MASTER, "PEER %u requested enc. key update, but had invalid ACL, no response", peerId);
-                                break;
-                            }
-                        }
-
-                        // scope intentional
-                        {
-                            // get remote access password hash from the frame message
-                            DECLARE_UINT8_ARRAY(remoteAccessHash, 32U);
-                            ::memcpy(remoteAccessHash, req->buffer + 44U, 32U);
-
-                            uint8_t remoteSalt[4U];
-                            ::memset(remoteSalt, 0x00U, 4U);
-                            ::memcpy(remoteSalt, req->buffer + 76U, 4U);
-
-                            std::string remoteAccessPassword = network->m_host->m_cryptoLookup->getRemotePassword();
-
-                            size_t size = remoteAccessPassword.size();
-                            uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
-                            ::memcpy(in, remoteSalt, sizeof(uint32_t));
-                            for (size_t i = 0U; i < size; i++)
-                                in[i + sizeof(uint32_t)] = remoteAccessPassword.at(i);
-
-                            uint8_t out[32U];
-                            edac::SHA256 sha256;
-                            sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out);
-
-                            delete[] in;
-
-                            // validate hash
-                            bool validHash = false;
-                            if (req->length - 8U == 32U) {
-                                validHash = true;
-                                for (uint8_t i = 0; i < 32U; i++) {
-                                    if (remoteAccessHash[i] != out[i]) {
-                                        validHash = false;
-                                        break;
-                                    }
-                                }
                             }
 
-                            if (!validHash) {
-                                LogError(LOG_MASTER, "PEER %u requested enc. key update, but had invalid access authentication, no response", peerId);
-                                break;
-                            }
+                            mdNetwork->m_peerKeyUpdatePkt.insert(peerId, MetadataNetwork::PacketBufferEntry());
+                            MetadataNetwork::PacketBufferEntry& pkt = mdNetwork->m_peerKeyUpdatePkt[peerId];
+                            pkt.buffer = new PacketBuffer(true, "Remote EKC, Key Update");
+                            pkt.streamId = streamId;
+                            pkt.locked = false;
+                            pkt.timeout = 0U;
+
+                            LogInfoEx(LOG_REPL, "PEER %u Remote EKC, Key Update, authenticated transfer streamId = %u", peerId, streamId);
+                            break;
                         }
 
                         // scope intentional
@@ -1027,29 +1045,21 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
                             // Utils::dump(1U, "MetadataNetwork::taskNetworkRx(), KEYS_UPDATE, Raw Payload", rawPayload, req->length);
 
-                            if (mdNetwork->m_peerKeyUpdatePkt.find(peerId) == mdNetwork->m_peerKeyUpdatePkt.end()) {
-                                mdNetwork->m_peerKeyUpdatePkt.insert(peerId, MetadataNetwork::PacketBufferEntry());
-
-                                MetadataNetwork::PacketBufferEntry& pkt = mdNetwork->m_peerKeyUpdatePkt[peerId];
-                                pkt.buffer = new PacketBuffer(true, "Remote EKC, Key Update");
-                                pkt.streamId = streamId;
-
-                                pkt.locked = false;
-                            } else {
-                                MetadataNetwork::PacketBufferEntry& pkt = mdNetwork->m_peerKeyUpdatePkt[peerId];
-                                if (!pkt.locked && pkt.streamId != streamId) {
-                                    LogError(LOG_REPL, "PEER %u Remote EKC, Key Update, stream ID mismatch, expected %u, got %u", peerId, pkt.streamId, streamId);
-                                    pkt.buffer->clear();
-                                    pkt.streamId = streamId;
-                                }
-
-                                if (pkt.streamId != streamId) {
-                                    // otherwise drop the packet
-                                    break;
-                                }
+                            MetadataNetwork::PacketBufferEntry& pkt = mdNetwork->m_peerKeyUpdatePkt[peerId];
+                            if (!pkt.locked && pkt.streamId != streamId) {
+                                LogError(LOG_REPL, "PEER %u Remote EKC, Key Update, stream ID mismatch, expected %u, got %u", peerId, pkt.streamId, streamId);
+                                pkt.buffer->clear();
+                                delete pkt.buffer;
+                                pkt.streamId = 0U;
+                                mdNetwork->m_peerKeyUpdatePkt.erase(peerId);
+                                break;
                             }
 
-                            MetadataNetwork::PacketBufferEntry& pkt = mdNetwork->m_peerKeyUpdatePkt[peerId];
+                            if (pkt.streamId != streamId) {
+                                // otherwise drop the packet
+                                break;
+                            }
+
                             if (pkt.locked) {
                                 while (pkt.locked && pkt.timeout < TIMEOUT_MAX_REPL) {
                                     pkt.timeout++;
@@ -1059,6 +1069,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                                 if (pkt.timeout >= TIMEOUT_MAX_REPL) {
                                     LogError(LOG_STP, "PEER %u Remote EKC, Key Update, timeout waiting for packet buffer to unlock", peerId);
                                     pkt.buffer->clear();
+                                    delete pkt.buffer;
                                     pkt.streamId = 0U;
                                     mdNetwork->m_peerKeyUpdatePkt.erase(peerId);
                                     break;
@@ -1073,7 +1084,6 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
                             if (pkt.buffer->decode(rawPayload, &decompressed, &decompressedLen)) {
                                 mdNetwork->m_peerKeyUpdatePkt.lock();
-                                // randomize filename
                                 std::ostringstream s;
                                 s << network->m_cryptoLookup->filename();
 
