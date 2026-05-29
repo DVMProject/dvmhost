@@ -1042,6 +1042,11 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
 
                         // scope intentional
                         {
+                            if (req->length < FRAG_SIZE) {
+                                LogWarning(LOG_REPL, "PEER %u Remote EKC, Key Update, ignoring short data phase frame (%u bytes)", peerId, req->length);
+                                break;
+                            }
+
                             DECLARE_UINT8_ARRAY(rawPayload, req->length);
                             ::memcpy(rawPayload, req->buffer, req->length);
 

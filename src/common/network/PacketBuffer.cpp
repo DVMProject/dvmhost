@@ -60,6 +60,11 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
     uint8_t blockCnt = data[9U];
 
     Fragment* frag = new Fragment();
+    frag->compressedSize = 0U;
+    frag->size = 0U;
+    frag->blockSize = 0U;
+    frag->blockId = 0U;
+    frag->data = nullptr;
 
     // if this is the first block store sizes and initialize temp buffer
     if (curBlock == 0U) {
@@ -81,10 +86,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
     // scope is intentional
     {
         frag->blockId = curBlock;
-        if (frag->size < FRAG_BLOCK_SIZE)
-            frag->data = new uint8_t[FRAG_BLOCK_SIZE + 1U];
-        else 
-            frag->data = new uint8_t[frag->size + 1U];
+        frag->data = new uint8_t[FRAG_BLOCK_SIZE + 1U];
 
         ::memcpy(frag->data, data + FRAG_HDR_SIZE, FRAG_BLOCK_SIZE);
         // Utils::dump(1U, "PacketBuffer::decode(), Block Payload", frag->data, FRAG_BLOCK_SIZE);
@@ -96,37 +98,66 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
     // do we have all the blocks?
     if (fragments.size() == blockCnt + 1U) {
         fragments.lock(false);
-        if (fragments[0] == nullptr) {
+        auto firstIt = fragments.find(0U);
+        if (firstIt == fragments.end() || firstIt->second == nullptr) {
             LogError(LOG_NET, "%s, Packet Fragment, error missing block 0? Packet dropped.", m_name);
             fragments.unlock();
             clear();
             return false;
         }
 
-        if (fragments[0]->size == 0U) {
+        Fragment* firstFrag = firstIt->second;
+
+        if (firstFrag->size == 0U) {
             LogError(LOG_NET, "%s, Packet Fragment, error missing size information", m_name);
             fragments.unlock();
             clear();
             return false;
         }
 
-        if (fragments[0]->compressedSize == 0U) {
+        if (firstFrag->compressedSize == 0U) {
             LogError(LOG_NET, "%s, Packet Fragment, error missing compressed size information", m_name);
             fragments.unlock();
             clear();
             return false;
         }
 
-        uint32_t compressedLen = fragments[0]->compressedSize;
-        uint32_t len = fragments[0]->size;
+        uint32_t compressedLen = firstFrag->compressedSize;
+        uint32_t len = firstFrag->size;
 
-        DECLARE_UINT8_ARRAY(buffer, len + 1U);
+        if (compressedLen > MAX_FRAGMENT_SIZE || len > MAX_FRAGMENT_SIZE) {
+            LogError(LOG_NET, "%s, Packet Fragment, error invalid packet length metadata", m_name);
+            fragments.unlock();
+            clear();
+            return false;
+        }
+
+        // Reassembly buffer must be compressed length, not uncompressed length.
+        DECLARE_UINT8_ARRAY(buffer, compressedLen + 1U);
+        ::memset(buffer, 0x00U, compressedLen + 1U);
+
         if (fragments.size() == 1U) {
-            ::memcpy(buffer, fragments[0U]->data, len);
+            uint32_t copyLen = (compressedLen > FRAG_BLOCK_SIZE) ? FRAG_BLOCK_SIZE : compressedLen;
+            ::memcpy(buffer, firstFrag->data, copyLen);
         } else {
-            for (uint8_t i = 0U; i < fragments.size(); i++) {
+            for (uint8_t i = 0U; i <= blockCnt; i++) {
+                auto it = fragments.find(i);
+                if (it == fragments.end() || it->second == nullptr || it->second->data == nullptr) {
+                    LogError(LOG_NET, "%s, Packet Fragment, error missing block %u, packet dropped", m_name, i);
+                    fragments.unlock();
+                    clear();
+                    return false;
+                }
+
                 uint32_t offs = i * FRAG_BLOCK_SIZE;
-                ::memcpy(buffer + offs, fragments[i]->data, FRAG_BLOCK_SIZE);
+                if (offs >= compressedLen)
+                    break;
+
+                uint32_t copyLen = FRAG_BLOCK_SIZE;
+                if (offs + FRAG_BLOCK_SIZE > compressedLen)
+                    copyLen = compressedLen - offs;
+
+                ::memcpy(buffer + offs, it->second->data, copyLen);
             }
         }
 
