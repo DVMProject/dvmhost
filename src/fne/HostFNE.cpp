@@ -861,7 +861,7 @@ bool HostFNE::createPeerNetworks()
             std::string location = peerConf["location"].as<std::string>();
 
             bool nakFallOver = peerConf["nakFallOver"].as<bool>(false);
-            uint32_t nakFallOverCount = peerConf["nakFallOverCount"].as<uint32_t>(10U);
+            uint32_t nakFallOverCount = peerConf["nakFallOverCount"].as<uint32_t>(50U);
 
             ::LogInfoEx(LOG_HOST, "Peer ID %u Master Address %s Master Port %u Enabled %u Encrypted %u NAK Fall Over %u", id, masterAddress.c_str(), masterPort, enabled, encrypted, nakFallOver);
 

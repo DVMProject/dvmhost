@@ -59,7 +59,7 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_prevSpanningTreeChildren(0U),
     m_nakFallOver(false),
     m_nakFallOverCount(0U),
-    m_nakFallOverCountThreshold(10U)
+    m_nakFallOverCountThreshold(50U)
 {
     assert(!address.empty());
     assert(port > 0U);
