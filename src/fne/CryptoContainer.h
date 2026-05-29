@@ -42,6 +42,7 @@ public:
     EKCKeyItem() :
         m_id(0U),
         m_name(),
+        m_rsiId(0U),
         m_keysetId(0U),
         m_sln(0U),
         m_algId(0U),
@@ -60,6 +61,7 @@ public:
         if (this != &data) {
             m_id = data.m_id;
             m_name = data.m_name;
+            m_rsiId = data.m_rsiId;
             m_keysetId = data.m_keysetId;
             m_sln = data.m_sln;
             m_algId = data.m_algId;
@@ -77,8 +79,6 @@ public:
      */
     bool isInvalid() const
     {
-        if (m_sln == 0U)
-            return true;
         if (m_algId == 0U)
             return true;
         if (m_kId == 0U)
@@ -127,6 +127,10 @@ public:
      * @brief 
      */
     DECLARE_PROPERTY_PLAIN(std::string, name);
+    /**
+     * @brief RSI/LLID this key belongs to. Zero is used as a default entry.
+     */
+    DECLARE_PROPERTY_PLAIN(uint32_t, rsiId);
 
     /**
      * @brief 
@@ -296,6 +300,15 @@ public:
      * @brief List of keys.
      */
     DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, keys);
+
+    /**
+     * @brief List of UKEK RSI keys.
+     */
+    DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, ukeks);
+    /**
+     * @brief List of LLA RSI keys.
+     */
+    DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, llas);
 };
 
 #endif // __CRYPTO_CONTAINER_H__

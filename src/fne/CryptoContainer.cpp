@@ -155,7 +155,9 @@ CryptoContainer::CryptoContainer(const std::string& filename, const std::string&
     m_enabled(enabled),
 #endif // !ENABLE_SSL
     m_stop(false),
-    m_keys()
+    m_keys(),
+    m_ukeks(),
+    m_llas()
 {
     /* stub */
 }
@@ -226,6 +228,8 @@ void CryptoContainer::clear()
 {
     std::lock_guard<std::mutex> lock(s_mutex);
     m_keys.clear();
+    m_ukeks.clear();
+    m_llas.clear();
 }
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
@@ -295,9 +299,25 @@ EKCKeyItem CryptoContainer::findUKEK(uint32_t rsi)
 
     std::lock_guard<std::mutex> lock(s_mutex);
 
-    /*
-    ** TODO TODO TODO
-    */
+    // prefer exact RSI/LLID match, then fall back to the default (RSI 0) key.
+    auto it = std::find_if(m_ukeks.begin(), m_ukeks.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == rsi;
+        });
+    if (it != m_ukeks.end()) {
+        entry = *it;
+        return entry;
+    }
+
+    it = std::find_if(m_ukeks.begin(), m_ukeks.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == 0U;
+        });
+    if (it != m_ukeks.end()) {
+        entry = *it;
+        return entry;
+    }
+
     entry = EKCKeyItem();
 
     return entry;
@@ -311,9 +331,25 @@ EKCKeyItem CryptoContainer::findLLA(uint32_t rsi)
 
     std::lock_guard<std::mutex> lock(s_mutex);
 
-    /*
-    ** TODO TODO TODO
-    */
+    // prefer exact RSI/LLID match, then fall back to the default (RSI 0) key.
+    auto it = std::find_if(m_llas.begin(), m_llas.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == rsi;
+        });
+    if (it != m_llas.end()) {
+        entry = *it;
+        return entry;
+    }
+
+    it = std::find_if(m_llas.begin(), m_llas.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == 0U;
+        });
+    if (it != m_llas.end()) {
+        entry = *it;
+        return entry;
+    }
+
     entry = EKCKeyItem();
 
     return entry;
@@ -540,7 +576,7 @@ bool CryptoContainer::load()
                 rapidxml::xml_node<>* keys = innerRoot->first_node("Keys");
                 if (keys != nullptr) {
                     uint32_t i = 0U;
-                    for (rapidxml::xml_node<>* keyNode = keys->first_node("KeyItem"); keyNode; keyNode = keyNode->next_sibling()) {
+                    for (rapidxml::xml_node<>* keyNode = keys->first_node("KeyItem"); keyNode; keyNode = keyNode->next_sibling("KeyItem")) {
                         EKCKeyItem key = EKCKeyItem();
                         key.id(i);
 
@@ -592,6 +628,126 @@ bool CryptoContainer::load()
                         i++;
                     }
                 }
+
+                // get UKEKs node
+                rapidxml::xml_node<>* ukeks = innerRoot->first_node("UKEKs");
+                if (ukeks != nullptr) {
+                    uint32_t i = 0U;
+                    for (rapidxml::xml_node<>* keyNode = ukeks->first_node("RSIKeyItem"); keyNode; keyNode = keyNode->next_sibling("RSIKeyItem")) {
+                        EKCKeyItem key = EKCKeyItem();
+                        key.id(i);
+
+                        rapidxml::xml_node<>* rsiNode = keyNode->first_node("RsiId");
+                        if (rsiNode == nullptr) {
+                            continue;
+                        }
+                        key.rsiId(::strtoul(rsiNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* nameNode = keyNode->first_node("Name");
+                        if (nameNode == nullptr) {
+                            continue;
+                        }
+                        key.name(nameNode->value());
+
+                        rapidxml::xml_node<>* keysetIdNode = keyNode->first_node("KeysetId");
+                        if (keysetIdNode == nullptr) {
+                            continue;
+                        }
+                        key.keysetId(::strtoul(keysetIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* slnNode = keyNode->first_node("Sln");
+                        if (slnNode != nullptr) {
+                            key.sln(::strtoul(slnNode->value(), NULL, 10));
+                        }
+
+                        rapidxml::xml_node<>* algIdNode = keyNode->first_node("AlgorithmId");
+                        if (algIdNode == nullptr) {
+                            continue;
+                        }
+                        key.algId(::strtoul(algIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* kIdNode = keyNode->first_node("KeyId");
+                        if (kIdNode == nullptr) {
+                            continue;
+                        }
+                        key.kId(::strtoul(kIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* keyMatNode = keyNode->first_node("Key");
+                        if (keyMatNode == nullptr) {
+                            continue;
+                        }
+                        key.keyMaterial(keyMatNode->value());
+
+                        if (key.isInvalid()) {
+                            continue;
+                        }
+
+                        ::LogInfoEx(LOG_HOST, "UKEK RSI: %u NAME: %s ALGID: $%02X, KID: $%04X", key.rsiId(), key.name().c_str(), key.algId(), key.kId());
+
+                        m_ukeks.push_back(key);
+                        i++;
+                    }
+                }
+
+                // get LLAs node
+                rapidxml::xml_node<>* llas = innerRoot->first_node("LLAs");
+                if (llas != nullptr) {
+                    uint32_t i = 0U;
+                    for (rapidxml::xml_node<>* keyNode = llas->first_node("RSIKeyItem"); keyNode; keyNode = keyNode->next_sibling("RSIKeyItem")) {
+                        EKCKeyItem key = EKCKeyItem();
+                        key.id(i);
+
+                        rapidxml::xml_node<>* rsiNode = keyNode->first_node("RsiId");
+                        if (rsiNode == nullptr) {
+                            continue;
+                        }
+                        key.rsiId(::strtoul(rsiNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* nameNode = keyNode->first_node("Name");
+                        if (nameNode == nullptr) {
+                            continue;
+                        }
+                        key.name(nameNode->value());
+
+                        rapidxml::xml_node<>* keysetIdNode = keyNode->first_node("KeysetId");
+                        if (keysetIdNode == nullptr) {
+                            continue;
+                        }
+                        key.keysetId(::strtoul(keysetIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* slnNode = keyNode->first_node("Sln");
+                        if (slnNode != nullptr) {
+                            key.sln(::strtoul(slnNode->value(), NULL, 10));
+                        }
+
+                        rapidxml::xml_node<>* algIdNode = keyNode->first_node("AlgorithmId");
+                        if (algIdNode == nullptr) {
+                            continue;
+                        }
+                        key.algId(::strtoul(algIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* kIdNode = keyNode->first_node("KeyId");
+                        if (kIdNode == nullptr) {
+                            continue;
+                        }
+                        key.kId(::strtoul(kIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* keyMatNode = keyNode->first_node("Key");
+                        if (keyMatNode == nullptr) {
+                            continue;
+                        }
+                        key.keyMaterial(keyMatNode->value());
+
+                        if (key.isInvalid()) {
+                            continue;
+                        }
+
+                        ::LogInfoEx(LOG_HOST, "LLA RSI: %u NAME: %s ALGID: $%02X, KID: $%04X", key.rsiId(), key.name().c_str(), key.algId(), key.kId());
+
+                        m_llas.push_back(key);
+                        i++;
+                    }
+                }
             }
 
             delete[] innerContainer;
@@ -601,19 +757,21 @@ bool CryptoContainer::load()
         return false;
     }
 
-    if (m_keys.size() == 0U) {
+    if (m_keys.size() == 0U && m_ukeks.size() == 0U && m_llas.size() == 0U) {
         ::LogError(LOG_HOST, "No encryption keys defined!");
         return false;
     }
 
-    size_t size = m_keys.size();
-    if (size == 0U)
+    size_t size = m_keys.size() + m_ukeks.size() + m_llas.size();
+    if (size == 0U) {
         return false;
+    }
 
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     m_lastLoadTime = now;
 
-    LogInfoEx(LOG_HOST, "Loaded %lu entries into crypto lookup table", size);
+    LogInfoEx(LOG_HOST, "Loaded %lu entries into crypto lookup table (TEK=%lu, UKEK=%lu, LLA=%lu)",
+        size, m_keys.size(), m_ukeks.size(), m_llas.size());
 
     return true;
 #endif // !ENABLE_SSL
