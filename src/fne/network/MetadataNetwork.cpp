@@ -879,8 +879,10 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                             LogInfoEx(LOG_REPL, "PEER %u Remote EKC, Key Inventory, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
                             if (pkt.fragments.size() > 0U) {
                                 for (auto frag : pkt.fragments) {
-                                    network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEYS_INVENTORY, NET_SUBFUNC::NOP }, 
-                                        frag.second->data, FRAG_SIZE, 0U, streamId);
+                                    // violate most handling rules for responding to packets -- we need to directly respond to the calling peer as
+                                    // they may not be logged in as a standard peer
+                                    mdNetwork->m_frameQueue->write(frag.second->data, FRAG_SIZE, streamId, peerId, network->m_peerId, { NET_FUNC::KEYS_INVENTORY, NET_SUBFUNC::NOP },
+                                        0U, req->address, req->addrLen);
                                     Thread::sleep(60U); // pace block transmission
                                 }
                             }
