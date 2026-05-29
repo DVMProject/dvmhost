@@ -327,9 +327,6 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 if (m_peerReplicaCallback != nullptr)
                     m_peerReplicaCallback(this);
 
-                // reset NAK count on reception of a replica TG
-                m_nakFallOverCount = 0U;
-
                 // cleanup temporary file
                 ::remove(filename.c_str());
                 m_tgidPkt.clear();
@@ -389,9 +386,6 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 if (m_peerReplicaCallback != nullptr)
                     m_peerReplicaCallback(this);
 
-                // reset NAK count on reception of a replica TG
-                m_nakFallOverCount = 0U;
-
                 // cleanup temporary file
                 ::remove(filename.c_str());
                 m_ridPkt.clear();
@@ -450,9 +444,6 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 m_peerReplica = true;
                 if (m_peerReplicaCallback != nullptr)
                     m_peerReplicaCallback(this);
-
-                // reset NAK count on reception of a replica TG
-                m_nakFallOverCount = 0U;
 
                 // cleanup temporary file
                 ::remove(filename.c_str());
