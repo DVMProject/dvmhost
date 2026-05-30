@@ -119,6 +119,7 @@ namespace network
         };
         concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerKeyUpdatePkt;
         concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerReplicaActPkt;
+        concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerPatchStatusPkt;
         concurrent::unordered_map<uint32_t, PacketBufferEntry> m_peerTreeListPkt;
 
         ThreadPool m_threadPool;

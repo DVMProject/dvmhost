@@ -48,6 +48,7 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_analogCallback(nullptr),
     m_netTreeDiscCallback(nullptr),
     m_peerReplicaCallback(nullptr),
+    m_patchStatusCallback(nullptr),
     m_masterPeerId(0U),
     m_pidLookup(nullptr),
     m_peerReplica(false),
@@ -55,6 +56,7 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_tgidPkt(true, "Peer Replication, TGID List"),
     m_ridPkt(true, "Peer Replication, RID List"),
     m_pidPkt(true, "Peer Replication, PID List"),
+    m_patchStatusPkt(true, "Peer Replication, Patch Status"),
     m_threadPool(WORKER_CNT, "peer"),
     m_prevSpanningTreeChildren(0U),
     m_nakFallOver(false),
@@ -231,6 +233,40 @@ bool PeerNetwork::writeHAParams(std::vector<HAParameters>& haParams)
     }
 
     return false;
+}
+
+/* Writes a complete console patch status update upstream. */
+
+bool PeerNetwork::writePatchStatus(json::object obj)
+{
+    if (!m_peerReplica)
+        return false;
+
+    obj["type"].set<std::string>("publish");
+    json::value v = json::value(obj);
+    std::string json = std::string(v.serialize());
+
+    size_t len = json.length() + 9U;
+    DECLARE_CHAR_ARRAY(buffer, len);
+
+    ::memcpy(buffer + 0U, TAG_PEER_REPLICA, 4U);
+    ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
+
+    PacketBuffer pkt(true, "Peer Replication, Patch Status");
+    pkt.encode((uint8_t*)buffer, len);
+
+    uint32_t streamId = createStreamId();
+    LogInfoEx(LOG_REPL, "PEER %u Peer Replication, Patch Status, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+    if (pkt.fragments.size() > 0U) {
+        for (auto frag : pkt.fragments) {
+            writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_PATCH_STATUS },
+                frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, true);
+            Thread::sleep(60U); // pace block transmission
+        }
+    }
+
+    pkt.clear();
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -448,6 +484,32 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
                 // cleanup temporary file
                 ::remove(filename.c_str());
                 m_pidPkt.clear();
+                delete[] decompressed;
+            }
+        }
+        break;
+
+        case NET_SUBFUNC::REPL_PATCH_STATUS:                        // Patch Status
+        {
+            uint32_t decompressedLen = 0U;
+            uint8_t* decompressed = nullptr;
+
+            if (m_patchStatusPkt.decode(data, &decompressed, &decompressedLen)) {
+                std::string payload(decompressed + 8U, decompressed + decompressedLen);
+
+                json::value v;
+                std::string err = json::parse(v, payload);
+                if (!err.empty() || !v.is<json::object>()) {
+                    LogError(LOG_PEER, "PEER %u error parsing patch status replication, %s", m_peerId, err.c_str());
+                    m_patchStatusPkt.clear();
+                    delete[] decompressed;
+                    break;
+                }
+
+                if (m_patchStatusCallback != nullptr)
+                    m_patchStatusCallback(this, v.get<json::object>());
+
+                m_patchStatusPkt.clear();
                 delete[] decompressed;
             }
         }

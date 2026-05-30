@@ -909,6 +909,7 @@ bool HostFNE::createPeerNetworks()
 
             network->setNetTreeDiscCallback(std::bind(&HostFNE::processNetworkTreeDisconnect, this, std::placeholders::_1, std::placeholders::_2));
             network->setNotifyPeerReplicaCallback(std::bind(&HostFNE::processPeerReplicaNotify, this, std::placeholders::_1));
+            network->setPatchStatusCallback(std::bind(&HostFNE::processPeerPatchStatus, this, std::placeholders::_1, std::placeholders::_2));
 
             network->enable(enabled);
             if (enabled) {
@@ -1208,5 +1209,14 @@ void HostFNE::processPeerReplicaNotify(network::PeerNetwork* peerNetwork)
 {
     if (m_network != nullptr) {
         m_network->setPeerReplica(true);
+    }
+}
+
+/* Processes peer patch status replication. */
+
+void HostFNE::processPeerPatchStatus(network::PeerNetwork* peerNetwork, json::object obj)
+{
+    if (m_network != nullptr && peerNetwork != nullptr) {
+        m_network->processReplicatedPatchStatus(peerNetwork->getPeerId(), obj);
     }
 }

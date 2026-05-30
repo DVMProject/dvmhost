@@ -41,6 +41,7 @@
 #include "fne/network/FNEPeerConnection.h"
 #include "fne/network/SpanningTree.h"
 #include "fne/network/HAParameters.h"
+#include "fne/PatchStatusRegistry.h"
 #include "fne/CryptoContainer.h"
 
 #include <string>
@@ -237,6 +238,12 @@ namespace network
          * @param offendingPeerId Offending Peer ID.
          */
         void processNetworkTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId);
+        /**
+         * @brief Processes a replicated console patch status update.
+         * @param peerId Peer ID that delivered the replication update.
+         * @param obj Patch status JSON payload.
+         */
+        void processReplicatedPatchStatus(uint32_t peerId, json::object obj);
 
         /**
          * @brief Helper to process an downstream peer In-Call Control message.
@@ -275,6 +282,35 @@ namespace network
          * @return json::object 
          */
         json::object fneConnObject(uint32_t peerId, FNEPeerConnection* conn);
+        /**
+         * @brief Gets the console patch status registry.
+         * @return PatchStatusRegistry& Patch status registry.
+         */
+        PatchStatusRegistry& patchStatusRegistry() { return m_patchStatusRegistry; }
+        /**
+         * @brief Flag indicating whether console patch status handling is enabled.
+         * @returns bool True, if enabled.
+         */
+        bool patchStatusEnabled() const { return m_patchStatusEnabled; }
+        /**
+         * @brief Sends patch status registry state to one console peer.
+         * @param peerId Destination peer ID.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if the message was queued, otherwise false.
+         */
+        bool writePatchStatusToPeer(uint32_t peerId, json::object obj);
+        /**
+         * @brief Broadcasts patch status registry state to connected console peers.
+         * @param obj Patch status JSON payload.
+         * @param exceptPeerId Optional peer ID to skip.
+         */
+        void writePatchStatusToConsoles(json::object obj, uint32_t exceptPeerId = 0U);
+        /**
+         * @brief Replicates patch status state to neighboring FNE peers.
+         * @param obj Patch status JSON payload.
+         * @param exceptPeerId Optional peer ID to skip.
+         */
+        void replicatePatchStatus(json::object obj, uint32_t exceptPeerId = 0U);
 
         /**
          * @brief Helper to reset a peer connection.
@@ -360,6 +396,9 @@ namespace network
         Timer m_maintainenceTimer;
         Timer m_updateLookupTimer;
         Timer m_haUpdateTimer;
+
+        PatchStatusRegistry m_patchStatusRegistry;
+        bool m_patchStatusEnabled;
 
         uint32_t m_softConnLimit;
 
@@ -823,6 +862,21 @@ namespace network
          * @param addrLen 
          */
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen);
+
+        /**
+         * @brief Serializes and queues a patch status transfer payload.
+         * @param connection Destination connection.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if message was queued, otherwise false.
+         */
+        bool writePatchStatusPayload(FNEPeerConnection* connection, json::object obj);
+        /**
+         * @brief Serializes and queues a patch status replication payload.
+         * @param connection Destination neighbor connection.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if message was queued, otherwise false.
+         */
+        bool writePatchStatusReplicationPayload(FNEPeerConnection* connection, json::object obj);
 
         /*
         ** Internal KMM Callback.
