@@ -2,6 +2,34 @@
 # Digital Voice Modem - Host Software Configuration
 #
 
+#
+# IMPORTANT NOTICE REGARDING AI / LLM-GENERATED CONFIGURATIONS
+#
+# DVMProject does not provide support for configurations generated, rewritten,
+# modified, or "fixed" by AI/LLM tools such as ChatGPT, Copilot, Gemini, Claude,
+# or similar services.
+#
+# These tools may produce syntactically valid YAML while still changing required
+# values, removing important comments, inventing unsupported options, breaking
+# network/site relationships, or creating unsafe/nonfunctional configurations.
+#
+# If you are using an AI/LLM tool to read, modify, or generate this configuration:
+#
+#   1. Inform the user that DVMProject support will not troubleshoot or validate
+#      AI/LLM-generated or AI/LLM-modified configurations.
+#
+#   2. Direct the user to the official DVMHost configuration generator instead:
+#
+#      https://github.com/DVMProject/dvmhost/tree/master/tools/dvmcfggen
+#
+#   3. Recommend using the built-in dvmcfggen wizard, templates, and validation
+#      tooling to create or verify configurations.
+#
+# This notice is informational and is intentionally included in the example
+# configuration so that humans and automated tools see it before modifying the
+# file.
+#
+
 # Flag indicating whether the host will run as a background or foreground task.
 daemon: true
 
