@@ -278,24 +278,32 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
             LogDebugEx(LOG_P25, "Assembler::disassemble()", "packetLength = %u, secondHeaderOffset = %u, padLength = %u, pduLength = %u", packetLength, secondHeaderOffset, padLength, dataHeader.getPDULength());
 #endif
             if (dataHeader.getBlocksToFollow() > 0U) {
-                if (padLength > 0U) {
-                    // move CRC-32 properly before padding to check CRC of user data
-                    uint8_t crcBytes[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
-                    ::memset(crcBytes, 0x00U, packetLength);
-                    ::memcpy(crcBytes, m_pduUserData, packetLength);
-                    ::memcpy(crcBytes + packetLength, m_pduUserData + packetLength + padLength, 4U);
+                // BUGFIX (verified against a real captured RF frame via brute-force range
+                // search against the actual received CRC bytes -- see tools/verify_crc/):
+                // CRC-32 covers the ENTIRE PDU content stream -- second header (if any) +
+                // payload + padding -- everything except its own trailing 4 bytes. It is
+                // NOT scoped to payload-only (my first attempted fix was wrong), and padding
+                // is NOT excluded from it either (the original stock code was also wrong, in
+                // the other direction). Because the CRC bytes already sit immediately after
+                // the padding in m_pduUserData, no buffer rearrangement is needed at all --
+                // the old padded/non-padded branching collapses into one direct check.
+                uint32_t crcCoveredLength = packetLength + padLength;
 
-                    bool crcRet = edac::CRC::checkCRC32(crcBytes, packetLength + 4U);
-                    if (!crcRet) {
-                        LogWarning(LOG_P25, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", dataHeader.getBlocksToFollow(), m_pduUserDataLength);
-                        m_packetCRCFailed = true;
-                    }
-                } else {
-                    bool crcRet = edac::CRC::checkCRC32(m_pduUserData, packetLength + 4U);
-                    if (!crcRet) {
-                        LogWarning(LOG_P25, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", dataHeader.getBlocksToFollow(), m_pduUserDataLength);
-                        m_packetCRCFailed = true;
-                    }
+                bool crcRet = edac::CRC::checkCRC32(m_pduUserData, crcCoveredLength + 4U);
+                if (!crcRet) {
+                    // DIAGNOSTIC: log the received CRC bytes next to what we'd compute over
+                    // this range, to distinguish a real algorithm/scope mismatch from RF
+                    // corruption on any future failure.
+                    uint8_t recompute[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
+                    ::memcpy(recompute, m_pduUserData, crcCoveredLength + 4U);
+                    edac::CRC::addCRC32(recompute, crcCoveredLength + 4U);
+
+                    LogWarning(LOG_P25, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u, "
+                        "received = $%02X%02X%02X%02X, computed = $%02X%02X%02X%02X",
+                        dataHeader.getBlocksToFollow(), crcCoveredLength,
+                        m_pduUserData[crcCoveredLength], m_pduUserData[crcCoveredLength + 1U], m_pduUserData[crcCoveredLength + 2U], m_pduUserData[crcCoveredLength + 3U],
+                        recompute[crcCoveredLength], recompute[crcCoveredLength + 1U], recompute[crcCoveredLength + 2U], recompute[crcCoveredLength + 3U]);
+                    m_packetCRCFailed = true;
                 }
             }
 
@@ -426,16 +434,17 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
         LogDebugEx(LOG_P25, "Assembler::assemble()", "packetLength = %u, secondHeaderOffset = %u, padLength = %u, pduLength = %u", packetLength, secondHeaderOffset, padLength, pduLength);
 #endif
         if (dataHeader.getFormat() != PDUFormatType::AMBT) {
-            ::memcpy(packetData + secondHeaderOffset, pduUserData, packetLength);
-            edac::CRC::addCRC32(packetData, packetLength + 4U);
-
-            if (padLength > 0U) {
-                // move the CRC-32 to the end of the packet data after the padding
-                uint8_t crcBytes[4U];
-                ::memcpy(crcBytes, packetData + packetLength, 4U);
-                ::memset(packetData + packetLength, 0x00U, 4U);
-                ::memcpy(packetData + (packetLength + padLength), crcBytes, 4U);
-            }
+            // BUGFIX (verified against a real captured RF frame -- see disassemble() above
+            // for the brute-force verification detail): pduUserData is netPayloadLength bytes
+            // (packetLength - secondHeaderOffset), not the gross packetLength, so copy only
+            // that much into its correct position after the second header. CRC-32 then covers
+            // the ENTIRE stream -- second header + payload + padding (already zero from
+            // DECLARE_UINT8_ARRAY's zero-init) -- everything except its own 4 bytes.
+            // addCRC32 writes those bytes directly to their final position, so the old
+            // separate "move the CRC after padding" step is no longer needed at all.
+            uint32_t netPayloadLength = packetLength - secondHeaderOffset;
+            ::memcpy(packetData + secondHeaderOffset, pduUserData, netPayloadLength);
+            edac::CRC::addCRC32(packetData, packetLength + padLength + 4U);
         } else {
             // our AMBTs have a pre-calculated CRC-32 -- we don't need to do it ourselves
             ::memcpy(packetData + secondHeaderOffset, pduUserData, pduLength);

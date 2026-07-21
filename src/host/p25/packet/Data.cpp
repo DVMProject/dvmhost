@@ -128,6 +128,8 @@ bool Data::process(uint8_t* data, uint32_t len)
 
             // did we receive a response header?
             if (m_rfAssembler->dataHeader.getFormat() == PDUFormatType::RSP) {
+                // clear inbound before emitting outbound OSP bursts (ACK/NACK, retries) below
+                m_inbound = false;
                 LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
                         m_rfAssembler->dataHeader.getFormat(), m_rfAssembler->dataHeader.getResponseClass(), m_rfAssembler->dataHeader.getResponseType(), m_rfAssembler->dataHeader.getResponseStatus(),
                         m_rfAssembler->dataHeader.getLLId(), m_rfAssembler->dataHeader.getSrcLLId());
@@ -188,7 +190,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                                 LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
                                     m_rfAssembler->dataHeader.getLLId());
 
-                                writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfAssembler->dataHeader.getNs(), m_rfAssembler->dataHeader.getLLId(), m_rfAssembler->dataHeader.getSrcLLId());
+                                writeRF_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_UNDELIVERABLE, m_rfAssembler->dataHeader.getNs(), m_rfAssembler->dataHeader.getLLId(), (m_rfAssembler->dataHeader.getSrcLLId() > 0U), m_rfAssembler->dataHeader.getSrcLLId());
                             }
                         }
                     }
@@ -200,7 +202,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 // only repeat the PDU locally if the packet isn't for the FNE
                 if (m_repeatPDU && m_rfAssembler->dataHeader.getLLId() != WUID_FNE) {
                     writeRF_PDU_Ack_Response(m_rfAssembler->dataHeader.getResponseClass(), m_rfAssembler->dataHeader.getResponseType(), m_rfAssembler->dataHeader.getResponseStatus(),
-                        m_rfAssembler->dataHeader.getLLId(), m_rfAssembler->dataHeader.getSrcLLId());
+                        m_rfAssembler->dataHeader.getLLId(), (m_rfAssembler->dataHeader.getSrcLLId() > 0U), m_rfAssembler->dataHeader.getSrcLLId());
                 }
 
                 m_rfPDUCount = 0U;
@@ -253,6 +255,8 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             if (m_rfAssembler->getComplete()) {
+                // clear inbound before the SAP switch emits outbound OSP bursts (local repeat, reg)
+                m_inbound = false;
                 m_rfPduUserDataLength = m_rfAssembler->getUserDataLength();
                 m_rfAssembler->getUserData(m_rfPduUserData);
 
