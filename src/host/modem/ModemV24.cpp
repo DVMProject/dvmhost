@@ -1888,8 +1888,13 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
 
                         if (correctedAlgId != m_rxCall->algoId || correctedKId != m_rxCall->kId ||
                             ::memcmp(m_rxCall->LDULC, m_rxCall->MI, MI_LENGTH_BYTES) != 0) {
-                            LogWarning(LOG_MODEM, "V.24/DFSI LDU2, %d FEC corrections changed Enc Sync content, algId = $%02X (was $%02X), kId = $%04X (was $%04X)",
-                                rsErrs, correctedAlgId, m_rxCall->algoId, correctedKId, m_rxCall->kId);
+                            LogWarning(LOG_MODEM, "V.24/DFSI LDU2, %d FEC corrections changed Enc Sync content, algId = $%02X (was $%02X), kId = $%04X (was $%04X), "
+                                "MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X (was %02X %02X %02X %02X %02X %02X %02X %02X %02X)",
+                                rsErrs, correctedAlgId, m_rxCall->algoId, correctedKId, m_rxCall->kId,
+                                m_rxCall->LDULC[0U], m_rxCall->LDULC[1U], m_rxCall->LDULC[2U], m_rxCall->LDULC[3U], m_rxCall->LDULC[4U],
+                                m_rxCall->LDULC[5U], m_rxCall->LDULC[6U], m_rxCall->LDULC[7U], m_rxCall->LDULC[8U],
+                                m_rxCall->MI[0U], m_rxCall->MI[1U], m_rxCall->MI[2U], m_rxCall->MI[3U], m_rxCall->MI[4U],
+                                m_rxCall->MI[5U], m_rxCall->MI[6U], m_rxCall->MI[7U], m_rxCall->MI[8U]);
                         }
 
                         m_rxCall->algoId = correctedAlgId;
@@ -2641,8 +2646,13 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
 
                             if (correctedAlgId != m_rxCall->algoId || correctedKId != m_rxCall->kId ||
                                 ::memcmp(m_rxCall->LDULC, m_rxCall->MI, MI_LENGTH_BYTES) != 0) {
-                                LogWarning(LOG_MODEM, "TIA/DFSI LDU2, %d FEC corrections changed Enc Sync content, algId = $%02X (was $%02X), kId = $%04X (was $%04X)",
-                                    rsErrs, correctedAlgId, m_rxCall->algoId, correctedKId, m_rxCall->kId);
+                                LogWarning(LOG_MODEM, "TIA/DFSI LDU2, %d FEC corrections changed Enc Sync content, algId = $%02X (was $%02X), kId = $%04X (was $%04X), "
+                                    "MI = %02X %02X %02X %02X %02X %02X %02X %02X %02X (was %02X %02X %02X %02X %02X %02X %02X %02X %02X)",
+                                    rsErrs, correctedAlgId, m_rxCall->algoId, correctedKId, m_rxCall->kId,
+                                    m_rxCall->LDULC[0U], m_rxCall->LDULC[1U], m_rxCall->LDULC[2U], m_rxCall->LDULC[3U], m_rxCall->LDULC[4U],
+                                    m_rxCall->LDULC[5U], m_rxCall->LDULC[6U], m_rxCall->LDULC[7U], m_rxCall->LDULC[8U],
+                                    m_rxCall->MI[0U], m_rxCall->MI[1U], m_rxCall->MI[2U], m_rxCall->MI[3U], m_rxCall->MI[4U],
+                                    m_rxCall->MI[5U], m_rxCall->MI[6U], m_rxCall->MI[7U], m_rxCall->MI[8U]);
                             }
 
                             m_rxCall->algoId = correctedAlgId;
