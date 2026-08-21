@@ -52,7 +52,7 @@ namespace network
          *  network interface.
          * @ingroup viface
          */
-        class HOST_SW_API VIFace {
+        class DVM_COMMON_API VIFace {
         public:
             auto operator=(VIFace&) -> VIFace& = delete;
             auto operator=(VIFace&&) -> VIFace& = delete;

@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements TIME DATE ANN - Time and Date Announcement
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_TIME_DATE_ANN : public TSBK {
+            class DVM_COMMON_API OSP_TIME_DATE_ANN : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_TIME_DATE_ANN class.

@@ -41,7 +41,7 @@ namespace lookups
      * @brief Represents an individual entry in the peer ID table.
      * @ingroup lookups_peer
      */
-    class HOST_SW_API PeerId {
+    class DVM_COMMON_API PeerId {
     public:
         /**
          * @brief Initializes a new instance of the PeerId class.
@@ -205,7 +205,7 @@ namespace lookups
      *  lookup table.
      * @ingroup lookups_peer
      */
-    class HOST_SW_API PeerListLookup : public LookupTable<PeerId> {
+    class DVM_COMMON_API PeerListLookup : public LookupTable<PeerId> {
     public:
         /**
          * @brief Initializes a new instance of the PeerListLookup class.

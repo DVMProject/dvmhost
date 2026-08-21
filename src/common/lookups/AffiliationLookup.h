@@ -43,7 +43,7 @@ namespace lookups
      *  and group affiliation information.
      * @ingroup lookups_aff
      */
-    class HOST_SW_API AffiliationLookup : public concurrent::concurrent_lock {
+    class DVM_COMMON_API AffiliationLookup : public concurrent::concurrent_lock {
     public:
         /**
          * @brief Initializes a new instance of the AffiliationLookup class.

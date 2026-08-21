@@ -30,7 +30,7 @@ namespace dmr
          * @brief Represents a DMR embedded signalling data.
          * @ingroup dmr
          */
-        class HOST_SW_API EMB {
+        class DVM_COMMON_API EMB {
         public:
             /**
              * @brief Initializes a new instance of the EMB class.

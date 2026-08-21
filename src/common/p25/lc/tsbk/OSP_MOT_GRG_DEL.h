@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements MOT GRG DEL - Motorola / Group Regroup Delete (Unpatch Supergroup)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_MOT_GRG_DEL : public TSBK {
+            class DVM_COMMON_API OSP_MOT_GRG_DEL : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_MOT_GRG_DEL class.

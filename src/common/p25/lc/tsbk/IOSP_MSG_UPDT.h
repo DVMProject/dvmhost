@@ -34,7 +34,7 @@ namespace p25
              *  MSG UPDT - Message Update (OSP)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API IOSP_MSG_UPDT : public TSBK {
+            class DVM_COMMON_API IOSP_MSG_UPDT : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the IOSP_MSG_UPDT class.

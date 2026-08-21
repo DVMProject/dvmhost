@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements UU ANS RSP - Unit to Unit Answer Response
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_UU_ANS_RSP : public CSBK {
+            class DVM_COMMON_API CSBK_UU_ANS_RSP : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_UU_ANS_RSP class.

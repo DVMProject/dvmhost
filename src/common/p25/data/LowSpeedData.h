@@ -31,7 +31,7 @@ namespace p25
          * @brief Represents embedded low speed data in P25 LDUs.
          * @ingroup p25
          */
-        class HOST_SW_API LowSpeedData {
+        class DVM_COMMON_API LowSpeedData {
         public:
             /**
              * @brief Initializes a new instance of the LowSpeedData class.

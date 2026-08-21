@@ -34,7 +34,7 @@ namespace p25
              *  CALL ALRT - Call Alert (OSP)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API IOSP_CALL_ALRT : public TSBK {
+            class DVM_COMMON_API IOSP_CALL_ALRT : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the IOSP_CALL_ALRT class.

@@ -184,7 +184,7 @@ namespace network
          * 20 bytes (16 bytes without RTP Extension Header)
          * \endcode
          */
-        class HOST_SW_API RTPFNEHeader : public RTPExtensionHeader {
+        class DVM_COMMON_API RTPFNEHeader : public RTPExtensionHeader {
         public:
             /**
              * @brief Initializes a new instance of the RTPFNEHeader class.

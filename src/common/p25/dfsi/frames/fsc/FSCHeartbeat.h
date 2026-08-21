@@ -39,7 +39,7 @@ namespace p25
                  * @brief Implements the FSC Heartbeat Message.
                  * @ingroup dfsi_fsc_frames
                  */
-                class HOST_SW_API FSCHeartbeat : public FSCMessage {
+                class DVM_COMMON_API FSCHeartbeat : public FSCMessage {
                 public:
                     static const uint8_t LENGTH = 3U;
 

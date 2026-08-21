@@ -37,7 +37,7 @@ namespace p25
          * @brief Represents a SNDCP PDU packet header.
          * @ingroup p25_sndcp
          */
-        class HOST_SW_API SNDCPPacket {
+        class DVM_COMMON_API SNDCPPacket {
         public:
             /**
              * @brief Initializes a copy instance of the SNDCPPacket class.

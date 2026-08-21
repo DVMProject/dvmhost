@@ -54,7 +54,7 @@ namespace network
          * \endcode
          * @ingroup network_core
          */
-        class HOST_SW_API RTPHeader {
+        class DVM_COMMON_API RTPHeader {
         public:
             /**
              * @brief Initializes a new instance of the RTPHeader class.

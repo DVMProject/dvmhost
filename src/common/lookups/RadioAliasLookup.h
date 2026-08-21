@@ -34,7 +34,7 @@ namespace lookups
      *  lookup table.
      * @ingroup lookups_rid
      */
-    class HOST_SW_API RadioAliasLookup : public LookupTable<std::string> {
+    class DVM_COMMON_API RadioAliasLookup : public LookupTable<std::string> {
     public:
         /**
          * @brief Initializes a new instance of the RadioAliasLookup class.

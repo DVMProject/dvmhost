@@ -43,7 +43,7 @@ namespace network
      * @brief Implements the network RTP frame queuing logic.
      * @ingroup network_core
      */
-    class HOST_SW_API FrameQueue : public RawFrameQueue {
+    class DVM_COMMON_API FrameQueue : public RawFrameQueue {
     public: typedef std::pair<const NET_FUNC::ENUM, const NET_SUBFUNC::ENUM> OpcodePair;
     public:
         auto operator=(FrameQueue&) -> FrameQueue& = delete;

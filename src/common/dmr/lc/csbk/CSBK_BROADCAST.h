@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements BCAST - Announcement PDUs
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_BROADCAST : public CSBK {
+            class DVM_COMMON_API CSBK_BROADCAST : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_BROADCAST class.

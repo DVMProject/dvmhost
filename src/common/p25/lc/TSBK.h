@@ -35,7 +35,7 @@ namespace p25
         //  Class Prototypes
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API LC;
+        class LC;
     }
 
     namespace lc
@@ -44,8 +44,8 @@ namespace p25
         //  Class Prototypes
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API LC;
-        class HOST_SW_API TDULC;
+        class LC;
+        class TDULC;
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
@@ -55,7 +55,7 @@ namespace p25
          * @brief Represents link control data for TSDU packets.
          * @ingroup p25_lc
          */
-        class HOST_SW_API TSBK {
+        class DVM_COMMON_API TSBK {
         public:
             /**
              * @brief Initializes a copy instance of the TSBK class.

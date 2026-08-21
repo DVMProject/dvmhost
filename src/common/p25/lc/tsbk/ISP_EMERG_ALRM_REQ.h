@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements EMERG ALRM REQ - Emergency Alarm Request
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API ISP_EMERG_ALRM_REQ : public TSBK {
+            class DVM_COMMON_API ISP_EMERG_ALRM_REQ : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the ISP_EMERG_ALRM_REQ class.

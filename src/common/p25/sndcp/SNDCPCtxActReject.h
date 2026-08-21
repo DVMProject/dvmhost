@@ -34,7 +34,7 @@ namespace p25
          * @brief Represents a SNDCP PDU context activation reject response.
          * @ingroup p25_sndcp
          */
-        class HOST_SW_API SNDCPCtxActReject : public SNDCPPacket {
+        class DVM_COMMON_API SNDCPCtxActReject : public SNDCPPacket {
         public:
             /**
              * @brief Initializes a new instance of the SNDCPCtxActReject class.

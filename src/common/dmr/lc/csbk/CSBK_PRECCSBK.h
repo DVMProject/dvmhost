@@ -34,7 +34,7 @@ namespace dmr
              * @brief Implements PRE CSBK - Preamble CSBK
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_PRECCSBK : public CSBK {
+            class DVM_COMMON_API CSBK_PRECCSBK : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_PRECCSBK class.

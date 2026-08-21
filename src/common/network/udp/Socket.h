@@ -182,7 +182,7 @@ namespace network
          *  network socket.
          * @ingroup udp_socket
          */
-        class HOST_SW_API Socket {
+        class DVM_COMMON_API Socket {
         public:
             auto operator=(Socket&) -> Socket& = delete;
             auto operator=(Socket&&) -> Socket& = delete;

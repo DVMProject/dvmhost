@@ -45,7 +45,7 @@ namespace p25
          * @brief Represents a key set item within a KMM frame packet.
          * @ingroup p25_kmm
          */
-        class HOST_SW_API KeyItem {
+        class DVM_COMMON_API KeyItem {
         public:
             /**
              * @brief Initializes a new instance of the KeyItem class.
@@ -141,7 +141,7 @@ namespace p25
          * @brief Represents a key set item within a KMM frame packet.
          * @ingroup p25_kmm
          */
-        class HOST_SW_API KeysetItem {
+        class DVM_COMMON_API KeysetItem {
         public:
             /**
              * @brief Initializes a new instance of the KeysetItem class.
@@ -228,7 +228,7 @@ namespace p25
          * @brief Represents a key status within a KMM frame packet.
          * @ingroup p25_kmm
          */
-        class HOST_SW_API KeyStatus {
+        class DVM_COMMON_API KeyStatus {
         public:
             /**
              * @brief Initializes a new instance of the KeyStatus class.

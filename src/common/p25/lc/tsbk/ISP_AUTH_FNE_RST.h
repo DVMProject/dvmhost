@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements AUTH FNE RST - Authentication FNE Result
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API ISP_AUTH_FNE_RST : public TSBK {
+            class DVM_COMMON_API ISP_AUTH_FNE_RST : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the ISP_AUTH_FNE_RST class.

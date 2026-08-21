@@ -36,7 +36,7 @@ namespace p25
          * @brief Implements radio and talkgroup ID access control checking.
          * @ingroup p25
          */
-        class HOST_SW_API AccessControl {
+        class DVM_COMMON_API AccessControl {
         public:
             /**
              * @brief Initializes the P25 access control.

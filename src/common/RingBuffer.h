@@ -31,7 +31,7 @@
  * @tparam T Type of data to store in RingBuffer.
  */
 template<class T>
-class HOST_SW_API RingBuffer {
+class DVM_COMMON_API RingBuffer {
 public:
     /**
      * @brief Initializes a new instance of the RingBuffer class.

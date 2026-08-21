@@ -183,7 +183,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API FullRateVoice {
+            class DVM_COMMON_API FullRateVoice {
             public:
                 static const uint8_t LENGTH_121011 = 14U;
                 static const uint8_t LENGTH_918 = 17U;

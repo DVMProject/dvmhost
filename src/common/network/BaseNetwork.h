@@ -196,7 +196,7 @@ namespace network
      * @brief Handles dealing with maintaining RTP sequencing for multiple multiplexed RTP streams.
      * @ingroup fne_network
      */
-    class HOST_SW_API RTPStreamMultiplex {
+    class DVM_COMMON_API RTPStreamMultiplex {
     public:
         auto operator=(RTPStreamMultiplex&) -> RTPStreamMultiplex& = delete;
         auto operator=(RTPStreamMultiplex&&) -> RTPStreamMultiplex& = delete;
@@ -393,7 +393,7 @@ namespace network
      * @brief Implements the base networking logic.
      * @ingroup network_core
      */
-    class HOST_SW_API BaseNetwork {
+    class DVM_COMMON_API BaseNetwork {
     public:
         /**
          * @brief Initializes a new instance of the BaseNetwork class.

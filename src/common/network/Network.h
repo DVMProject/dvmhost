@@ -141,7 +141,7 @@ namespace network
      * @brief Implements the core peer networking logic.
      * @ingroup network_core
      */
-    class HOST_SW_API Network : public BaseNetwork {
+    class DVM_COMMON_API Network : public BaseNetwork {
     public:
         /**
          * @brief Initializes a new instance of the Network class.

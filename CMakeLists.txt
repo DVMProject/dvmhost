@@ -19,6 +19,14 @@ else ()
     message(CHECK_PASS "no")
 endif (ENABLE_TESTS)
 
+option(SHARED_LIBS "Build dvmcommon and vocoder as shared libraries" off)
+message(CHECK_START "Build dvmcommon and vocoder as shared libraries")
+if (SHARED_LIBS)
+    message(CHECK_PASS "yes")
+else ()
+    message(CHECK_PASS "no")
+endif (SHARED_LIBS)
+
 option(ENABLE_TUI_SUPPORT "Enable TUI support" on)
 message(CHECK_START "Enable TUI support")
 if (ENABLE_TUI_SUPPORT)
@@ -286,6 +294,12 @@ if (ENABLE_TESTS)
     target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
     target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
     target_include_directories(dvmtests PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/fne tests)
+    if (SHARED_LIBS AND NOT COMPILE_WIN32)
+        set_target_properties(dvmtests PROPERTIES
+            BUILD_RPATH_USE_ORIGIN TRUE
+            BUILD_RPATH "$ORIGIN;/opt/dvm/bin;/opt/dvm/lib;/usr/local/bin;/usr/local/lib;/usr/bin"
+            INSTALL_RPATH "$ORIGIN;/opt/dvm/bin;/opt/dvm/lib;/usr/local/bin;/usr/local/lib;/usr/bin")
+    endif ()
     catch_discover_tests(dvmtests)
 endif (ENABLE_TESTS)
 
@@ -301,6 +315,12 @@ install(TARGETS tged DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 install(TARGETS dvmbridge DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmpatch DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+if (SHARED_LIBS)
+    install(TARGETS common vocoder
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+endif (SHARED_LIBS)
 install(FILES configs/config.example.yml configs/fne-config.example.yml configs/fne-sysview.example.yml configs/monitor-config.example.yml configs/iden_table.example.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml configs/bridge-config.example.yml configs/patch-config.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
 install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh tools/fne-watchdog.sh tools/start-dvm-fne.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")

@@ -102,7 +102,7 @@ namespace network
      * fast path for in-order packets. Out-of-order packets are buffered briefly
      * to allow reordering, with adaptive timeout based on observed jitter.
      */
-    class HOST_SW_API AdaptiveJitterBuffer {
+    class DVM_COMMON_API AdaptiveJitterBuffer {
     public:
         /**
          * @brief Initializes a new instance of the AdaptiveJitterBuffer class.

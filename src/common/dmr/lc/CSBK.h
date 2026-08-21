@@ -35,7 +35,7 @@ namespace dmr
          * @brief Represents DMR control signalling block data.
          * @ingroup dmr_lc
          */
-        class HOST_SW_API CSBK {
+        class DVM_COMMON_API CSBK {
         public:
             /**
              * @brief Initializes a copy instance of the CSBK class.

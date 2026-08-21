@@ -114,7 +114,7 @@ namespace p25
              * @brief Helper class to instantiate an instance of a TSBK.
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API TSBKFactory {
+            class DVM_COMMON_API TSBKFactory {
             public:
                 /**
                  * @brief Initializes a new instance of the TSBKFactory class.

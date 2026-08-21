@@ -38,7 +38,7 @@ namespace crypto
      * @brief Rivest Cipher 4 Algorithm.
      * @ingroup crypto
      */
-    class HOST_SW_API RC4 {
+    class DVM_COMMON_API RC4 {
     public:
         /**
          * @brief Initializes a new instance of the RC4 class.

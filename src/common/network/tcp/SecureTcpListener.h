@@ -38,7 +38,7 @@ namespace network
          * @brief Implements a secure TCP server listener.
          * @ingroup tcp_socket
          */
-        class HOST_SW_API SecureTcpListener : public Socket
+        class DVM_COMMON_API SecureTcpListener : public Socket
         {
         public:
             auto operator=(SecureTcpListener&) -> SecureTcpListener& = delete;

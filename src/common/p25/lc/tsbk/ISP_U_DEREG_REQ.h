@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements U DE REG REQ - Unit De-Registration Request
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API ISP_U_DEREG_REQ : public TSBK {
+            class DVM_COMMON_API ISP_U_DEREG_REQ : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the ISP_U_DEREG_REQ class.

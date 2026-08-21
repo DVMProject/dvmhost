@@ -48,7 +48,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotStartOfStream {
+            class DVM_COMMON_API MotStartOfStream {
             public:
                 /**
                  * @brief Initializes a copy instance of the MotStartOfStream class.

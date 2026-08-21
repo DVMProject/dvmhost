@@ -30,7 +30,7 @@ namespace nxdn
          * @brief Represents the packet information data for link control data.
          * @ingroup nxdn_lc
          */
-        class HOST_SW_API PacketInformation {
+        class DVM_COMMON_API PacketInformation {
         public:
             /**
              * @brief Initializes a new instance of the PacketInformation class.

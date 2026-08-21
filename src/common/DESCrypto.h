@@ -28,7 +28,7 @@ namespace crypto
      * @brief Data Encryption Standard Algorithm.
      * @ingroup crypto
      */
-    class HOST_SW_API DES {
+    class DVM_COMMON_API DES {
     public:
         /**
          * @brief Initializes a new instance of the DES class.

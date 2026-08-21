@@ -45,7 +45,7 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMRekeyAck : public KMMFrame {
+        class DVM_COMMON_API KMMRekeyAck : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMRekeyAck class.

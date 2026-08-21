@@ -74,7 +74,7 @@ namespace vocoder
     /**
      * @brief Implements MBE audio decoding.
      */
-    class HOST_SW_API MBEDecoder
+    class VOCODER_API MBEDecoder
     {
     public:
         /**

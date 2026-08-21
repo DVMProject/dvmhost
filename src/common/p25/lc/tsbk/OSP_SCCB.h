@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SCCB - Secondary Control Channel Broadcast
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_SCCB : public TSBK {
+            class DVM_COMMON_API OSP_SCCB : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_SCCB class.

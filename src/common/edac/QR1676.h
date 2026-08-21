@@ -28,7 +28,7 @@ namespace edac
      * @brief Implements Quadratic residue (16,7,6) forward error correction.
      * @ingroup edac
      */
-    class HOST_SW_API QR1676 {
+    class DVM_COMMON_API QR1676 {
     public:
         /**
          * @brief Decode QR (16,7,6) FEC.

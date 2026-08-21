@@ -33,7 +33,7 @@ namespace p25
          * @brief Base MAC object for a decoded Phase 2 MAC PDU.
          * @ingroup p25_lc
          */
-        class HOST_SW_API MACPDU {
+        class DVM_COMMON_API MACPDU {
         public:
             /**
              * @brief Initializes a new instance of the MACPDU class.

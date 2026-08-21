@@ -37,7 +37,7 @@ namespace nxdn
          * @brief Implements NXDN frame convolution processing.
          * @ingroup nxdn_edac
          */
-        class HOST_SW_API Convolution {
+        class DVM_COMMON_API Convolution {
         public:
             /**
              * @brief Initializes a new instance of the Convolution class.

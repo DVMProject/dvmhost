@@ -54,7 +54,7 @@ namespace network
      *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * \endcode
      */
-    class HOST_SW_API PacketBuffer {
+    class DVM_COMMON_API PacketBuffer {
     public:
         auto operator=(PacketBuffer&) -> PacketBuffer& = delete;
         auto operator=(PacketBuffer&&) -> PacketBuffer& = delete;

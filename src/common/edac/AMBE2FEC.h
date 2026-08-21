@@ -64,7 +64,7 @@ namespace edac
      * c0[24], c1[23], c2[11], c3[14], MSB first. Annex S conversion between
      * transmitted dibits and this codeword is intentionally separate.
      */
-    class HOST_SW_API AMBE2FEC {
+    class DVM_COMMON_API AMBE2FEC {
     public:
         /**
          * @brief Regenerates the P25 Phase 2 half-rate FEC.

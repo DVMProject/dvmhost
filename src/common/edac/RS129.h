@@ -28,7 +28,7 @@ namespace edac
      * @brief Implements Reed-Solomon (12,9) forward error correction.
      * @ingroup edac
      */
-    class HOST_SW_API RS129 {
+    class DVM_COMMON_API RS129 {
     public:
         /**
          * @brief Check RS (12,9) FEC.

@@ -31,7 +31,7 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMNoService : public KMMFrame {
+        class DVM_COMMON_API KMMNoService : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMNoService class.

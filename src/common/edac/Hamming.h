@@ -30,7 +30,7 @@ namespace edac
      *  (17, 12, 3) forward error correction.
      * @ingroup edac
      */
-    class HOST_SW_API Hamming {
+    class DVM_COMMON_API Hamming {
     public:
         /**
          * @brief Decode Hamming (15,11,3).

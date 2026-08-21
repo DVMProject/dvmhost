@@ -38,7 +38,7 @@ namespace p25
          * @brief Project 25 Cryptography.
          * @ingroup p25_crypto
          */
-        class HOST_SW_API P25Crypto {
+        class DVM_COMMON_API P25Crypto {
         public:
             /**
              * @brief Initializes a new instance of the P25Crypto class.

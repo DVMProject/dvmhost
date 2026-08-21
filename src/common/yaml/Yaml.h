@@ -42,7 +42,7 @@ namespace yaml
     //  Class Prototypes
     // ---------------------------------------------------------------------------
 
-    class HOST_SW_API Node;
+    class Node;
 
     // ---------------------------------------------------------------------------
     //  Helper classes and functions
@@ -178,7 +178,7 @@ namespace yaml
      * @brief Exception General YAML Exception.
      * @ingroup yaml
      */
-    class HOST_SW_API Exception : public std::runtime_error {
+    class DVM_COMMON_API Exception : public std::runtime_error {
     public:
         /**
          * @brief Enumeration of exception types.
@@ -221,7 +221,7 @@ namespace yaml
      * @brief InternalException YAML Internal Exception.
      * @ingroup yaml
      */
-    class HOST_SW_API InternalException : public Exception {
+    class DVM_COMMON_API InternalException : public Exception {
     public:
         /**
          * @brief Initializes a new instance of the InternalException class.
@@ -238,7 +238,7 @@ namespace yaml
      * @brief ParsingException YAML Parsing Exception.
      * @ingroup yaml
      */
-    class HOST_SW_API ParsingException : public Exception {
+    class DVM_COMMON_API ParsingException : public Exception {
     public:
         /**
          * @brief Initializes a new instance of the ParsingException class.
@@ -256,7 +256,7 @@ namespace yaml
      * @brief OperationException YAML Operation Exception.
      * @ingroup yaml
      */
-    class HOST_SW_API OperationException : public Exception {
+    class DVM_COMMON_API OperationException : public Exception {
     public:
         /**
          * @brief Initializes a new instance of the OperationException class.
@@ -273,7 +273,7 @@ namespace yaml
      * @brief Iterator Helper class used to iterate through YAML files.
      * @ingroup yaml
      */
-    class HOST_SW_API Iterator {
+    class DVM_COMMON_API Iterator {
     public:
         friend class Node;
 
@@ -344,7 +344,7 @@ namespace yaml
      * @brief ConstIterator Helper class used to iterate through YAML files.
      * @ingroup yaml
      */
-    class HOST_SW_API ConstIterator {
+    class DVM_COMMON_API ConstIterator {
     public:
         friend class Node;
 
@@ -414,7 +414,7 @@ namespace yaml
      * @brief Node Represents a node/element within a YAML file.
      * @ingroup yaml
      */
-    class HOST_SW_API Node {
+    class DVM_COMMON_API Node {
     public:
         friend class Iterator;
 
@@ -602,28 +602,28 @@ namespace yaml
      * @param root Root node to populate.
      * @param filename Path of input file.
      */
-    bool Parse(Node& root, const char* filename);
+    DVM_COMMON_API bool Parse(Node& root, const char* filename);
     /**
      * @brief Populate given root node with deserialized data.
      * @ingroup yaml
      * @param root Root node to populate.
      * @param stream Input stream.
      */
-    bool Parse(Node& root, std::iostream& stream);
+    DVM_COMMON_API bool Parse(Node& root, std::iostream& stream);
     /**
      * @brief Populate given root node with deserialized data.
      * @ingroup yaml
      * @param root Root node to populate.
      * @param string String of input data.
      */
-    bool Parse(Node& root, const std::string& string);
+    DVM_COMMON_API bool Parse(Node& root, const std::string& string);
     /**
      * @brief Populate given root node with deserialized data.
      * @ingroup yaml
      * @param buffer Character array of input data.
      * @param size Buffer size.
      */
-    bool Parse(Node& root, const char* buffer, const size_t size);
+    DVM_COMMON_API bool Parse(Node& root, const char* buffer, const size_t size);
 
     // ---------------------------------------------------------------------------
     //  Structure Declaration
@@ -657,7 +657,7 @@ namespace yaml
      * @param filename Path of output file.
      * @param config Serialization configuration.
      */
-    void Serialize(const Node& root, const char* filename, const SerializeConfig& config = {2, 64, false, false});
+    DVM_COMMON_API void Serialize(const Node& root, const char* filename, const SerializeConfig& config = {2, 64, false, false});
     /**
      * @brief Serialize node data.
      * @ingroup yaml
@@ -665,7 +665,7 @@ namespace yaml
      * @param stream Output stream.
      * @param config Serialization configuration.
      */
-    void Serialize(const Node& root, std::iostream& stream, const SerializeConfig& config = {2, 64, false, false});
+    DVM_COMMON_API void Serialize(const Node& root, std::iostream& stream, const SerializeConfig& config = {2, 64, false, false});
     /**
      * @brief Serialize node data.
      * @ingroup yaml
@@ -673,7 +673,7 @@ namespace yaml
      * @param string String of output data.
      * @param config Serialization configuration.
      */
-    void Serialize(const Node& root, std::string& string, const SerializeConfig& config = {2, 64, false, false});
+    DVM_COMMON_API void Serialize(const Node& root, std::string& string, const SerializeConfig& config = {2, 64, false, false});
 } // namespace yaml
 
 #endif // __YAML_H__

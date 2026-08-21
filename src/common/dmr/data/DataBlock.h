@@ -36,7 +36,7 @@ namespace dmr
          * @brief Represents a data block for PDU DMR packets.
          * @ingroup dmr_pdu
          */
-        class HOST_SW_API DataBlock {
+        class DVM_COMMON_API DataBlock {
         public:
             /**
              * @brief Initializes a copy instance of the DataBlock class.

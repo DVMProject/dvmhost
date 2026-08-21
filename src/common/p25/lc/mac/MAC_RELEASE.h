@@ -31,7 +31,7 @@ namespace p25
             /** 
              * @brief Phase 2 MAC release PDU. 
              */
-            class HOST_SW_API MAC_RELEASE : public MACPDU {
+            class DVM_COMMON_API MAC_RELEASE : public MACPDU {
             public:
                 /**
                  * @brief Initializes a new instance of the MAC_RELEASE class.

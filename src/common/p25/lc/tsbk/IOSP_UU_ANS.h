@@ -34,7 +34,7 @@ namespace p25
              *  UU ANS REQ - Unit-to-Unit Answer Request (OSP)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API IOSP_UU_ANS : public TSBK {
+            class DVM_COMMON_API IOSP_UU_ANS : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the IOSP_UU_ANS class.

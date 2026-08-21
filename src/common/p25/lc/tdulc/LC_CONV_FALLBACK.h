@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements CONV FALLBACK - Conventional Fallback
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_CONV_FALLBACK : public TDULC {
+            class DVM_COMMON_API LC_CONV_FALLBACK : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_CONV_FALLBACK class.

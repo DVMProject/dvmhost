@@ -31,7 +31,7 @@ namespace p25
             /** 
              * @brief Phase 2 unit-to-unit voice channel user MAC PDU. 
              */
-            class HOST_SW_API MAC_UU_VCH_USER : public MACPDU {
+            class DVM_COMMON_API MAC_UU_VCH_USER : public MACPDU {
             public:
                 /**
                  * @brief Initializes a new instance of the MAC_UU_VCH_USER class.

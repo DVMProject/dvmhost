@@ -45,7 +45,7 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMUnableToDecrypt : public KMMFrame {
+        class DVM_COMMON_API KMMUnableToDecrypt : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMUnableToDecrypt class.

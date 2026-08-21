@@ -33,7 +33,7 @@ namespace p25
          * @brief Represents link control data for Alternate Trunking packets.
          * @ingroup p25_lc
          */
-        class HOST_SW_API AMBT : public TSBK {
+        class DVM_COMMON_API AMBT : public TSBK {
         public:
             /**
              * @brief Initializes a new instance of the AMBT class.

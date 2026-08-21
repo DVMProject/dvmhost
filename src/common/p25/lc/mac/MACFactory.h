@@ -37,7 +37,7 @@ namespace p25
              * @brief Helper class to instantiate a Phase 2 MAC PDU.
              * @ingroup p25_lc
              */
-            class HOST_SW_API MACFactory {
+            class DVM_COMMON_API MACFactory {
             public:
                 /**
                  * @brief Initializes a new instance of the MACFactory class.

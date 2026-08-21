@@ -50,7 +50,7 @@ namespace p25
              * @brief Helper class to instantiate an instance of a TDULC.
              * @ingroup p25_lc
              */
-            class HOST_SW_API TDULCFactory {
+            class DVM_COMMON_API TDULCFactory {
             public:
                 /**
                  * @brief Initializes a new instance of the TDULCFactory class.

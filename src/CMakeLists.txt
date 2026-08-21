@@ -13,7 +13,19 @@ include(src/CompilerOptions.cmake)
 ## common
 #
 include(src/common/CMakeLists.txt)
-add_library(common STATIC ${common_SRC} ${common_INCLUDE})
+if (SHARED_LIBS)
+    set(DVM_LIBRARY_TYPE SHARED)
+else ()
+    set(DVM_LIBRARY_TYPE STATIC)
+endif (SHARED_LIBS)
+
+add_library(common ${DVM_LIBRARY_TYPE} ${common_SRC} ${common_INCLUDE})
+set_target_properties(common PROPERTIES OUTPUT_NAME dvmcommon)
+if (SHARED_LIBS)
+    target_compile_definitions(common PRIVATE DVMCOMMON_EXPORTS)
+else ()
+    target_compile_definitions(common PUBLIC DVMCOMMON_STATIC)
+endif (SHARED_LIBS)
 if (COMPILE_WIN32)
     target_link_libraries(common PRIVATE asio::asio Threads::Threads)
 else ()
@@ -25,7 +37,12 @@ target_include_directories(common PRIVATE ${OPENSSL_INCLUDE_DIR} ${LIBDW_INCLUDE
 ## vocoder
 #
 include(src/vocoder/CMakeLists.txt)
-add_library(vocoder STATIC ${vocoder_SRC} ${vocoder_INCLUDE})
+add_library(vocoder ${DVM_LIBRARY_TYPE} ${vocoder_SRC} ${vocoder_INCLUDE})
+if (SHARED_LIBS)
+    target_compile_definitions(vocoder PRIVATE VOCODER_EXPORTS)
+else ()
+    target_compile_definitions(vocoder PUBLIC VOCODER_STATIC)
+endif (SHARED_LIBS)
 target_include_directories(vocoder PRIVATE src src/vocoder)
 
 #
@@ -157,3 +174,23 @@ else ()
     target_link_libraries(dvmpatch PRIVATE common ${OPENSSL_LIBRARIES} ${LIBDW_LIBRARY} dl asio::asio Threads::Threads)
 endif (COMPILE_WIN32)
 target_include_directories(dvmpatch PRIVATE ${OPENSSL_INCLUDE_DIR} ${LIBDW_INCLUDE_DIR} src src/patch)
+
+if (SHARED_LIBS AND NOT COMPILE_WIN32)
+    set(_dvm_shared_library_consumers
+        dvmhost
+        dvmfne
+        dvmcmd
+        dvmbridge
+        dvmpatch)
+
+    if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
+        list(APPEND _dvm_shared_library_consumers sysview tged peered)
+    endif ()
+
+    foreach (_target IN LISTS _dvm_shared_library_consumers)
+        set_target_properties(${_target} PROPERTIES
+            BUILD_RPATH_USE_ORIGIN TRUE
+            BUILD_RPATH "$ORIGIN;/opt/dvm/bin;/opt/dvm/lib;/usr/local/bin;/usr/local/lib;/usr/bin"
+            INSTALL_RPATH "$ORIGIN;/opt/dvm/bin;/opt/dvm/lib;/usr/local/bin;/usr/local/lib;/usr/bin")
+    endforeach ()
+endif ()

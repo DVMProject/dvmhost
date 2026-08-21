@@ -44,7 +44,7 @@ namespace vocoder
     /**
      * @brief Implements MBE audio encoding.
      */
-    class HOST_SW_API MBEEncoder {
+    class VOCODER_API MBEEncoder {
     public:
         /**
          * @brief Initializes a new instance of the MBEEncoder class.

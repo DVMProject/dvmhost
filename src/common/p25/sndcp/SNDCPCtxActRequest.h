@@ -34,7 +34,7 @@ namespace p25
          * @brief Represents a SNDCP PDU context activation request.
          * @ingroup p25_sndcp
          */
-        class HOST_SW_API SNDCPCtxActRequest : public SNDCPPacket {
+        class DVM_COMMON_API SNDCPCtxActRequest : public SNDCPPacket {
         public:
             /**
              * @brief Initializes a new instance of the SNDCPCtxActRequest class.

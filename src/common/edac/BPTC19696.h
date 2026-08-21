@@ -28,7 +28,7 @@ namespace edac
      * @brief Implements Block Product Turbo Code (196,96) FEC.
      * @ingroup edac
      */
-    class HOST_SW_API BPTC19696 {
+    class DVM_COMMON_API BPTC19696 {
     public:
         /**
          * @brief Initializes a new instance of the BPTC19696 class.

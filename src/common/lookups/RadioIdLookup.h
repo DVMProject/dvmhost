@@ -39,7 +39,7 @@ namespace lookups
      * @brief Represents an individual entry in the radio ID table.
      * @ingroup lookups_rid
      */
-    class HOST_SW_API RadioId {
+    class DVM_COMMON_API RadioId {
     public:
         /**
          * @brief Initializes a new instance of the RadioId class.
@@ -171,7 +171,7 @@ namespace lookups
      *  lookup table.
      * @ingroup lookups_rid
      */
-    class HOST_SW_API RadioIdLookup : public LookupTable<RadioId> {
+    class DVM_COMMON_API RadioIdLookup : public LookupTable<RadioId> {
     public:
         /**
          * @brief Initializes a new instance of the RadioIdLookup class.

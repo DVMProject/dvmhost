@@ -44,7 +44,7 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMInventoryResponseHeader : public KMMFrame {
+        class DVM_COMMON_API KMMInventoryResponseHeader : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMInventoryResponseHeader class.

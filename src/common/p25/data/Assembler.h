@@ -35,7 +35,7 @@ namespace p25
          * @brief Implements a packet assembler for P25 PDU packet streams.
          * @ingroup p25_pdu
          */
-        class HOST_SW_API Assembler {
+        class DVM_COMMON_API Assembler {
         public:
             /**
              * @brief Initializes a new instance of the Assembler class.

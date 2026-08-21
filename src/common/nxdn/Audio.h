@@ -454,7 +454,7 @@ namespace nxdn
      * @brief Implements NXDN audio processing and interleaving.
      * @ingroup host_nxdn
      */
-    class HOST_SW_API Audio {
+    class DVM_COMMON_API Audio {
     public:
         /**
          * @brief Initializes a new instance of the Audio class.

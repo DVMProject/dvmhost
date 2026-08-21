@@ -53,7 +53,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotFullRateVoice {
+            class DVM_COMMON_API MotFullRateVoice {
             public:
                 static const uint8_t LENGTH = 17U;
                 static const uint8_t SHORTENED_LENGTH = 14U;

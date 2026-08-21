@@ -464,7 +464,7 @@ namespace edac
      *  correction.
      * @ingroup edac
      */
-    class HOST_SW_API AMBEFEC {
+    class DVM_COMMON_API AMBEFEC {
     public:
         /**
          * @brief Initializes a new instance of the AMBEFEC class.

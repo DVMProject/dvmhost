@@ -34,7 +34,7 @@ namespace nxdn
              *  Group Registration Response (OSP)
              * @ingroup nxdn_rcch 
              */
-            class HOST_SW_API MESSAGE_TYPE_GRP_REG : public RCCH {
+            class DVM_COMMON_API MESSAGE_TYPE_GRP_REG : public RCCH {
             public:
                 /**
                  * @brief Initializes a new instance of the MESSAGE_TYPE_GRP_REG class.

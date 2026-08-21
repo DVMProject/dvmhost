@@ -35,7 +35,7 @@ namespace p25
              *  CALL ALRT - Call Alert (OSP)
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_IOSP_CALL_ALRT : public AMBT {
+            class DVM_COMMON_API MBT_IOSP_CALL_ALRT : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_IOSP_CALL_ALRT class.

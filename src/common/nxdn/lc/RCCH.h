@@ -32,7 +32,7 @@ namespace nxdn
          * @brief Represents link control data for control channel NXDN calls.
          * @ingroup nxdn_lc
          */
-        class HOST_SW_API RCCH {
+        class DVM_COMMON_API RCCH {
         public:
             /**
              * @brief Initializes a new instance of the RCCH class.

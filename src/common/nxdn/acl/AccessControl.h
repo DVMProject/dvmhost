@@ -36,7 +36,7 @@ namespace nxdn
          * @brief This class implements radio and talkgroup ID access control checking.
          * @ingroup nxdn
          */
-        class HOST_SW_API AccessControl {
+        class DVM_COMMON_API AccessControl {
         public:
             /**
              * @brief Initializes the NXDN access control.

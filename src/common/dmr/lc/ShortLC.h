@@ -30,7 +30,7 @@ namespace dmr
          * @brief Represents short DMR link control.
          * @ingroup dmr_lc
          */
-        class HOST_SW_API ShortLC {
+        class DVM_COMMON_API ShortLC {
         public:
             /**
              * @brief Initializes a new instance of the ShortLC class.

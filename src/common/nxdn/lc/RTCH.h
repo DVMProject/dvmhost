@@ -36,7 +36,7 @@ namespace nxdn
          * @brief Represents link control data for traffic channel NXDN calls.
          * @ingroup nxdn_lc
          */
-        class HOST_SW_API RTCH {
+        class DVM_COMMON_API RTCH {
         public:
             /**
              * @brief Initializes a new instance of the RTCH class.

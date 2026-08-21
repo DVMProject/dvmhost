@@ -45,7 +45,7 @@ namespace crypto
      * @brief Advanced Encryption Standard Algorithm.
      * @ingroup crypto
      */
-    class HOST_SW_API AES {
+    class DVM_COMMON_API AES {
     public:
         /**
          * @brief Initializes a new instance of the AES class.

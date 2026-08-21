@@ -27,7 +27,7 @@
  * @brief Timer Simple timer that tracks the time and marks if an expiration period has been reached. 
  * @ingroup timers
  */
-class HOST_SW_API Timer {
+class DVM_COMMON_API Timer {
 public:
     /**
      * @brief Initializes a new instance of the Timer class.

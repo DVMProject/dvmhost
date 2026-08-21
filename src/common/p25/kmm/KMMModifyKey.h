@@ -45,7 +45,7 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMModifyKey : public KMMFrame {
+        class DVM_COMMON_API KMMModifyKey : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMModifyKey class.

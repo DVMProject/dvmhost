@@ -38,7 +38,7 @@ namespace lookups
      * @brief Represents an individual entry in the bandplan identity table.
      * @ingroup lookups_iden
      */
-    class HOST_SW_API IdenTable {
+    class DVM_COMMON_API IdenTable {
     public:
         /**
          * @brief Initializes a new instance of the IdenTable class.
@@ -119,7 +119,7 @@ namespace lookups
      *  identity table.
      * @ingroup lookups_iden
      */
-    class HOST_SW_API IdenTableLookup : public LookupTable<IdenTable> {
+    class DVM_COMMON_API IdenTableLookup : public LookupTable<IdenTable> {
     public:
         /**
          * @brief Initializes a new instance of the IdenTableLookup class.

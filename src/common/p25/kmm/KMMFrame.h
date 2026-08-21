@@ -51,7 +51,7 @@ namespace p25
          * @brief Represents a KMM frame packet header.
          * @ingroup p25_kmm
          */
-        class HOST_SW_API KMMFrame {
+        class DVM_COMMON_API KMMFrame {
         public:
             /**
              * @brief Initializes a copy instance of the KMMFrame class.

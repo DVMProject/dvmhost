@@ -39,7 +39,7 @@ namespace lookups
      * @brief Represents an adjacent peer map entry.
      * @ingroup lookups_asm
      */
-    class HOST_SW_API AdjPeerMapEntry {
+    class DVM_COMMON_API AdjPeerMapEntry {
     public:
         /**
          * @brief Initializes a new instance of the AdjPeerMapEntry class.
@@ -148,7 +148,7 @@ namespace lookups
      *  information.
      * @ingroup lookups_asm
      */
-    class HOST_SW_API AdjSiteMapLookup : public Thread {
+    class DVM_COMMON_API AdjSiteMapLookup : public Thread {
     public:
         /**
          * @brief Initializes a new instance of the AdjSiteMapLookup class.

@@ -55,7 +55,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotTSBKFrame {
+            class DVM_COMMON_API MotTSBKFrame {
             public:
                 /**
                  * @brief Initializes a copy instance of the MotTSBKFrame class.

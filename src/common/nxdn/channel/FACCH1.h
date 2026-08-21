@@ -30,7 +30,7 @@ namespace nxdn
          * @brief Implements NXDN Fast Associated Control Channel 1.
          * @ingroup nxdn_ch
          */
-        class HOST_SW_API FACCH1 {
+        class DVM_COMMON_API FACCH1 {
         public:
             /**
              * @brief Initializes a new instance of the FACCH1 class.

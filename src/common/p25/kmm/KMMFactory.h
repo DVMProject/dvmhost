@@ -50,7 +50,7 @@ namespace p25
          * @brief Helper class to instantiate an instance of a KMM frame packet.
          * @ingroup p25_kmm
          */
-        class HOST_SW_API KMMFactory {
+        class DVM_COMMON_API KMMFactory {
         public:
             /**
              * @brief Initializes a new instance of the KMMFactory class.

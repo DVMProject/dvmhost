@@ -40,7 +40,7 @@ namespace lookups
      * @brief Represents voice channel data.
      * @ingroup lookups_ch
      */
-    class HOST_SW_API VoiceChData {
+    class DVM_COMMON_API VoiceChData {
     public:
         /**
          * @brief Initializes a new instance of the VoiceChData class.
@@ -192,7 +192,7 @@ namespace lookups
      * @brief Implements a lookup table class that contains RF channel information.
      * @ingroup lookups_ch
      */
-    class HOST_SW_API ChannelLookup {
+    class DVM_COMMON_API ChannelLookup {
     public:
         /**
          * @brief Initializes a new instance of the ChannelLookup class.

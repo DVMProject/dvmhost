@@ -28,7 +28,7 @@ namespace nxdn
      * @brief Helper class for generating NXDN sync data.
      * @ingroup nxdn
      */
-    class HOST_SW_API Sync {
+    class DVM_COMMON_API Sync {
     public:
         /**
          * @brief Helper to append NXDN sync bytes to the passed buffer.

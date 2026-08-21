@@ -30,7 +30,7 @@ namespace p25
      *  for interleaving P25 data.
      * @ingroup p25
      */
-    class HOST_SW_API P25Utils {
+    class DVM_COMMON_API P25Utils {
     public:
         /**
          * @brief Helper to test and clamp a P25 NAC.

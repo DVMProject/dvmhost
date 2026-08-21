@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements a mechanism to generate raw TSBK data from bytes.
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_TSBK_RAW : public TSBK {
+            class DVM_COMMON_API OSP_TSBK_RAW : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_TSBK_RAW class.

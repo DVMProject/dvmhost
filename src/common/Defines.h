@@ -141,6 +141,30 @@ typedef unsigned long long  ulong64_t;
 
 #define HOST_SW_API
 
+#if defined(DVMCOMMON_STATIC)
+    #define DVM_COMMON_API
+#elif defined(_WIN32)
+    #if defined(DVMCOMMON_EXPORTS)
+        #define DVM_COMMON_API __declspec(dllexport)
+    #else
+        #define DVM_COMMON_API __declspec(dllimport)
+    #endif
+#else
+    #define DVM_COMMON_API __attribute__((visibility("default")))
+#endif
+
+#if defined(VOCODER_STATIC)
+    #define VOCODER_API
+#elif defined(_WIN32)
+    #if defined(VOCODER_EXPORTS)
+        #define VOCODER_API __declspec(dllexport)
+    #else
+        #define VOCODER_API __declspec(dllimport)
+    #endif
+#else
+    #define VOCODER_API __attribute__((visibility("default")))
+#endif
+
 /**
  * @addtogroup common
  * @{

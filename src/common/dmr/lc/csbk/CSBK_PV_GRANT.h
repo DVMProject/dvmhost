@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements PV_GRANT - Private Voice Channel Grant
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_PV_GRANT : public CSBK {
+            class DVM_COMMON_API CSBK_PV_GRANT : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_PV_GRANT class.

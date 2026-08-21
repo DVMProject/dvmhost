@@ -44,7 +44,7 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMDeregistrationResponse : public KMMFrame {
+        class DVM_COMMON_API KMMDeregistrationResponse : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMDeregistrationResponse class.

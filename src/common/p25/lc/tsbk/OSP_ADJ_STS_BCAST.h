@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements ADJ STS BCAST - Adjacent Site Status Broadcast
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_ADJ_STS_BCAST : public TSBK {
+            class DVM_COMMON_API OSP_ADJ_STS_BCAST : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_ADJ_STS_BCAST class.

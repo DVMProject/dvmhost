@@ -31,7 +31,7 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMZeroize : public KMMFrame {
+        class DVM_COMMON_API KMMZeroize : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMZeroize class.

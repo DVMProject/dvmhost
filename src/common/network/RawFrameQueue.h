@@ -40,7 +40,7 @@ namespace network
      * @brief Implements the network frame queuing logic.
      * @ingroup network_core
      */
-    class HOST_SW_API RawFrameQueue {
+    class DVM_COMMON_API RawFrameQueue {
     public:
         auto operator=(RawFrameQueue&) -> RawFrameQueue& = delete;
         auto operator=(RawFrameQueue&&) -> RawFrameQueue& = delete;

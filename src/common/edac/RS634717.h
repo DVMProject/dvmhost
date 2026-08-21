@@ -31,7 +31,7 @@ namespace edac
      *  (45,26,20). (44,16,29) forward error correction.
      * @ingroup edac
      */
-    class HOST_SW_API RS634717 {
+    class DVM_COMMON_API RS634717 {
     public:
         /**
          * @brief Initializes a new instance of the RS634717 class.

@@ -52,7 +52,7 @@ namespace lookups
      * @brief Represents an source block for a routing rule.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleGroupVoiceSource {
+    class DVM_COMMON_API TalkgroupRuleGroupVoiceSource {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.
@@ -117,7 +117,7 @@ namespace lookups
      * @brief Represents an rewrite block for a routing rule rewrites.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleRewrite {
+    class DVM_COMMON_API TalkgroupRuleRewrite {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleRewrite class.
@@ -190,7 +190,7 @@ namespace lookups
      * @brief Represents an configuration block for a routing rule.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleConfig {
+    class DVM_COMMON_API TalkgroupRuleConfig {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleConfig class.
@@ -450,7 +450,7 @@ namespace lookups
      * @brief Represents an group voice block for a routing rule.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleGroupVoice {
+    class DVM_COMMON_API TalkgroupRuleGroupVoice {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleGroupVoice class.
@@ -549,7 +549,7 @@ namespace lookups
      *  rules information.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRulesLookup : public Thread {
+    class DVM_COMMON_API TalkgroupRulesLookup : public Thread {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRulesLookup class.

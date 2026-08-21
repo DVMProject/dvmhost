@@ -29,7 +29,7 @@ namespace edac
      * @brief Implements various Cyclic Redundancy Check routines.
      * @ingroup edac
      */
-    class HOST_SW_API CRC {
+    class DVM_COMMON_API CRC {
     public:
         /**
          * @brief Check 5-bit CRC.

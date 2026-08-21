@@ -58,7 +58,7 @@ namespace dmr
              * @brief Helper class to instantiate an instance of a CSBK.
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBKFactory {
+            class DVM_COMMON_API CSBKFactory {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBKFactory class.
