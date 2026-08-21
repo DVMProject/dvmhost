@@ -59,7 +59,7 @@ namespace lookups
             AdjPeerMapEntry()
         {
             m_active = node["active"].as<bool>(false);
-            m_peerId = node["peer_id"].as<uint32_t>(0U);
+            m_peerId = node["peerId"].as<uint32_t>(0U);
 
             yaml::Node& neighborList = node["neighbors"];
             if (neighborList.size() > 0U) {
@@ -120,6 +120,7 @@ namespace lookups
                     newNeighbor = __INT_STR(neighbor);
                 }
             }
+            node["neighbors"] = neighborList;
         }
 
     public:

@@ -1065,7 +1065,7 @@ bool Host::createNetwork()
     if (restApiEnable) {
         m_restAddress = restApiAddress;
         m_restPort = restApiPort;
-        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
+        m_RESTAPI = new host_restapi::RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
         m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
         bool ret = m_RESTAPI->open();
         if (!ret) {

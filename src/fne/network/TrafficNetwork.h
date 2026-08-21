@@ -63,7 +63,7 @@ class FNETestHooks;
 #endif
 
 class HOST_SW_API HostFNE;
-class HOST_SW_API RESTAPI;
+namespace fne_restapi { class HOST_SW_API RESTAPI; }
 namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API DMRPacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
@@ -336,7 +336,7 @@ namespace network
         friend class P25OTARService;
         P25OTARService* m_p25OTARService;
 
-        friend class ::RESTAPI;
+        friend class ::fne_restapi::RESTAPI;
         HostFNE* m_host;
 
         std::string m_address;

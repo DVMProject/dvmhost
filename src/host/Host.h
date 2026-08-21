@@ -67,7 +67,7 @@ extern network::NetRPC* g_RPC;
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API RESTAPI;
+namespace host_restapi { class HOST_SW_API RESTAPI; }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -232,10 +232,10 @@ private:
     static uint8_t m_activeTickDelay;
     static uint8_t m_idleTickDelay;
 
-    friend class RESTAPI;
+    friend class host_restapi::RESTAPI;
     std::string m_restAddress;
     uint16_t m_restPort;
-    RESTAPI* m_RESTAPI;
+    host_restapi::RESTAPI* m_RESTAPI;
 
     std::string m_rpcAddress;
     uint16_t m_rpcPort;

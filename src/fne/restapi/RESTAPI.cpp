@@ -24,6 +24,7 @@ using namespace network;
 using namespace restapi;
 using namespace restapi::http;
 using namespace lookups;
+using namespace fne_restapi;
 
 #include <cstdio>
 #include <cstdlib>
@@ -43,6 +44,7 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+namespace fne_restapi {
 
 /**
  * @brief Helper to format string.
@@ -489,6 +491,8 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
 
     return groupVoice;
 }
+
+} // namespace fne_restapi
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -1810,8 +1814,8 @@ void RESTAPI::restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& repl
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
-    if (m_network != nullptr) {
-        m_network->m_tidLookup->reload();
+    if (m_tidLookup != nullptr) {
+        m_tidLookup->reload();
     }
 
     reply.payload(response);
@@ -1828,8 +1832,8 @@ void RESTAPI::restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& rep
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
-    if (m_network != nullptr) {
-        m_network->m_ridLookup->reload();
+    if (m_ridLookup != nullptr) {
+        m_ridLookup->reload();
     }
 
     reply.payload(response);
@@ -1846,8 +1850,8 @@ void RESTAPI::restAPI_GetReloadPeerList(const HTTPPayload& request, HTTPPayload&
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
-    if (m_network != nullptr) {
-        m_network->m_peerListLookup->reload();
+    if (m_peerListLookup != nullptr) {
+        m_peerListLookup->reload();
     }
 
     reply.payload(response);

@@ -25,6 +25,7 @@ using namespace network;
 using namespace restapi;
 using namespace restapi::http;
 using namespace modem;
+using namespace host_restapi;
 
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +45,7 @@ using namespace modem;
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+namespace host_restapi {
 
 /**
  * @brief Helper to format string.
@@ -129,6 +131,8 @@ bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::obje
     obj = v.get<json::object>();
     return true;
 }
+
+} // namespace host_restapi
 
 // ---------------------------------------------------------------------------
 //  Public Class Members

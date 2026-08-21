@@ -135,8 +135,8 @@ private:
     bool m_allowActivityTransfer;
     bool m_allowDiagnosticTransfer;
 
-    friend class RESTAPI;
-    RESTAPI* m_RESTAPI;
+    friend class fne_restapi::RESTAPI;
+    fne_restapi::RESTAPI* m_RESTAPI;
 
     /**
      * @brief Reads basic configuration parameters from the INI.

@@ -75,10 +75,10 @@
 
 class HOST_SW_API Host;
 class HOST_SW_API HostCal;
-class HOST_SW_API RESTAPI;
+namespace host_restapi { class HOST_SW_API RESTAPI; }
 
 class HOST_SW_API HostSetup;
-#if defined(ENABLE_SETUP_TUI)        
+#if defined(ENABLE_SETUP_TUI)
 class HOST_SW_API SetupApplication;
 class HOST_SW_API SetupMainWnd;
 
@@ -786,10 +786,10 @@ namespace modem
     protected:
         friend class ::Host;
         friend class ::HostCal;
-        friend class ::RESTAPI;
+        friend class ::host_restapi::RESTAPI;
 
         friend class ::HostSetup;
-#if defined(ENABLE_SETUP_TUI)        
+#if defined(ENABLE_SETUP_TUI)
         friend class ::SetupApplication;
         friend class ::SetupMainWnd;
 
