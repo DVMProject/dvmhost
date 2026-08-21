@@ -633,7 +633,7 @@ namespace yaml
      * @brief Serialization configuration structure, describing output behavior.
      * @ingroup yaml
      */
-    struct SerializeConfig {
+    struct DVM_COMMON_API SerializeConfig {
         /**
          * @brief Initializes a new instance of the SerializeConfig struct.
          * @param spaceIndentation Number of spaces per indentation.

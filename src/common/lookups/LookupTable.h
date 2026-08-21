@@ -43,7 +43,7 @@ namespace lookups
      * @ingroup lookups
      */
     template <class T>
-    class DVM_COMMON_API LookupTable : public Thread {
+    class LookupTable : public Thread {
     public:
         /**
          * @brief Initializes a new instance of the LookupTable class.

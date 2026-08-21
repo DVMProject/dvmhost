@@ -132,15 +132,15 @@
 /**
  * @brief (Global) Display log level.
  */
-extern uint32_t g_logDisplayLevel;
+extern DVM_COMMON_API uint32_t g_logDisplayLevel;
 /**
  * @brief (Global) Flag for displaying timestamps on log entries (does not apply to syslog logging).
  */
-extern bool g_disableTimeDisplay;
+extern DVM_COMMON_API bool g_disableTimeDisplay;
 /**
  * @brief (Global) Flag indicating whether or not logging goes to the syslog.
  */
-extern bool g_useSyslog;
+extern DVM_COMMON_API bool g_useSyslog;
 /**
  * @brief (Global) Flag indicating whether or not network logging is disabled.
  */
@@ -806,7 +806,7 @@ extern DVM_COMMON_API void LogFinalise();
  * This is a variable argument function. This shouldn't be called directly, utilize the LogXXXX macros above, instead.
  */
 template<typename ... Args>
-DVM_COMMON_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, const std::string& fmt, Args... args)
+void Log(uint32_t level, log_internal::SourceLocation sourceLoc, const std::string& fmt, Args... args)
 {
     using namespace log_internal;
 
