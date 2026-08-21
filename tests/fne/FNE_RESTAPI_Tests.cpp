@@ -9,6 +9,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/AdjSiteMapLookup.h"
 #include "common/lookups/PeerListLookup.h"
@@ -61,6 +62,18 @@ namespace {
     {
         const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
         return "/tmp/dvm-fne-rest-rid-" + std::to_string(stamp) + ".csv";
+    }
+
+    /**
+     * @brief Reads the contents of a lookup file, returning an empty string if it does not exist.
+     * @param path The lookup file path.
+     * @returns std::string
+     */
+    std::string readFileContents(const std::string& path)
+    {
+        std::ifstream file(path);
+        return std::string((std::istreambuf_iterator<char>(file)),
+            std::istreambuf_iterator<char>());
     }
 
     /** 
@@ -148,17 +161,19 @@ namespace {
          * @brief Initializes a new instance of the ScopedRESTAPI class.
          * @param port The port on which the REST API server will listen.
          * @param ridLookup The Radio ID lookup instance.
+         * @param ridAliasLookup The Radio Alias lookup instance.
          * @param tgLookup The Talkgroup Rules lookup instance.
          * @param peerLookup The Peer List lookup instance.
          * @param adjLookup The Adjacent Site Map lookup instance.
          */
         ScopedRESTAPI(uint16_t port, lookups::RadioIdLookup* ridLookup = nullptr,
+            lookups::RadioAliasLookup* ridAliasLookup = nullptr,
             lookups::TalkgroupRulesLookup* tgLookup = nullptr,
             lookups::PeerListLookup* peerLookup = nullptr,
             lookups::AdjSiteMapLookup* adjLookup = nullptr) :
             api("127.0.0.1", port, TEST_PASSWORD, "", "", false, nullptr, false)
         {
-            api.setLookups(ridLookup, tgLookup, peerLookup, adjLookup, nullptr);
+            api.setLookups(ridLookup, ridAliasLookup, tgLookup, peerLookup, adjLookup, nullptr);
             REQUIRE(api.open());
         }
         /**
@@ -175,6 +190,7 @@ TEST_CASE("FNE REST RID add and commit updates the persisted ACL", "[fne][restap
 {
     ScopedACLFile aclFile;
     lookups::RadioIdLookup lookup(aclFile.path, 0U, true);
+    const std::string initialContents = readFileContents(aclFile.path);
     const uint16_t port = reserveLoopbackPort();
     ScopedRESTAPI server(port, &lookup);
 
@@ -190,6 +206,7 @@ TEST_CASE("FNE REST RID add and commit updates the persisted ACL", "[fne][restap
     add["allowedKIds"].set<json::array>(allowedKIds);
 
     sendRequest(port, HTTP_PUT, FNE_PUT_RID_ADD, add);
+    CHECK(readFileContents(aclFile.path) == initialContents);
 
     const lookups::RadioId added = lookup.find(TEST_RID);
     REQUIRE_FALSE(added.radioDefault());
@@ -200,6 +217,9 @@ TEST_CASE("FNE REST RID add and commit updates the persisted ACL", "[fne][restap
     CHECK(added.allowedKIds() == std::vector<uint16_t> { 0x1234U, 0xABCDU });
 
     sendRequest(port, HTTP_GET, FNE_GET_RID_COMMIT);
+    const std::string committedContents = readFileContents(aclFile.path);
+    CHECK(committedContents != initialContents);
+    CHECK(committedContents.find(std::to_string(TEST_RID)) != std::string::npos);
 
     lookups::RadioIdLookup persisted(aclFile.path, 0U, true);
     REQUIRE(persisted.read());
@@ -215,6 +235,7 @@ TEST_CASE("FNE REST RID delete and commit removes the RID from the ACL", "[fne][
     lookups::RadioIdLookup lookup(aclFile.path, 0U, true);
     lookup.addEntry(TEST_RID, true, "radio to delete");
     lookup.commit(true);
+    const std::string committedContents = readFileContents(aclFile.path);
 
     const uint16_t port = reserveLoopbackPort();
     ScopedRESTAPI server(port, &lookup);
@@ -223,13 +244,55 @@ TEST_CASE("FNE REST RID delete and commit removes the RID from the ACL", "[fne][
     remove["rid"] = json::value((double)TEST_RID);
     sendRequest(port, HTTP_PUT, FNE_PUT_RID_DELETE, remove);
     CHECK(lookup.find(TEST_RID).radioDefault());
+    CHECK(readFileContents(aclFile.path) == committedContents);
 
     sendRequest(port, HTTP_GET, FNE_GET_RID_COMMIT);
+    const std::string contents = readFileContents(aclFile.path);
+    CHECK(contents != committedContents);
+    CHECK(contents.find(std::to_string(TEST_RID)) == std::string::npos);
+}
 
-    std::ifstream savedACL(aclFile.path);
-    REQUIRE(savedACL.good());
-    const std::string contents((std::istreambuf_iterator<char>(savedACL)),
-        std::istreambuf_iterator<char>());
+TEST_CASE("FNE REST RID alias endpoints query, persist, and delete aliases", "[fne][restapi][rid][alias]")
+{
+    ScopedACLFile aliasFile;
+    lookups::RadioAliasLookup lookup(aliasFile.path, 0U, true);
+    const std::string initialContents = readFileContents(aliasFile.path);
+    const uint16_t port = reserveLoopbackPort();
+    ScopedRESTAPI server(port, nullptr, &lookup);
+
+    json::object add = json::object();
+    add["rid"] = json::value((double)TEST_RID);
+    add["alias"].set<std::string>("REST test alias");
+    sendRequest(port, HTTP_PUT, FNE_PUT_RID_ALIAS_ADD, add);
+
+    CHECK(lookup.find(TEST_RID) == "REST test alias");
+    CHECK(readFileContents(aliasFile.path) == initialContents);
+
+    json::object query = sendRequest(port, HTTP_GET, FNE_GET_RID_ALIAS_QUERY);
+    const json::array aliases = query["rids"].get<json::array>();
+    REQUIRE(aliases.size() == 1U);
+    json::object queriedAlias = aliases[0U].get<json::object>();
+    CHECK(queriedAlias["id"].get<uint32_t>() == TEST_RID);
+    CHECK(queriedAlias["alias"].get<std::string>() == "REST test alias");
+
+    sendRequest(port, HTTP_GET, FNE_GET_RID_ALIAS_COMMIT);
+    const std::string committedContents = readFileContents(aliasFile.path);
+    CHECK(committedContents != initialContents);
+    CHECK(committedContents.find(std::to_string(TEST_RID)) != std::string::npos);
+
+    lookups::RadioAliasLookup persisted(aliasFile.path, 0U, true);
+    REQUIRE(persisted.read());
+    CHECK(persisted.find(TEST_RID) == "REST test alias");
+
+    json::object remove = json::object();
+    remove["rid"] = json::value((double)TEST_RID);
+    sendRequest(port, HTTP_PUT, FNE_PUT_RID_ALIAS_DELETE, remove);
+    CHECK(lookup.find(TEST_RID) == "UNKNOWN");
+    CHECK(readFileContents(aliasFile.path) == committedContents);
+
+    sendRequest(port, HTTP_GET, FNE_GET_RID_ALIAS_COMMIT);
+    const std::string contents = readFileContents(aliasFile.path);
+    CHECK(contents != committedContents);
     CHECK(contents.find(std::to_string(TEST_RID)) == std::string::npos);
 }
 
@@ -237,8 +300,9 @@ TEST_CASE("FNE REST peer endpoints query, persist, and delete ACL entries", "[fn
 {
     ScopedACLFile aclFile;
     lookups::PeerListLookup lookup(aclFile.path, 0U, true, false);
+    const std::string initialContents = readFileContents(aclFile.path);
     const uint16_t port = reserveLoopbackPort();
-    ScopedRESTAPI server(port, nullptr, nullptr, &lookup);
+    ScopedRESTAPI server(port, nullptr, nullptr, nullptr, &lookup);
 
     json::object add = json::object();
     add["peerId"] = json::value((double)9001U);
@@ -249,6 +313,7 @@ TEST_CASE("FNE REST peer endpoints query, persist, and delete ACL entries", "[fn
     add["canIssueInhibit"] = json::value(true);
     add["hasCallPriority"] = json::value(true);
     sendRequest(port, HTTP_PUT, FNE_PUT_PEER_ADD, add);
+    CHECK(readFileContents(aclFile.path) == initialContents);
 
     const lookups::PeerId peer = lookup.find(9001U);
     CHECK(peer.peerAlias() == "REST peer");
@@ -263,6 +328,9 @@ TEST_CASE("FNE REST peer endpoints query, persist, and delete ACL entries", "[fn
     CHECK(query["peers"].get<json::array>()[0U].get<json::object>()["peerPassword"].get<bool>());
 
     sendRequest(port, HTTP_GET, FNE_GET_PEER_COMMIT);
+    const std::string committedContents = readFileContents(aclFile.path);
+    CHECK(committedContents != initialContents);
+    CHECK(committedContents.find("9001") != std::string::npos);
     lookups::PeerListLookup persisted(aclFile.path, 0U, true, false);
     REQUIRE(persisted.read());
     CHECK(persisted.find(9001U).peerAlias() == "REST peer");
@@ -270,7 +338,11 @@ TEST_CASE("FNE REST peer endpoints query, persist, and delete ACL entries", "[fn
     json::object remove = json::object();
     remove["peerId"] = json::value((double)9001U);
     sendRequest(port, HTTP_PUT, FNE_PUT_PEER_DELETE, remove);
+    CHECK(readFileContents(aclFile.path) == committedContents);
     sendRequest(port, HTTP_GET, FNE_GET_PEER_COMMIT);
+    const std::string deletedContents = readFileContents(aclFile.path);
+    CHECK(deletedContents != committedContents);
+    CHECK(deletedContents.find("9001") == std::string::npos);
     CHECK(lookup.find(9001U).peerDefault());
 }
 
@@ -278,10 +350,12 @@ TEST_CASE("FNE REST talkgroup endpoints query, persist, and delete rules", "[fne
 {
     ScopedACLFile rulesFile;
     lookups::TalkgroupRulesLookup lookup(rulesFile.path, 0U, true, false);
+    const std::string initialContents = readFileContents(rulesFile.path);
     const uint16_t port = reserveLoopbackPort();
-    ScopedRESTAPI server(port, nullptr, &lookup);
+    ScopedRESTAPI server(port, nullptr, nullptr, &lookup);
 
     sendRequest(port, HTTP_PUT, FNE_PUT_TGID_ADD, talkgroupPayload(3100U, 1U, "REST TG"));
+    CHECK(readFileContents(rulesFile.path) == initialContents);
     const lookups::TalkgroupRuleGroupVoice added = lookup.find(3100U, 1U);
     REQUIRE_FALSE(added.isInvalid());
     CHECK(added.name() == "REST TG");
@@ -290,6 +364,9 @@ TEST_CASE("FNE REST talkgroup endpoints query, persist, and delete rules", "[fne
     json::object query = sendRequest(port, HTTP_GET, FNE_GET_TGID_QUERY);
     REQUIRE(query["tgs"].get<json::array>().size() == 1U);
     sendRequest(port, HTTP_GET, FNE_GET_TGID_COMMIT);
+    const std::string committedContents = readFileContents(rulesFile.path);
+    CHECK(committedContents != initialContents);
+    CHECK(committedContents.find("3100") != std::string::npos);
 
     lookups::TalkgroupRulesLookup persisted(rulesFile.path, 0U, true, false);
     REQUIRE(persisted.read());
@@ -299,7 +376,11 @@ TEST_CASE("FNE REST talkgroup endpoints query, persist, and delete rules", "[fne
     remove["tgid"] = json::value((double)3100U);
     remove["slot"] = json::value((double)1U);
     sendRequest(port, HTTP_PUT, FNE_PUT_TGID_DELETE, remove);
+    CHECK(readFileContents(rulesFile.path) == committedContents);
     sendRequest(port, HTTP_GET, FNE_GET_TGID_COMMIT);
+    const std::string deletedContents = readFileContents(rulesFile.path);
+    CHECK(deletedContents != committedContents);
+    CHECK(deletedContents.find("3100") == std::string::npos);
     CHECK(lookup.find(3100U, 1U).isInvalid());
 }
 
@@ -307,8 +388,9 @@ TEST_CASE("FNE REST adjacent-map endpoints query, persist, and delete entries", 
 {
     ScopedACLFile mapFile;
     lookups::AdjSiteMapLookup lookup(mapFile.path, 0U);
+    const std::string initialContents = readFileContents(mapFile.path);
     const uint16_t port = reserveLoopbackPort();
-    ScopedRESTAPI server(port, nullptr, nullptr, nullptr, &lookup);
+    ScopedRESTAPI server(port, nullptr, nullptr, nullptr, nullptr, &lookup);
 
     json::object add = json::object();
     add["peerId"] = json::value((double)100U);
@@ -317,11 +399,15 @@ TEST_CASE("FNE REST adjacent-map endpoints query, persist, and delete entries", 
     neighbors.push_back(json::value((double)102U));
     add["neighbors"].set<json::array>(neighbors);
     sendRequest(port, HTTP_PUT, FNE_PUT_ADJ_MAP_ADD, add);
+    CHECK(readFileContents(mapFile.path) == initialContents);
 
     CHECK(lookup.find(100U).neighbors() == std::vector<uint32_t> { 101U, 102U });
     json::object query = sendRequest(port, HTTP_GET, FNE_GET_ADJ_MAP_LIST);
     REQUIRE(query["peers"].get<json::array>().size() == 1U);
     sendRequest(port, HTTP_GET, FNE_GET_ADJ_MAP_COMMIT);
+    const std::string committedContents = readFileContents(mapFile.path);
+    CHECK(committedContents != initialContents);
+    CHECK(committedContents.find("100") != std::string::npos);
 
     lookups::AdjSiteMapLookup persisted(mapFile.path, 0U);
     REQUIRE(persisted.read());
@@ -330,7 +416,11 @@ TEST_CASE("FNE REST adjacent-map endpoints query, persist, and delete entries", 
     json::object remove = json::object();
     remove["peerId"] = json::value((double)100U);
     sendRequest(port, HTTP_PUT, FNE_PUT_ADJ_MAP_DELETE, remove);
+    CHECK(readFileContents(mapFile.path) == committedContents);
     sendRequest(port, HTTP_GET, FNE_GET_ADJ_MAP_COMMIT);
+    const std::string deletedContents = readFileContents(mapFile.path);
+    CHECK(deletedContents != committedContents);
+    CHECK(deletedContents.find("100") == std::string::npos);
     CHECK(lookup.find(100U).neighbors().empty());
 }
 
@@ -350,7 +440,7 @@ TEST_CASE("FNE REST reload endpoints refresh their configured lookup tables", "[
     peers.commit(true);
 
     const uint16_t port = reserveLoopbackPort();
-    ScopedRESTAPI server(port, &rids, &tgs, &peers);
+    ScopedRESTAPI server(port, &rids, nullptr, &tgs, &peers);
     sendRequest(port, HTTP_PUT, FNE_PUT_TGID_ADD, talkgroupPayload(3001U, 1U, "persisted TG"));
     sendRequest(port, HTTP_GET, FNE_GET_TGID_COMMIT);
 

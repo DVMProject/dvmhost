@@ -515,6 +515,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_host(host),
     m_network(nullptr),
     m_ridLookup(nullptr),
+    m_ridAliasLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
     m_adjSiteMapLookup(nullptr),
@@ -568,11 +569,12 @@ RESTAPI::~RESTAPI()
 
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
 
-void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, 
+void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::RadioAliasLookup* ridAliasLookup, lookups::TalkgroupRulesLookup* tidLookup, 
     ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjMapLookup,
     CryptoContainer* cryptoLookup)
 {
     m_ridLookup = ridLookup;
+    m_ridAliasLookup = ridAliasLookup;
     m_tidLookup = tidLookup;
     m_peerListLookup = peerListLookup;
     m_adjSiteMapLookup = adjMapLookup;
@@ -666,6 +668,10 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
     m_dispatcher.match(FNE_PUT_RID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutRIDDelete, this));
     m_dispatcher.match(FNE_GET_RID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetRIDCommit, this));
+    m_dispatcher.match(FNE_GET_RID_ALIAS_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRAQuery, this));
+    m_dispatcher.match(FNE_PUT_RID_ALIAS_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRAAdd, this));
+    m_dispatcher.match(FNE_PUT_RID_ALIAS_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutRADelete, this));
+    m_dispatcher.match(FNE_GET_RID_ALIAS_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetRACommit, this));
 
     m_dispatcher.match(FNE_GET_TGID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetTGQuery, this));
     m_dispatcher.match(FNE_PUT_TGID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutTGAdd, this));
@@ -1500,6 +1506,125 @@ void RESTAPI::restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& repl
 
     LogInfoEx(LOG_REST, "request to commit and save RID ACLs");
     m_ridLookup->commit();
+
+    reply.payload(response);
+}
+
+/*
+** Radio Alias Operations
+*/
+
+/* REST API endpoint; implements get radio alias query request. */
+
+void RESTAPI::restAPI_GetRAQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array rids = json::array();
+    if (m_ridAliasLookup != nullptr) {
+        if (m_ridAliasLookup->table().size() > 0) {
+            for (auto entry : m_ridAliasLookup->table()) {
+                json::object ridObj = json::object();
+
+                uint32_t rid = entry.first;
+                ridObj["id"].set<uint32_t>(rid);
+                std::string alias = entry.second;
+                ridObj["alias"].set<std::string>(alias);
+
+                rids.push_back(json::value(ridObj));
+            }
+        }
+    }
+
+    response["rids"].set<json::array>(rids);
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements put radio alias add request. */
+
+void RESTAPI::restAPI_PutRAAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    if (!req["alias"].is<std::string>()) {
+        errorPayload(reply, "alias was not a valid string");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+    std::string alias = req["alias"].get<std::string>();
+
+    LogInfoEx(LOG_REST, "request to add RID alias, rid = %u, alias= %s", rid, alias.c_str());
+
+    // The addEntry function will automatically update an existing entry, so no need to check for an exisitng one here
+    m_ridAliasLookup->addEntry(rid, alias);
+}
+
+/* REST API endpoint; implements put radio alias delete request. */
+
+void RESTAPI::restAPI_PutRADelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+
+    std::string alias = m_ridAliasLookup->find(rid);
+    if (alias == "SYSTEM" || alias == "UNKNOWN") {
+        errorPayload(reply, "failed to find specified RID alias to delete");
+        return;
+    }
+
+    LogInfoEx(LOG_REST, "request to delete RID alias, rid = %u", rid);
+
+    m_ridAliasLookup->eraseEntry(rid);
+}
+
+/* REST API endpoint; implements put radio alias commit request. */
+
+void RESTAPI::restAPI_GetRACommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to commit and save RID aliases");
+    m_ridAliasLookup->commit();
 
     reply.payload(response);
 }

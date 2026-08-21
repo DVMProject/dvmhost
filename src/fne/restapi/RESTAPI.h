@@ -22,6 +22,7 @@
 #include "common/restapi/http/SecureHTTPServer.h"
 #include "common/lookups/AdjSiteMapLookup.h"
 #include "common/lookups/RadioIdLookup.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/Thread.h"
@@ -70,14 +71,15 @@ namespace fne_restapi
         ~RESTAPI() override;
 
         /**
-         * @brief Sets the instances of the Radio ID, Talkgroup ID and Peer List lookup tables.
+         * @brief Sets the instances of the Radio ID, Radio Alias, Talkgroup ID and Peer List lookup tables.
          * @param ridLookup Radio ID Lookup Table Instance
+         * @param ridAliasLookup Radio Alias Lookup Table Instance
          * @param tidLookup Talkgroup Rules Lookup Table Instance
          * @param peerListLookup Peer List Lookup Table Instance
          * @param adjPeerMapLookup Adjacent Site Map Lookup Table Instance
          * @param cryptoLookup Crypto Container Instance
          */
-        void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, 
+        void setLookups(::lookups::RadioIdLookup* ridLookup, ::lookups::RadioAliasLookup* ridAliasLookup,  ::lookups::TalkgroupRulesLookup* tidLookup, 
             ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjPeerMapLookup, 
             CryptoContainer* cryptoLookup);
         /**
@@ -117,7 +119,8 @@ namespace fne_restapi
         network::TrafficNetwork* m_network;
 
         ::lookups::RadioIdLookup* m_ridLookup;
-        ::lookups::TalkgroupRulesLookup* m_tidLookup;
+        ::lookups::RadioAliasLookup *m_ridAliasLookup;
+        ::lookups::TalkgroupRulesLookup *m_tidLookup;
         ::lookups::PeerListLookup* m_peerListLookup;
         ::lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
         CryptoContainer* m_cryptoLookup;
@@ -280,6 +283,39 @@ namespace fne_restapi
          * @param match HTTP request matcher.
          */
         void restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+        /*
+        ** Radio Alias Operations
+        */
+
+        /**
+         * @brief REST API endpoint; implements get radio alias query request.
+         * @param request HTTP request.
+         * @param reply HTTP reply.
+         * @param match HTTP request matcher.
+         */
+        void restAPI_GetRAQuery(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+        /**
+         * @brief REST API endpoint; implements put radio alias add request.
+         * @param request HTTP request.
+         * @param reply HTTP reply.
+         * @param match HTTP request matcher.
+         */
+        void restAPI_PutRAAdd(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+        /**
+         * @brief REST API endpoint; implements put radio alias delete request.
+         * @param request HTTP request.
+         * @param reply HTTP reply.
+         * @param match HTTP request matcher.
+         */
+        void restAPI_PutRADelete(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+        /**
+         * @brief REST API endpoint; implements put radio alias commit request.
+         * @param request HTTP request.
+         * @param reply HTTP reply.
+         * @param match HTTP request matcher.
+         */
+        void restAPI_GetRACommit(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
         /*
         ** Talkgroup ID Operations
