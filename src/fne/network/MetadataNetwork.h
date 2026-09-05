@@ -172,8 +172,10 @@ namespace network
          * @brief Erases a packet buffer entry from the map.
          * @param pktMap Instance of the PacketBufferMap class.
          * @param peerId Peer ID of the packet buffer entry.
+         * @param pkt Expected packet buffer entry. The map entry is only erased if
+         * it still refers to this instance.
          */
-        static void erasePacketBufferEntry(PacketBufferMap& pktMap, uint32_t peerId);
+        static void erasePacketBufferEntry(PacketBufferMap& pktMap, uint32_t peerId, const PacketBufferEntryPtr& pkt);
 
         /*
         ** Packet Processing

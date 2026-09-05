@@ -42,10 +42,9 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                     // Utils::dump(1U, "MetadataNetwork::taskNetworkRx(), NET_TREE_LIST, Raw Payload", rawPayload, req->length);
 
                     PacketBufferEntryPtr pkt = findOrCreatePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, "Network Tree, Tree List", streamId);
-                    if (pkt == nullptr || !pkt->buffer) {
+                    if (pkt == nullptr) {
                         LogError(LOG_STP, "PEER %u (%s) Network Tree, Tree List, failed to initialize packet buffer", peerId,
                             connection->identWithQualifier().c_str());
-                        erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId);
                         return;
                     }
 
@@ -59,12 +58,16 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                     if (!pktLock.owns_lock()) {
                         LogError(LOG_STP, "PEER %u (%s) Network Tree, Tree List, timeout waiting for packet buffer to unlock", peerId,
                             connection->identWithQualifier().c_str());
-                        if (pkt->buffer) {
-                            pkt->buffer->clear();
-                            pkt->buffer.reset();
-                        }
-                        pkt->streamId = 0U;
-                        erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId);
+                        // detach the stalled transfer without destroying state that
+                        // another worker still owns; its shared_ptr keeps it alive
+                        erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, pkt);
+                        return;
+                    }
+
+                    // the worker that previously owned the entry may have completed the
+                    // transfer and released the lock after resetting the buffer
+                    if (!pkt->buffer) {
+                        erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, pkt);
                         return;
                     }
 
@@ -92,7 +95,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                             if (decompressed != nullptr) {
                                 delete[] decompressed;
                             }
-                            erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId);
+                            erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, pkt);
                             return;
                         }
                         else  {
@@ -105,7 +108,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                                 if (decompressed != nullptr) {
                                     delete[] decompressed;
                                 }
-                                erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId);
+                                erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, pkt);
                                 return;
                             }
                             else {
@@ -135,7 +138,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                         if (decompressed != nullptr) {
                             delete[] decompressed;
                         }
-                        erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId);
+                        erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, pkt);
                     }
                 }
                 else {

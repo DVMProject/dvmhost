@@ -183,9 +183,8 @@ void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, Metadat
 
             bool created = false;
             PacketBufferEntryPtr pkt = findOrCreatePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId, "Remote EKC, Key Update", streamId, &created);
-            if (pkt == nullptr || !pkt->buffer) {
+            if (pkt == nullptr) {
                 LogError(LOG_REPL, "PEER %u Remote EKC, Key Update, failed to initialize packet buffer", peerId);
-                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId);
                 return;
             }
 
@@ -222,7 +221,7 @@ void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, Metadat
             // Utils::dump(1U, "MetadataNetwork::taskNetworkRx(), KEYS_UPDATE, Raw Payload", rawPayload, req->length);
 
             PacketBufferEntryPtr pkt = findPacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId);
-            if (pkt == nullptr || !pkt->buffer) {
+            if (pkt == nullptr) {
                 return;
             }
 
@@ -235,12 +234,16 @@ void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, Metadat
 
             if (!pktLock.owns_lock()) {
                 LogError(LOG_STP, "PEER %u Remote EKC, Key Update, timeout waiting for packet buffer to unlock", peerId);
-                if (pkt->buffer) {
-                    pkt->buffer->clear();
-                    pkt->buffer.reset();
-                }
-                pkt->streamId = 0U;
-                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId);
+                // detach the stalled transfer without destroying state that
+                // another worker still owns; its shared_ptr keeps it alive
+                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId, pkt);
+                return;
+            }
+
+            // the worker that previously owned the entry may have completed the
+            // transfer and released the lock after resetting the buffer
+            if (!pkt->buffer) {
+                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId, pkt);
                 return;
             }
 
@@ -251,7 +254,7 @@ void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, Metadat
                     pkt->buffer.reset();
                 }
                 pkt->streamId = 0U;
-                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId);
+                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId, pkt);
                 return;
             }
 
@@ -274,7 +277,7 @@ void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, Metadat
                     if (decompressed != nullptr) {
                         delete[] decompressed;
                     }
-                    erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId);
+                    erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId, pkt);
                     return;
                 }
 
@@ -293,7 +296,7 @@ void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, Metadat
                     if (decompressed != nullptr) {
                         delete[] decompressed;
                     }
-                    erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId);
+                    erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId, pkt);
                     return;
                 }
 
@@ -306,7 +309,7 @@ void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, Metadat
                 if (decompressed != nullptr) {
                     delete[] decompressed;
                 }
-                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId);
+                erasePacketBufferEntry(mdNetwork->m_peerKeyUpdatePkt, peerId, pkt);
             }
         }
     }

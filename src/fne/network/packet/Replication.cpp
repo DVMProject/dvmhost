@@ -40,10 +40,9 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                     // Utils::dump(1U, "MetadataNetwork::taskNetworkRx(), REPL_ACT_PEER_LIST, Raw Payload", rawPayload, req->length);
 
                     PacketBufferEntryPtr pkt = findOrCreatePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, "Peer Replication, Active Peer List", streamId);
-                    if (pkt == nullptr || !pkt->buffer) {
+                    if (pkt == nullptr) {
                         LogError(LOG_REPL, "PEER %u (%s) Peer Replication, Active Peer List, failed to initialize packet buffer", peerId,
                             connection->identWithQualifier().c_str());
-                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId);
                         return;
                     }
 
@@ -57,12 +56,16 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                     if (!pktLock.owns_lock()) {
                         LogError(LOG_STP, "PEER %u (%s) Peer Replication, Active Peer List, timeout waiting for packet buffer to unlock", peerId,
                             connection->identWithQualifier().c_str());
-                        if (pkt->buffer) {
-                            pkt->buffer->clear();
-                            pkt->buffer.reset();
-                        }
-                        pkt->streamId = 0U;
-                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId);
+                        // detach the stalled transfer without destroying state that
+                        // another worker still owns; its shared_ptr keeps it alive
+                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
+                        return;
+                    }
+
+                    // the worker that previously owned the entry may have completed the
+                    // transfer and released the lock after resetting the buffer
+                    if (!pkt->buffer) {
+                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                         return;
                     }
 
@@ -90,7 +93,7 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                             if (decompressed != nullptr) {
                                 delete[] decompressed;
                             }
-                            erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId);
+                            erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                             return;
                         }
                         else  {
@@ -103,7 +106,7 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                                 if (decompressed != nullptr) {
                                     delete[] decompressed;
                                 }
-                                erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId);
+                                erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                                 return;
                             }
                             else {
@@ -119,7 +122,7 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                         if (decompressed != nullptr) {
                             delete[] decompressed;
                         }
-                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId);
+                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                     }
                 }
                 else {

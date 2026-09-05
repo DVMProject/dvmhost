@@ -200,10 +200,15 @@ MetadataNetwork::PacketBufferEntryPtr MetadataNetwork::findOrCreatePacketBufferE
 
 /* Erases a packet buffer entry from the map. */
 
-void MetadataNetwork::erasePacketBufferEntry(PacketBufferMap& pktMap, uint32_t peerId)
+void MetadataNetwork::erasePacketBufferEntry(PacketBufferMap& pktMap, uint32_t peerId, const PacketBufferEntryPtr& pkt)
 {
     pktMap.lock(false);
-    pktMap.get().erase(peerId);
+
+    auto& entries = pktMap.get();
+    auto it = entries.find(peerId);
+    if (it != entries.end() && it->second == pkt)
+        entries.erase(it);
+
     pktMap.unlock();
 }
 
