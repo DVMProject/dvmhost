@@ -201,8 +201,8 @@ bool Network::PacketHandler::master(Network* network, uint32_t peerId, uint32_t 
                     len /= HA_PARAMS_ENTRY_LEN;
                 }
 
-                uint8_t offs = 10U;
-                for (uint8_t i = 0U; i < len; i++, offs += HA_PARAMS_ENTRY_LEN) {
+                uint32_t offs = 10U;
+                for (uint32_t i = 0U; i < len; i++, offs += HA_PARAMS_ENTRY_LEN) {
                     uint32_t ipAddr = GET_UINT32(buffer, offs + 4U);
                     uint16_t port = GET_UINT16(buffer, offs + 8U);
 

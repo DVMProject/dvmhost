@@ -224,7 +224,7 @@ bool PeerNetwork::writeHAParams(std::vector<HAParameters>& haParams)
         SET_UINT32((len - 4U), buffer, 0U);
 
         uint32_t offs = 4U;
-        for (uint8_t i = 0U; i < haParams.size(); i++) {
+        for (uint32_t i = 0U; i < haParams.size(); i++) {
             uint32_t peerId = haParams[i].peerId;
             uint32_t ipAddr = haParams[i].masterIP;
             uint16_t port = haParams[i].masterPort;

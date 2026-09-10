@@ -150,8 +150,8 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                         len /= HA_PARAMS_ENTRY_LEN;
                     }
 
-                    uint8_t offs = 4U;
-                    for (uint8_t i = 0U; i < len; i++, offs += HA_PARAMS_ENTRY_LEN) {
+                    uint32_t offs = 4U;
+                    for (uint32_t i = 0U; i < len; i++, offs += HA_PARAMS_ENTRY_LEN) {
                         uint32_t peerId = GET_UINT32(rawPayload, offs);
                         uint32_t ipAddr = GET_UINT32(rawPayload, offs + 4U);
                         uint16_t port = GET_UINT16(rawPayload, offs + 8U);

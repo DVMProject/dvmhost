@@ -2412,7 +2412,7 @@ void TrafficNetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool 
 
     uint32_t offs = 4U;
     m_peerReplicaHAParams.lock(false);
-    for (uint8_t i = 0U; i < m_peerReplicaHAParams.size(); i++) {
+    for (uint32_t i = 0U; i < m_peerReplicaHAParams.size(); i++) {
         uint32_t peerId = m_peerReplicaHAParams[i].peerId;
         uint32_t ipAddr = m_peerReplicaHAParams[i].masterIP;
         uint16_t port = m_peerReplicaHAParams[i].masterPort;

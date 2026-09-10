@@ -529,7 +529,7 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
         // ooookay -- lets do the insane, and ridiculously stupid, ETSI Big-Endian reversed byte ordering bullshit for the CRC-32
         uint8_t crcBytes[MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U];
         ::memset(crcBytes, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
-        for (uint8_t i = 0U; i < status->pduDataOffset - 4U; i += 2U) {
+        for (uint32_t i = 0U; i < status->pduDataOffset - 4U; i += 2U) {
             crcBytes[i + 1U] = status->pduUserData[i];
             crcBytes[i] = status->pduUserData[i + 1U];
         }

@@ -140,7 +140,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
             uint32_t copyLen = (compressedLen > FRAG_BLOCK_SIZE) ? FRAG_BLOCK_SIZE : compressedLen;
             ::memcpy(buffer, firstFrag->data, copyLen);
         } else {
-            for (uint8_t i = 0U; i <= blockCnt; i++) {
+            for (uint16_t i = 0U; i <= blockCnt; i++) {
                 auto it = fragments.find(i);
                 if (it == fragments.end() || it->second == nullptr || it->second->data == nullptr) {
                     LogError(LOG_NET, "%s, Packet Fragment, error missing block %u, packet dropped", m_name, i);
