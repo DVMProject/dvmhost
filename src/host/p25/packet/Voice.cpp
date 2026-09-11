@@ -832,8 +832,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             if (m_verbose) {
-                LogInfoEx(LOG_RF, P25_LDU1_STR ", audio, mfId = $%02X srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
-                    m_rfLC.getMFId(), m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
+                LogInfoEx(LOG_RF, P25_LDU1_STR ", audio, mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, errs = %u/1233 (%.1f%%)",
+                    m_rfLC.getMFId(), m_rfLC.getLCO(), m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup(), m_rfLC.getEmergency(), m_rfLC.getEncrypted(), m_rfLC.getPriority(), errors, float(errors) / 12.33F);
             }
 
             return true;
@@ -2151,8 +2151,8 @@ void Voice::writeNet_LDU1()
     m_p25->addFrame(buffer, P25_LDU_FRAME_LENGTH_BYTES + 2U, true);
 
     if (m_verbose) {
-        LogInfoEx(LOG_NET, P25_LDU1_STR " audio, mfId = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, sysId = $%03X, netId = $%05X",
-            m_netLC.getMFId(), m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(),
+        LogInfoEx(LOG_NET, P25_LDU1_STR " audio, mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, group = %u, emerg = %u, encrypt = %u, prio = %u, sysId = $%03X, netId = $%05X",
+            m_netLC.getMFId(), m_netLC.getLCO(), m_netLC.getSrcId(), m_netLC.getDstId(), m_netLC.getGroup(), m_netLC.getEmergency(), m_netLC.getEncrypted(), m_netLC.getPriority(),
             sysId, netId);
     }
 
