@@ -375,6 +375,11 @@ public:
      * @return bool True if termination processing succeeds.
      */
     static bool p25TerminateNetCall(p25::Control& control, const p25::lc::LC& lc, p25::defines::DUID::E duid = p25::defines::DUID::TDU);
+    /**
+     * @brief Selects the next secondary active talkgroup for a P25 voice channel.
+     */
+    static bool p25NextActiveTalkgroups(p25::Control& control, const std::vector<uint32_t>& activeTG,
+        uint8_t& groupUpdtIndex, const uint32_t& dstId, uint32_t& dstIdB, bool& hasDstIdB);
     /** @} */
 
     /**

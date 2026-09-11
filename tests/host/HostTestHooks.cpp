@@ -383,6 +383,14 @@ bool HostTestHooks::p25TerminateNetCall(p25::Control& control, const p25::lc::LC
     return voice->processNetwork(buffer, 1U, localControl, lsd, localDuid, frameType);
 }
 
+/* Selects the next secondary active talkgroup for a P25 voice channel. */
+
+bool HostTestHooks::p25NextActiveTalkgroups(p25::Control& control, const std::vector<uint32_t>& activeTG,
+    uint8_t& groupUpdtIndex, const uint32_t& dstId, uint32_t& dstIdB, bool& hasDstIdB)
+{
+    return control.m_voice->nextActiveTalkgroups(activeTG, groupUpdtIndex, dstId, dstIdB, hasDstIdB);
+}
+
 /* Gets NXDN network state. */
 
 RPT_NET_STATE HostTestHooks::nxdnNetState(const nxdn::Control& control) { return control.m_netState; }

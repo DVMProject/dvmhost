@@ -120,7 +120,11 @@ namespace p25
              * @return bool True, if MAC PDU decoded, otherwise false.
              */
             bool decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync);
-            /** @brief Encode an inbound/IEMI Phase 2 VCH MAC PDU. */
+            /** 
+             * @brief Encode an inbound/IEMI Phase 2 VCH MAC PDU. 
+             * @param[out] data Buffer to encode the MAC PDU.
+             * @param sync Flag indicating if sync is to be included.
+             */
             void encodeVCH_MACPDU_IEMI(uint8_t* data, bool sync);
             /**
              * @brief Decode a xOEMI VCH MAC PDU.

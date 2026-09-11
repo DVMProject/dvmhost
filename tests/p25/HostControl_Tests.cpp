@@ -436,6 +436,46 @@ public:
     p25::Control* m_control;
 };
 
+TEST_CASE("P25 active talkgroup updates preserve the working TGID", "[p25][active_tg]")
+{
+    P25HostHarness harness;
+    const uint32_t workingDstId = 2001U;
+    uint8_t index = 0U;
+    uint32_t dstIdB = 0U;
+    bool hasDstIdB = false;
+
+    const std::vector<uint32_t> activeTG = { workingDstId, 2002U, 2003U, 2004U, 2005U };
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2002U);
+    REQUIRE(dstIdB != workingDstId);
+
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2003U);
+    REQUIRE(dstIdB != workingDstId);
+
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2004U);
+    REQUIRE(dstIdB != workingDstId);
+
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2005U);
+    REQUIRE(dstIdB != workingDstId);
+
+    const std::vector<uint32_t> onlyWorkingTG = { workingDstId, workingDstId };
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, onlyWorkingTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE_FALSE(hasDstIdB);
+    REQUIRE(dstIdB == 0U);
+}
+
 TEST_CASE("P25 host arms the network watchdog when network voice starts", "[p25][host][control]")
 {
     P25HostHarness harness;

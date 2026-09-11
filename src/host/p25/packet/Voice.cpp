@@ -746,14 +746,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 else {
                     std::lock_guard<std::mutex> lock(m_p25->s_activeTGLock);
                     if (m_p25->m_activeTG.size() > 0) {
-                        uint32_t dstId = 0U;
+                        const uint32_t dstId = m_rfLC.getDstId();
                         uint32_t dstIdB = 0U;
                         bool hasDstIdB = false;
                         if (nextActiveTalkgroups(m_p25->m_activeTG, m_grpUpdtCount, dstId, dstIdB, hasDstIdB)) {
-                            m_rfLC.setMFId(MFG_STANDARD);
-                            m_rfLC.setLCO(LCO::GROUP_UPDT);
-                            m_rfLC.setDstId(dstId);
                             if (hasDstIdB) {
+                                m_rfLC.setMFId(MFG_STANDARD);
+                                m_rfLC.setLCO(LCO::GROUP_UPDT);
                                 m_rfLC.setDstIdB(dstIdB);
                             }
                         }
@@ -2094,14 +2093,13 @@ void Voice::writeNet_LDU1()
         else {
             std::lock_guard<std::mutex> lock(m_p25->s_activeTGLock);
             if (m_p25->m_activeTG.size() > 0) {
-                uint32_t dstId = 0U;
+                const uint32_t dstId = m_netLC.getDstId();
                 uint32_t dstIdB = 0U;
                 bool hasDstIdB = false;
                 if (nextActiveTalkgroups(m_p25->m_activeTG, m_grpUpdtCount, dstId, dstIdB, hasDstIdB)) {
-                    m_netLC.setMFId(MFG_STANDARD);
-                    m_netLC.setLCO(LCO::GROUP_UPDT);
-                    m_netLC.setDstId(dstId);
                     if (hasDstIdB) {
+                        m_netLC.setMFId(MFG_STANDARD);
+                        m_netLC.setLCO(LCO::GROUP_UPDT);
                         m_netLC.setDstIdB(dstIdB);
                     }
                 }
@@ -2428,33 +2426,32 @@ bool Voice::applyUserAlias(lc::LC& control, uint8_t& phase)
 
 /* Helper to determine the next active talkgroup in a active multi-group scenario. */
 
-bool Voice::nextActiveTalkgroups(const std::vector<uint32_t>& activeTG, uint8_t& groupUpdtIndex, uint32_t& dstId, uint32_t& dstIdB, bool& hasDstIdB)
+bool Voice::nextActiveTalkgroups(const std::vector<uint32_t>& activeTG, uint8_t& groupUpdtIndex, const uint32_t dstId, uint32_t& dstIdB, bool& hasDstIdB)
 {
     const size_t count = activeTG.size();
+    dstIdB = 0U;
+    hasDstIdB = false;
+
     if (count == 0U) {
         groupUpdtIndex = 0U;
-        hasDstIdB = false;
         return false;
     }
 
-    size_t index = static_cast<size_t>(groupUpdtIndex);
-    if (index >= count) {
-        index = 0U;
+    const size_t startIndex = static_cast<size_t>(groupUpdtIndex) < count ? static_cast<size_t>(groupUpdtIndex) : 0U;
+    size_t index = startIndex;
+    do {
+        if (activeTG[index] != dstId) {
+            dstIdB = activeTG[index];
+            hasDstIdB = true;
+            groupUpdtIndex = static_cast<uint8_t>((index + 1U) % count);
+            return true;
+        }
+
+        index = (index + 1U) % count;
     }
+    while (index != startIndex);
 
-    dstId = activeTG[index];
-    if (count < 2U) {
-        groupUpdtIndex = static_cast<uint8_t>(index);
-        hasDstIdB = false;
-        return true;
-    }
-
-    const size_t nextIndex = (index + 1U) % count;
-    dstIdB = activeTG[nextIndex];
-    hasDstIdB = true;
-
-    // move the rolling index forward for the next report cycle
-    groupUpdtIndex = static_cast<uint8_t>(nextIndex);
+    groupUpdtIndex = static_cast<uint8_t>(startIndex);
     return true;
 }
 
