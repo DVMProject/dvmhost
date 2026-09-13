@@ -243,6 +243,30 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                         }
 
                         if (changed) {
+                            uint32_t patchCount = 0U;
+                            std::string patchIds;
+                            if (reqObj["patches"].is<json::array>()) {
+                                json::array& patchesArr = reqObj["patches"].get<json::array>();
+                                patchCount = (uint32_t)patchesArr.size();
+
+                                for (json::value& pv : patchesArr) {
+                                    if (!pv.is<json::object>())
+                                        continue;
+                                    json::object po = pv.get<json::object>();
+                                    if (po["patchId"].is<std::string>()) {
+                                        if (!patchIds.empty())
+                                            patchIds += ", ";
+                                        patchIds += po["patchId"].get<std::string>();
+                                    }
+                                }
+                            }
+
+                            if (patchCount > 0U)
+                                LogInfoEx(LOG_MASTER, "PEER %u (%s) published %u active patch(es): %s", pktPeerId, connection->identWithQualifier().c_str(),
+                                    patchCount, patchIds.empty() ? "(unnamed)" : patchIds.c_str());
+                            else
+                                LogInfoEx(LOG_MASTER, "PEER %u (%s) cleared all patches", pktPeerId, connection->identWithQualifier().c_str());
+
                             network->writePatchStatusToConsoles(response);
                             network->replicatePatchStatus(reqObj);
                         }
