@@ -17,6 +17,7 @@
 #define __HOST_FNE_H__
 
 #include "fne/Defines.h"
+#include "common/json/json.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
@@ -298,6 +299,12 @@ private:
      * @param peerNetwork Peer network instance.
      */
     void processPeerReplicaNotify(network::PeerNetwork* peerNetwork);
+    /**
+     * @brief Processes peer patch status replication.
+     * @param peerNetwork Peer network instance.
+     * @param obj Patch status JSON payload.
+     */
+    void processPeerPatchStatus(network::PeerNetwork* peerNetwork, json::object obj);
 };
 
 #endif // __HOST_FNE_H__

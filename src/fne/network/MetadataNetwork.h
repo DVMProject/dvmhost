@@ -107,6 +107,9 @@ namespace network
         friend class ::FNETestHooks;
 #endif
         friend class TrafficNetwork;
+        bool writePeerMetadata(FNEPeerConnection* connection, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
+            uint32_t length, uint16_t pktSeq, uint32_t streamId) const;
+
         TrafficNetwork* m_trafficNetwork;
         HostFNE* m_host;
 
@@ -147,6 +150,7 @@ namespace network
 
         PacketBufferMap m_peerKeyUpdatePkt;
         PacketBufferMap m_peerReplicaActPkt;
+        PacketBufferMap m_peerPatchStatusPkt;
         PacketBufferMap m_peerTreeListPkt;
 
         ThreadPool m_threadPool;
