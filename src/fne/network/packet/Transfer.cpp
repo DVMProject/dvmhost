@@ -9,6 +9,7 @@
  */
 #include "fne/Defines.h"
 #include "common/Log.h"
+#include "common/json/json.h"
 #include "network/MetadataNetwork.h"
 #include "fne/ActivityLog.h"
 #include "HostFNE.h"
@@ -180,6 +181,98 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                     }
                     else {
                         network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                    }
+                }
+            }
+        }
+        break;
+
+    case NET_SUBFUNC::TRANSFER_SUBFUNC_PATCH_STATUS:    // Console Patch Status Transfer
+        {
+            if (pktPeerId > 0 && validPeerId) {
+                FNEPeerConnection* connection = network->m_peers[pktPeerId];
+                if (connection != nullptr) {
+                    if (!network->patchStatusEnabled()) {
+                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                        break;
+                    }
+
+                    std::string ip = udp::Socket::address(req->address);
+
+                    // Only authenticated console peers may publish or request patch registry state.
+                    if (req->length <= TRANSFER_PCKT_HDR_LEN) {
+                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                        break;
+                    }
+
+                    if (connection->connected() && connection->address() == ip && connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
+                        const size_t payloadLength = (size_t)(req->length - TRANSFER_PCKT_HDR_LEN);
+                        std::string payload((const char *)(req->buffer + TRANSFER_PCKT_HDR_LEN), payloadLength);
+
+                        json::value v;
+                        std::string err = json::parse(v, payload);
+                        if (!err.empty() || !v.is<json::object>()) {
+                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                            break;
+                        }
+
+                        json::object reqObj = v.get<json::object>();
+                        std::string type = "snapshot";
+                        if (reqObj["type"].is<std::string>())
+                            type = reqObj["type"].get<std::string>();
+
+                        if (type == "request") {
+                            json::object snapshot = network->patchStatusRegistry().snapshot();
+                            network->writePatchStatusToPeer(pktPeerId, snapshot);
+                            break;
+                        }
+
+                        // The authenticated peer identity is authoritative; do not allow spoofed peer IDs.
+                        reqObj["peerId"].set<uint32_t>(pktPeerId);
+                        reqObj["originFnePeerId"].set<uint32_t>(network->m_peerId);
+                        if (!reqObj["peerName"].is<std::string>() || reqObj["peerName"].get<std::string>().empty())
+                            reqObj["peerName"].set<std::string>(connection->identity());
+
+                        json::object response = json::object();
+                        std::string errorMessage;
+                        bool changed = false;
+                        if (!network->patchStatusRegistry().publish(reqObj, response, errorMessage, &changed)) {
+                            LogWarning(LOG_MASTER, "PEER %u (%s) invalid patch status payload, %s", pktPeerId, connection->identWithQualifier().c_str(), errorMessage.c_str());
+                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                            break;
+                        }
+
+                        if (changed) {
+                            uint32_t patchCount = 0U;
+                            std::string patchIds;
+                            if (reqObj["patches"].is<json::array>()) {
+                                json::array& patchesArr = reqObj["patches"].get<json::array>();
+                                patchCount = (uint32_t)patchesArr.size();
+
+                                for (json::value& pv : patchesArr) {
+                                    if (!pv.is<json::object>())
+                                        continue;
+                                    json::object po = pv.get<json::object>();
+                                    if (po["patchId"].is<std::string>()) {
+                                        if (!patchIds.empty())
+                                            patchIds += ", ";
+                                        patchIds += po["patchId"].get<std::string>();
+                                    }
+                                }
+                            }
+
+                            if (patchCount > 0U)
+                                LogInfoEx(LOG_MASTER, "PEER %u (%s) published %u active patch(es): %s", pktPeerId, connection->identWithQualifier().c_str(),
+                                    patchCount, patchIds.empty() ? "(unnamed)" : patchIds.c_str());
+                            else
+                                LogInfoEx(LOG_MASTER, "PEER %u (%s) cleared all patches", pktPeerId, connection->identWithQualifier().c_str());
+
+                            network->writePatchStatusToConsoles(response);
+                            network->replicatePatchStatus(reqObj);
+                        }
+                    }
+                    else {
+                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
                     }
                 }
             }
