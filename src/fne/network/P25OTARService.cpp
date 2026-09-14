@@ -719,10 +719,11 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
             outKmm.getSrcLLId(), outKmm.getDstLLId(), ks.keys().size());
     }
 
+    const uint32_t frameLength = outKmm.fullLength();
     if (payloadSize != nullptr)
-        *payloadSize = outKmm.length();
+        *payloadSize = frameLength;
 
-    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.length());
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(frameLength);
     outKmm.encode(kmmFrame.get());
     outKmm.generateMAC(kekKey, kmmFrame.get());
     return kmmFrame;
@@ -741,10 +742,11 @@ UInt8Array P25OTARService::write_KMM_Reg_Command(uint32_t llId, uint32_t kmmRSI,
             outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
+    const uint32_t frameLength = outKmm.fullLength();
     if (payloadSize != nullptr)
-        *payloadSize = outKmm.length();
+        *payloadSize = frameLength;
 
-    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.length());
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(frameLength);
     outKmm.encode(kmmFrame.get());
     return kmmFrame;
 }
@@ -763,10 +765,11 @@ UInt8Array P25OTARService::write_KMM_Dereg_Response(uint32_t llId, uint32_t kmmR
             outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
+    const uint32_t frameLength = outKmm.fullLength();
     if (payloadSize != nullptr)
-        *payloadSize = outKmm.length();
+        *payloadSize = frameLength;
 
-    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.length());
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(frameLength);
     outKmm.encode(kmmFrame.get());
     return kmmFrame;
 }
@@ -784,10 +787,11 @@ UInt8Array P25OTARService::write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, u
             outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
+    const uint32_t frameLength = outKmm.fullLength();
     if (payloadSize != nullptr)
-        *payloadSize = outKmm.length();
+        *payloadSize = frameLength;
     
-    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.length());
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(frameLength);
     outKmm.encode(kmmFrame.get());
     return kmmFrame;
 }
@@ -805,10 +809,11 @@ UInt8Array P25OTARService::write_KMM_Zeroize(uint32_t llId, uint32_t kmmRSI, uin
             outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
+    const uint32_t frameLength = outKmm.fullLength();
     if (payloadSize != nullptr)
-        *payloadSize = outKmm.length();
+        *payloadSize = frameLength;
 
-    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.length());
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(frameLength);
     outKmm.encode(kmmFrame.get());
     return kmmFrame;
 }

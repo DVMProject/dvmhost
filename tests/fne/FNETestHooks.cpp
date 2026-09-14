@@ -9,6 +9,7 @@
  */
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
+#include "fne/network/P25OTARService.h"
 
 #include <cstring>
 #include <chrono>
@@ -67,6 +68,22 @@ FNEPeerConnection& FNETestHooks::addPeer(TrafficNetwork& network, uint32_t peerI
     connection->m_connected = connected;
     network.m_peers[peerId] = connection;
     return *connection;
+}
+
+std::unique_ptr<uint8_t[]> FNETestHooks::processOTARKMM(TrafficNetwork& network,
+    const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize)
+{
+    payloadSize = 0U;
+    if (packet.empty() || network.m_p25OTARService == nullptr)
+        return nullptr;
+
+    return network.m_p25OTARService->processKMM(packet.data(), (uint32_t)packet.size(), llId,
+        false, &payloadSize);
+}
+
+void FNETestHooks::setKMFServicesEnabled(TrafficNetwork& network, bool enabled)
+{
+    network.m_kmfServicesEnabled = enabled;
 }
 
 // ---------------------------------------------------------------------------

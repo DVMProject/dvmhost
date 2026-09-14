@@ -14,6 +14,7 @@
 #include "fne/network/TrafficNetwork.h"
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,19 @@ public:
     static void dispatchMetadata(network::TrafficNetwork& network, network::MetadataNetwork& metadata,
         network::NET_FUNC::ENUM function, network::NET_SUBFUNC::ENUM subFunction, uint32_t peerId,
         const std::vector<uint8_t>& packet);
+
+    /**
+     * @brief Passes an encoded KMM through the FNE OTAR message dispatcher.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param packet Encoded KMM bytes.
+     * @param llId Logical Link ID associated with the message.
+     * @param[out] payloadSize Size of the returned KMM, or zero when no response is required.
+     * @return Encoded response, or nullptr when the dispatcher produces no response.
+     */
+    static std::unique_ptr<uint8_t[]> processOTARKMM(network::TrafficNetwork& network,
+        const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize);
+    /** @brief Enables or disables KMF services for a test TrafficNetwork. */
+    static void setKMFServicesEnabled(network::TrafficNetwork& network, bool enabled);
 };
 
 #endif // __FNE_TEST_HOOKS_H__

@@ -16,6 +16,10 @@
 #if !defined(__P25_OTAR_SERVICE_H__)
 #define __P25_OTAR_SERVICE_H__
 
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 #include "fne/Defines.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
@@ -51,6 +55,9 @@ namespace network
      * @ingroup fne_network
      */
     class HOST_SW_API P25OTARService {
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::FNETestHooks;
+#endif
     public:
         /**
          * @brief Initializes a new instance of the P25OTARService class.
