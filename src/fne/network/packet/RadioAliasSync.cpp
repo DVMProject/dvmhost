@@ -61,7 +61,11 @@ void MetadataNetwork::PacketHandler::radioAliasSync(TrafficNetwork* network, Met
                 }
 
                 PacketBuffer pkt(true, "Radio Alias Sync");
-                pkt.encode((uint8_t*)buffer, len);
+                bool success = pkt.encode((uint8_t*)buffer, len);
+                if (!success) {
+                    LogError(LOG_REPL, "PEER %u Radio Alias Sync, failed to encode packet", peerId);
+                    return;
+                }
 
                 LogInfoEx(LOG_REPL, "PEER %u Radio Alias Sync, blocks %u, streamId = %u", peerId, pkt.fragments.size(), streamId);
                 if (pkt.fragments.size() > 0U) {

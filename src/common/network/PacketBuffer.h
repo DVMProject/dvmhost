@@ -82,8 +82,9 @@ namespace network
          * @brief Encode a network packet fragment.
          * @param[out] data Message to encode.
          * @param length Length of message.
+         * @returns bool True if encoding was successful, false otherwise.
          */
-        void encode(uint8_t* data, uint32_t length);
+        bool encode(uint8_t* data, uint32_t length);
 
         /**
          * @brief Helper to clear currently buffered fragments.

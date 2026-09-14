@@ -22,7 +22,7 @@ using namespace compress;
 // ---------------------------------------------------------------------------
 
 #define MAX_FRAGMENT_SIZE 8192 * 1024 // 8MB max
-
+#define MAX_BLOCK_CNT 254
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -164,6 +164,13 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
         if (m_compression) {
             uint32_t decompressedLen = 0U;
             UInt8Array decompressed = Compression::decompress(buffer, compressedLen, &decompressedLen);
+            if (decompressed == nullptr || decompressedLen == 0U) {
+                LogError(LOG_NET, "%s, Packet Fragment, error decompressing packet data", m_name);
+                fragments.unlock();
+                clear();
+                return false;
+            }
+
             *message = new uint8_t[decompressedLen];
             ::memset(*message, 0x00U, decompressedLen);
             ::memcpy(*message, decompressed.get(), decompressedLen);
@@ -202,7 +209,7 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
 
 /* Encode a network packet fragment. */
 
-void PacketBuffer::encode(uint8_t* data, uint32_t length)
+bool PacketBuffer::encode(uint8_t* data, uint32_t length)
 {
     assert(data != nullptr);
     assert(length > 0U);
@@ -224,6 +231,11 @@ void PacketBuffer::encode(uint8_t* data, uint32_t length)
 
     // create packet fragments
     uint8_t blockCnt = (compressedLen / FRAG_BLOCK_SIZE) + (compressedLen % FRAG_BLOCK_SIZE ? 1U : 0U);
+    if (blockCnt > MAX_BLOCK_CNT) {
+        LogError(LOG_NET, "%s, Outbound Packet Fragment, too many packet fragments, %u (max %u)", m_name, blockCnt, MAX_BLOCK_CNT);
+        return false;
+    }
+
     uint32_t offs = 0U;
     for (uint8_t i = 0U; i < blockCnt; i++) {
         // build dataset
@@ -256,6 +268,8 @@ void PacketBuffer::encode(uint8_t* data, uint32_t length)
         fragments.insert(i, frag);
         LogInfoEx(LOG_NET, "%s, Outbound Packet Fragment, block %u of %u, txFragments = %u", m_name, i, blockCnt - 1U, fragments.size());
     }
+
+    return true;
 }
 
 /* Helper to clear currently buffered fragments. */

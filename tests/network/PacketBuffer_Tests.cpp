@@ -141,3 +141,47 @@ TEST_CASE("PacketBuffer rejects oversized packet metadata", "[network][packetbuf
     REQUIRE(messageLength == 0U);
     REQUIRE(buffer.fragments.size() == 0U);
 }
+
+TEST_CASE("PacketBuffer rejects invalid ZLIB data", "[network][packetbuffer]")
+{
+    PacketBuffer buffer(true, "packetbuffer-invalid-zlib");
+
+    std::array<uint8_t, FRAG_SIZE> fragment = {};
+    constexpr uint32_t invalidCompressedSize = 8U;
+    setFragmentHeader(fragment.data(), 64U, invalidCompressedSize, 0U, 0U);
+    std::fill_n(fragment.data() + FRAG_HDR_SIZE, invalidCompressedSize, 0xFFU);
+
+    uint8_t* message = nullptr;
+    uint32_t messageLength = 0U;
+    REQUIRE_FALSE(buffer.decode(fragment.data(), &message, &messageLength));
+    REQUIRE(message == nullptr);
+    REQUIRE(messageLength == 0U);
+    REQUIRE(buffer.fragments.empty());
+}
+
+TEST_CASE("PacketBuffer enforces the maximum block count", "[network][packetbuffer]")
+{
+    constexpr uint32_t maxBlockCount = 254U;
+
+    SECTION("accepts exactly the maximum number of blocks") {
+        PacketBuffer buffer(false, "packetbuffer-max-blocks");
+        std::vector<uint8_t> payload(FRAG_BLOCK_SIZE * maxBlockCount, 0x5AU);
+
+        REQUIRE(buffer.encode(payload.data(), (uint32_t)payload.size()));
+        REQUIRE(buffer.fragments.size() == maxBlockCount);
+
+        auto last = buffer.fragments.find((uint8_t)(maxBlockCount - 1U));
+        REQUIRE(last != buffer.fragments.end());
+        REQUIRE(last->second != nullptr);
+        REQUIRE(last->second->data[8U] == maxBlockCount - 1U);
+        REQUIRE(last->second->data[9U] == maxBlockCount - 1U);
+    }
+
+    SECTION("rejects one block over the maximum") {
+        PacketBuffer buffer(false, "packetbuffer-too-many-blocks");
+        std::vector<uint8_t> payload(FRAG_BLOCK_SIZE * maxBlockCount + 1U, 0xA5U);
+
+        REQUIRE_FALSE(buffer.encode(payload.data(), (uint32_t)payload.size()));
+        REQUIRE(buffer.fragments.empty());
+    }
+}

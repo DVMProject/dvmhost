@@ -1914,7 +1914,11 @@ void TrafficNetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool
             ::memcpy(buffer, b.str().data(), len);
 
             PacketBuffer pkt(true, "Peer Replication, RID List");
-            pkt.encode((uint8_t*)buffer, len);
+            bool success = pkt.encode((uint8_t*)buffer, len);
+            if (!success) {
+                LogError(LOG_REPL, "PEER %u (%s) Peer Replication, RID List, failed to encode packet", peerId, connection->identWithQualifier().c_str());
+                return;
+            }
 
             LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, RID List, blocks %u, streamId = %u", peerId, connection->identWithQualifier().c_str(),
                 pkt.fragments.size(), streamId);
@@ -2115,7 +2119,11 @@ void TrafficNetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendRep
             ::memcpy(buffer, b.str().data(), len);
 
             PacketBuffer pkt(true, "Peer Replication, TGID List");
-            pkt.encode((uint8_t*)buffer, len);
+            bool success = pkt.encode((uint8_t*)buffer, len);
+            if (!success) {
+                LogError(LOG_REPL, "PEER %u (%s) Peer Replication, TGID List, failed to encode packet", peerId, connection->identWithQualifier().c_str());
+                return;
+            }
 
             LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, TGID List, blocks %u, streamId = %u", peerId, connection->identWithQualifier().c_str(),
                 pkt.fragments.size(), streamId);
@@ -2317,7 +2325,11 @@ void TrafficNetwork::writeRadioAliasList(uint32_t peerId, uint32_t streamId)
         ::memcpy(buffer, b.str().data(), len);
 
         PacketBuffer pkt(true, "Peer Replication, RID Alias List");
-        pkt.encode((uint8_t*)buffer, len);
+        bool success = pkt.encode((uint8_t*)buffer, len);
+        if (!success) {
+            LogError(LOG_REPL, "PEER %u (%s) Peer Replication, RID Alias List, failed to encode packet", peerId, connection->identWithQualifier().c_str());
+            return;
+        }
 
         LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, RID Alias List, blocks %u, streamId = %u", peerId, connection->identWithQualifier().c_str(),
             pkt.fragments.size(), streamId);
@@ -2379,7 +2391,11 @@ void TrafficNetwork::writePeerList(uint32_t peerId, uint32_t streamId)
         ::memcpy(buffer, b.str().data(), len);
 
         PacketBuffer pkt(true, "Peer Replication, PID List");
-        pkt.encode((uint8_t*)buffer, len);
+        bool success = pkt.encode((uint8_t*)buffer, len);
+        if (!success) {
+            LogError(LOG_REPL, "PEER %u (%s) Peer Replication, PID List, failed to encode packet", peerId, connection->identWithQualifier().c_str());
+            return;
+        }
 
         LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, PID List, blocks %u, streamId = %u", peerId, connection->identWithQualifier().c_str(),
             pkt.fragments.size(), streamId);

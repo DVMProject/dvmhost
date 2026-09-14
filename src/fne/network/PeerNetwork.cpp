@@ -146,7 +146,11 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
         PacketBuffer pkt(true, "Peer Replication, Active Peer List");
-        pkt.encode((uint8_t*)buffer, len);
+        bool success = pkt.encode((uint8_t*)buffer, len);
+        if (!success) {
+            LogError(LOG_REPL, "PEER %u Peer Replication, Active Peer List, failed to encode packet", m_peerId);
+            return false;
+        }
 
         uint32_t streamId = createStreamId();
         LogInfoEx(LOG_REPL, "PEER %u Peer Replication, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
@@ -188,7 +192,11 @@ bool PeerNetwork::writeSpanningTree(SpanningTree* treeRoot)
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
         PacketBuffer pkt(true, "Network Tree, Tree List");
-        pkt.encode((uint8_t*)buffer, len);
+        bool success = pkt.encode((uint8_t*)buffer, len);
+        if (!success) {
+            LogError(LOG_STP, "PEER %u Network Tree, Tree List, failed to encode packet", m_peerId);
+            return false;
+        }
 
         uint32_t streamId = createStreamId();
         LogInfoEx(LOG_STP, "PEER %u Network Tree, Tree List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
