@@ -34,9 +34,27 @@ void MetadataNetwork::PacketHandler::radioAliasSync(TrafficNetwork* network, Met
 
             // validate peer (simple validation really)
             if (connection->connected() && connection->address() == ip) {
+                // save out radio alias table to disk
+                std::string tempFile;
+                if (network->m_isReplica) {
+                    std::ostringstream s;
+                    std::random_device rd;
+                    std::mt19937 mt(rd());
+                    std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                    s << "/tmp/rid_alias.dat." << dist(mt);
+
+                    tempFile = s.str();
+                    std::string origFile = network->m_ridAliasLookup->filename();
+                    network->m_ridAliasLookup->filename(tempFile);
+                    network->m_ridAliasLookup->commit(true);
+                    network->m_ridAliasLookup->filename(origFile);
+                } else {
+                    tempFile = network->m_ridAliasLookup->filename();
+                }
+
                 // read entire file into buffer
                 std::stringstream b;
-                std::ifstream stream(network->m_ridAliasLookup->filename(), std::ios::in | std::ios::binary);
+                std::ifstream stream(tempFile, std::ios::in | std::ios::binary);
 
                 uint32_t len = 0U;
                 UInt8Array bufferUInt8Array = nullptr;
@@ -59,6 +77,9 @@ void MetadataNetwork::PacketHandler::radioAliasSync(TrafficNetwork* network, Met
 
                     stream.close();
                 }
+
+                if (network->m_isReplica)
+                    ::remove(tempFile.c_str());
 
                 PacketBuffer pkt(true, "Radio Alias Sync");
                 bool success = pkt.encode((uint8_t*)buffer, len);
