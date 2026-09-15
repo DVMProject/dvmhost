@@ -250,6 +250,8 @@ void TrafficNetwork::PacketHandler::repeaterConfig(TrafficNetwork* network, NetP
 
                         // spin up a thread and send metadata over to peer
                         network->peerMetadataUpdate(peerId);
+                        if (network->patchStatusEnabled() && connection->peerClass() == PEER_CONN_CLASS_CONSOLE)
+                            network->writePatchStatusToPeer(peerId, network->patchStatusRegistry().snapshot());
                     }
                 }
             }
