@@ -557,7 +557,8 @@ void TagAnalogData::playbackParrot()
 
         delete[] pkt.buffer;
     }
-    Thread::sleep(60);
+    // Each analog voice packet carries 20ms of audio.
+    Thread::sleep(20);
     m_parrotFrames.unlock();
     m_parrotFrames.pop_front();
 }
