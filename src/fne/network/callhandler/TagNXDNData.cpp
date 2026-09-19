@@ -864,7 +864,8 @@ void TagNXDNData::playbackParrot()
 
         delete[] pkt.buffer;
     }
-    Thread::sleep(60);
+    // Each NXDN voice packet carries four 20ms audio frames.
+    Thread::sleep(80);
     m_parrotFrames.unlock();
     m_parrotFrames.pop_front();
 }
