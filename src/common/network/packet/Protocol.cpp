@@ -37,6 +37,12 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
     case NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR:                 // Encapsulated DMR data frame
         {
             if (network->m_enabled && network->m_dmrEnabled) {
+                if (buffer == nullptr || length != (int)(DMR_PACKET_LENGTH + PACKET_PAD)) {
+                    LogError(LOG_NET, "DMR frame has invalid length, peer = %u, streamId = %u, len = %d, expected = %u",
+                        peerId, streamId, length, DMR_PACKET_LENGTH + PACKET_PAD);
+                    break;
+                }
+
                 uint32_t slotNo = (buffer[15U] & 0x80U) == 0x80U ? 1U : 0U; // this is the raw index for the stream ID array
 
                 if (network->m_debug) {
@@ -111,9 +117,6 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
 
                 if (network->m_packetDump)
                     Utils::dump(1U, "Network::clock(), Network Rx, DMR", buffer, length);
-                if (length > (int)(DMR_PACKET_LENGTH + PACKET_PAD))
-                    LogError(LOG_NET, "DMR Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, network->m_pktSeq, length);
-
                 uint8_t len = length;
                 network->m_rxDMRData.addData(&len, 1U);
                 network->m_rxDMRData.addData(buffer, len);
@@ -306,6 +309,12 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
     case NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN:                // Encapsulated NXDN data frame
         {
             if (network->m_enabled && network->m_nxdnEnabled) {
+                if (buffer == nullptr || length != (int)(NXDN_PACKET_LENGTH + PACKET_PAD)) {
+                    LogError(LOG_NET, "NXDN frame has invalid length, peer = %u, streamId = %u, len = %d, expected = %u",
+                        peerId, streamId, length, NXDN_PACKET_LENGTH + PACKET_PAD);
+                    break;
+                }
+
                 if (network->m_debug) {
                     LogDebug(LOG_NET, "NXDN, peer = %u, len = %u, pktSeq = %u, streamId = %u",
                         peerId, length, rtpHeader.getSequence(), streamId);

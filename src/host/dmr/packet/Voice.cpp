@@ -357,6 +357,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else {
+        // Late entry may begin on any of the B--E bursts carrying embedded LC;
+        // do not wait for the next voice-sync (A) burst before collecting it.
+        if (m_slot->m_rfState == RS_RF_LISTENING) {
+            m_rfEmbeddedLC.reset();
+            m_lastRfN = 0xFFU;
+            m_slot->m_rfState = RS_RF_LATE_ENTRY;
+        }
+
         if (m_slot->m_rfState == RS_RF_AUDIO) {
             m_rfN = data[1U] & 0x0FU;
 
@@ -603,7 +611,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfEmbeddedData[1U].setLC(*m_slot->m_rfLC);
 
                 // Create a dummy start frame to replace the received frame
-                uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
+                uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
 
                 Sync::addDMRDataSync(start + 2U, m_slot->s_duplex);
 
@@ -865,7 +873,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
                 m_slot->addFrame(m_slot->s_idle, true);
 
             // Create a dummy start frame
-            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
+            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
 
             Sync::addDMRDataSync(start + 2U, m_slot->s_duplex);
 
@@ -974,7 +982,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
                 m_slot->addFrame(m_slot->s_idle, true);
 
             // Create a dummy start frame
-            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
+            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
 
             Sync::addDMRDataSync(start + 2U, m_slot->s_duplex);
 

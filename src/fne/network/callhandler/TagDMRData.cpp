@@ -67,6 +67,12 @@ TagDMRData::~TagDMRData()
 
 bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
 {
+    if (data == nullptr || len != (DMR_PACKET_LENGTH + PACKET_PAD)) {
+        LogError(LOG_NET, "DMR frame has invalid length, peer = %u, ssrc = %u, streamId = %u, len = %u, expected = %u",
+            peerId, ssrc, streamId, len, DMR_PACKET_LENGTH + PACKET_PAD);
+        return false;
+    }
+
     hrc::hrc_t pktTime = hrc::now();
 
     DECLARE_UINT8_ARRAY(buffer, len);
