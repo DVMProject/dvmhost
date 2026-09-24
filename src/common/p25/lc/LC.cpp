@@ -1365,8 +1365,8 @@ bool LC::decodeMACPDU(const uint8_t* raw, uint32_t macLength)
         ** bryanb: likely will need extra work here -- IDLE,ACTIVE,HANGTIME PDUs can contain multiple
         **  MCOs; for now we're only gonna be decoding the first one...
         */
-        m_macPartition = raw[1U] >> 5U;                                             // MAC Partition
-        m_lco = raw[1U] & 0x1FU;                                                    // MCO
+        m_macPartition = raw[1U] & 0xC0U;                                           // MAC Partition
+        m_lco = raw[1U] & 0x3FU;                                                    // MCO
 
         if (m_macPartition == P2_MAC_MCO_PARTITION::UNIQUE) {
             switch (m_lco) {
@@ -1468,8 +1468,8 @@ void LC::encodeMACPDU(uint8_t* raw, uint32_t macLength)
         ** bryanb: likely will need extra work here -- IDLE,ACTIVE,HANGTIME PDUs can contain multiple
         **  MCOs; for now we're only gonna be decoding the first one...
         */
-        raw[1U] = ((m_macPartition & 0x07U) << 5U) +                                // MAC Partition
-            (m_lco & 0x1FU);                                                        // MCO
+        raw[1U] = (m_macPartition & 0xC0U) +                                        // MAC Partition
+            (m_lco & 0x3FU);                                                        // MCO
 
         if (m_macPartition == P2_MAC_MCO_PARTITION::UNIQUE) {
             switch (m_lco) {
@@ -1875,6 +1875,9 @@ void LC::applyP2Scrambler(uint8_t* data, bool inbound, bool sync)
     // initialize the scrambler state based on the network ID, system ID, color code, and direction
     uint64_t state = p25P2InitialScramblerState(s_siteData.netId(), s_siteData.sysId(), m_colorCode, inbound);
     state = p25P2AdvanceScrambler(state, (uint64_t)m_p2ScrambleOffset);
+    // Scrambler-sequence bits corresponding to leading sync/DUID positions are
+    // discarded even though those burst bits are not XORed.
+    state = p25P2AdvanceScrambler(state, cursor);
 
     // apply the scrambler to each field, advancing the scrambler state as necessary
     for (uint8_t field = 0U; field < fieldCount; field++) {

@@ -931,7 +931,7 @@ namespace p25
                 PRIVATE = 0x02U,                        //!< UU VCH USER - Unit-to-Unit Voice Channel User
                 TEL_INT_VCH_USER = 0x03U,               //!< TEL INT VCH USER - Telephone Interconnect Voice Channel User
 
-                MAC_RELEASE = 0x61U,                    //!< MAC RELEASE - MAC Release
+                MAC_RELEASE = 0x31U,                    //!< MAC RELEASE - MAC Release
 
             /* Any abbreviated or explicit partition opcodes are essentially just TSBKO's. */
             };

@@ -66,11 +66,12 @@ namespace p25
              * @param queueSize Modem frame buffer queue size (bytes).
              * @param debug Flag indicating whether P25 debug is enabled.
              * @param verbose Flag indicating whether P25 verbose logging is enabled.
+             * @param colorCode P25 Phase 2 color code expected on inbound unsrambled MAC PDUs.
              */
             Control(bool authoritative, uint32_t callHang, uint32_t timeout, uint32_t tgHang,
                 modem::Modem* modem, network::Network* network, lookups::P25AffiliationLookup* affiliations,
                 ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
-                uint32_t queueSize, bool debug, bool verbose);
+                uint32_t queueSize, bool debug, bool verbose, uint16_t colorCode = 0U);
             /**
              * @brief Finalizes a P25 Phase 2 controller.
              */

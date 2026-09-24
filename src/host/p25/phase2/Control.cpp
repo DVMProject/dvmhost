@@ -24,7 +24,7 @@ using namespace p25::phase2;
 Control::Control(bool authoritative, uint32_t callHang, uint32_t timeout, uint32_t tgHang,
     modem::Modem* modem, network::Network* network, lookups::P25AffiliationLookup* affiliations,
     ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup,
-    uint32_t queueSize, bool debug, bool verbose) :
+    uint32_t queueSize, bool debug, bool verbose, uint16_t colorCode) :
     m_modem(modem),
     m_network(network),
     m_slot1(nullptr),
@@ -38,7 +38,7 @@ Control::Control(bool authoritative, uint32_t callHang, uint32_t timeout, uint32
     m_debug(debug),
     m_verbose(verbose)
 {
-    Slot::init(this, authoritative, callHang, modem, network, affiliations, ridLookup, tidLookup);
+    Slot::init(this, authoritative, callHang, modem, network, affiliations, ridLookup, tidLookup, colorCode);
     m_slot1 = new Slot(0U, timeout, tgHang, queueSize, debug, verbose);
     m_slot2 = new Slot(1U, timeout, tgHang, queueSize, debug, verbose);
 }

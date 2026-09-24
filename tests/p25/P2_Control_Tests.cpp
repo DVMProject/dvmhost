@@ -41,13 +41,14 @@ namespace {
  */
 std::array<uint8_t, P25DEF::P25_P2_HOST_FRAME_LENGTH_BYTES> makeInboundMAC(
     P25DEF::P2_DUID::E duid, uint8_t opcode, uint32_t srcId = 0x123456U,
-    uint32_t dstId = 0x2345U)
+    uint32_t dstId = 0x2345U, uint16_t colorCode = 0U)
 {
     p25::lc::LC control;
     control.setGroup(true);
     control.setLCO(P25DEF::P2_MAC_MCO::GROUP);
     control.setSrcId(srcId);
     control.setDstId(dstId);
+    control.setColorCode(colorCode);
     control.setP2DUID(static_cast<uint8_t>(duid));
     control.setMACPDUOpcode(opcode);
 
@@ -56,6 +57,35 @@ std::array<uint8_t, P25DEF::P25_P2_HOST_FRAME_LENGTH_BYTES> makeInboundMAC(
     frame[1U] = static_cast<uint8_t>(duid);
     control.encodeVCH_MACPDU_IEMI(frame.data() + 2U, duid == P25DEF::P2_DUID::FACCH_UNSCRAMBLED);
     return frame;
+}
+
+TEST_CASE("P25 Phase 2 ignores END_PTT for another call", "[p25][p2][end-ptt]")
+{
+    p25::phase2::Control control(true, 1U, 20U, 20U, nullptr, nullptr, nullptr, nullptr,
+        nullptr, 4096U, false, false);
+    p25::phase2::Slot& slot = HostTestHooks::p25P2Slot(control, 0U);
+
+    auto ptt = makeInboundMAC(P25DEF::P2_DUID::FACCH_UNSCRAMBLED,
+        P25DEF::P2_MAC_HEADER_OPCODE::PTT);
+    REQUIRE(control.processFrame(0U, ptt.data(), ptt.size()));
+
+    auto wrongColor = makeInboundMAC(P25DEF::P2_DUID::FACCH_UNSCRAMBLED,
+        P25DEF::P2_MAC_HEADER_OPCODE::END_PTT, 0xFFFFFFU, 0x2345U, 1U);
+    REQUIRE(control.processFrame(0U, wrongColor.data(), wrongColor.size()));
+    REQUIRE(control.processFrame(0U, wrongColor.data(), wrongColor.size()));
+    REQUIRE(HostTestHooks::p25P2RFVCHState(slot) == p25::phase2::Slot::VCH_STATE::PTT);
+
+    auto wrongAddress = makeInboundMAC(P25DEF::P2_DUID::FACCH_UNSCRAMBLED,
+        P25DEF::P2_MAC_HEADER_OPCODE::END_PTT, 0xFFFFFFU, 0x3456U);
+    REQUIRE(control.processFrame(0U, wrongAddress.data(), wrongAddress.size()));
+    REQUIRE(control.processFrame(0U, wrongAddress.data(), wrongAddress.size()));
+    REQUIRE(HostTestHooks::p25P2RFVCHState(slot) == p25::phase2::Slot::VCH_STATE::PTT);
+
+    auto matching = makeInboundMAC(P25DEF::P2_DUID::FACCH_UNSCRAMBLED,
+        P25DEF::P2_MAC_HEADER_OPCODE::END_PTT, 0xFFFFFFU);
+    REQUIRE(control.processFrame(0U, matching.data(), matching.size()));
+    REQUIRE(control.processFrame(0U, matching.data(), matching.size()));
+    REQUIRE(HostTestHooks::p25P2RFVCHState(slot) == p25::phase2::Slot::VCH_STATE::HANGTIME);
 }
 
 /**

@@ -11,6 +11,7 @@
 #include "common/edac/RS634717.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/mac/MACFactory.h"
 #include "common/p25/Sync.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -384,6 +385,25 @@ TEST_CASE("P25 Phase 2 VCH MAC PDU Scrambled I-OEMI Round-Trip Test", "[p25][p2_
     }
 
     REQUIRE(failed == false);
+}
+
+TEST_CASE("P25 Phase 2 MAC Release preserves six-bit MCO on wire", "[p25][p2][mac-release]") {
+    LC lc;
+    lc.setLCO(P2_MAC_MCO::MAC_RELEASE);
+    lc.setSrcId(0x123456U);
+    lc.setP2DUID(P2_DUID::SACCH_UNSCRAMBLED);
+    lc.setMACPDUOpcode(P2_MAC_HEADER_OPCODE::ACTIVE);
+    lc.setMACPartition(P2_MAC_MCO_PARTITION::UNIQUE);
+
+    uint8_t encodedData[P25_P2_FRAME_LENGTH_BYTES] = { 0U };
+    lc.encodeVCH_MACPDU(encodedData, false);
+
+    LC decoded;
+    REQUIRE(decoded.decodeVCH_MACPDU_OEMI(encodedData, false));
+    REQUIRE(decoded.getMACPartition() == P2_MAC_MCO_PARTITION::UNIQUE);
+    REQUIRE(decoded.getLCO() == P2_MAC_MCO::MAC_RELEASE);
+    REQUIRE(decoded.getSrcId() == 0x123456U);
+    REQUIRE(p25::lc::mac::MACFactory::createMACPDU(decoded) != nullptr);
 }
 
 TEST_CASE("P25 Phase 2 VCH MAC PDU Scrambled S-OEMI Round-Trip Test", "[p25][p2_vch_macpdu_scrambled_soemi][!mayfail]") {

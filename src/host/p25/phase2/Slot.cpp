@@ -52,6 +52,7 @@ using namespace p25::defines;
 bool Slot::s_authoritative = true;
 
 uint32_t Slot::s_callHang = 0U;
+uint16_t Slot::s_colorCode = 0U;
 
 modem::Modem* Slot::s_modem = nullptr;
 network::Network* Slot::s_network = nullptr;
@@ -304,6 +305,17 @@ bool Slot::processFrame(uint8_t* data, uint32_t length)
             break;
         case defines::P2_MAC_HEADER_OPCODE::END_PTT:
             if (isFACCHDUID(duid)) {
+                const bool colorCodeMatches = m_control.getColorCode() == s_colorCode;
+                const bool addressMatches = m_rfLastDstId == 0U || m_control.getDstId() == m_rfLastDstId;
+                if (!colorCodeMatches || !addressMatches) {
+                    if (m_debug) {
+                        LogDebugEx(LOG_RF, "Slot::processFrame()",
+                            "P25 Phase 2 Slot %u, ignoring END_PTT for another call, colorCode = $%03X, dstId = %u",
+                            m_slotNo + 1U, m_control.getColorCode(), m_control.getDstId());
+                    }
+                    return true;
+                }
+
                 m_rfEndPTTCount++;
                 if (m_rfEndPTTCount == 2U) {
                     ::ActivityLog("P25P2", true, "Slot %u RF voice call ended from %u to %u, %.1f seconds, BER: %.1f%%",
@@ -704,13 +716,15 @@ void Slot::clock(uint32_t ms)
 /* Helper to initialize shared P25 Phase 2 slot configuration. */
 
 void Slot::init(Control* control, bool authoritative, uint32_t callHang, modem::Modem* modem, network::Network* network,
-    lookups::P25AffiliationLookup* affiliations, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup)
+    lookups::P25AffiliationLookup* affiliations, ::lookups::RadioIdLookup* ridLookup,
+    ::lookups::TalkgroupRulesLookup* tidLookup, uint16_t colorCode)
 {
     s_control = control;
 
     s_authoritative = authoritative;
 
     s_callHang = callHang;
+    s_colorCode = colorCode & 0x0FFFU;
 
     s_modem = modem;
     s_network = network;

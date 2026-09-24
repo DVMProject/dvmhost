@@ -175,9 +175,11 @@ namespace p25
              * @param affiliations Instance of the P25AffiliationLookup class.
              * @param ridLookup Instance of the RadioIdLookup class.
              * @param tidLookup Instance of the TalkgroupRulesLookup class.
+             * @param colorCode P25 Phase 2 color code expected on inbound unsrambled MAC PDUs.
              */
             static void init(Control* control, bool authoritative, uint32_t callHang, modem::Modem* modem, network::Network* network,
-                lookups::P25AffiliationLookup* affiliations, ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup);
+                lookups::P25AffiliationLookup* affiliations, ::lookups::RadioIdLookup* ridLookup,
+                ::lookups::TalkgroupRulesLookup* tidLookup, uint16_t colorCode = 0U);
 
         private:
 #if defined(CATCH2_TEST_COMPILATION)
@@ -272,6 +274,7 @@ namespace p25
             static bool s_authoritative;
 
             static uint32_t s_callHang;
+            static uint16_t s_colorCode;
 
             static modem::Modem* s_modem;
             static network::Network* s_network;

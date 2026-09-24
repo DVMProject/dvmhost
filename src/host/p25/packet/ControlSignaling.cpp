@@ -1561,8 +1561,8 @@ void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
     tsbk->encode(buffer + 2U);
 
     // add status bits
-    P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
-    P25Utils::addIdleStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
+    P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BITS, false, true);
+    P25Utils::addIdleStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BITS);
     P25Utils::setStatusBitsStartIdle(buffer + 2U);
 
     m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
@@ -3174,7 +3174,7 @@ void ControlSignaling::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
     tsbk->encode(data);
 
     // add status bits
-    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false, false);
+    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BITS, false, false);
     P25Utils::setStatusBitsStartIdle(data);
 }
 
