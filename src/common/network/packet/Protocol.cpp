@@ -9,6 +9,7 @@
  */
 #include "Defines.h"
 #include "common/Log.h"
+#include "common/nxdn/NXDNDefines.h"
 #include "network/Network.h"
 
 using namespace network;
@@ -377,8 +378,11 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
 
                 if (network->m_packetDump)
                     Utils::dump(1U, "Network::clock(), Network Rx, NXDN", buffer, length);
-                if (length > (int)(NXDN_PACKET_LENGTH + PACKET_PAD))
-                    LogError(LOG_NET, "NXDN Stream %u, frame oversized? this shouldn't happen, pktSeq = %u, len = %u", streamId, network->m_pktSeq, length);
+                if (length > (int)(NXDN_PACKET_LENGTH + PACKET_PAD)) {
+                    LogWarning(LOG_NET, "NXDN Stream %u, rejecting oversized frame, pktSeq = %u, len = %u",
+                        streamId, network->m_pktSeq, length);
+                    break;
+                }
 
                 uint8_t len = length;
                 network->m_rxNXDNData.addData(&len, 1U);

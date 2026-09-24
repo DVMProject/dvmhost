@@ -93,7 +93,7 @@ namespace network
     const uint32_t  P25_TSDU_PACKET_LENGTH = 69U;   // 24 byte header + TSDU data
     const uint32_t  P25_TDULC_PACKET_LENGTH = 78U;  // 24 byte header + TDULC data
     const uint32_t  P25_P2_PACKET_LENGTH = 66U;     // 24 byte header + P25_P2_FRAME_LENGTH_BYTES + 2 byte trailer
-    const uint32_t  NXDN_PACKET_LENGTH = 70U;       // 20 byte header + NXDN_FRAME_LENGTH_BYTES + 2 byte trailer
+    const uint32_t  NXDN_PACKET_LENGTH = 74U;       // 24 byte header + NXDN CAI frame + 2 byte trailer
     const uint32_t  ANALOG_PACKET_LENGTH = 344U;    // 20 byte header + AUDIO_SAMPLES_LENGTH_BYTES + 4 byte trailer
 
     const uint32_t  HA_PARAMS_ENTRY_LEN = 20U;

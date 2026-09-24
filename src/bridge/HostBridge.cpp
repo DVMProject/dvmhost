@@ -17,6 +17,11 @@
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/EMB.h"
 #include "common/nxdn/NXDNDefines.h"
+#include "common/nxdn/NXDNUtils.h"
+#include "common/nxdn/Sync.h"
+#include "common/nxdn/channel/FACCH1.h"
+#include "common/nxdn/channel/LICH.h"
+#include "common/nxdn/channel/SACCH.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/dfsi/DFSIDefines.h"
@@ -1840,6 +1845,9 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
             break;
         case TX_MODE_NXDN:
             {
+                using namespace nxdn;
+                using namespace nxdn::defines;
+
                 ::nxdn::lc::RTCH lc = ::nxdn::lc::RTCH();
                 lc.setMessageType(NXDDEF::MessageType::RTCH_TX_REL);
                 lc.setCallType(NXDDEF::CallType::UNSPECIFIED);
@@ -1848,19 +1856,42 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
                 lc.setDstId((uint16_t)dstId);
                 lc.setTransmissionMode(NXDDEF::TransmissionMode::MODE_4800);
 
-                uint8_t data[NXDDEF::NXDN_FRAME_LENGTH_BYTES];
-                ::memset(data, 0x00U, NXDDEF::NXDN_FRAME_LENGTH_BYTES);
+                uint8_t data[NXDN_FRAME_LENGTH_BYTES];
+                ::memset(data, 0x00U, sizeof(data));
+                Sync::addNXDNSync(data);
+
+                channel::LICH lich;
+                lich.setRFCT(RFChannelType::RDCH);
+                lich.setFCT(FuncChannelType::USC_SACCH_NS);
+                lich.setOption(ChOption::STEAL_FACCH);
+                lich.setOutbound(true);
+                lich.encode(data);
+
+                channel::SACCH sacch;
+                sacch.setData(SACCH_IDLE);
+                sacch.setRAN(0U);
+                sacch.setStructure(ChStructure::SR_SINGLE);
+                sacch.encode(data);
+
+                uint8_t lcData[NXDN_RTCH_LC_LENGTH_BYTES];
+                ::memset(lcData, 0x00U, sizeof(lcData));
+                lc.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+
+                channel::FACCH1 facch;
+                facch.setData(lcData);
+                facch.encode(data, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                facch.encode(data, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+
+                NXDNUtils::scrambler(data);
 
                 LogInfoEx(LOG_HOST, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", srcId = %u, dstId = %u", srcId, dstId);
-                m_network->writeNXDN(lc, data, NXDDEF::NXDN_FRAME_LENGTH_BYTES, true);
+                m_network->writeNXDN(lc, data, NXDN_FRAME_LENGTH_BYTES, true);
             }
             break;
         case TX_MODE_ANALOG:
             {
                 LogInfoEx(LOG_HOST, ANO_TERMINATOR);
 
-                uint8_t controlByte = 0x00U;
-                
                 data::NetData analogData;
                 analogData.setSeqNo(m_analogN);
                 analogData.setSrcId(srcId);
@@ -2980,7 +3011,43 @@ void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
 
                 LogInfoEx(LOG_HOST, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio (silence), srcId = %u, dstId = %u", srcId, dstId);
 
-                m_network->writeNXDN(lc, m_nxdnAMBE, 36U);
+                uint8_t frame[NXDN_FRAME_LENGTH_BYTES];
+                ::memset(frame, 0x00U, sizeof(frame));
+                Sync::addNXDNSync(frame);
+
+                channel::LICH lich;
+                lich.setRFCT(RFChannelType::RDCH);
+                lich.setFCT(FuncChannelType::USC_SACCH_SS);
+                lich.setOption(ChOption::STEAL_NONE);
+                lich.setOutbound(true);
+                lich.encode(frame);
+
+                uint8_t lcData[NXDN_RTCH_LC_LENGTH_BYTES];
+                ::memset(lcData, 0x00U, sizeof(lcData));
+                lc.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+
+                const ChStructure::E structures[] = {
+                    ChStructure::SR_1_4, ChStructure::SR_2_4,
+                    ChStructure::SR_3_4, ChStructure::SR_4_4
+                };
+                const uint8_t superframeIndex = m_nxdnSeqNo % 4U;
+                uint8_t sacchData[3U];
+                ::memset(sacchData, 0x00U, sizeof(sacchData));
+                for (uint32_t bit = 0U; bit < 18U; bit++) {
+                    WRITE_BIT(sacchData, bit, READ_BIT(lcData, superframeIndex * 18U + bit));
+                }
+
+                channel::SACCH sacch;
+                sacch.setData(sacchData);
+                sacch.setRAN(0U);
+                sacch.setStructure(structures[superframeIndex]);
+                sacch.encode(frame);
+
+                ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES, m_nxdnAMBE, 36U);
+                NXDNUtils::scrambler(frame);
+
+                m_network->writeNXDN(lc, frame, NXDN_FRAME_LENGTH_BYTES);
+                m_nxdnSeqNo++;
                 m_nxdnN = 1U;
             }
         }

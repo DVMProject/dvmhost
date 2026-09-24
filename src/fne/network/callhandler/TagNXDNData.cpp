@@ -95,17 +95,10 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
     lc.setGroup(group);
 
     // process raw NXDN data bytes
-    UInt8Array frame;
-    uint8_t frameLength = buffer[23U];
-    if (frameLength <= 24) {
-        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(frame.get(), 0x00U, frameLength);
-    }
-    else {
-        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(frame.get(), 0x00U, frameLength);
-        ::memcpy(frame.get(), buffer + 24U, frameLength);
-    }
+    const uint8_t frameLength = NXDN_FRAME_LENGTH_BYTES + 2U;
+    UInt8Array frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+    ::memset(frame.get(), 0x00U, frameLength);
+    ::memcpy(frame.get() + 2U, buffer + MSG_HDR_SIZE, NXDN_FRAME_LENGTH_BYTES);
 
     NXDNUtils::scrambler(frame.get() + 2U);
 
@@ -1255,7 +1248,7 @@ bool TagNXDNData::write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t 
         }
     }
 
-    rcch->setMessageType(MessageType::RTCH_VCALL);
+    rcch->setMessageType(MessageType::RCCH_VCALL_CONN);
     rcch->setGrpVchNo(0U);
     rcch->setGroup(grp);
     rcch->setSrcId(srcId);
@@ -1283,7 +1276,8 @@ void TagNXDNData::write_Message_Deny(uint32_t peerId, uint32_t srcId, uint32_t d
     switch (service) {
     case MessageType::RTCH_VCALL:
         rcch = std::make_unique<lc::rcch::MESSAGE_TYPE_VCALL_CONN>();
-        rcch->setMessageType(MessageType::RTCH_VCALL);
+        rcch->setMessageType(MessageType::RCCH_VCALL_CONN);
+        break;
     default:
         return;
     }
@@ -1338,7 +1332,7 @@ void TagNXDNData::write_Message(uint32_t peerId, lc::RCCH* rcch)
     lc.setDstId(rcch->getDstId());
 
     uint32_t messageLength = 0U;
-    UInt8Array message = m_network->createNXDN_Message(messageLength, lc, data, NXDN_FRAME_LENGTH_BYTES + 2U);
+    UInt8Array message = m_network->createNXDN_Message(messageLength, lc, data + 2U, NXDN_FRAME_LENGTH_BYTES);
     if (message == nullptr) {
         return;
     }

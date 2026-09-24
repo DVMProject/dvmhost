@@ -15,10 +15,38 @@
 #include <cstring>
 
 #include "common/nxdn/lc/RTCH.h"
+#include "common/nxdn/channel/FACCH1.h"
 #include "common/nxdn/NXDNDefines.h"
 
 using namespace nxdn;
 using namespace nxdn::defines;
+
+TEST_CASE("RTCH TX_REL survives FACCH1 channel coding", "[nxdn][rtch][facch1]")
+{
+    lc::RTCH txRelease;
+    txRelease.setMessageType(MessageType::RTCH_TX_REL);
+    txRelease.setSrcId(1601U);
+    txRelease.setDstId(2601U);
+
+    uint8_t lcData[NXDN_RTCH_LC_LENGTH_BYTES] = {};
+    txRelease.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+
+    channel::FACCH1 encoder;
+    encoder.setData(lcData);
+    uint8_t frame[NXDN_FRAME_LENGTH_BYTES] = {};
+    encoder.encode(frame, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+
+    channel::FACCH1 decoder;
+    REQUIRE(decoder.decode(frame, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS));
+    uint8_t decodedData[NXDN_FACCH1_CRC_LENGTH_BYTES - 2U] = {};
+    decoder.getData(decodedData);
+
+    lc::RTCH decoded;
+    decoded.decode(decodedData, NXDN_FACCH1_LENGTH_BITS);
+    REQUIRE(decoded.getMessageType() == MessageType::RTCH_TX_REL);
+    REQUIRE(decoded.getSrcId() == 1601U);
+    REQUIRE(decoded.getDstId() == 2601U);
+}
 using namespace nxdn::lc;
 
 TEST_CASE("RTCH encodes and decodes voice call", "[nxdn][rtch]") {
@@ -213,4 +241,43 @@ TEST_CASE("RTCH encodes and decodes data frame and block numbers", "[nxdn][rtch]
     REQUIRE(decoded.getMessageType() == MessageType::RTCH_DCALL_DATA);
     REQUIRE(decoded.getDataFrameNumber() == 0x0AU);
     REQUIRE(decoded.getDataBlockNumber() == 0x05U);
+}
+
+TEST_CASE("RTCH VCALL_IV preserves the 64-bit IV without prior cipher state", "[nxdn][rtch][security]") {
+    const uint8_t expectedMI[MI_LENGTH_BYTES] = {
+        0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xABU, 0xCDU, 0xEFU
+    };
+
+    RTCH iv;
+    iv.setMessageType(MessageType::RTCH_VCALL_IV);
+    iv.setMI(expectedMI);
+
+    uint8_t data[NXDN_RTCH_LC_LENGTH_BYTES] = {};
+    iv.encode(data, NXDN_FACCH1_LENGTH_BITS);
+    REQUIRE(data[0U] == MessageType::RTCH_VCALL_IV);
+    REQUIRE(::memcmp(data + 1U, expectedMI, MI_LENGTH_BYTES) == 0);
+
+    RTCH decoded;
+    REQUIRE(decoded.getAlgId() == CIPHER_TYPE_NONE);
+    decoded.decode(data, NXDN_FACCH1_LENGTH_BITS);
+
+    uint8_t actualMI[MI_LENGTH_BYTES] = {};
+    decoded.getMI(actualMI);
+    REQUIRE(::memcmp(actualMI, expectedMI, MI_LENGTH_BYTES) == 0);
+}
+
+TEST_CASE("RTCH derives encrypted state from VCALL cipher type", "[nxdn][rtch][security]") {
+    RTCH call;
+    call.setMessageType(MessageType::RTCH_VCALL);
+    call.setAlgId(0x02U);
+    call.setKId(0x15U);
+
+    uint8_t data[NXDN_RTCH_LC_LENGTH_BYTES] = {};
+    call.encode(data, NXDN_FACCH1_LENGTH_BITS);
+
+    RTCH decoded;
+    decoded.decode(data, NXDN_FACCH1_LENGTH_BITS);
+    REQUIRE(decoded.getEncrypted());
+    REQUIRE(decoded.getAlgId() == 0x02U);
+    REQUIRE(decoded.getKId() == 0x15U);
 }

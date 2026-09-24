@@ -171,6 +171,23 @@ void RTCH::reset()
     m_kId = 0U;
 
     m_causeRsp = CauseResponse::VD_ACCEPTED;
+    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+}
+
+/* Gets the 64-bit on-air initialization vector. */
+
+void RTCH::getMI(uint8_t* mi) const
+{
+    assert(mi != nullptr);
+    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
+}
+
+/* Sets the 64-bit on-air initialization vector. */
+
+void RTCH::setMI(const uint8_t* mi)
+{
+    assert(mi != nullptr);
+    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -201,14 +218,11 @@ bool RTCH::decodeLC(const uint8_t* data)
         m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
         m_algId = (data[7U] >> 6) & 0x03U;                                          // Cipher Type
         m_kId = (data[7U] & 0x3FU);                                                 // Key ID
+        m_encrypted = m_algId != CIPHER_TYPE_NONE;
         break;
     case MessageType::RTCH_VCALL_IV:
     case MessageType::RTCH_SDCALL_IV:
-        if (m_algId != CIPHER_TYPE_NONE && m_kId > 0U) {
-            m_mi = new uint8_t[MI_LENGTH_BYTES];
-            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
-            ::memcpy(m_mi, data + 1U, MI_LENGTH_BYTES);                             // Message Indicator
-        }
+        ::memcpy(m_mi, data + 1U, MI_LENGTH_BYTES);                                 // Initialization Vector
         break;
     case MessageType::RTCH_TX_REL:
     case MessageType::RTCH_TX_REL_EX:
@@ -228,6 +242,7 @@ bool RTCH::decodeLC(const uint8_t* data)
         m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
         m_algId = (data[7U] >> 6) & 0x03U;                                          // Cipher Type
         m_kId = (data[7U] & 0x3FU);                                                 // Key ID
+        m_encrypted = m_algId != CIPHER_TYPE_NONE;
 
         m_packetInfo = PacketInformation();
         m_packetInfo.decode(m_messageType, data + 8U);                              // Packet Information
@@ -328,9 +343,8 @@ void RTCH::encodeLC(uint8_t* data)
             (m_kId & 0x3FU);                                                        // Key ID
         break;
     case MessageType::RTCH_VCALL_IV:
-        if (m_algId != CIPHER_TYPE_NONE && m_kId > 0U) {
-            ::memcpy(data + 1U, m_mi, MI_LENGTH_BYTES);                             // Message Indicator
-        }
+    case MessageType::RTCH_SDCALL_IV:
+        ::memcpy(data + 1U, m_mi, MI_LENGTH_BYTES);                                 // Initialization Vector
         break;
     case MessageType::RTCH_TX_REL:
     case MessageType::RTCH_TX_REL_EX:

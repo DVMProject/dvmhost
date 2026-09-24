@@ -1704,6 +1704,9 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
 {
     assert(data != nullptr);
 
+    using namespace nxdn::defines;
+    length = 0U;
+
     uint8_t* buffer = new uint8_t[NXDN_PACKET_LENGTH + PACKET_PAD];
     ::memset(buffer, 0x00U, NXDN_PACKET_LENGTH + PACKET_PAD);
 
@@ -1723,12 +1726,8 @@ UInt8Array BaseNetwork::createNXDN_Message(uint32_t& length, const nxdn::lc::RTC
     buffer[15U] |= lc.getGroup() ? 0x00U : 0x40U;                               // Group
 
     // pack raw NXDN message bytes
-    uint32_t count = MSG_HDR_SIZE;
-
     ::memcpy(buffer + 24U, data, len);
-    count += len;
-
-    buffer[23U] = count;
+    buffer[23U] = (uint8_t)len;
 
     if (m_packetDump)
         Utils::dump(1U, "BaseNetwork::createNXDN_Message(), Message", buffer, (NXDN_PACKET_LENGTH + PACKET_PAD));

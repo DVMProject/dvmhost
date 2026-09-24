@@ -151,22 +151,37 @@ public:
     void close() override {}
 };
 
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
 /**
  * @brief Lightweight network test double for NXDN ingress stream-lock tests.
  */
 class NXDNTestNetwork final : public network::Network {
 public:
+    /**
+     * @brief Initializes a new instance of the NXDNTestNetwork class.
+     * @param localPort The local port number to bind the network socket to.
+     * @param peerId The peer ID for the network connection.
+     */
     NXDNTestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U) :
         network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, false, false, true, false, true, true, false, false, false, false),
         m_resetNXDNCount(0U)
     {
-        // keep protocol gates deterministic for this P25-focused harness
+        // keep protocol gates deterministic for this NXDN-focused harness
         m_dmrEnabled = false;
         m_p25Enabled = false;
         m_nxdnEnabled = true;
         m_analogEnabled = false;
     }
 
+    /**
+     * @brief Activates loopback mode for the network connection.
+     * @param remoteAddress The remote address to connect to.
+     * @param remotePort The remote port to connect to.
+     * @returns bool True if loopback mode was successfully activated, false otherwise.
+     */
     bool activateLoopback(const std::string& remoteAddress, uint16_t remotePort)
     {
         if (network::udp::Socket::lookup(remoteAddress, remotePort, m_addr, m_addrLen) != 0) {
@@ -182,7 +197,18 @@ public:
         return true;
     }
 
-    bool sendNXDNFrame(uint32_t targetPeerId, uint32_t streamId, uint16_t seq, uint8_t messageType, uint16_t srcId, uint16_t dstId)
+    /**
+     * @brief Sends an NXDN control frame over the network.
+     * @param targetPeerId The target peer ID for the network connection.
+     * @param streamId The stream ID for the network connection.
+     * @param seq The sequence number for the network frame.
+     * @param messageType The message type of the NXDN control frame.
+     * @param srcId The source ID for the NXDN control frame.
+     * @param dstId The destination ID for the NXDN control frame.
+     * @returns bool True if the control frame was successfully sent, false otherwise.
+     */
+    bool sendNXDNControlFrame(uint32_t targetPeerId, uint32_t streamId, uint16_t seq,
+        uint8_t messageType, uint16_t srcId, uint16_t dstId)
     {
         uint8_t frame[nxdn::defines::NXDN_FRAME_LENGTH_BYTES + 2U];
         ::memset(frame, 0x00U, sizeof(frame));
@@ -206,8 +232,10 @@ public:
         sacch.encode(frame + 2U);
 
         uint8_t lcBuffer[nxdn::defines::NXDN_RTCH_LC_LENGTH_BYTES];
+        ::memset(lcBuffer, 0x00U, sizeof(lcBuffer));
         nxdn::lc::RTCH lc;
         lc.setMessageType(messageType);
+        lc.setCallType(nxdn::defines::CallType::UNSPECIFIED);
         lc.setSrcId(srcId);
         lc.setDstId(dstId);
         lc.setGroup(true);
@@ -222,7 +250,8 @@ public:
         nxdn::NXDNUtils::scrambler(frame + 2U);
 
         uint32_t messageLength = 0U;
-        UInt8Array message = createNXDN_Message(messageLength, lc, frame, sizeof(frame));
+        UInt8Array message = createNXDN_Message(messageLength, lc, frame + 2U,
+            nxdn::defines::NXDN_FRAME_LENGTH_BYTES);
         if (message == nullptr || messageLength == 0U) {
             return false;
         }
@@ -231,17 +260,132 @@ public:
             { network::NET_FUNC::PROTOCOL, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, seq, m_addr, m_addrLen);
     }
 
+    /**
+     * @brief Sends an NXDN call header over the network.
+     * @param targetPeerId The target peer ID for the network connection.
+     * @param streamId The stream ID for the network connection.
+     * @param seq The sequence number for the network frame.
+     * @param srcId The source ID for the NXDN call header.
+     * @param dstId The destination ID for the NXDN call header.
+     * @returns bool True if the call header was successfully sent, false otherwise.
+     */
+    bool sendNXDNCallHeader(uint32_t targetPeerId, uint32_t streamId, uint16_t seq,
+        uint16_t srcId, uint16_t dstId)
+    {
+        return sendNXDNControlFrame(targetPeerId, streamId, seq,
+            nxdn::defines::MessageType::RTCH_VCALL, srcId, dstId);
+    }
+
+    /**
+     * @brief Sends an NXDN call terminator over the network.
+     * @param targetPeerId The target peer ID for the network connection.
+     * @param streamId The stream ID for the network connection.
+     * @param srcId The source ID for the NXDN call terminator.
+     * @param dstId The destination ID for the NXDN call terminator.
+     * @returns bool True if the call terminator was successfully sent, false otherwise.
+     */
+    bool sendNXDNCallTerminator(uint32_t targetPeerId, uint32_t streamId,
+        uint16_t srcId, uint16_t dstId)
+    {
+        return sendNXDNControlFrame(targetPeerId, streamId, RTP_END_OF_CALL_SEQ,
+            nxdn::defines::MessageType::RTCH_TX_REL, srcId, dstId);
+    }
+
+    /**
+     * @brief Sends an NXDN voice frame over the network.
+     * @param targetPeerId The target peer ID for the network connection.
+     * @param streamId The stream ID for the network connection.
+     * @param seq The sequence number for the network frame.
+     * @param fragment The fragment number of the voice frame.
+     * @param srcId The source ID for the NXDN voice frame.
+     * @param dstId The destination ID for the NXDN voice frame.
+     * @returns bool True if the voice frame was successfully sent, false otherwise.
+     */
+    bool sendNXDNVoiceFrame(uint32_t targetPeerId, uint32_t streamId, uint16_t seq,
+        uint8_t fragment, uint16_t srcId, uint16_t dstId)
+    {
+        using namespace nxdn;
+        using namespace nxdn::defines;
+
+        if (fragment >= 4U)
+            return false;
+
+        uint8_t frame[NXDN_FRAME_LENGTH_BYTES];
+        ::memset(frame, 0x00U, sizeof(frame));
+        Sync::addNXDNSync(frame);
+
+        channel::LICH lich;
+        lich.setRFCT(RFChannelType::RTCH);
+        lich.setFCT(FuncChannelType::USC_SACCH_SS);
+        lich.setOption(ChOption::STEAL_NONE);
+        lich.setOutbound(true);
+        lich.encode(frame);
+
+        lc::RTCH lc;
+        lc.setMessageType(MessageType::RTCH_VCALL);
+        lc.setSrcId(srcId);
+        lc.setDstId(dstId);
+        lc.setGroup(true);
+        lc.setTransmissionMode(TransmissionMode::MODE_4800);
+
+        uint8_t lcBuffer[NXDN_RTCH_LC_LENGTH_BYTES];
+        ::memset(lcBuffer, 0x00U, sizeof(lcBuffer));
+        lc.encode(lcBuffer, NXDN_RTCH_LC_LENGTH_BITS);
+
+        uint8_t sacchData[3U];
+        ::memset(sacchData, 0x00U, sizeof(sacchData));
+        for (uint32_t bit = 0U; bit < 18U; bit++)
+            WRITE_BIT(sacchData, bit, READ_BIT(lcBuffer, fragment * 18U + bit));
+
+        const ChStructure::E structures[] = {
+            ChStructure::SR_1_4, ChStructure::SR_2_4,
+            ChStructure::SR_3_4, ChStructure::SR_4_4
+        };
+        channel::SACCH sacch;
+        sacch.setData(sacchData);
+        sacch.setRAN(1U);
+        sacch.setStructure(structures[fragment]);
+        sacch.encode(frame);
+
+        // Four null VCH payloads form a complete half-rate voice frame.
+        ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NULL_AMBE, 9U);
+        ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U, NULL_AMBE, 9U);
+        ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NULL_AMBE, 9U);
+        ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U, NULL_AMBE, 9U);
+
+        NXDNUtils::scrambler(frame);
+
+        uint32_t messageLength = 0U;
+        UInt8Array message = createNXDN_Message(messageLength, lc, frame, NXDN_FRAME_LENGTH_BYTES);
+        if (message == nullptr || messageLength == 0U)
+            return false;
+
+        return m_frameQueue->write(message.get(), messageLength, streamId, targetPeerId, m_peerId,
+            { network::NET_FUNC::PROTOCOL, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, seq, m_addr, m_addrLen);
+    }
+
+    /**
+     * @brief Resets the NXDN network connection.
+     */
     void resetNXDN() override
     {
         ++m_resetNXDNCount;
         network::Network::resetNXDN();
     }
 
+    /**
+     * @brief Retrieves the number of times the NXDN network connection has been reset.
+     * @returns uint32_t The reset count for the NXDN network connection.
+     */
     uint32_t resetNXDNCount() const
     {
         return m_resetNXDNCount;
     }
 
+    /**
+     * @brief Retrieves the stream ID of the last received NXDN frame.
+     * @returns uint32_t The stream ID of the last received NXDN frame.
+     */
     uint32_t rxNXDNStreamId() const
     {
         return m_rxNXDNStreamId;
@@ -292,6 +436,10 @@ public:
         g_RPC = nullptr;
     }
 
+    /**
+     * @brief Retrieves the NXDN test network instance associated with the harness.
+     * @returns NXDNTestNetwork* The NXDN test network instance.
+     */
     NXDNTestNetwork* network() const
     {
         return m_network;
@@ -328,17 +476,38 @@ public:
 
 TEST_CASE("NXDN host e2e loopback handles missed frames without dropping active call", "[nxdn][host][control][net][e2e]")
 {
-    NXDNHostHarness harness;
-    harness.startNetworkVoiceCall(1001U, 2001U);
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
 
-    nxdn::lc::RTCH followOn;
-    followOn.setMessageType(nxdn::defines::MessageType::RTCH_VCALL);
-    followOn.setSrcId(1001U);
-    followOn.setDstId(2001U);
-    followOn.setGroup(true);
-    followOn.setTransmissionMode(nxdn::defines::TransmissionMode::MODE_4800);
+    const uint32_t hostPeerId = 8001U;
+    const uint32_t streamId = 0x620001U;
+    NXDNHostHarness harness(true, true, hostPort, hostPeerId);
+    NXDNTestNetwork sender(senderPort, 8002U);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
 
-    REQUIRE(HostTestHooks::nxdnStartNetCall(*harness.m_control, followOn));
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, streamId, 100U, 1001U, 2001U));
+    for (uint32_t i = 0U; i < 40U && HostTestHooks::nxdnNetState(*harness.m_control) != RS_NET_AUDIO; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+
+    // Skip RTP sequence 101 while continuing with the first two SACCH fragments.
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 102U, 0U, 1001U, 2001U));
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 103U, 1U, 1001U, 2001U));
+    for (uint32_t i = 0U; i < 20U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
     REQUIRE(HostTestHooks::nxdnNetworkWatchdog(*harness.m_control).isRunning());
     REQUIRE(HostTestHooks::nxdnNetLastSrcId(*harness.m_control) == 1001U);
@@ -347,30 +516,155 @@ TEST_CASE("NXDN host e2e loopback handles missed frames without dropping active 
 
 TEST_CASE("NXDN host e2e loopback handles dropped call terminator and returns idle", "[nxdn][host][control][net][e2e]")
 {
-    NXDNHostHarness harness;
-    harness.startNetworkVoiceCall(1101U, 2101U);
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 8003U;
+    const uint32_t streamId = 0x620002U;
+    NXDNHostHarness harness(true, true, hostPort, hostPeerId);
+    NXDNTestNetwork sender(senderPort, 8004U);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, streamId, 200U, 1101U, 2101U));
+    for (uint32_t i = 0U; i < 40U && HostTestHooks::nxdnNetState(*harness.m_control) != RS_NET_AUDIO; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
 
+    // Deliberately omit TX_REL and verify watchdog recovery.
     HostTestHooks::nxdnNetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::nxdnNetworkWatchdog(*harness.m_control)));
     harness.m_control->clock();
 
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
     REQUIRE_FALSE(HostTestHooks::nxdnNetworkWatchdog(*harness.m_control).isRunning());
+    REQUIRE(harness.network()->rxNXDNStreamId() == 0U);
+    REQUIRE(harness.network()->resetNXDNCount() == 1U);
 }
 
 TEST_CASE("NXDN host e2e loopback times out stale call and resets stream state", "[nxdn][host][control][net][e2e]")
 {
-    NXDNHostHarness harness;
-    harness.startNetworkVoiceCall(1201U, 2201U);
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
 
+    const uint32_t hostPeerId = 8005U;
+    const uint32_t streamId = 0x620003U;
+    NXDNHostHarness harness(true, true, hostPort, hostPeerId);
+    NXDNTestNetwork sender(senderPort, 8006U);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, streamId, 300U, 1201U, 2201U));
+    for (uint32_t i = 0U; i < 40U && HostTestHooks::nxdnNetState(*harness.m_control) != RS_NET_AUDIO; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(harness.network()->rxNXDNStreamId() == streamId);
 
-    HostTestHooks::nxdnNetTGHang(*harness.m_control).clock(expireTimerTicks(HostTestHooks::nxdnNetTGHang(*harness.m_control)));
+    HostTestHooks::nxdnNetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::nxdnNetworkWatchdog(*harness.m_control)));
     harness.m_control->clock();
 
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->rxNXDNStreamId() == 0U);
+    REQUIRE(harness.network()->resetNXDNCount() == 1U);
+}
+
+TEST_CASE("NXDN host e2e loopback completes the conventional voice call flow", "[nxdn][host][control][net][e2e][call-flow]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 8013U;
+    const uint32_t streamId = 0x620301U;
+    NXDNHostHarness harness(true, true, hostPort, hostPeerId);
+    NXDNTestNetwork sender(senderPort, 8014U);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    // TS 1-B conventional flow: FACCH VCALL, one four-frame SACCH
+    // voice superframe, then a FACCH TX_REL.
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, streamId, 700U, 1601U, 2601U));
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 701U, 0U, 1601U, 2601U));
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 702U, 1U, 1601U, 2601U));
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 703U, 2U, 1601U, 2601U));
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 704U, 3U, 1601U, 2601U));
+
+    for (uint32_t i = 0U; i < 60U && HostTestHooks::nxdnNetState(*harness.m_control) != RS_NET_AUDIO; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
-    REQUIRE(HostTestHooks::nxdnNetLastDstId(*harness.m_control) == 0U);
-    REQUIRE(HostTestHooks::nxdnNetLastSrcId(*harness.m_control) == 0U);
+    REQUIRE(HostTestHooks::nxdnNetLastSrcId(*harness.m_control) == 1601U);
+    REQUIRE(HostTestHooks::nxdnNetLastDstId(*harness.m_control) == 2601U);
+    REQUIRE(harness.network()->rxNXDNStreamId() == streamId);
+
+    REQUIRE(sender.sendNXDNCallTerminator(hostPeerId, streamId, 1601U, 2601U));
+    for (uint32_t i = 0U; i < 50U && HostTestHooks::nxdnNetState(*harness.m_control) != RS_NET_IDLE; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE_FALSE(HostTestHooks::nxdnNetworkWatchdog(*harness.m_control).isRunning());
+    REQUIRE(harness.network()->rxNXDNStreamId() == 0U);
+}
+
+TEST_CASE("NXDN host e2e loopback tolerates out-of-order voice frames", "[nxdn][host][control][net][e2e][call-flow]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 8015U;
+    const uint32_t streamId = 0x620302U;
+    NXDNHostHarness harness(true, true, hostPort, hostPeerId);
+    NXDNTestNetwork sender(senderPort, 8016U);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, streamId, 800U, 1701U, 2701U));
+    for (uint32_t i = 0U; i < 40U && HostTestHooks::nxdnNetState(*harness.m_control) != RS_NET_AUDIO; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 802U, 1U, 1701U, 2701U));
+    REQUIRE(sender.sendNXDNVoiceFrame(hostPeerId, streamId, 801U, 0U, 1701U, 2701U));
+    for (uint32_t i = 0U; i < 25U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::nxdnNetworkWatchdog(*harness.m_control).isRunning());
+    REQUIRE(harness.network()->rxNXDNStreamId() == streamId);
 }
 
 TEST_CASE("NXDN host e2e loopback preserves a continuing network stream across an RF collision", "[nxdn][host][control][net][e2e]")
@@ -392,7 +686,7 @@ TEST_CASE("NXDN host e2e loopback preserves a continuing network stream across a
     REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
 
     HostTestHooks::nxdnSetRFCall(*harness.m_control, 1401U, 2401U);
-    REQUIRE(sender.sendNXDNFrame(hostPeerId, streamId, 600U, nxdn::defines::MessageType::RTCH_VCALL, 1501U, 2501U));
+    REQUIRE(sender.sendNXDNControlFrame(hostPeerId, streamId, 600U, nxdn::defines::MessageType::RTCH_VCALL, 1501U, 2501U));
 
     for (uint32_t i = 0U; i < 40U; i++) {
         sender.clock(1U);
@@ -410,7 +704,7 @@ TEST_CASE("NXDN host e2e loopback preserves a continuing network stream across a
     REQUIRE(harness.network()->resetNXDNCount() == 0U);
 
     HostTestHooks::nxdnClearRFCall(*harness.m_control);
-    REQUIRE(sender.sendNXDNFrame(hostPeerId, streamId, 601U, nxdn::defines::MessageType::RTCH_VCALL, 1501U, 2501U));
+    REQUIRE(sender.sendNXDNControlFrame(hostPeerId, streamId, 601U, nxdn::defines::MessageType::RTCH_VCALL, 1501U, 2501U));
 
     for (uint32_t i = 0U; i < 40U; i++) {
         sender.clock(1U);
@@ -447,7 +741,7 @@ TEST_CASE("NXDN host e2e loopback enforces stream lock until active stream termi
     REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
     REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
 
-    REQUIRE(sender.sendNXDNFrame(hostPeerId, streamA, 400U, nxdn::defines::MessageType::RTCH_VCALL, 1301U, 2301U));
+    REQUIRE(sender.sendNXDNControlFrame(hostPeerId, streamA, 400U, nxdn::defines::MessageType::RTCH_VCALL, 1301U, 2301U));
 
     for (uint32_t i = 0U; i < 40U; i++) {
         sender.clock(1U);
@@ -465,7 +759,7 @@ TEST_CASE("NXDN host e2e loopback enforces stream lock until active stream termi
     REQUIRE(HostTestHooks::nxdnNetLastDstId(*harness.m_control) == 2301U);
     REQUIRE(harness.network()->rxNXDNStreamId() == streamA);
 
-    REQUIRE(sender.sendNXDNFrame(hostPeerId, streamB, 500U, nxdn::defines::MessageType::RTCH_VCALL, 1301U, 2301U));
+    REQUIRE(sender.sendNXDNControlFrame(hostPeerId, streamB, 500U, nxdn::defines::MessageType::RTCH_VCALL, 1301U, 2301U));
 
     for (uint32_t i = 0U; i < 30U; i++) {
         sender.clock(1U);
@@ -479,7 +773,7 @@ TEST_CASE("NXDN host e2e loopback enforces stream lock until active stream termi
     REQUIRE(HostTestHooks::nxdnNetLastDstId(*harness.m_control) == 2301U);
     REQUIRE(harness.network()->rxNXDNStreamId() == streamA);
 
-    REQUIRE(sender.sendNXDNFrame(hostPeerId, streamA, RTP_END_OF_CALL_SEQ, nxdn::defines::MessageType::RTCH_TX_REL, 1301U, 2301U));
+    REQUIRE(sender.sendNXDNControlFrame(hostPeerId, streamA, RTP_END_OF_CALL_SEQ, nxdn::defines::MessageType::RTCH_TX_REL, 1301U, 2301U));
 
     for (uint32_t i = 0U; i < 50U; i++) {
         sender.clock(1U);
@@ -495,7 +789,7 @@ TEST_CASE("NXDN host e2e loopback enforces stream lock until active stream termi
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
     REQUIRE(harness.network()->rxNXDNStreamId() == 0U);
 
-    REQUIRE(sender.sendNXDNFrame(hostPeerId, streamB, 502U, nxdn::defines::MessageType::RTCH_VCALL, 1301U, 2301U));
+    REQUIRE(sender.sendNXDNControlFrame(hostPeerId, streamB, 502U, nxdn::defines::MessageType::RTCH_VCALL, 1301U, 2301U));
 
     for (uint32_t i = 0U; i < 40U; i++) {
         sender.clock(1U);

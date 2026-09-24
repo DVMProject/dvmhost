@@ -320,7 +320,12 @@ void ControlSignaling::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_rfTimeoutTimer.isRunning() && m_nxdn->m_rfTimeoutTimer.hasExpired())
         return;
 
-    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len, true);
+    if (len != NXDN_FRAME_LENGTH_BYTES + 2U) {
+        LogError(LOG_NET, "ControlSignaling::writeNetwork(), invalid modem NXDN frame length, len = %u", len);
+        return;
+    }
+
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data + 2U, NXDN_FRAME_LENGTH_BYTES, true);
 }
 
 /*

@@ -1012,17 +1012,10 @@ void Control::processNetwork()
     lc.setGroup(group);
 
     // process raw NXDN data bytes
-    UInt8Array data;
-    uint8_t frameLength = buffer[23U];
-    if (frameLength <= 24) {
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-    }
-    else {
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer.get() + 24U, frameLength);
-    }
+    const uint8_t frameLength = NXDN_FRAME_LENGTH_BYTES + 2U;
+    UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+    ::memset(data.get(), 0x00U, frameLength);
+    ::memcpy(data.get() + 2U, buffer.get() + network::MSG_HDR_SIZE, NXDN_FRAME_LENGTH_BYTES);
 
     if (m_debug) {
         Utils::dump(2U, "* !!! NXDN Network Frame", data.get(), frameLength);

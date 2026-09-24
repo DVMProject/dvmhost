@@ -79,21 +79,6 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
         return;
     }
 
-    uint8_t frameLength = buffer[23U];
-    if (frameLength == 0U) {
-        m_network->resetNXDN();
-        return;
-    }
-
-    uint32_t payloadLength = frameLength;
-    if (payloadLength > NXDN_FRAME_LENGTH_BYTES && payloadLength >= 24U)
-        payloadLength -= 24U;
-
-    if (payloadLength < NXDN_FRAME_LENGTH_BYTES) {
-        m_network->resetNXDN();
-        return;
-    }
-
     uint8_t frame[NXDN_FRAME_LENGTH_BYTES + 2U];
     ::memset(frame, 0x00U, NXDN_FRAME_LENGTH_BYTES + 2U);
     ::memcpy(frame + 2U, buffer + 24U, NXDN_FRAME_LENGTH_BYTES);
@@ -428,9 +413,25 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
     lich.encode(voiceFrame + 2U);
 
     channel::SACCH sacch;
-    sacch.setData(SACCH_IDLE);
+    uint8_t lcData[NXDN_RTCH_LC_LENGTH_BYTES];
+    ::memset(lcData, 0x00U, sizeof(lcData));
+    lc.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+
+    const uint8_t superframeIndex = m_nxdnSeqNo % 4U;
+    const ChStructure::E structures[] = {
+        ChStructure::SR_1_4, ChStructure::SR_2_4,
+        ChStructure::SR_3_4, ChStructure::SR_4_4
+    };
+
+    uint8_t sacchData[3U];
+    ::memset(sacchData, 0x00U, sizeof(sacchData));
+    for (uint32_t bit = 0U; bit < 18U; bit++) {
+        WRITE_BIT(sacchData, bit, READ_BIT(lcData, superframeIndex * 18U + bit));
+    }
+
+    sacch.setData(sacchData);
     sacch.setRAN(0U);
-    sacch.setStructure(ChStructure::SR_SINGLE);
+    sacch.setStructure(structures[superframeIndex]);
     sacch.encode(voiceFrame + 2U);
 
     ::memcpy(voiceFrame + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES, nxdnAudioPayload, 36U);

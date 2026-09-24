@@ -78,7 +78,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
         facch.getData(buffer);
 
         lc::RTCH lc;
-        lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+        lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
         bool group = lc.getGroup();
@@ -200,6 +200,26 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
         m_nxdn->m_rfLastDstId = lc.getDstId();
         m_nxdn->m_rfLastSrcId = lc.getSrcId();
         m_nxdn->m_rfLC = lc;
+
+        // In an encrypted first frame the second FACCH1 carries VCALL_IV.
+        // Preserve its 64-bit IV with the call state; VCALL_IV intentionally
+        // has no source/destination or cipher/key fields of its own.
+        if (lc.getEncrypted()) {
+            channel::FACCH1 ivFacch;
+            if (ivFacch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS +
+                NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS)) {
+                uint8_t ivLCData[10U];
+                ::memset(ivLCData, 0x00U, sizeof(ivLCData));
+                ivFacch.getData(ivLCData);
+                lc::RTCH ivLC;
+                ivLC.decode(ivLCData, NXDN_FACCH1_LENGTH_BITS);
+                if (ivLC.getMessageType() == MessageType::RTCH_VCALL_IV) {
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ivLC.getMI(mi);
+                    m_nxdn->m_rfLC.setMI(mi);
+                }
+            }
+        }
 
         Sync::addNXDNSync(data + 2U);
 
@@ -736,6 +756,24 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
         m_nxdn->m_netLastSrcId = lc.getSrcId();
         m_nxdn->m_netLC = lc;
 
+        if (lc.getEncrypted()) {
+            channel::FACCH1 ivFacch;
+            if (ivFacch.decode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS +
+                NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS)) {
+                uint8_t ivLCData[10U];
+                ::memset(ivLCData, 0x00U, sizeof(ivLCData));
+                ivFacch.getData(ivLCData);
+
+                lc::RTCH ivLC;
+                ivLC.decode(ivLCData, NXDN_FACCH1_LENGTH_BITS);
+                if (ivLC.getMessageType() == MessageType::RTCH_VCALL_IV) {
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ivLC.getMI(mi);
+                    m_nxdn->m_netLC.setMI(mi);
+                }
+            }
+        }
+
         Sync::addNXDNSync(data + 2U);
 
         // generate the LICH
@@ -758,14 +796,15 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
 
         NXDNUtils::scrambler(data + 2U);
 
-        if (m_nxdn->m_duplex) {
-            data[0U] = type == MessageType::RTCH_TX_REL ? modem::TAG_EOT : modem::TAG_DATA;
-            data[1U] = 0x00U;
+        data[0U] = type == MessageType::RTCH_TX_REL || type == MessageType::RTCH_TX_REL_EX ?
+            modem::TAG_EOT : modem::TAG_DATA;
+        data[1U] = 0x00U;
 
+        if (m_nxdn->m_duplex) {
             m_nxdn->addFrame(data, true);
         }
 
-        if (data[0U] == modem::TAG_EOT) {
+        if (type == MessageType::RTCH_TX_REL || type == MessageType::RTCH_TX_REL_EX) {
             m_netFrames++;
             ::ActivityLog("NXDN", false, "network end of transmission, %.1f seconds",
                 float(m_netFrames) / 12.5F);
@@ -1107,7 +1146,12 @@ void Voice::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_rfTimeoutTimer.isRunning() && m_nxdn->m_rfTimeoutTimer.hasExpired())
         return;
 
-    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
+    if (len != NXDN_FRAME_LENGTH_BYTES + 2U) {
+        LogError(LOG_NET, "Voice::writeNetwork(), invalid modem NXDN frame length, len = %u", len);
+        return;
+    }
+
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data + 2U, NXDN_FRAME_LENGTH_BYTES);
 }
 
 /* Helper to perform RF traffic collision checking. */
