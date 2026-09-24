@@ -107,6 +107,12 @@ void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
 
+    if (length > NXDN_RTCH_LC_LENGTH_BITS) {
+        LogError(LOG_NXDN, "RTCH::decode(), invalid LC length, len = %u, maximum = %u",
+            length, NXDN_RTCH_LC_LENGTH_BITS);
+        return;
+    }
+
     uint8_t rtch[NXDN_RTCH_LC_LENGTH_BYTES];
     ::memset(rtch, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
 

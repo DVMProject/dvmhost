@@ -148,7 +148,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             uint8_t buffer[10U];
                             facch.getData(buffer);
 
-                            lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                            lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
                         }
                     } else {
                         channel::FACCH1 facch;
@@ -173,7 +173,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             uint8_t buffer[10U];
                             facch.getData(buffer);
 
-                            lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                            lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
                         }
                     }
                 }

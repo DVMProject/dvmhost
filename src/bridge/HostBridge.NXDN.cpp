@@ -107,7 +107,7 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
             facch.getData(lcBuffer);
 
             lc::RTCH lc;
-            lc.decode(lcBuffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+            lc.decode(lcBuffer, NXDN_FACCH1_LENGTH_BITS);
 
             if (lc.getMessageType() == MessageType::RTCH_VCALL) {
                 m_rxNXDNLC = lc;

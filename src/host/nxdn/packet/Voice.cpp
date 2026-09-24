@@ -321,7 +321,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 facch.getData(buffer);
 
                 lc::RTCH lc;
-                lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == MessageType::RTCH_VCALL;
                 if (!hasInfo)
@@ -668,7 +668,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
         facch.getData(buffer);
 
         lc::RTCH lc;
-        lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+        lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
         uint16_t dstId = lc.getDstId();
         uint16_t srcId = lc.getSrcId();
         bool group = lc.getGroup();
@@ -854,7 +854,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                 facch.getData(buffer);
 
                 lc::RTCH lc;
-                lc.decode(buffer, NXDN_FACCH1_FEC_LENGTH_BITS);
+                lc.decode(buffer, NXDN_FACCH1_LENGTH_BITS);
 
                 hasInfo = lc.getMessageType() == MessageType::RTCH_VCALL;
                 if (!hasInfo)
