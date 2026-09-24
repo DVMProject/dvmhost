@@ -197,3 +197,23 @@ TEST_CASE("DataHeader copy and assignment preserve fields", "[dmr][dataheader]")
     REQUIRE(assigned.getSrcId() == original.getSrcId());
     REQUIRE(assigned.getDstId() == original.getDstId());
 }
+
+TEST_CASE("DataHeader preserves all six defined-short data format bits", "[dmr][dataheader]") {
+    const uint8_t formats[] = {0x01U, 0x15U, 0x2AU, 0x3FU};
+
+    for (uint8_t format : formats) {
+        uint8_t frame[DMR_FRAME_LENGTH_BYTES] = {};
+        DataHeader header;
+        header.setDPF(DPF::DEFINED_SHORT);
+        header.setSAP(0x0AU);
+        header.setSrcId(123U);
+        header.setDstId(456U);
+        header.setBlocksToFollow(1U);
+        header.setDataFormat(format);
+        header.encode(frame);
+
+        DataHeader decoded;
+        REQUIRE(decoded.decode(frame));
+        REQUIRE(decoded.getDataFormat() == format);
+    }
+}

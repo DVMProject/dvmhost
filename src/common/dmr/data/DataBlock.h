@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -122,6 +122,26 @@ namespace dmr
             defines::DPF::E m_DPF;
 
             uint8_t* m_data;
+
+            /**
+             * @brief Gets the CRC mask for the given data type.
+             * @param dataType DMR data type.
+             * @returns uint16_t CRC mask.
+             */
+            uint16_t crcMask(const defines::DataType::E dataType) const;
+
+            /**
+             * @brief Decodes a rate 1 encoded data block.
+             * @param data Pointer to the encoded data.
+             * @param payload Pointer to the buffer to store the decoded payload.
+             */
+            void decodeRate1(const uint8_t* data, uint8_t* payload);
+            /**
+             * @brief Encodes a data block using rate 1 encoding.
+             * @param payload Pointer to the buffer containing the payload to encode.
+             * @param data Pointer to the buffer to store the encoded data.
+             */
+            void encodeRate1(const uint8_t* payload, uint8_t* data);
 
             /**
              * @brief Internal helper to copy the class.

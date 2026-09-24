@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2018-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -84,8 +84,11 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             else if (m_dataType == DataType::RATE_12_DATA) {
                 m_bptc.decode(data, buffer);
             }
+            else if (m_dataType == DataType::RATE_1_DATA) {
+                decodeRate1(data, buffer);
+            }
             else {
-                LogError(LOG_DMR, "DataBlock::decode(), cowardly refusing to decode confirmed full-rate (rate 1) data");
+                LogError(LOG_DMR, "DataBlock::decode(), invalid confirmed dataType = $%02X", m_dataType);
                 return false;
             }
 
@@ -95,6 +98,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 
             m_serialNo = (buffer[0] & 0xFEU) >> 1;                                          // Confirmed Data Serial No.
             uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                          // CRC-9 Check Sum
+            crc ^= crcMask(m_dataType);
 
             ::memset(m_data, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
             if (m_dataType == DataType::RATE_34_DATA)
@@ -150,6 +154,7 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
 
             if ((crc ^ calculated) != 0) {
                 LogWarning(LOG_DMR, "DMR, dataType = $%02X, invalid crc = $%04X != $%04X (computed)", m_dataType, crc, calculated);
+                return false;
             }
 
 #if DEBUG_DMR_PDU_DATA
@@ -174,9 +179,12 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             else if (m_dataType == DataType::RATE_12_DATA) {
                 m_bptc.decode(data, buffer);
             }
+            else if (m_dataType == DataType::RATE_1_DATA) {
+                decodeRate1(data, buffer);
+            }
             else {
-                ::memcpy(buffer, data, DMR_PDU_UNCODED_LENGTH_BYTES);
-                return true; // never do any further processing for uncoded
+                LogError(LOG_DMR, "DataBlock::decode(), invalid unconfirmed dataType = $%02X", m_dataType);
+                return false;
             }
 
             ::memset(m_data, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
@@ -184,6 +192,8 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
                 ::memcpy(m_data, buffer, DMR_PDU_THREEQUARTER_LENGTH_BYTES);                // Payload Data
             else if (m_dataType == DataType::RATE_12_DATA)
                 ::memcpy(m_data, buffer, DMR_PDU_HALFRATE_LENGTH_BYTES);                    // Payload Data
+            else if (m_dataType == DataType::RATE_1_DATA)
+                ::memcpy(m_data, buffer, DMR_PDU_UNCODED_LENGTH_BYTES);                     // Payload Data
             else {
                 LogError(LOG_DMR, "DataBlock::decode(), failed to decode block, invalid dataType = $%02X", m_dataType);
                 return false;
@@ -229,6 +239,7 @@ void DataBlock::encode(uint8_t* data)
 
             uint16_t crc = edac::CRC::createCRC9(crcBuffer, 135U);
             crc = ~crc & 0x1FFU;
+            crc ^= crcMask(m_dataType);
 
             buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                     // CRC-9 Check Sum (b8)
             buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
@@ -259,11 +270,10 @@ void DataBlock::encode(uint8_t* data)
 
             uint16_t crc = edac::CRC::createCRC9(crcBuffer, 87U);
             crc = ~crc & 0x1FFU;
+            crc ^= crcMask(m_dataType);
 
             buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                     // CRC-9 Check Sum (b8)
             buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
-
-            ::memcpy(buffer, m_data, DMR_PDU_HALFRATE_LENGTH_BYTES);
 
 #if DEBUG_DMR_PDU_DATA
             Utils::dump(1U, "DMR, DataBlock::encode(), Confirmed 1/2 Rate PDU Data Block", buffer, DMR_PDU_HALFRATE_LENGTH_BYTES);
@@ -291,17 +301,16 @@ void DataBlock::encode(uint8_t* data)
 
             uint16_t crc = edac::CRC::createCRC9(crcBuffer, 183U);
             crc = ~crc & 0x1FFU;
+            crc ^= crcMask(m_dataType);
 
             buffer[0U] = buffer[0U] + ((crc >> 8) & 0x01U);                                     // CRC-9 Check Sum (b8)
             buffer[1U] = (crc & 0xFFU);                                                         // CRC-9 Check Sum (b0 - b7)
-
-            ::memcpy(buffer, m_data, DMR_PDU_UNCODED_LENGTH_BYTES);
 
 #if DEBUG_DMR_PDU_DATA
             Utils::dump(1U, "DMR, DataBlock::encode(), Confirmed 1 Rate PDU Data Block", buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
 #endif
 
-            ::memcpy(data, buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
+            encodeRate1(buffer, data);
         }
     }
     else if (m_DPF == DPF::UNCONFIRMED_DATA || m_DPF == DPF::RESPONSE || m_DPF == DPF::DEFINED_RAW ||
@@ -336,7 +345,7 @@ void DataBlock::encode(uint8_t* data)
 
             ::memcpy(buffer, m_data, DMR_PDU_UNCODED_LENGTH_BYTES);
 
-            ::memcpy(data, buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
+            encodeRate1(buffer, data);
 
 #if DEBUG_DMR_PDU_DATA
             Utils::dump(1U, "DMR, DataBlock::encode(), Unconfirmed 1 Rate PDU Data Block", buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
@@ -453,6 +462,42 @@ uint32_t DataBlock::getData(uint8_t* buffer) const
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/* */
+
+uint16_t DataBlock::crcMask(const DataType::E dataType) const
+{
+    switch (dataType) {
+    case DataType::RATE_12_DATA:
+        return 0x0F0U;
+    case DataType::RATE_34_DATA:
+        return 0x1FFU;
+    case DataType::RATE_1_DATA:
+        return 0x10FU;
+    default:
+        return 0U;
+    }
+}
+
+/* Decodes a rate 1 encoded data block. */
+
+void DataBlock::decodeRate1(const uint8_t* data, uint8_t* payload)
+{
+    ::memcpy(payload, data, 12U);
+    ::memcpy(payload + 12U, data + 21U, 12U);
+}
+
+/* Encodes a data block using rate 1 encoding. */
+
+void DataBlock::encodeRate1(const uint8_t* payload, uint8_t* data)
+{
+    ::memcpy(data, payload, 12U);
+    ::memcpy(data + 21U, payload + 12U, 12U);
+
+    // annex B.2.5 inserts four zero padding bits between the two halves
+    data[12U] &= 0x3FU;
+    data[20U] &= 0xFCU;
+}
 
 /* Internal helper to copy the the class. */
 

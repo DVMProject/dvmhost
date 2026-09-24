@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2012 Ian Wraith
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2021,2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021,2023,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -326,7 +326,7 @@ void DataHeader::encode(uint8_t* data)
             (m_blocksToFollow & 0x0FU);                                         // Blocks To Follow LSB
         m_data[8U] = (m_F ? 0x01U : 0x00U) +                                    // Full Message Flag
             (m_S ? 0x02U : 0x00U) +                                             // Synchronize Flag
-            ((m_dataFormat & 0xFCU) << 2);                                      // Defined Data Format
+            ((m_dataFormat & 0x3FU) << 2);                                      // Defined Data Format
         m_data[9U] = m_padLength;                                               // Bit Padding
 #if DEBUG_DMR_PDU_DATA
         Utils::dump(1U, "DMR, DataHeader::decode(), Defined Short Data Header", m_data, DMR_LC_HEADER_LENGTH_BYTES);
