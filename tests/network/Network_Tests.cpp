@@ -380,7 +380,15 @@ TEST_CASE("Network stores loopback DMR protocol frames into the receive ring buf
 
     network.clock(1000U);
 
-    std::vector<uint8_t> payload = { 0x10U, 0x11U, 0x12U, 0x13U, 0x14U, 0x15U };
+    std::vector<uint8_t> payload(DMR_PACKET_LENGTH + PACKET_PAD, 0x00U);
+    ::memcpy(payload.data(), TAG_DMR_DATA, 4U);
+    payload[4U] = 0x10U;       // DMR sequence number
+    payload[15U] = 0x21U;      // Slot 1, data sync, Voice LC Header
+    payload[20U] = 0x11U;      // Distinct CAI bytes for the round-trip check
+    payload[21U] = 0x12U;
+    payload[52U] = 0x13U;
+    payload[53U] = 0x14U;      // BER
+    payload[54U] = 0x15U;      // RSSI
     REQUIRE(sendLoopbackFrame(masterSenderQueue, networkDestination, networkDestinationLen, payload,
         { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, 0x12345678U, 7777U, 7777U, 0x1234U));
 
@@ -389,6 +397,152 @@ TEST_CASE("Network stores loopback DMR protocol frames into the receive ring buf
     bool ret = false;
     uint32_t frameLength = 0U;
     UInt8Array decoded = network.readDMR(ret, frameLength);
+    REQUIRE(ret);
+    REQUIRE(frameLength == payload.size());
+    REQUIRE(decoded != nullptr);
+    REQUIRE(std::memcmp(decoded.get(), payload.data(), payload.size()) == 0);
+
+    masterReceiver.close();
+}
+
+TEST_CASE("Network stores loopback NXDN protocol frames into the receive ring buffer", "[network][loopback][nxdn]")
+{
+    const uint16_t masterPort = reserveLoopbackPort();
+    REQUIRE(masterPort != 0U);
+
+    const uint16_t localPort = reserveLoopbackPort();
+    REQUIRE(localPort != 0U);
+
+    Socket masterReceiver("127.0.0.1", masterPort);
+    REQUIRE(masterReceiver.open(AF_INET));
+
+    FrameQueue masterReceiverQueue(&masterReceiver, 0x9ABDU, false);
+    FrameQueue masterSenderQueue(&masterReceiver, 0xDEF1U, false);
+
+    sockaddr_storage networkDestination = {};
+    uint32_t networkDestinationLen = 0U;
+    REQUIRE(Socket::lookup("127.0.0.1", localPort, networkDestination, networkDestinationLen) == 0);
+
+    TestableNetwork network("127.0.0.1", masterPort, localPort, 7778U, "loopback-password", true, false, false, false, true, false, true, true, true, true, false, false);
+    network.enable(true);
+    REQUIRE(network.open());
+
+    completeHandshake(network, masterReceiverQueue, masterSenderQueue, networkDestination, networkDestinationLen, 7778U);
+
+    std::vector<uint8_t> payload(NXDN_PACKET_LENGTH + PACKET_PAD, 0x00U);
+    ::memcpy(payload.data(), TAG_NXDN_DATA, 4U);
+    payload[4U] = 0x20U;       // NXDN sequence number
+    payload[24U] = 0x21U;      // Distinct CAI bytes for the round-trip check
+    payload[25U] = 0x22U;
+    payload[71U] = 0x23U;
+    payload[72U] = 0x24U;      // BER
+    payload[73U] = 0x25U;      // RSSI
+    REQUIRE(sendLoopbackFrame(masterSenderQueue, networkDestination, networkDestinationLen, payload,
+        { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, 0x23456789U, 7778U, 7778U, 0x2345U));
+
+    network.clock(0U);
+
+    bool ret = false;
+    uint32_t frameLength = 0U;
+    UInt8Array decoded = network.readNXDN(ret, frameLength);
+    REQUIRE(ret);
+    REQUIRE(frameLength == payload.size());
+    REQUIRE(decoded != nullptr);
+    REQUIRE(std::memcmp(decoded.get(), payload.data(), payload.size()) == 0);
+
+    masterReceiver.close();
+}
+
+TEST_CASE("Network stores loopback P25 Phase 2 protocol frames into the receive ring buffer", "[network][loopback][p25][p2]")
+{
+    const uint16_t masterPort = reserveLoopbackPort();
+    REQUIRE(masterPort != 0U);
+
+    const uint16_t localPort = reserveLoopbackPort();
+    REQUIRE(localPort != 0U);
+
+    Socket masterReceiver("127.0.0.1", masterPort);
+    REQUIRE(masterReceiver.open(AF_INET));
+
+    FrameQueue masterReceiverQueue(&masterReceiver, 0x9ABEU, false);
+    FrameQueue masterSenderQueue(&masterReceiver, 0xDEF2U, false);
+
+    sockaddr_storage networkDestination = {};
+    uint32_t networkDestinationLen = 0U;
+    REQUIRE(Socket::lookup("127.0.0.1", localPort, networkDestination, networkDestinationLen) == 0);
+
+    TestableNetwork network("127.0.0.1", masterPort, localPort, 7779U, "loopback-password", true, false, false, true, false, false, true, true, true, true, false, false);
+    network.enable(true);
+    REQUIRE(network.open());
+
+    completeHandshake(network, masterReceiverQueue, masterSenderQueue, networkDestination, networkDestinationLen, 7779U);
+    network.resetP25P2(2U);
+
+    std::vector<uint8_t> payload(P25_P2_PACKET_LENGTH + PACKET_PAD, 0x00U);
+    ::memcpy(payload.data(), TAG_P25_DATA, 4U);
+    payload[4U] = 0x30U;       // MAC PDU opcode
+    payload[19U] = 0x80U;      // Slot 2
+    payload[20U] = 0x31U;      // Scrambler offset
+    payload[21U] = 0x32U;
+    payload[23U] = 0x40U;      // Header plus 40-byte Phase 2 frame
+    payload[24U] = 0x33U;      // Distinct CAI bytes for the round-trip check
+    payload[57U] = 0x34U;
+    REQUIRE(sendLoopbackFrame(masterSenderQueue, networkDestination, networkDestinationLen, payload,
+        { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, 0x3456789AU, 7779U, 7779U, 0x3456U));
+
+    network.clock(0U);
+
+    bool ret = false;
+    uint32_t frameLength = 0U;
+    UInt8Array decoded = network.readP25P2(ret, frameLength);
+    REQUIRE(ret);
+    REQUIRE(frameLength == payload.size());
+    REQUIRE(decoded != nullptr);
+    REQUIRE(std::memcmp(decoded.get(), payload.data(), payload.size()) == 0);
+
+    masterReceiver.close();
+}
+
+TEST_CASE("Network stores loopback analog protocol frames into the receive ring buffer", "[analog][network][loopback]")
+{
+    const uint16_t masterPort = reserveLoopbackPort();
+    REQUIRE(masterPort != 0U);
+
+    const uint16_t localPort = reserveLoopbackPort();
+    REQUIRE(localPort != 0U);
+
+    Socket masterReceiver("127.0.0.1", masterPort);
+    REQUIRE(masterReceiver.open(AF_INET));
+
+    FrameQueue masterReceiverQueue(&masterReceiver, 0x9ABFU, false);
+    FrameQueue masterSenderQueue(&masterReceiver, 0xDEF3U, false);
+
+    sockaddr_storage networkDestination = {};
+    uint32_t networkDestinationLen = 0U;
+    REQUIRE(Socket::lookup("127.0.0.1", localPort, networkDestination, networkDestinationLen) == 0);
+
+    TestableNetwork network("127.0.0.1", masterPort, localPort, 7780U, "loopback-password", true, false, false, false, false, true, true, true, true, true, false, false);
+    network.enable(true);
+    REQUIRE(network.open());
+
+    completeHandshake(network, masterReceiverQueue, masterSenderQueue, networkDestination, networkDestinationLen, 7780U);
+    network.resetAnalog();
+
+    std::vector<uint8_t> payload(ANALOG_PACKET_LENGTH + PACKET_PAD, 0x00U);
+    ::memcpy(payload.data(), TAG_ANALOG_DATA, 4U);
+    payload[4U] = 0x40U;       // Analog sequence number
+    payload[15U] = 0x01U;      // Audio frame type
+    payload[20U] = 0x41U;      // Distinct PCM bytes for the round-trip check
+    payload[21U] = 0x42U;
+    payload[339U] = 0x43U;
+    REQUIRE(sendLoopbackFrame(masterSenderQueue, networkDestination, networkDestinationLen, payload,
+        { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, 0x456789ABU, 7780U, 7780U, 0x4567U));
+
+    network.clock(0U);
+
+    bool ret = false;
+    uint32_t frameLength = 0U;
+    UInt8Array decoded = network.readAnalog(ret, frameLength);
     REQUIRE(ret);
     REQUIRE(frameLength == payload.size());
     REQUIRE(decoded != nullptr);
