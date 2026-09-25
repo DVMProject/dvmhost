@@ -193,7 +193,7 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                 FNEPeerConnection* connection = network->m_peers[pktPeerId];
                 if (connection != nullptr) {
                     if (!network->patchStatusEnabled()) {
-                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STAT, NET_CONN_NAK_FNE_UNAUTHORIZED);
                         break;
                     }
 
@@ -201,7 +201,7 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
 
                     // Only authenticated console peers may publish or request patch registry state.
                     if (req->length <= TRANSFER_PCKT_HDR_LEN) {
-                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STAT, NET_CONN_NAK_ILLEGAL_PACKET);
                         break;
                     }
 
@@ -212,7 +212,7 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                         json::value v;
                         std::string err = json::parse(v, payload);
                         if (!err.empty() || !v.is<json::object>()) {
-                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STAT, NET_CONN_NAK_ILLEGAL_PACKET);
                             break;
                         }
 
@@ -238,7 +238,7 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                         bool changed = false;
                         if (!network->patchStatusRegistry().publish(reqObj, response, errorMessage, &changed)) {
                             LogWarning(LOG_MASTER, "PEER %u (%s) invalid patch status payload, %s", pktPeerId, connection->identWithQualifier().c_str(), errorMessage.c_str());
-                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_ILLEGAL_PACKET);
+                            network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STAT, NET_CONN_NAK_ILLEGAL_PACKET);
                             break;
                         }
 
@@ -272,7 +272,7 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                         }
                     }
                     else {
-                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STATUS, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                        network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STAT, NET_CONN_NAK_FNE_UNAUTHORIZED);
                     }
                 }
             }

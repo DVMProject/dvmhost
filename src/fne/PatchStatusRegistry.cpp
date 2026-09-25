@@ -22,6 +22,10 @@ constexpr uint32_t PatchStatusRegistry::MIN_TTL_SECONDS;
 constexpr uint32_t PatchStatusRegistry::MAX_TTL_SECONDS;
 constexpr uint32_t PatchStatusRegistry::MAX_WAIT_MS;
 
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
+
 /* Initializes a new instance of the PatchStatusRegistry class. */
 
 PatchStatusRegistry::PatchStatusRegistry() :
@@ -271,6 +275,10 @@ uint32_t PatchStatusRegistry::maxTtlSeconds() const
     std::lock_guard<std::mutex> guard(m_mutex);
     return m_maxTtlSeconds;
 }
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
 
 /* Gets the current system time in milliseconds. */
 

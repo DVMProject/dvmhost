@@ -308,35 +308,6 @@ namespace network
          * @return json::object 
          */
         json::object fneConnObject(uint32_t peerId, FNEPeerConnection* conn);
-        /**
-         * @brief Gets the console patch status registry.
-         * @return PatchStatusRegistry& Patch status registry.
-         */
-        PatchStatusRegistry& patchStatusRegistry() { return m_patchStatusRegistry; }
-        /**
-         * @brief Flag indicating whether console patch status handling is enabled.
-         * @returns bool True, if enabled.
-         */
-        bool patchStatusEnabled() const { return m_patchStatusEnabled; }
-        /**
-         * @brief Sends patch status registry state to one console peer.
-         * @param peerId Destination peer ID.
-         * @param obj Patch status JSON payload.
-         * @returns bool True, if the message was queued, otherwise false.
-         */
-        bool writePatchStatusToPeer(uint32_t peerId, json::object obj);
-        /**
-         * @brief Broadcasts patch status registry state to connected console peers.
-         * @param obj Patch status JSON payload.
-         * @param exceptPeerId Optional peer ID to skip.
-         */
-        void writePatchStatusToConsoles(json::object obj, uint32_t exceptPeerId = 0U);
-        /**
-         * @brief Replicates patch status state to neighboring FNE peers.
-         * @param obj Patch status JSON payload.
-         * @param exceptPeerId Optional peer ID to skip.
-         */
-        void replicatePatchStatus(json::object obj, uint32_t exceptPeerId = 0U);
 
         /**
          * @brief Helper to reset a peer connection.
@@ -798,6 +769,40 @@ namespace network
          * @param req Instance of the MetadataUpdateRequest structure.
          */
         static void taskMetadataUpdate(MetadataUpdateRequest* req);
+
+        /*
+        ** Console Patch Registry
+        */
+
+        /**
+         * @brief Gets the console patch status registry.
+         * @return PatchStatusRegistry& Patch status registry.
+         */
+        PatchStatusRegistry& patchStatusRegistry() { return m_patchStatusRegistry; }
+        /**
+         * @brief Flag indicating whether console patch status handling is enabled.
+         * @returns bool True, if enabled.
+         */
+        bool patchStatusEnabled() const { return m_patchStatusEnabled; }
+        /**
+         * @brief Sends patch status registry state to one console peer.
+         * @param peerId Destination peer ID.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if the message was queued, otherwise false.
+         */
+        bool writePatchStatusToPeer(uint32_t peerId, json::object obj);
+        /**
+         * @brief Broadcasts patch status registry state to connected console peers.
+         * @param obj Patch status JSON payload.
+         * @param exceptPeerId Optional peer ID to skip.
+         */
+        void writePatchStatusToConsoles(json::object obj, uint32_t exceptPeerId = 0U);
+        /**
+         * @brief Replicates patch status state to neighboring FNE peers.
+         * @param obj Patch status JSON payload.
+         * @param exceptPeerId Optional peer ID to skip.
+         */
+        void replicatePatchStatus(json::object obj, uint32_t exceptPeerId = 0U);
 
         /*
         ** ACL Message Writing

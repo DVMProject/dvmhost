@@ -107,8 +107,6 @@ namespace network
         friend class ::FNETestHooks;
 #endif
         friend class TrafficNetwork;
-        bool writePeerMetadata(FNEPeerConnection* connection, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
-            uint32_t length, uint16_t pktSeq, uint32_t streamId) const;
 
         TrafficNetwork* m_trafficNetwork;
         HostFNE* m_host;
@@ -180,6 +178,20 @@ namespace network
          * it still refers to this instance.
          */
         static void erasePacketBufferEntry(PacketBufferMap& pktMap, uint32_t peerId, const PacketBufferEntryPtr& pkt);
+
+        /**
+         * @brief Writes metadata for a peer connection.
+         * @param connection Pointer to the FNEPeerConnection instance.
+         * @param ssrc SSRC of the packet.
+         * @param opcode Opcode pair of the frame.
+         * @param data Pointer to the data buffer.
+         * @param length Length of the data buffer.
+         * @param pktSeq Packet sequence number.
+         * @param streamId Stream ID of the packet.
+         * @returns True if the metadata was successfully written, false otherwise.
+         */
+        bool writePeerMetadata(FNEPeerConnection* connection, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
+            uint32_t length, uint16_t pktSeq, uint32_t streamId) const;
 
         /*
         ** Packet Processing

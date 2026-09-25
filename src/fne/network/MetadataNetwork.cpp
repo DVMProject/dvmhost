@@ -156,31 +156,6 @@ void MetadataNetwork::close()
     m_status = NET_STAT_INVALID;
 }
 
-/* Helper to send a metadata message to a peer's metadata port. */
-
-bool MetadataNetwork::writePeerMetadata(FNEPeerConnection* connection, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
-    uint32_t length, uint16_t pktSeq, uint32_t streamId) const
-{
-    if (connection == nullptr)
-        return false;
-    if (m_status != NET_STAT_MST_RUNNING)
-        return false;
-    if (m_frameQueue == nullptr)
-        return false;
-
-    sockaddr_storage addr;
-    uint32_t addrLen = 0U;
-    uint16_t port = connection->port() + 1U;
-
-    if (udp::Socket::lookup(connection->address(), port, addr, addrLen) != 0) {
-        LogWarning(LOG_NET, "PEER %u (%s) failed to resolve metadata endpoint %s:%u", connection->id(),
-            connection->identWithQualifier().c_str(), connection->address().c_str(), port);
-        return false;
-    }
-
-    return m_frameQueue->write(data, length, streamId, connection->id(), ssrc, opcode, pktSeq, addr, addrLen);
-}
-
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -236,6 +211,31 @@ void MetadataNetwork::erasePacketBufferEntry(PacketBufferMap& pktMap, uint32_t p
         entries.erase(it);
 
     pktMap.unlock();
+}
+
+/* Helper to send a metadata message to a peer's metadata port. */
+
+bool MetadataNetwork::writePeerMetadata(FNEPeerConnection* connection, uint32_t ssrc, FrameQueue::OpcodePair opcode, const uint8_t* data,
+    uint32_t length, uint16_t pktSeq, uint32_t streamId) const
+{
+    if (connection == nullptr)
+        return false;
+    if (m_status != NET_STAT_MST_RUNNING)
+        return false;
+    if (m_frameQueue == nullptr)
+        return false;
+
+    sockaddr_storage addr;
+    uint32_t addrLen = 0U;
+    uint16_t port = connection->port() + 1U;
+
+    if (udp::Socket::lookup(connection->address(), port, addr, addrLen) != 0) {
+        LogWarning(LOG_NET, "PEER %u (%s) failed to resolve metadata endpoint %s:%u", connection->id(),
+            connection->identWithQualifier().c_str(), connection->address().c_str(), port);
+        return false;
+    }
+
+    return m_frameQueue->write(data, length, streamId, connection->id(), ssrc, opcode, pktSeq, addr, addrLen);
 }
 
 /*

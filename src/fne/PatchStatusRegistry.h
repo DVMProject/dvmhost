@@ -24,6 +24,10 @@
 #include <string>
 #include <vector>
 
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
 /**
  * @brief In-memory registry for console-advertised patch status.
  *
