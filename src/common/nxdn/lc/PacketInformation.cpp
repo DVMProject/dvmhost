@@ -112,8 +112,8 @@ void PacketInformation::encode(const uint8_t messageType, uint8_t* data)
     break;
     case MessageType::RTCH_DCALL_ACK:
     {
-        data[0U] = (m_rspClass & 0x03U << 4) +                                      // Response Class
-            (m_rspType & 0x07U << 1);                                               // Response Type
+        data[0U] = ((m_rspClass & 0x03U) << 4) |                                    // Response Class
+            ((m_rspType & 0x07U) << 1);                                             // Response Type
 
         bool highFragCount = (m_fragmentCount & 0x100U) == 0x100U;
         data[0U] += (highFragCount ? 0x01U : 0x00U);                                // Fragment Count - bit 8
