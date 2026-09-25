@@ -142,6 +142,9 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
                 m_rxNXDNLC = lc::RTCH();
                 m_rxStartTime = 0U;
                 m_rxStreamId = 0U;
+                m_nxdnSeqNo = 0U;
+                m_nxdnN = 0U;
+                ::memset(m_nxdnAMBE, 0x00U, 36U);
 
                 if (!m_udpRTPContinuousSeq) {
                     m_rtpInitialFrame = false;
@@ -156,6 +159,26 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
 
     if (m_ignoreCall)
         return;
+
+    // Only superframe SACCH traffic frames contain voice payloads.
+    if (fct != FuncChannelType::USC_SACCH_SS)
+        return;
+
+    // A bridge may join an already active stream after its VCALL header.  Treat
+    // the first valid voice frame as the start of the receive call as well.
+    if (!m_callInProgress) {
+        m_callInProgress = true;
+        m_callAlgoId = 0U;
+        m_networkWatchdog.start();
+        m_rxStartTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        LogInfoEx(LOG_HOST, "NXDN, late entry call start, srcId = %u, dstId = %u", srcId, dstId);
+        if (m_preambleLeaderTone)
+            generatePreambleTone();
+    }
+    else {
+        m_networkWatchdog.start();
+    }
 
     LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u", srcId, dstId);
     decodeNXDNAudioFrame(frame, srcId, dstId, m_nxdnSeqNo);
@@ -187,38 +210,51 @@ void HostBridge::decodeNXDNAudioFrame(uint8_t* frame, uint32_t srcId, uint32_t d
         ::memset(nxdnAMBE, 0x00U, 18U);
         ::memcpy(nxdnAMBE, frame + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + pairOffset, 18U);
 
-        ambeFec.regenerateNXDN(nxdnAMBE + 0U);
-        ambeFec.regenerateNXDN(nxdnAMBE + 9U);
+        const uint32_t fecErrors[] = {
+            ambeFec.regenerateNXDN(nxdnAMBE + 0U),
+            ambeFec.regenerateNXDN(nxdnAMBE + 9U)
+        };
+
+        // match the normal NXDN voice path's lost-audio policy -- a pair is
+        // half of a full four-codeword frame, so use half the frame threshold
+        if ((fecErrors[0U] + fecErrors[1U]) > (DEFAULT_SILENCE_THRESHOLD / 2U)) {
+            ::memcpy(nxdnAMBE + 0U, NULL_AMBE, 9U);
+            ::memcpy(nxdnAMBE + 9U, NULL_AMBE, 9U);
+            LogWarning(LOG_HOST, "NXDN, AMBE errors exceeded threshold, substituting silence, errors = %u",
+                fecErrors[0U] + fecErrors[1U]);
+        }
 
         uint8_t packedBits[13U];
         ::memset(packedBits, 0x00U, 13U);
         nxdnAudio.decode(nxdnAMBE, packedBits);
 
         for (uint8_t half = 0U; half < 2U; half++) {
-            uint8_t rawBits[72U];
-            ::memset(rawBits, 0x00U, 72U);
+            uint8_t rawBits[49U];
+            ::memset(rawBits, 0x00U, sizeof(rawBits));
 
             for (uint32_t b = 0U; b < 49U; b++) {
                 rawBits[b] = READ_BIT(packedBits, (half * 49U) + b) ? 1U : 0U;
             }
 
-            // HACK: use the DMR AMBE handling to decode NXDN audio
-            uint8_t dmrAMBE[dmr::defines::DMR_AMBE_LENGTH_BYTES];
-            ::memset(dmrAMBE, 0x00U, dmr::defines::DMR_AMBE_LENGTH_BYTES);
-            m_encoder->encodeBits(rawBits, dmrAMBE);
-
             short samples[AUDIO_SAMPLES_LENGTH];
             int errs = 0;
 #if defined(_WIN32)
             if (m_useExternalVocoder) {
-                ambeDecode(dmrAMBE, dmr::defines::DMR_AMBE_LENGTH_BYTES, samples);
+                // reframe the NXDN 49-bit payload before handing it to the external vocoder
+                uint8_t ambePartial[dmr::defines::RAW_AMBE_LENGTH_BYTES];
+                ::memset(ambePartial, 0x00U, sizeof(ambePartial));
+                m_encoder->encodeBits(rawBits, ambePartial);
+
+                errs = ambeDecode(ambePartial, dmr::defines::RAW_AMBE_LENGTH_BYTES, samples);
             }
             else {
 #endif // defined(_WIN32)
-                errs = m_decoder->decode(dmrAMBE, samples);
+                errs = m_decoder->decodeBits(rawBits, samples);
 #if defined(_WIN32)
             }
 #endif // defined(_WIN32)
+
+            errs += (int)fecErrors[half];
 
             if (m_debug) {
                 LogDebug(LOG_HOST, "NXDN, Frame, VC%u.%u, srcId = %u, dstId = %u, errs = %u", nxdnN, vcBase + half, srcId, dstId, errs);
@@ -306,16 +342,25 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
 
     AnalogAudio::gain(samples, AUDIO_SAMPLES_LENGTH, m_txAudioGain);
 
-    // HACK: use the DMR AMBE handling to encode NXDN audio
-    uint8_t dmrAMBE[dmr::defines::DMR_AMBE_LENGTH_BYTES];
-    ::memset(dmrAMBE, 0x00U, dmr::defines::DMR_AMBE_LENGTH_BYTES);
+    uint8_t rawBits[49U];
+    ::memset(rawBits, 0x00U, sizeof(rawBits));
 #if defined(_WIN32)
     if (m_useExternalVocoder) {
-        ambeEncode(samples, AUDIO_SAMPLES_LENGTH, dmrAMBE);
+        // reframe the NXDN 49-bit payload before handing it to the external vocoder
+        uint8_t ambePartial[dmr::defines::RAW_AMBE_LENGTH_BYTES];
+        ::memset(ambePartial, 0x00U, sizeof(ambePartial));
+        ambeEncode(samples, AUDIO_SAMPLES_LENGTH, ambePartial);
+
+        char mbeBits[49U];
+        ::memset(mbeBits, 0x00U, sizeof(mbeBits));
+        m_decoder->decodeBits(ambePartial, mbeBits);
+
+        for (uint32_t i = 0U; i < 49U; i++)
+            rawBits[i] = mbeBits[i] != 0;
     }
     else {
 #endif // defined(_WIN32)
-        m_encoder->encode(samples, dmrAMBE);
+        m_encoder->encodeBits(samples, rawBits);
 #if defined(_WIN32)
     }
 #endif // defined(_WIN32)
@@ -324,7 +369,10 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
         m_nxdnN = 0U;
     }
 
-    ::memcpy(m_nxdnAMBE + (m_nxdnN * dmr::defines::DMR_AMBE_LENGTH_BYTES), dmrAMBE, dmr::defines::DMR_AMBE_LENGTH_BYTES);
+    uint8_t* packedAMBE = m_nxdnAMBE + (m_nxdnN * dmr::defines::DMR_AMBE_LENGTH_BYTES);
+    ::memset(packedAMBE, 0x00U, dmr::defines::DMR_AMBE_LENGTH_BYTES);
+    for (uint32_t b = 0U; b < 49U; b++)
+        WRITE_BIT(packedAMBE, b, rawBits[b] != 0U);
     m_nxdnN++;
 
     if (m_nxdnN < 4U) {
@@ -341,14 +389,9 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
         ::memset(packedBits, 0x00U, 13U);
 
         for (uint8_t half = 0U; half < 2U; half++) {
-            char mbeBits[49U];
-            ::memset(mbeBits, 0x00U, 49U);
-
             uint8_t* ambe = m_nxdnAMBE + ((pair * 2U + half) * dmr::defines::DMR_AMBE_LENGTH_BYTES);
-            m_decoder->decodeBits(ambe, mbeBits);
-
             for (uint32_t b = 0U; b < 49U; b++) {
-                WRITE_BIT(packedBits, (half * 49U) + b, mbeBits[b] != 0);
+                WRITE_BIT(packedBits, (half * 49U) + b, READ_BIT(ambe, b));
             }
         }
 

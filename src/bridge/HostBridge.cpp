@@ -18,6 +18,7 @@
 #include "common/dmr/data/EMB.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/NXDNUtils.h"
+#include "common/nxdn/Audio.h"
 #include "common/nxdn/Sync.h"
 #include "common/nxdn/channel/FACCH1.h"
 #include "common/nxdn/channel/LICH.h"
@@ -2993,13 +2994,24 @@ void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
             using namespace nxdn;
             using namespace nxdn::defines;
 
-            if (m_nxdnN == 0U || m_nxdnN > 3U) {
-                ::memset(m_nxdnAMBE, 0x00U, 36U);
+            if (m_nxdnN > 0U && m_nxdnN < 4U) {
+                // m_nxdnAMBE stores packed raw 49-bit payloads.  Pad the
+                // incomplete frame with the raw payload represented by the
+                // standard NXDN null codeword.
+                nxdn::Audio nxdnAudio;
+                uint8_t nullPair[18U];
+                ::memcpy(nullPair + 0U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+                ::memcpy(nullPair + 9U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+                uint8_t nullBits[13U];
+                ::memset(nullBits, 0x00U, sizeof(nullBits));
+                nxdnAudio.decode(nullPair, nullBits);
 
-                ::memcpy(m_nxdnAMBE + 0U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
-                ::memcpy(m_nxdnAMBE + 9U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
-                ::memcpy(m_nxdnAMBE + 18U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
-                ::memcpy(m_nxdnAMBE + 27U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+                for (uint8_t n = m_nxdnN; n < 4U; n++) {
+                    uint8_t* packedAMBE = m_nxdnAMBE + (n * RAW_AMBE_LENGTH_BYTES);
+                    ::memset(packedAMBE, 0x00U, RAW_AMBE_LENGTH_BYTES);
+                    for (uint32_t bit = 0U; bit < 49U; bit++)
+                        WRITE_BIT(packedAMBE, bit, READ_BIT(nullBits, bit));
+                }
 
                 ::nxdn::lc::RTCH lc = ::nxdn::lc::RTCH();
                 lc.setMessageType(NXDDEF::MessageType::RTCH_VCALL);
@@ -3043,7 +3055,20 @@ void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
                 sacch.setStructure(structures[superframeIndex]);
                 sacch.encode(frame);
 
-                ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES, m_nxdnAMBE, 36U);
+                uint8_t nxdnAudioPayload[36U];
+                ::memset(nxdnAudioPayload, 0x00U, sizeof(nxdnAudioPayload));
+                for (uint8_t pair = 0U; pair < 2U; pair++) {
+                    uint8_t packedBits[13U];
+                    ::memset(packedBits, 0x00U, sizeof(packedBits));
+                    for (uint8_t half = 0U; half < 2U; half++) {
+                        const uint8_t* ambe = m_nxdnAMBE + ((pair * 2U + half) * RAW_AMBE_LENGTH_BYTES);
+                        for (uint32_t bit = 0U; bit < 49U; bit++)
+                            WRITE_BIT(packedBits, (half * 49U) + bit, READ_BIT(ambe, bit));
+                    }
+                    nxdnAudio.encode(packedBits, nxdnAudioPayload + (pair * 18U));
+                }
+
+                ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES, nxdnAudioPayload, sizeof(nxdnAudioPayload));
                 NXDNUtils::scrambler(frame);
 
                 m_network->writeNXDN(lc, frame, NXDN_FRAME_LENGTH_BYTES);

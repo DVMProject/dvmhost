@@ -96,6 +96,14 @@ namespace vocoder
         int32_t decodeBits(uint8_t* codeword, char* mbeBits);
 
         /**
+         * @brief Decodes a deinterleaved 49-bit AMBE payload to PCM samples.
+         * @param[in] mbeBits Deinterleaved AMBE payload, one bit per byte.
+         * @param[out] samples PCM samples.
+         * @returns int32_t Decoder error count.
+         */
+        int32_t decodeBits(const uint8_t* mbeBits, int16_t samples[]);
+
+        /**
          * @brief Decodes the given MBE codewords to PCM samples using the decoder mode.
          * @param[in] codeword MBE codeword.
          * @param[out] samples PCM Samples (in float format).

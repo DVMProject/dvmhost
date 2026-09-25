@@ -66,6 +66,13 @@ namespace vocoder
          */
         void encode(int16_t* samples, uint8_t* codeword);
 
+        /**
+         * @brief Encodes PCM samples to a deinterleaved 49-bit AMBE payload.
+         * @param[in] samples PCM samples.
+         * @param[out] bits Deinterleaved AMBE payload, one bit per byte.
+         */
+        void encodeBits(int16_t* samples, uint8_t bits[]);
+
     private:
         imbe_vocoder m_vocoder;
         mbe_parms m_curMBEParms;

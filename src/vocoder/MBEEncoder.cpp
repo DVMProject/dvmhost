@@ -715,3 +715,23 @@ void MBEEncoder::encode(int16_t* samples, uint8_t* codeword)
         ::memcpy(codeword, dmrAMBE, 9U);
     }
 }
+
+/* Encodes PCM samples to a deinterleaved 49-bit AMBE payload. */
+
+void MBEEncoder::encodeBits(int16_t* samples, uint8_t bits[])
+{
+    assert(samples != nullptr);
+    assert(bits != nullptr);
+
+    if (m_mbeMode != ENCODE_DMR_AMBE) {
+        ::memset(bits, 0x00U, 49U);
+        return;
+    }
+
+    int16_t frameVector[8];
+    m_vocoder.imbe_encode(frameVector, samples);
+
+    int b[9];
+    encodeAMBE(m_vocoder.param(), b, &m_curMBEParms, &m_prevMBEParms, m_gainAdjust);
+    encode49bit(bits, b);
+}
