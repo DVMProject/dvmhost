@@ -68,6 +68,8 @@ P25Crypto::~P25Crypto()
 {
     if (m_keystream != nullptr)
         delete[] m_keystream;
+
+    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
     delete[] m_mi;
 }
 
@@ -111,7 +113,7 @@ void P25Crypto::generateNextMI()
 
 /* Helper to check if there is a valid encryption keystream. */
 
-bool P25Crypto::hasValidKeystream()
+bool P25Crypto::hasValidKeystream() const
 {
     if (m_tek == nullptr)
         return false;
@@ -217,6 +219,10 @@ void P25Crypto::generateKeystream()
         break;
     default:
         LogError(LOG_P25, "unsupported crypto algorithm, algId = $%02X", m_tekAlgoId);
+        if (m_keystream != nullptr) {
+            delete[] m_keystream;
+            m_keystream = nullptr;
+        }
         break;
     }
 }
@@ -743,7 +749,7 @@ void P25Crypto::cryptARC4_IMBE(uint8_t* imbe, DUID::E duid)
 
 /* Helper to check if there is a valid encryption message indicator. */
 
-bool P25Crypto::hasValidMI()
+bool P25Crypto::hasValidMI() const
 {
     bool hasMI = false;
     for (uint8_t i = 0; i < MI_LENGTH_BYTES; i++) {
@@ -785,13 +791,18 @@ void P25Crypto::setKey(const uint8_t* key, uint8_t len)
 {
     assert(key != nullptr);
 
-    m_tekLength = len;
-    if (m_tek != nullptr)
-        m_tek.reset();
+    if (m_tekAlgoId == ALGO_DES && isWeakDESKey(key)) {
+        LogError(LOG_P25, "invalid DES crypto key, algoId = $%02X, keyId = $%02X, len = %u", m_tekAlgoId, m_tekKeyId, len);
+        clearKey();
+        return;
+    }
 
+    clearKey();
     m_tek = std::make_unique<uint8_t[]>(len);
     ::memset(m_tek.get(), 0x00U, m_tekLength);
     ::memcpy(m_tek.get(), key, len);
+
+    m_tekLength = len;
 }
 
 /* Gets the encryption key. */
@@ -800,7 +811,8 @@ void P25Crypto::getKey(uint8_t* key) const
 {
     assert(key != nullptr);
 
-    ::memcpy(key, m_tek.get(), m_tekLength);
+    if (m_tek != nullptr)
+        ::memcpy(key, m_tek.get(), m_tekLength);
 }
 
 /* Clears the stored encryption key. */
@@ -868,4 +880,44 @@ uint8_t* P25Crypto::expandMIToIV()
     }
 
     return iv;
+}
+
+/* Helper to check for weak DES keys. */
+
+bool P25Crypto::isWeakDESKey(const uint8_t* key)
+{
+    static const uint8_t WEAK_KEYS[][DES_ENC_KEY_LENGTH_BYTES] = {
+        { 0x01U, 0x01U, 0x01U, 0x01U, 0x01U, 0x01U, 0x01U, 0x01U },
+        { 0xFEU, 0xFEU, 0xFEU, 0xFEU, 0xFEU, 0xFEU, 0xFEU, 0xFEU },
+        { 0xE0U, 0xE0U, 0xE0U, 0xE0U, 0xF1U, 0xF1U, 0xF1U, 0xF1U },
+        { 0x1FU, 0x1FU, 0x1FU, 0x1FU, 0x0EU, 0x0EU, 0x0EU, 0x0EU },
+        { 0x01U, 0xFEU, 0x01U, 0xFEU, 0x01U, 0xFEU, 0x01U, 0xFEU },
+        { 0xFEU, 0x01U, 0xFEU, 0x01U, 0xFEU, 0x01U, 0xFEU, 0x01U },
+        { 0x1FU, 0xE0U, 0x1FU, 0xE0U, 0x0EU, 0xF1U, 0x0EU, 0xF1U },
+        { 0xE0U, 0x1FU, 0xE0U, 0x1FU, 0xF1U, 0x0EU, 0xF1U, 0x0EU },
+        { 0x01U, 0xE0U, 0x01U, 0xE0U, 0x01U, 0xF1U, 0x01U, 0xF1U },
+        { 0xE0U, 0x01U, 0xE0U, 0x01U, 0xF1U, 0x01U, 0xF1U, 0x01U },
+        { 0x1FU, 0xFEU, 0x1FU, 0xFEU, 0x0EU, 0xFEU, 0x0EU, 0xFEU },
+        { 0xFEU, 0x1FU, 0xFEU, 0x1FU, 0xFEU, 0x0EU, 0xFEU, 0x0EU },
+        { 0x01U, 0x1FU, 0x01U, 0x1FU, 0x01U, 0x0EU, 0x01U, 0x0EU },
+        { 0x1FU, 0x01U, 0x1FU, 0x01U, 0x0EU, 0x01U, 0x0EU, 0x01U },
+        { 0xE0U, 0xFEU, 0xE0U, 0xFEU, 0xF1U, 0xFEU, 0xF1U, 0xFEU },
+        { 0xFEU, 0xE0U, 0xFEU, 0xE0U, 0xFEU, 0xF1U, 0xFEU, 0xF1U }
+    };
+
+    for (const auto& weakKey : WEAK_KEYS) {
+        bool match = true;
+        for (uint8_t i = 0U; i < DES_ENC_KEY_LENGTH_BYTES; i++) {
+            // DES parity bits do not contribute to the effective 56-bit key
+            if ((key[i] & 0xFEU) != (weakKey[i] & 0xFEU)) {
+                match = false;
+                break;
+            }
+        }
+
+        if (match)
+            return true;
+    }
+
+    return false;
 }

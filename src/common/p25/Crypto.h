@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Digital Voice Modem - Common Library
- * MIT Open Source. Use is subject to license terms.
+ * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
@@ -35,7 +35,7 @@ namespace p25
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Project 25 Cryptography.
+         * @brief Generates and applies P25 voice and data keystreams.
          * @ingroup p25_crypto
          */
         class DVM_COMMON_API P25Crypto {
@@ -49,9 +49,11 @@ namespace p25
              */
             ~P25Crypto();
 
+            P25Crypto(const P25Crypto&) = delete;
+            P25Crypto& operator=(const P25Crypto&) = delete;
+
             /**
-             * @brief Helper given to generate a new initial seed MI.
-             * @param mi 
+             * @brief Helper to generate a new initial seed MI.
              */
             void generateMI();
             /**
@@ -63,7 +65,7 @@ namespace p25
              * @brief Helper to check if there is a valid encryption keystream.
              * @return bool True, if there is a valid keystream, otherwise false.
              */
-            bool hasValidKeystream();
+            bool hasValidKeystream() const;
             /**
              * @brief Helper to generate the encryption keystream.
              */
@@ -160,7 +162,7 @@ namespace p25
              * @brief Helper to check if there is a valid encryption message indicator.
              * @return bool True, if there is a valid encryption message indicator, otherwise false.
              */
-            bool hasValidMI();
+            bool hasValidMI() const;
             /**
              * @brief Sets the encryption message indicator.
              * @param[in] mi Buffer containing the 9-byte Message Indicator.
@@ -178,13 +180,13 @@ namespace p25
 
             /**
              * @brief Sets the encryption key.
-             * @param[in] mi Buffer containing the encryption key.
+             * @param[in] key Buffer containing the encryption key.
              * @param[in] len Length of the key.
              */
             void setKey(const uint8_t* key, uint8_t len);
             /**
              * @brief Gets the encryption key,
-             * @param[out] mi Buffer containing the encryption key.
+             * @param[out] key Buffer containing the encryption key.
              */
             void getKey(uint8_t* key) const;
             /**
@@ -229,6 +231,13 @@ namespace p25
              * @return uint8_t* Buffer containing expanded 16-byte IV.
              */
             uint8_t* expandMIToIV();
+
+            /**
+             * @brief Helper to check if a DES key is weak.
+             * @param key DES key to check.
+             * @returns bool True If the key is weak, otherwise false.
+             */
+            static bool isWeakDESKey(const uint8_t* key);
         };
     } // namespace crypto
 } // namespace p25
