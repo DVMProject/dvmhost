@@ -519,7 +519,7 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
         }
 
         if (m_trace)
-            Utils::dump(1U, "HostBridge()::encodeAnalogAudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+            Utils::dump(1U, "HostBridge()::encodeNXDNAudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
 
         analogData.setAudio(outPcm);
 

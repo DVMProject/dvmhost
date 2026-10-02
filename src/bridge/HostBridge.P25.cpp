@@ -669,7 +669,7 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         }
 
         if (m_trace)
-            Utils::dump(1U, "HostBridge()::encodeAnalogAudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+            Utils::dump(1U, "HostBridge()::encodeP25AudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
 
         analogData.setAudio(outPcm);
 
