@@ -182,6 +182,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_sysId(P25DEF::SID_STD_DEFAULT),
     m_grantDemand(false),
     m_txMode(1U),
+    m_duplicateToAnalog(false),
     m_rxAudioGain(1.0f),
     m_vocoderDecoderAudioGain(3.0f),
     m_vocoderDecoderAutoGain(false),
@@ -1029,6 +1030,8 @@ bool HostBridge::readParams()
     if (m_txMode > TX_MODE_NXDN)
         m_txMode = TX_MODE_NXDN;
 
+    m_duplicateToAnalog = systemConf["duplicateToAnalog"].as<bool>(false);
+
     m_voxSampleLevel = systemConf["voxSampleLevel"].as<float>(30.0f);
     m_dropTimeMS = (uint16_t)systemConf["dropTimeMs"].as<uint32_t>(180U);
 
@@ -1049,6 +1052,7 @@ bool HostBridge::readParams()
     case TX_MODE_NXDN:
         break;
     case TX_MODE_ANALOG:
+        m_duplicateToAnalog = false;
         break;
     }
 
@@ -1173,6 +1177,8 @@ bool HostBridge::readParams()
     LogInfo("    Tx Audio Gain: %.1f", m_txAudioGain);
     LogInfo("    Vocoder Encoder Audio Gain: %.1f", m_vocoderEncoderAudioGain);
     LogInfo("    Transmit Mode: %s", txModeStr.c_str());
+    if (m_txMode != TX_MODE_ANALOG)
+        LogInfo("    Duplicate to Analog: %s", m_duplicateToAnalog ? "yes" : "no");
     LogInfo("    VOX Sample Level: %.1f", m_voxSampleLevel);
     LogInfo("    Drop Time: %ums", m_dropTimeMS);
     LogInfo("    Detect Analog MDC1200: %s", m_detectAnalogMDC1200 ? "yes" : "no");
@@ -1907,6 +1913,22 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
             }
             break;
         }
+    }
+
+    if (m_duplicateToAnalog) {
+        LogInfoEx(LOG_HOST, ANO_TERMINATOR);
+
+        data::NetData analogData;
+        analogData.setSeqNo(m_analogN);
+        analogData.setSrcId(srcId);
+        analogData.setDstId(dstId);
+        analogData.setFrameType(AudioFrameType::TERMINATOR);
+
+        uint8_t pcm[AUDIO_SAMPLES_LENGTH * 2U];
+        ::memset(pcm, 0x00U, AUDIO_SAMPLES_LENGTH * 2U);
+        analogData.setAudio(pcm);
+
+        m_network->writeAnalog(analogData, true);
     }
 
     LogInfoEx(LOG_HOST, "%s, call end, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);

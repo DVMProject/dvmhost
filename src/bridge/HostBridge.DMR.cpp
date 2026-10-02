@@ -330,6 +330,8 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     using namespace dmr::defines;
     using namespace dmr::data;
 
+    bool callStart = false;
+
     uint32_t srcId = m_srcId;
     if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC))
         srcId = m_srcIdOverride;
@@ -393,6 +395,11 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
                 dmrLC.getSrcId(), dmrLC.getDstId(), dmrData.getFLCO());
 
             m_network->writeDMR(dmrData, false);
+
+            if (m_txStreamId <= 1U) {
+                callStart = true;
+            }
+
             m_txStreamId = m_network->getDMRStreamId(m_slot);
 
             m_dmrSeqNo++;
@@ -474,4 +481,39 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), ambe, RAW_AMBE_LENGTH_BYTES);
     m_ambeCount++;
+
+    // is this traffic being duplicated to a raw analog TG?
+    if (m_duplicateToAnalog) {
+        analog::data::NetData analogData;
+        analogData.setSeqNo(m_analogN);
+        analogData.setSrcId(srcId);
+        analogData.setDstId(dstId);
+        analogData.setControl(0U);
+        analogData.setFrameType(AudioFrameType::VOICE);
+        if (callStart) {
+            analogData.setFrameType(AudioFrameType::VOICE_START);
+
+            if (m_grantDemand) {
+                analogData.setControl(0x80U); // analog remote grant demand flag
+            }
+        }
+
+        int pcmIdx = 0;
+        uint8_t outPcm[AUDIO_SAMPLES_LENGTH * 2U];
+        for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+            outPcm[smpIdx] = AnalogAudio::encodeMuLaw(samples[smpIdx]);
+        }
+
+        if (m_trace)
+            Utils::dump(1U, "HostBridge()::encodeAnalogAudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+
+        analogData.setAudio(outPcm);
+
+        if (analogData.getFrameType() == AudioFrameType::VOICE) {
+            LogInfoEx(LOG_HOST, ANO_VOICE ", audio, srcId = %u, dstId = %u, seqNo = %u", srcId, dstId, analogData.getSeqNo());
+        }
+
+        m_network->writeAnalog(analogData);
+        m_analogN++;
+    }
 }

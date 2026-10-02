@@ -170,6 +170,7 @@ private:
     bool m_grantDemand;
 
     uint8_t m_txMode;
+    bool m_duplicateToAnalog;
 
     float m_rxAudioGain;
     float m_vocoderDecoderAudioGain;

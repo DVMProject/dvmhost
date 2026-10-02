@@ -12,6 +12,7 @@
 #include "Defines.h"
 #include "common/analog/AnalogDefines.h"
 #include "common/analog/AnalogAudio.h"
+#include "common/analog/data/NetData.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/dfsi/DFSIDefines.h"
@@ -457,6 +458,8 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     using namespace p25::defines;
     using namespace p25::data;
 
+    bool callStart = false;
+
     if (m_p25N > 17)
         m_p25N = 0;
     if (m_p25N == 0)
@@ -622,6 +625,11 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     if (m_p25N == 8U) {
         LogInfoEx(LOG_HOST, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
         m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::HDU_VALID, controlByte);
+
+        if (m_txStreamId <= 1U) {
+            callStart = true;
+        }
+
         m_txStreamId = m_network->getP25StreamId();
     }
 
@@ -637,4 +645,39 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     // if N is >17 reset sequence
     if (m_p25N > 17)
         m_p25N = 0;
+
+    // is this traffic being duplicated to a raw analog TG?
+    if (m_duplicateToAnalog) {
+        analog::data::NetData analogData;
+        analogData.setSeqNo(m_analogN);
+        analogData.setSrcId(srcId);
+        analogData.setDstId(dstId);
+        analogData.setControl(0U);
+        analogData.setFrameType(AudioFrameType::VOICE);
+        if (callStart) {
+            analogData.setFrameType(AudioFrameType::VOICE_START);
+
+            if (m_grantDemand) {
+                analogData.setControl(0x80U); // analog remote grant demand flag
+            }
+        }
+
+        int pcmIdx = 0;
+        uint8_t outPcm[AUDIO_SAMPLES_LENGTH * 2U];
+        for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+            outPcm[smpIdx] = AnalogAudio::encodeMuLaw(samples[smpIdx]);
+        }
+
+        if (m_trace)
+            Utils::dump(1U, "HostBridge()::encodeAnalogAudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+
+        analogData.setAudio(outPcm);
+
+        if (analogData.getFrameType() == AudioFrameType::VOICE) {
+            LogInfoEx(LOG_HOST, ANO_VOICE ", audio, srcId = %u, dstId = %u, seqNo = %u", srcId, dstId, analogData.getSeqNo());
+        }
+
+        m_network->writeAnalog(analogData);
+        m_analogN++;
+    }
 }

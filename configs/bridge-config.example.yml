@@ -113,6 +113,8 @@ system:
 
     # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog, 4 - NXDN).
     txMode: 1
+    # Flag indicating whether or not audio should be duplicated to a analog TG when the bridge is encoding traffic.
+    duplicateToAnalog: false
 
     # PCM audio gain for received (from digital network) audio frames.
     #   - This is used to apply gain to the decoded IMBE/AMBE audio, post-decoding.
