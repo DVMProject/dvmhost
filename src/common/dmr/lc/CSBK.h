@@ -95,6 +95,12 @@ namespace dmr
              */
             static void setVerbose(bool verbose) { s_verbose = verbose; }
 
+            /**
+             * @brief Sets whether CRC errors warn and allow decoding to continue.
+             * @param warnCRC Flag indicating CRC errors should be warnings.
+             */
+            static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
+
             /** @name Local Site data */
             /**
              * @brief Gets the local site data.
@@ -227,6 +233,7 @@ namespace dmr
 
         protected:
             static bool s_verbose;
+            static bool s_warnCRC;
 
             // Local Site data
             static SiteData s_siteData;

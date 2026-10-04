@@ -21,6 +21,8 @@ using namespace dmr::lc::csbk;
 
 #include <cassert>
 
+bool CSBKFactory::s_warnCRC = false;
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -64,8 +66,13 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
-        LogError(LOG_DMR, "CSBKFactory::createCSBK(), failed CRC CCITT-162 check");
-        return nullptr;
+        if (s_warnCRC) {
+            LogWarning(LOG_DMR, "CSBKFactory::createCSBK(), failed CRC CCITT-162 check");
+        }
+        else {
+            LogError(LOG_DMR, "CSBKFactory::createCSBK(), failed CRC CCITT-162 check");
+            return nullptr;
+        }
     }
 
     // restore the checksum

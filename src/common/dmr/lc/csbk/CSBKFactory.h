@@ -77,7 +77,14 @@ namespace dmr
                  */
                 static std::unique_ptr<CSBK> createCSBK(const uint8_t* data, defines::DataType::E dataType);
 
+                /**
+                 * @brief Sets whether CRC errors warn and allow decoding to continue.
+                 * @param warnCRC Flag indicating CRC errors should be warnings.
+                 */
+                static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
+
             private:
+                static bool s_warnCRC;
                 /**
                  * @brief Decode a CSBK.
                  * @param csbk Instance of a CSBK.

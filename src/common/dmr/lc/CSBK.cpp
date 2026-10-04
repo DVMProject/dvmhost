@@ -25,6 +25,8 @@ using namespace dmr::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
+bool CSBK::s_warnCRC = false;
+
 bool CSBK::s_verbose = false;
 
 SiteData CSBK::s_siteData = SiteData();
@@ -262,8 +264,13 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
-        LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
-        return false;
+        if (s_warnCRC) {
+            LogWarning(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
+        }
+        else {
+            LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
+            return false;
+        }
     }
 
     // restore the checksum
