@@ -514,6 +514,32 @@ TEST_CASE("NXDN host e2e loopback handles missed frames without dropping active 
     REQUIRE(HostTestHooks::nxdnNetLastDstId(*harness.m_control) == 2001U);
 }
 
+TEST_CASE("NXDN host preserves encrypted network call parameters", "[nxdn][host][control][crypto]")
+{
+    NXDNHostHarness harness;
+    nxdn::lc::RTCH control;
+    control.setMessageType(nxdn::defines::MessageType::RTCH_VCALL);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+    control.setGroup(true);
+    control.setTransmissionMode(nxdn::defines::TransmissionMode::MODE_4800);
+    control.setAlgId(nxdn::defines::CIPHER_TYPE_AES);
+    control.setKId(23U);
+    const uint8_t mi[nxdn::defines::MI_LENGTH_BYTES] = {
+        0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xABU, 0xCDU, 0xEFU
+    };
+    control.setMI(mi);
+
+    REQUIRE(HostTestHooks::nxdnStartNetCall(*harness.m_control, control));
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::nxdnNetAlgId(*harness.m_control) == nxdn::defines::CIPHER_TYPE_AES);
+    REQUIRE(HostTestHooks::nxdnNetKId(*harness.m_control) == 23U);
+
+    uint8_t actualMI[nxdn::defines::MI_LENGTH_BYTES] = {};
+    HostTestHooks::nxdnNetMI(*harness.m_control, actualMI);
+    REQUIRE(::memcmp(actualMI, mi, sizeof(mi)) == 0);
+}
+
 TEST_CASE("NXDN host e2e loopback handles dropped call terminator and returns idle", "[nxdn][host][control][net][e2e]")
 {
     const uint16_t hostPort = reserveLoopbackPort();

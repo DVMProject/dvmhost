@@ -476,6 +476,34 @@ TEST_CASE("P25 active talkgroup updates preserve the working TGID", "[p25][activ
     REQUIRE(dstIdB == 0U);
 }
 
+TEST_CASE("P25 host preserves encrypted network call parameters", "[p25][host][control][crypto]")
+{
+    P25HostHarness harness;
+    p25::lc::LC control;
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setMFId(p25::defines::MFG_STANDARD);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+    control.setEncrypted(true);
+    control.setAlgId(p25::defines::ALGO_AES_256);
+    control.setKId(0x1234U);
+    const uint8_t mi[p25::defines::MI_LENGTH_BYTES] = {
+        0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xABU, 0xCDU, 0xEFU, 0x10U
+    };
+    control.setMI(mi);
+    p25::data::LowSpeedData lsd;
+
+    HostTestHooks::p25StartNetCall(*harness.m_control, control, lsd);
+    HostTestHooks::p25UpdateNetEncryption(*harness.m_control, control, lsd);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetAlgId(*harness.m_control) == p25::defines::ALGO_AES_256);
+    REQUIRE(HostTestHooks::p25NetKId(*harness.m_control) == 0x1234U);
+
+    uint8_t actualMI[p25::defines::MI_LENGTH_BYTES] = {};
+    HostTestHooks::p25NetMI(*harness.m_control, actualMI);
+    REQUIRE(::memcmp(actualMI, mi, sizeof(mi)) == 0);
+}
+
 TEST_CASE("P25 host arms the network watchdog when network voice starts", "[p25][host][control]")
 {
     P25HostHarness harness;

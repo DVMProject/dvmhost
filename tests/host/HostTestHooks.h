@@ -151,6 +151,9 @@ public:
      * @return uint32_t Last network source ID.
      */
     static uint32_t p25NetLastSrcId(const p25::Control& control);
+    static uint8_t p25NetAlgId(const p25::Control& control);
+    static uint32_t p25NetKId(const p25::Control& control);
+    static void p25NetMI(const p25::Control& control, uint8_t* mi);
     /**
      * @brief Gets the currently permitted P25 destination ID.
      * @param control P25 control instance.
@@ -367,6 +370,7 @@ public:
      * @param lsd Low speed data for synthetic call.
      */
     static void p25StartNetCall(p25::Control& control, const p25::lc::LC& lc, const p25::data::LowSpeedData& lsd);
+    static void p25UpdateNetEncryption(p25::Control& control, const p25::lc::LC& lc, const p25::data::LowSpeedData& lsd);
     /**
      * @brief Injects synthetic P25 network call termination via voice packet path.
      * @param control P25 control instance.
@@ -410,6 +414,9 @@ public:
      * @return uint32_t Last network source ID.
      */
     static uint32_t nxdnNetLastSrcId(const nxdn::Control& control);
+    static uint8_t nxdnNetAlgId(const nxdn::Control& control);
+    static uint8_t nxdnNetKId(const nxdn::Control& control);
+    static void nxdnNetMI(const nxdn::Control& control, uint8_t* mi);
     /**
      * @brief Gets the currently permitted NXDN destination ID.
      * @param control NXDN control instance.

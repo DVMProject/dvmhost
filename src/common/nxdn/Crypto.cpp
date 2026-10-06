@@ -268,7 +268,7 @@ void NXDNCrypto::setKey(const uint8_t* key, uint8_t len)
         m_tekCipherType == CIPHER_TYPE_DES ? DES_KEY_LENGTH_BYTES :
         m_tekCipherType == CIPHER_TYPE_AES ? AES_KEY_LENGTH_BYTES : 0U;
 
-    bool valid = expected > 0U && len == expected && m_tekKeyId > 0U && m_tekKeyId <= 63U;
+    bool valid = expected > 0U && len == expected && m_tekKeyId <= 63U;
     if (valid && m_tekCipherType == CIPHER_TYPE_EHR) {
         uint16_t value = (uint16_t(key[0U]) << 8U) | key[1U];
         valid = value > 0U && value <= 0x7FFFU;

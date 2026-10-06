@@ -22,6 +22,7 @@
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
 #include "common/nxdn/lc/RTCH.h"
+#include "common/nxdn/Crypto.h"
 #include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
 #include "common/network/RTPHeader.h"
@@ -187,6 +188,8 @@ private:
     bool m_requestedTek;
 
     p25::crypto::P25Crypto* m_p25Crypto;
+    nxdn::crypto::NXDNCrypto* m_nxdnCrypto;
+    uint8_t m_nxdnCipherType;
 
     bool m_localAudio;
 
@@ -262,6 +265,10 @@ private:
     */
 
     nxdn::lc::RTCH m_rxNXDNLC;
+    nxdn::lc::RTCH m_rxNXDNSACCHLC;
+    uint8_t m_rxNXDNSACCHMask;
+    bool m_rxNXDNPendingMI;
+    uint8_t m_rxNXDNNextMI[nxdn::defines::MI_LENGTH_BYTES];
     uint8_t* m_nxdnAMBE;
     uint32_t m_nxdnSeqNo;
     uint8_t m_nxdnN;

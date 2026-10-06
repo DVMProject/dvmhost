@@ -243,6 +243,26 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
 
         facch.setData(lcBuffer);
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+
+        if (lc.getAlgId() == CIPHER_TYPE_DES || lc.getAlgId() == CIPHER_TYPE_AES) {
+            lc::RTCH ivLC;
+            ivLC.setMessageType(MessageType::RTCH_VCALL_IV);
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            m_nxdn->m_rfLC.getMI(mi);
+            ivLC.setMI(mi);
+
+            if (m_verbose) {
+                LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U]);
+            }
+            
+            uint8_t ivData[NXDN_RTCH_LC_LENGTH_BYTES];
+            ::memset(ivData, 0x00U, sizeof(ivData));
+            ivLC.encode(ivData, NXDN_RTCH_LC_LENGTH_BITS);
+            facch.setData(ivData);
+        }
+
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
         NXDNUtils::scrambler(data + 2U);
@@ -527,7 +547,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
 
             // replace audio with silence in cases where the error rate
             // has exceeded the configured threshold
-            if (errors > m_silenceThreshold) {
+            if (!m_nxdn->m_rfLC.getEncrypted() && errors > m_silenceThreshold) {
                 // bryanb: this is probably the wrong way to go about this...
                 // generate null audio
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NULL_AMBE, 9U);
@@ -559,7 +579,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
 
             // replace audio with silence in cases where the error rate
             // has exceeded the configured threshold
-            if (errors > (m_silenceThreshold / 2U)) {
+            if (!m_nxdn->m_rfLC.getEncrypted() && errors > (m_silenceThreshold / 2U)) {
                 // bryanb: this is probably the wrong way to go about this...
                 // generate null audio
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U, NULL_AMBE, 9U);
@@ -584,7 +604,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
 
             // replace audio with silence in cases where the error rate
             // has exceeded the configured threshold
-            if (errors > (m_silenceThreshold / 2U)) {
+            if (!m_nxdn->m_rfLC.getEncrypted() && errors > (m_silenceThreshold / 2U)) {
                 // bryanb: this is probably the wrong way to go about this...
                 // generate null audio
                 ::memcpy(data + 2U + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U, NULL_AMBE, 9U);
@@ -792,6 +812,27 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
         sacch.encode(data + 2U);
 
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+
+        if (lc.getAlgId() == CIPHER_TYPE_DES || lc.getAlgId() == CIPHER_TYPE_AES) {
+            lc::RTCH ivLC;
+            ivLC.setMessageType(MessageType::RTCH_VCALL_IV);
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            m_nxdn->m_netLC.getMI(mi);
+            ivLC.setMI(mi);
+
+            if (m_verbose) {
+                LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X", 
+                    mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U]);
+            }
+
+            uint8_t ivData[NXDN_RTCH_LC_LENGTH_BYTES];
+            ::memset(ivData, 0x00U, sizeof(ivData));
+            ivLC.encode(ivData, NXDN_RTCH_LC_LENGTH_BITS);
+
+            facch.setData(ivData);
+        }
+
         facch.encode(data + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
         NXDNUtils::scrambler(data + 2U);

@@ -101,12 +101,12 @@ namespace nxdn
             bool hasValidMI() const;
             /**
              * @brief Sets the encryption message indicator.
-             * @param[in] mi Buffer containing the 9-byte Message Indicator.
+             * @param[in] mi Buffer containing the 8-byte Message Indicator.
              */
             void setMI(const uint8_t* mi);
             /**
              * @brief Gets the encryption message indicator.
-             * @param[out] mi Buffer containing the 9-byte Message Indicator.
+             * @param[out] mi Buffer containing the 8-byte Message Indicator.
              */
             void getMI(uint8_t* mi) const;
             /**

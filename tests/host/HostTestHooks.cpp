@@ -293,6 +293,17 @@ uint32_t HostTestHooks::p25NetLastDstId(const p25::Control& control) { return co
 
 uint32_t HostTestHooks::p25NetLastSrcId(const p25::Control& control) { return control.m_netLastSrcId; }
 
+/* Gets P25 network encryption parameters. */
+
+uint8_t HostTestHooks::p25NetAlgId(const p25::Control& control) { return control.m_voice->m_netLC.getAlgId(); }
+
+uint32_t HostTestHooks::p25NetKId(const p25::Control& control) { return control.m_voice->m_netLC.getKId(); }
+
+void HostTestHooks::p25NetMI(const p25::Control& control, uint8_t* mi)
+{
+    control.m_voice->m_netLC.getMI(mi);
+}
+
 /* Gets P25 permitted destination ID. */
 
 uint32_t HostTestHooks::p25PermittedDstId(const p25::Control& control) { return control.m_permittedDstId; }
@@ -370,6 +381,15 @@ void HostTestHooks::p25StartNetCall(p25::Control& control, const p25::lc::LC& lc
     voice->writeNet_LDU1();
 }
 
+/* Injects synthetic P25 network encryption-sync data. */
+
+void HostTestHooks::p25UpdateNetEncryption(p25::Control& control, const p25::lc::LC& lc, const p25::data::LowSpeedData& lsd)
+{
+    p25::packet::Voice* voice = control.m_voice;
+    voice->m_dfsiLC = p25::dfsi::LC(lc, lsd);
+    voice->writeNet_LDU2();
+}
+
 /* Injects synthetic P25 network call termination. */
 
 bool HostTestHooks::p25TerminateNetCall(p25::Control& control, const p25::lc::LC& lc, p25::defines::DUID::E duid)
@@ -406,6 +426,17 @@ uint32_t HostTestHooks::nxdnNetLastDstId(const nxdn::Control& control) { return 
 /* Gets NXDN last network source ID. */
 
 uint32_t HostTestHooks::nxdnNetLastSrcId(const nxdn::Control& control) { return control.m_netLastSrcId; }
+
+/* Gets NXDN network encryption parameters. */
+
+uint8_t HostTestHooks::nxdnNetAlgId(const nxdn::Control& control) { return control.m_netLC.getAlgId(); }
+
+uint8_t HostTestHooks::nxdnNetKId(const nxdn::Control& control) { return control.m_netLC.getKId(); }
+
+void HostTestHooks::nxdnNetMI(const nxdn::Control& control, uint8_t* mi)
+{
+    control.m_netLC.getMI(mi);
+}
 
 /* Gets NXDN permitted destination ID. */
 
@@ -493,6 +524,7 @@ bool HostTestHooks::nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint
     nxdn::channel::FACCH1 facch;
     facch.setData(buffer);
     facch.encode(start + 2U, nxdn::defines::NXDN_FSW_LENGTH_BITS + nxdn::defines::NXDN_LICH_LENGTH_BITS + nxdn::defines::NXDN_SACCH_FEC_LENGTH_BITS);
+
     facch.encode(start + 2U, nxdn::defines::NXDN_FSW_LENGTH_BITS + nxdn::defines::NXDN_LICH_LENGTH_BITS + nxdn::defines::NXDN_SACCH_FEC_LENGTH_BITS + nxdn::defines::NXDN_FACCH1_FEC_LENGTH_BITS);
 
     nxdn::NXDNUtils::scrambler(start + 2U);
@@ -529,6 +561,17 @@ bool HostTestHooks::nxdnStartNetCall(nxdn::Control& control, const nxdn::lc::RTC
     nxdn::channel::FACCH1 facch;
     facch.setData(buffer);
     facch.encode(start + 2U, nxdn::defines::NXDN_FSW_LENGTH_BITS + nxdn::defines::NXDN_LICH_LENGTH_BITS + nxdn::defines::NXDN_SACCH_FEC_LENGTH_BITS);
+    if (localControl.getAlgId() == nxdn::defines::CIPHER_TYPE_DES ||
+        localControl.getAlgId() == nxdn::defines::CIPHER_TYPE_AES) {
+        nxdn::lc::RTCH ivLC;
+        ivLC.setMessageType(nxdn::defines::MessageType::RTCH_VCALL_IV);
+        uint8_t mi[nxdn::defines::MI_LENGTH_BYTES];
+        localControl.getMI(mi);
+        ivLC.setMI(mi);
+        ::memset(buffer, 0x00U, sizeof(buffer));
+        ivLC.encode(buffer, nxdn::defines::NXDN_RTCH_LC_LENGTH_BITS);
+        facch.setData(buffer);
+    }
     facch.encode(start + 2U, nxdn::defines::NXDN_FSW_LENGTH_BITS + nxdn::defines::NXDN_LICH_LENGTH_BITS + nxdn::defines::NXDN_SACCH_FEC_LENGTH_BITS + nxdn::defines::NXDN_FACCH1_FEC_LENGTH_BITS);
 
     return control.m_voice->processNetwork(nxdn::defines::FuncChannelType::USC_SACCH_NS, nxdn::defines::ChOption::STEAL_FACCH, localControl, start, sizeof(start));

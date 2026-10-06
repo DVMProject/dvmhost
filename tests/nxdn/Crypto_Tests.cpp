@@ -122,7 +122,7 @@ TEST_CASE("NXDN crypto rejects invalid keys", "[nxdn][crypto]")
     REQUIRE(crypto.getTEKKeyLength() == 0U);
     crypto.setTEKKeyId(0U);
     crypto.setKey(validEhr, sizeof(validEhr));
-    REQUIRE(crypto.getTEKKeyLength() == 0U);
+    REQUIRE(crypto.getTEKKeyLength() == sizeof(validEhr));
     crypto.setTEKKeyId(64U);
     crypto.setKey(validEhr, sizeof(validEhr));
     REQUIRE(crypto.getTEKKeyLength() == 0U);

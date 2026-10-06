@@ -70,6 +70,7 @@ const int NUMBER_OF_BUFFERS = 32;
 #define TEK_DES "des"
 #define TEK_AES "aes"
 #define TEK_ARC4 "arc4"
+#define TEK_EHR "ehr"
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -194,6 +195,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_tekKeyId(0U),
     m_requestedTek(false),
     m_p25Crypto(nullptr),
+    m_nxdnCrypto(nullptr),
+    m_nxdnCipherType(NXDDEF::CIPHER_TYPE_NONE),
     m_localAudio(false),
     m_voxSampleLevel(30.0f),
     m_dropTimeMS(180U),
@@ -240,6 +243,10 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_p25SeqNo(0U),
     m_p25N(0U),
     m_rxNXDNLC(),
+    m_rxNXDNSACCHLC(),
+    m_rxNXDNSACCHMask(0U),
+    m_rxNXDNPendingMI(false),
+    m_rxNXDNNextMI(),
     m_nxdnAMBE(nullptr),
     m_nxdnSeqNo(0U),
     m_nxdnN(0U),
@@ -309,6 +316,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
 
     m_p25Crypto = new p25::crypto::P25Crypto();
+    m_nxdnCrypto = new nxdn::crypto::NXDNCrypto();
+    ::memset(m_rxNXDNNextMI, 0x00U, sizeof(m_rxNXDNNextMI));
 
     // initialize RTS PTT timing
     m_lastAudioOut = system_clock::hrc::now();
@@ -336,6 +345,7 @@ HostBridge::~HostBridge()
     delete[] m_netLDU1;
     delete[] m_netLDU2;
     delete m_p25Crypto;
+    delete m_nxdnCrypto;
 }
 
 /* Executes the main FNE processing loop. */
@@ -670,6 +680,7 @@ int HostBridge::run()
                     m_rxDMRLC = dmr::lc::LC();
                     m_rxDMRPILC = dmr::lc::PrivacyLC();
                     m_rxP25LC = p25::lc::LC();
+                    m_rxNXDNLC = nxdn::lc::RTCH();
                     m_rxStartTime = 0U;
                     m_rxStreamId = 0U;
 
@@ -702,6 +713,12 @@ int HostBridge::run()
 
                     m_p25Crypto->clearMI();
                     m_p25Crypto->resetKeystream();
+
+                    m_nxdnCrypto->resetKeystream();
+                    m_rxNXDNSACCHLC = nxdn::lc::RTCH();
+                    m_rxNXDNSACCHMask = 0U;
+                    m_rxNXDNPendingMI = false;
+                    ::memset(m_rxNXDNNextMI, 0x00U, sizeof(m_rxNXDNNextMI));
 
                     m_network->resetDMR(1U);
                     m_network->resetDMR(2U);
@@ -1109,17 +1126,44 @@ bool HostBridge::readParams()
     std::string tekAlgo = tekConf["tekAlgo"].as<std::string>();
     std::transform(tekAlgo.begin(), tekAlgo.end(), tekAlgo.begin(), ::tolower);
     m_tekKeyId = (uint32_t)::strtoul(tekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
+    m_nxdnCipherType = NXDDEF::CIPHER_TYPE_NONE;
     if (tekEnable && m_tekKeyId > 0U) {
-        if (tekAlgo == TEK_AES)
-            m_tekAlgoId = P25DEF::ALGO_AES_256;
-        else if (tekAlgo == TEK_ARC4)
-            m_tekAlgoId = P25DEF::ALGO_ARC4;
-        else if (tekAlgo == TEK_DES)
-            m_tekAlgoId = P25DEF::ALGO_DES;
-        else {
-            ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
-            m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
-            m_tekKeyId = 0U;
+        if (m_txMode == TX_MODE_P25) {
+            if (tekAlgo == TEK_AES)
+                m_tekAlgoId = P25DEF::ALGO_AES_256;
+            else if (tekAlgo == TEK_ARC4)
+                m_tekAlgoId = P25DEF::ALGO_ARC4;
+            else if (tekAlgo == TEK_DES)
+                m_tekAlgoId = P25DEF::ALGO_DES;
+            else {
+                ::LogError(LOG_HOST, "Invalid P25 TEK algorithm specified, must be \"aes\", \"des\", or \"arc4\".");
+                m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
+                m_tekKeyId = 0U;
+            }
+        }
+        else if (m_txMode == TX_MODE_NXDN) {
+            if (m_tekKeyId > 63U) {
+                ::LogError(LOG_HOST, "Invalid NXDN TEK key ID, valid range is 0-63.");
+                m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
+                m_tekKeyId = 0U;
+            }
+            else if (tekAlgo == TEK_EHR) {
+                m_tekAlgoId = NXDDEF::CIPHER_TYPE_EHR;
+                m_nxdnCipherType = NXDDEF::CIPHER_TYPE_EHR;
+            }
+            else if (tekAlgo == TEK_DES) {
+                m_tekAlgoId = P25DEF::ALGO_DES;
+                m_nxdnCipherType = NXDDEF::CIPHER_TYPE_DES;
+            }
+            else if (tekAlgo == TEK_AES) {
+                m_tekAlgoId = P25DEF::ALGO_AES_256;
+                m_nxdnCipherType = NXDDEF::CIPHER_TYPE_AES;
+            }
+            else {
+                ::LogError(LOG_HOST, "Invalid NXDN TEK algorithm specified, must be \"ehr\", \"des\", or \"aes\".");
+                m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
+                m_tekKeyId = 0U;
+            }
         }
     }
 
@@ -1131,13 +1175,6 @@ bool HostBridge::readParams()
     // ensure encryption is currently disabled for DMR (its not supported)
     if (m_txMode == TX_MODE_DMR && m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
         ::LogError(LOG_HOST, "Encryption is not supported for DMR. Disabling.");
-        m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
-        m_tekKeyId = 0U;
-    }
-
-    // ensure encryption is currently disabled for NXDN (its not supported)
-    if (m_txMode == TX_MODE_NXDN && m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && m_tekKeyId > 0U) {
-        ::LogError(LOG_HOST, "Encryption is not supported for NXDN. Disabling.");
         m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
         m_tekKeyId = 0U;
     }
@@ -1963,6 +2000,12 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_p25Crypto->clearMI();
     m_p25Crypto->resetKeystream();
 
+    m_nxdnCrypto->resetKeystream();
+    m_rxNXDNSACCHLC = nxdn::lc::RTCH();
+    m_rxNXDNSACCHMask = 0U;
+    m_rxNXDNPendingMI = false;
+    ::memset(m_rxNXDNNextMI, 0x00U, sizeof(m_rxNXDNNextMI));
+
     m_network->resetDMR(m_slot);
     m_network->resetP25();
     m_network->resetNXDN();
@@ -1981,14 +2024,28 @@ void HostBridge::processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_
         UInt8Array tek = std::make_unique<uint8_t[]>(keyLength);
         ki->getKey(tek.get());
 
-        m_p25Crypto->setTEKAlgoId(algId);
-        m_p25Crypto->setTEKKeyId(ki->kId());
-        m_p25Crypto->setKey(tek.get(), keyLength);
+        if (m_txMode == TX_MODE_NXDN) {
+            m_nxdnCrypto->setTEKCipherType(m_nxdnCipherType);
+            m_nxdnCrypto->setTEKKeyId((uint8_t)ki->kId());
+            m_nxdnCrypto->setKey(tek.get(), keyLength);
+        }
+        else {
+            m_p25Crypto->setTEKAlgoId(algId);
+            m_p25Crypto->setTEKKeyId(ki->kId());
+            m_p25Crypto->setKey(tek.get(), keyLength);
+        }
     }
     else {
-        m_p25Crypto->setTEKAlgoId(P25DEF::ALGO_UNENCRYPT);
-        m_p25Crypto->setTEKKeyId(0U);
-        m_p25Crypto->clearKey();
+        if (m_txMode == TX_MODE_NXDN) {
+            m_nxdnCrypto->setTEKCipherType(NXDDEF::CIPHER_TYPE_NONE);
+            m_nxdnCrypto->setTEKKeyId(0U);
+            m_nxdnCrypto->clearKey();
+        }
+        else {
+            m_p25Crypto->setTEKAlgoId(P25DEF::ALGO_UNENCRYPT);
+            m_p25Crypto->setTEKKeyId(0U);
+            m_p25Crypto->clearKey();
+        }
     }
 }
 
@@ -2685,8 +2742,12 @@ void* HostBridge::threadNetworkProcess(void* arg)
             }
 
             if (bridge->m_network->getStatus() == NET_STAT_RUNNING) {
-                if (bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U) {
-                    if (bridge->m_p25Crypto->getTEKLength() == 0U && !bridge->m_requestedTek) {
+                bool encryptionEnabled = bridge->m_txMode == TX_MODE_NXDN ?
+                    bridge->m_nxdnCipherType != NXDDEF::CIPHER_TYPE_NONE :
+                    bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U;
+                if (encryptionEnabled) {
+                    uint8_t tekLength = bridge->m_txMode == TX_MODE_NXDN ? bridge->m_nxdnCrypto->getTEKKeyLength() : bridge->m_p25Crypto->getTEKLength();
+                    if (tekLength == 0U && !bridge->m_requestedTek) {
                         bridge->m_requestedTek = true;
                         LogInfoEx(LOG_HOST, "Bridge encryption enabled, requesting TEK from network.");
                         bridge->m_network->writeKeyReq(bridge->m_tekKeyId, bridge->m_tekAlgoId, bridge->m_srcId);

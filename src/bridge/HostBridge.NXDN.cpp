@@ -111,13 +111,63 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
 
             if (lc.getMessageType() == MessageType::RTCH_VCALL) {
                 m_rxNXDNLC = lc;
+                m_callAlgoId = lc.getAlgId();
+
+                if (m_callAlgoId != CIPHER_TYPE_NONE) {
+                    if (m_callAlgoId != m_nxdnCipherType || lc.getKId() != m_tekKeyId ||
+                        m_nxdnCrypto->getTEKKeyLength() == 0U) {
+                        LogWarning(LOG_HOST, "NXDN, call ignored, unsupported encryption parameters, callAlgoId = $%02X, callKID = $%02X, tekAlgoId = $%02X, tekKID = $%02X",
+                            m_callAlgoId, lc.getKId(), m_nxdnCipherType, m_tekKeyId);
+                        m_ignoreCall = true;
+                        m_network->resetNXDN();
+                        return;
+                    }
+
+                    if (m_callAlgoId == CIPHER_TYPE_EHR) {
+                        m_nxdnCrypto->generateKeystream();
+                    }
+                    else {
+                        // DES/AES headers carry VCALL in FACCH1-1 and the current
+                        // session's VCALL_IV in FACCH1-2.
+                        channel::FACCH1 ivFacch;
+                        if (!ivFacch.decode(frame + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS +
+                            NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS)) {
+                            LogWarning(LOG_HOST, "NXDN, encrypted call ignored, missing initial VCALL_IV");
+                            m_ignoreCall = true;
+                            m_network->resetNXDN();
+                            return;
+                        }
+
+                        uint8_t ivData[NXDN_RTCH_LC_LENGTH_BYTES];
+                        ::memset(ivData, 0x00U, sizeof(ivData));
+                        ivFacch.getData(ivData);
+
+                        lc::RTCH ivLC;
+                        ivLC.decode(ivData, NXDN_FACCH1_LENGTH_BITS);
+                        if (ivLC.getMessageType() != MessageType::RTCH_VCALL_IV) {
+                            LogWarning(LOG_HOST, "NXDN, encrypted call ignored, invalid initial VCALL_IV");
+                            m_ignoreCall = true;
+                            m_network->resetNXDN();
+                            return;
+                        }
+
+                        uint8_t mi[MI_LENGTH_BYTES];
+                        ivLC.getMI(mi);
+
+                        m_nxdnCrypto->setMI(mi);
+                        m_nxdnCrypto->generateKeystream();
+                        if (!m_nxdnCrypto->hasValidKeystream()) {
+                            m_ignoreCall = true;
+                            m_network->resetNXDN();
+                            return;
+                        }
+                    }
+                }
 
                 m_networkWatchdog.start();
 
                 if (m_network->getNXDNStreamId() != m_rxStreamId && !m_callInProgress) {
                     m_callInProgress = true;
-                    m_callAlgoId = 0U;
-
                     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                     m_rxStartTime = now;
 
@@ -146,6 +196,11 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
                 m_nxdnN = 0U;
                 ::memset(m_nxdnAMBE, 0x00U, 36U);
 
+                m_nxdnCrypto->resetKeystream();
+                m_rxNXDNSACCHLC = lc::RTCH();
+                m_rxNXDNSACCHMask = 0U;
+                m_rxNXDNPendingMI = false;
+
                 if (!m_udpRTPContinuousSeq) {
                     m_rtpInitialFrame = false;
                     m_rtpSeqNo = 0U;
@@ -160,18 +215,74 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
     if (m_ignoreCall)
         return;
 
-    // Only superframe SACCH traffic frames contain voice payloads.
+    // only superframe SACCH traffic frames contain voice payloads
     if (fct != FuncChannelType::USC_SACCH_SS)
         return;
 
-    // A bridge may join an already active stream after its VCALL header.  Treat
-    // the first valid voice frame as the start of the receive call as well.
+    // reassemble the 72-bit RTCH message carried as four 18-bit SACCH
+    // fragments -- DES/AES alternates VCALL and VCALL_IV superframes
+    channel::SACCH voiceSACCH;
+    if (voiceSACCH.decode(frame + 2U)) {
+        uint8_t fragment[3U];
+        ::memset(fragment, 0x00U, sizeof(fragment));
+        voiceSACCH.getData(fragment);
+
+        uint8_t quarter = 3U - (uint8_t)voiceSACCH.getStructure();
+        if (quarter == 0U) {
+            m_rxNXDNSACCHLC = lc::RTCH();
+            m_rxNXDNSACCHMask = 0U;
+        }
+
+        m_rxNXDNSACCHLC.decode(fragment, 18U, quarter * 18U);
+        m_rxNXDNSACCHMask |= (uint8_t)(1U << quarter);
+
+        if (quarter == 3U && m_rxNXDNSACCHMask == 0x0FU) {
+            uint8_t sacchType = m_rxNXDNSACCHLC.getMessageType();
+            if (sacchType == MessageType::RTCH_VCALL) {
+                m_rxNXDNLC = m_rxNXDNSACCHLC;
+                m_callAlgoId = m_rxNXDNLC.getAlgId();
+                m_nxdnSeqNo = 3U;
+
+                if (m_callAlgoId == CIPHER_TYPE_EHR &&
+                    m_callAlgoId == m_nxdnCipherType &&
+                    m_rxNXDNLC.getKId() == m_tekKeyId &&
+                    m_nxdnCrypto->getTEKKeyLength() > 0U) {
+                    m_nxdnCrypto->generateKeystream();
+                }
+            }
+            else if (sacchType == MessageType::RTCH_VCALL_IV &&
+                m_callAlgoId >= CIPHER_TYPE_DES) {
+                m_rxNXDNSACCHLC.getMI(m_rxNXDNNextMI);
+                m_rxNXDNPendingMI = true;
+                m_nxdnSeqNo = 7U;
+            }
+            m_rxNXDNSACCHMask = 0U;
+        }
+    }
+
+    // bridge may join an already active stream after its VCALL header, treat
+    // the first valid voice frame as the start of the receive call as well
     if (!m_callInProgress) {
+        if (m_rxNXDNLC.getMessageType() != MessageType::RTCH_VCALL)
+            return;
+        if (m_callAlgoId != CIPHER_TYPE_NONE &&
+            (m_callAlgoId != m_nxdnCipherType || m_rxNXDNLC.getKId() != m_tekKeyId ||
+             m_nxdnCrypto->getTEKKeyLength() == 0U)) {
+            m_ignoreCall = true;
+            return;
+        }
+
+        // if late entry first observed the preceding VCALL_IV superframe, that
+        // announced MI is already current by the time this VCALL completes
+        if (m_rxNXDNPendingMI && m_callAlgoId >= CIPHER_TYPE_DES) {
+            m_nxdnCrypto->setMI(m_rxNXDNNextMI);
+            m_nxdnCrypto->generateKeystream();
+            m_rxNXDNPendingMI = false;
+        }
+
         m_callInProgress = true;
-        m_callAlgoId = 0U;
         m_networkWatchdog.start();
-        m_rxStartTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
+        m_rxStartTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         LogInfoEx(LOG_HOST, "NXDN, late entry call start, srcId = %u, dstId = %u", srcId, dstId);
         if (m_preambleLeaderTone)
             generatePreambleTone();
@@ -182,6 +293,14 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
 
     LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio, srcId = %u, dstId = %u", srcId, dstId);
     decodeNXDNAudioFrame(frame, srcId, dstId, m_nxdnSeqNo);
+
+    // a VCALL_IV completed in this frame announces the MI for the following
+    // eight-frame DES/AES session, so activate it only after current audio
+    if (m_rxNXDNPendingMI) {
+        m_nxdnCrypto->setMI(m_rxNXDNNextMI);
+        m_nxdnCrypto->generateKeystream();
+        m_rxNXDNPendingMI = false;
+    }
 
     m_nxdnSeqNo++;
     m_rxStreamId = m_network->getNXDNStreamId();
@@ -218,10 +337,13 @@ void HostBridge::decodeNXDNAudioFrame(uint8_t* frame, uint32_t srcId, uint32_t d
         // match the normal NXDN voice path's lost-audio policy -- a pair is
         // half of a full four-codeword frame, so use half the frame threshold
         if ((fecErrors[0U] + fecErrors[1U]) > (DEFAULT_SILENCE_THRESHOLD / 2U)) {
-            ::memcpy(nxdnAMBE + 0U, NULL_AMBE, 9U);
-            ::memcpy(nxdnAMBE + 9U, NULL_AMBE, 9U);
             LogWarning(LOG_HOST, "NXDN, AMBE errors exceeded threshold, substituting silence, errors = %u",
                 fecErrors[0U] + fecErrors[1U]);
+            if (m_callAlgoId != CIPHER_TYPE_NONE)
+                return;
+
+            ::memcpy(nxdnAMBE + 0U, NULL_AMBE, 9U);
+            ::memcpy(nxdnAMBE + 9U, NULL_AMBE, 9U);
         }
 
         uint8_t packedBits[13U];
@@ -234,6 +356,36 @@ void HostBridge::decodeNXDNAudioFrame(uint8_t* frame, uint32_t srcId, uint32_t d
 
             for (uint32_t b = 0U; b < 49U; b++) {
                 rawBits[b] = READ_BIT(packedBits, (half * 49U) + b) ? 1U : 0U;
+            }
+
+            if (m_callAlgoId != CIPHER_TYPE_NONE) {
+                if (!m_nxdnCrypto->hasValidKeystream())
+                    continue;
+
+                if (m_debug) {
+                    uint8_t mi[MI_LENGTH_BYTES];
+                    ::memset(mi, 0x00U, MI_LENGTH_BYTES);
+                    m_nxdnCrypto->getMI(mi);
+
+                    LogInfoEx(LOG_NET, "Crypto, Enc Sync, MI = %02X %02X %02X %02X %02X %02X %02X %02X", 
+                        mi[0U], mi[1U], mi[2U], mi[3U], mi[4U], mi[5U], mi[6U], mi[7U]);
+                }
+
+                uint8_t framesPerSession = m_callAlgoId == CIPHER_TYPE_EHR ? 4U : 8U;
+                uint8_t word = (uint8_t)((nxdnN % framesPerSession) * 4U + vcBase + half);
+                switch (m_callAlgoId) {
+                case CIPHER_TYPE_EHR:
+                    m_nxdnCrypto->cryptEHR_AMBE(rawBits, word);
+                    break;
+                case CIPHER_TYPE_DES:
+                    m_nxdnCrypto->cryptDES_AMBE(rawBits, word);
+                    break;
+                case CIPHER_TYPE_AES:
+                    m_nxdnCrypto->cryptAES_AMBE(rawBits, word);
+                    break;
+                default:
+                    continue;
+                }
             }
 
             short samples[AUDIO_SAMPLES_LENGTH];
@@ -367,6 +519,42 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
     }
 #endif // defined(_WIN32)
 
+    if (m_nxdnCipherType != CIPHER_TYPE_NONE) {
+        if (m_nxdnCrypto->getTEKKeyLength() == 0U) {
+            LogWarning(LOG_HOST, "NXDN, encrypted audio dropped while TEK is unavailable");
+            return;
+        }
+
+        if (m_nxdnSeqNo == 0U && m_nxdnN == 0U && !m_nxdnCrypto->hasValidKeystream()) {
+            if (m_nxdnCipherType >= CIPHER_TYPE_DES)
+                m_nxdnCrypto->generateMI();
+            m_nxdnCrypto->generateKeystream();
+        }
+
+        // during the second superframe the existing keystream remains active,
+        // while the advanced MI is announced for the following session
+        if (m_nxdnCipherType >= CIPHER_TYPE_DES &&
+            (m_nxdnSeqNo % 8U) == 4U && m_nxdnN == 0U) {
+            m_nxdnCrypto->generateNextMI();
+        }
+
+        uint8_t framesPerSession = m_nxdnCipherType == CIPHER_TYPE_EHR ? 4U : 8U;
+        uint8_t word = (uint8_t)((m_nxdnSeqNo % framesPerSession) * 4U + m_nxdnN);
+        switch (m_nxdnCipherType) {
+        case CIPHER_TYPE_EHR:
+            m_nxdnCrypto->cryptEHR_AMBE(rawBits, word);
+            break;
+        case CIPHER_TYPE_DES:
+            m_nxdnCrypto->cryptDES_AMBE(rawBits, word);
+            break;
+        case CIPHER_TYPE_AES:
+            m_nxdnCrypto->cryptAES_AMBE(rawBits, word);
+            break;
+        default:
+            return;
+        }
+    }
+
     if (m_nxdnN >= 4U) {
         m_nxdnN = 0U;
     }
@@ -410,6 +598,9 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
     lc.setSrcId((uint16_t)srcId);
     lc.setDstId((uint16_t)dstId);
     lc.setTransmissionMode(TransmissionMode::MODE_4800);
+    lc.setAlgId(m_nxdnCipherType);
+    lc.setKId(m_nxdnCipherType != CIPHER_TYPE_NONE ? (uint8_t)m_tekKeyId : 0U);
+    lc.setEncrypted(m_nxdnCipherType != CIPHER_TYPE_NONE);
 
     if (m_nxdnSeqNo == 0U) {
         uint8_t controlFrame[NXDN_FRAME_LENGTH_BYTES + 2U];
@@ -436,7 +627,22 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
         lc.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
         facch.setData(lcData);
         facch.encode(controlFrame + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
-        facch.encode(controlFrame + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+
+        if (m_nxdnCipherType >= CIPHER_TYPE_DES) {
+            lc::RTCH ivLC;
+            ivLC.setMessageType(MessageType::RTCH_VCALL_IV);
+
+            uint8_t mi[MI_LENGTH_BYTES];
+            m_nxdnCrypto->getMI(mi);
+            ivLC.setMI(mi);
+            ::memset(lcData, 0x00U, sizeof(lcData));
+            ivLC.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+
+            facch.setData(lcData);
+        }
+
+        facch.encode(controlFrame + 2U, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS +
+            NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
 
         NXDNUtils::scrambler(controlFrame + 2U);
 
@@ -465,7 +671,18 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
     channel::SACCH sacch;
     uint8_t lcData[NXDN_RTCH_LC_LENGTH_BYTES];
     ::memset(lcData, 0x00U, sizeof(lcData));
-    lc.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+    lc::RTCH sacchLC = lc;
+
+    if (m_nxdnCipherType >= CIPHER_TYPE_DES && (m_nxdnSeqNo % 8U) >= 4U) {
+        sacchLC = lc::RTCH();
+        sacchLC.setMessageType(MessageType::RTCH_VCALL_IV);
+
+        uint8_t mi[MI_LENGTH_BYTES];
+        m_nxdnCrypto->getMI(mi);
+        sacchLC.setMI(mi);
+    }
+
+    sacchLC.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
 
     const uint8_t superframeIndex = m_nxdnSeqNo % 4U;
     const ChStructure::E structures[] = {
@@ -493,6 +710,8 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
     m_txStreamId = m_network->getNXDNStreamId();
 
     m_nxdnSeqNo++;
+    if (m_nxdnCipherType >= CIPHER_TYPE_DES && (m_nxdnSeqNo % 8U) == 0U)
+        m_nxdnCrypto->generateKeystream();
     m_nxdnN = 0U;
     ::memset(m_nxdnAMBE, 0x00U, 36U);
 
