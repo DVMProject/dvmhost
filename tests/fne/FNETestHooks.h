@@ -95,8 +95,47 @@ public:
      */
     static std::unique_ptr<uint8_t[]> processOTARKMM(network::TrafficNetwork& network,
         const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize);
-    /** @brief Enables or disables KMF services for a test TrafficNetwork. */
+    /**
+     * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param packet Encoded DLD bytes.
+     * @param llId Logical Link ID associated with the message.
+     * @param n Sequence number of the DLD packet.
+     * @param encrypted Whether the packet is encrypted.
+     * @param algoId The algorithm ID used for encryption.
+     * @param kid The key ID used for encryption.
+     * @param mi The message integrity value.
+     * @return True if the packet was successfully processed, false otherwise.
+     */
+    static bool processOTARDLD(network::TrafficNetwork& network, const std::vector<uint8_t>& packet,
+        uint32_t llId, uint8_t n, bool encrypted = false, uint8_t algoId = P25DEF::ALGO_UNENCRYPT,
+        uint16_t kid = 0U, const uint8_t* mi = nullptr);
+    /**
+     * @brief Passes a complete Version-0 DLI datagram through the network receive task.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param datagram Encoded DLI bytes.
+     */
+    static void processOTARDLI(network::TrafficNetwork& network, const std::vector<uint8_t>& datagram);
+    /**
+     * @brief Checks if the specified inbound message number exists for the given RSI.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param rsi The RSI to check.
+     * @param mn The message number to check.
+     * @return True if the inbound message number exists and matches, false otherwise.
+     */
+    static bool hasOTARInboundMessageNumber(network::TrafficNetwork& network, uint32_t rsi, uint16_t mn);
+    /**
+     * @brief Enables or disables KMF services for the specified TrafficNetwork.
+     * @param network The TrafficNetwork that owns the KMF services.
+     * @param enabled True to enable KMF services, false to disable.
+     */
     static void setKMFServicesEnabled(network::TrafficNetwork& network, bool enabled);
+    /**
+     * @brief Adds a cryptographic key to the network's crypto lookup.
+     * @param network The TrafficNetwork instance.
+     * @param key The cryptographic key to add.
+     */
+    static void addCryptoKey(network::TrafficNetwork& network, const EKCKeyItem& key);
 };
 
 #endif // __FNE_TEST_HOOKS_H__

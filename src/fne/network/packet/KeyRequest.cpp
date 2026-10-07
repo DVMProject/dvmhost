@@ -149,7 +149,7 @@ void TrafficNetwork::PacketHandler::keyRequest(TrafficNetwork* network, NetPacke
                                 ks.keyLength(keyLength);
 
                                 p25::kmm::KeyItem ki = p25::kmm::KeyItem();
-                                ki.keyFormat(KEY_FORMAT_TEK);
+                                ki.keyFormat(KMM_KEY_FORMAT_TEK);
                                 ki.kId((uint16_t)keyItem.kId());
                                 ki.sln((uint16_t)keyItem.sln());
                                 ki.setKey(key, keyLength);

@@ -101,6 +101,76 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data)
     return nullptr;
 }
 
+/* Create an instance of a KMMFrame with a specified length. */
+
+std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data, uint32_t len)
+{
+    if (data == nullptr || len < 10U || len > 512U)
+        return nullptr;
+
+    const uint32_t fullLength = (((uint32_t)data[1U] << 8U) | data[2U]) + 3U;
+    if (fullLength < 10U || fullLength > len || fullLength > 512U)
+        return nullptr;
+
+    const uint8_t mnCode = (data[3U] >> 4U) & 0x03U;
+    const uint8_t macType = (data[3U] >> 2U) & 0x03U;
+    if ((mnCode != 0U && mnCode != 2U) || macType == 1U)
+        return nullptr;
+
+    const uint32_t body = 10U + ((mnCode == 2U) ? 2U : 0U);
+    uint32_t bodyEnd = fullLength;
+    if (macType == KMM_MAC::DES_MAC) {
+        if (bodyEnd < 7U) return nullptr;
+        bodyEnd -= 7U;
+    } else if (macType == KMM_MAC::ENH_MAC) {
+        if (bodyEnd < 13U || data[bodyEnd - 5U] != P25DEF::KMM_AES_MAC_LENGTH)
+            return nullptr;
+        bodyEnd -= 13U;
+    }
+    if (body > bodyEnd)
+        return nullptr;
+
+    const uint32_t available = bodyEnd - body;
+    switch (data[0U]) {
+    case KMM_MessageType::HELLO:
+    case KMM_MessageType::INVENTORY_CMD:
+    case KMM_MessageType::DEREG_RSP:
+    case KMM_MessageType::REG_RSP:
+        if (available < 1U)
+            return nullptr;
+        break;
+    case KMM_MessageType::DEREG_CMD:
+    case KMM_MessageType::REG_CMD:
+        if (available < 4U)
+            return nullptr;
+        break;
+    case KMM_MessageType::NAK:
+        if (available < 4U)
+            return nullptr;
+        break;
+    case KMM_MessageType::REKEY_ACK:
+        if (available < 2U || available < 2U + (uint32_t)data[body + 1U] * 4U)
+            return nullptr;
+        break;
+    case KMM_MessageType::NO_SERVICE:
+    case KMM_MessageType::ZEROIZE_CMD:
+    case KMM_MessageType::ZEROIZE_RSP:
+        break;
+    case KMM_MessageType::UNABLE_TO_DECRYPT:
+        // the optional reverse-warm-start body is not accepted until its full
+        // nested length validation is implemented
+        if (available < 7U || (data[body] & 0x80U) != 0U)
+            return nullptr;
+        break;
+    default:
+        // other decoders contain nested count fields; keep the air-facing path
+        // fail-closed until each has a dedicated structural validator
+        return nullptr;
+    }
+
+    return create(data);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

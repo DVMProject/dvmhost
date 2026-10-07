@@ -37,7 +37,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_BODY_MODIFY_KEY_LENGTH = 8U;
+         const uint32_t KMM_BODY_MODIFY_KEY_LENGTH = 4U; // decryption instruction block
 
          /** @} */
  

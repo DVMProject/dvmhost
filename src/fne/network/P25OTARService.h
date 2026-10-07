@@ -24,6 +24,7 @@ class FNETestHooks;
 #include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/Crypto.h"
+#include "common/p25/kmm/KMMFrame.h"
 #include "common/network/udp/Socket.h"
 #include "common/network/RawFrameQueue.h"
 #include "network/TrafficNetwork.h"
@@ -105,6 +106,18 @@ namespace network
         void close();
 
     private:
+        /**
+         * @brief Context for KMM message authentication.
+         */
+        struct KMMAuthContext {
+            bool authenticated = false;                     //!< Indicates if the KMM message is authenticated.
+            bool hasMessageNumber = false;                  //!< Indicates if the KMM message has a message number.
+            uint16_t messageNumber = 0U;                    //!< Message number of the KMM message.
+            uint8_t algorithmId = P25DEF::ALGO_UNENCRYPT;   //!< Algorithm ID used for the KMM message.
+            uint16_t keyId = 0U;                            //!< Key ID used for the KMM message.
+            uint16_t format = P25DEF::KMM_MAC_FORMAT_CBC;   //!< MAC format used for the KMM message.
+        };
+
         network::udp::Socket* m_socket;
         network::RawFrameQueue* m_frameQueue;
 
@@ -114,6 +127,8 @@ namespace network
         network::callhandler::packetdata::P25PacketData* m_packetData;
 
         concurrent::unordered_map<uint32_t, uint16_t> m_rsiMessageNumber;
+        concurrent::unordered_map<uint32_t, uint16_t> m_rsiInboundMessageNumber;
+        concurrent::unordered_map<uint32_t, uint64_t> m_rsiInboundFingerprint;
 
         bool m_allowNoUKEKRekey;
 
@@ -156,9 +171,11 @@ namespace network
          * @param kmmRSI KMM Radio Set Identifier.
          * @param flags Hello KMM flags.
          * @param[out] payloadSize Size of the returned KMM payload.
+         * @param auth Authentication context containing MAC/MN fields to mirror.
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
-        UInt8Array write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRSI, uint8_t flags, uint32_t* payloadSize);
+        UInt8Array write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRSI, uint8_t flags, uint32_t* payloadSize,
+            const KMMAuthContext& auth);
 
         /**
          * @brief Helper used to return a Registration-Command KMM to the calling SU.
@@ -174,18 +191,31 @@ namespace network
          * @param llId Logical Link Address.
          * @param kmmRSI KMM Radio Set Identifier.
          * @param[out] payloadSize Size of the returned KMM payload.
+         * @param auth Authentication context containing MAC/MN fields to mirror.
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
-        UInt8Array write_KMM_Dereg_Response(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize);
+        UInt8Array write_KMM_Dereg_Response(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize,
+            const KMMAuthContext& auth);
 
         /**
          * @brief Helper used to return a No-Service KMM to the calling SU.
          * @param llId Logical Link Address.
          * @param kmmRSI KMM Radio Set Identifier.
          * @param[out] payloadSize Size of the returned KMM payload.
+         * @param auth Authentication context containing MAC/MN fields to mirror.
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
-        UInt8Array write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize);
+        UInt8Array write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize,
+            const KMMAuthContext& auth);
+
+        /** 
+         * @brief Encodes a response and mirrors an authenticated request's MAC/MN fields. 
+         * @param frame KMM frame to encode.
+         * @param[out] payloadSize Size of the returned KMM payload.
+         * @param auth Authentication context containing MAC/MN fields to mirror.
+         */
+        UInt8Array encode_KMM_Response(p25::kmm::KMMFrame& frame, uint32_t* payloadSize,
+            const KMMAuthContext& auth);
 
         /**
          * @brief Helper used to return a Zeroize KMM to the calling SU.

@@ -137,7 +137,7 @@ namespace p25
              * @param frame Data frame
              * @param frameLen Data frame Length
              */
-            void cryptAES_PDU(uint8_t* frame, uint8_t frameLen);
+            void cryptAES_PDU(uint8_t* frame, uint32_t frameLen);
 
             /**
              * @brief Helper to crypt P25 IMBE audio using DES.

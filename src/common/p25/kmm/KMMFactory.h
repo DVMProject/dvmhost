@@ -67,6 +67,13 @@ namespace p25
              * @returns KMMFrame* Instance of a KMMFrame representing the decoded data.
              */
             static std::unique_ptr<KMMFrame> create(const uint8_t* data);
+            /**
+             * @brief Create an instance of a KMMFrame with a specified length.
+             * @param[in] data Buffer containing KMM frame packet data to decode.
+             * @param[in] len Length of the buffer.
+             * @returns KMMFrame* Instance of a KMMFrame representing the decoded data.
+             */
+            static std::unique_ptr<KMMFrame> create(const uint8_t* data, uint32_t len);
 
         private:
             /**

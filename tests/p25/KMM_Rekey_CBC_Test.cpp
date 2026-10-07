@@ -97,7 +97,7 @@ TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc][cap]") {
     ks.keyLength(P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
 
     p25::kmm::KeyItem ki = p25::kmm::KeyItem();
-    ki.keyFormat(0U);
+    ki.keyFormat(KMM_KEY_FORMAT_TEK);
     ki.sln(0U);
     ki.kId(0x4983U);
 
@@ -112,6 +112,11 @@ TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc][cap]") {
     UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.fullLength());
     outKmm.encode(kmmFrame.get());
     outKmm.generateMAC(macTek, kmmFrame.get());
+
+    REQUIRE(outKmm.verifyMAC(macTek, kmmFrame.get(), outKmm.fullLength()));
+    kmmFrame[20U] ^= 0x01U;
+    REQUIRE_FALSE(outKmm.verifyMAC(macTek, kmmFrame.get(), outKmm.fullLength()));
+    kmmFrame[20U] ^= 0x01U;
 
     Utils::dump(2U, "P25_KMM_ReKey_CBC_Test, GeneratedDataBlock", kmmFrame.get(), outKmm.fullLength());
 
@@ -140,4 +145,42 @@ TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc][cap]") {
     }
 
     REQUIRE(failed==false);
+}
+
+TEST_CASE("KMM Key Format follows AACA-D Table 70", "[p25][kmm][key-format]")
+{
+    REQUIRE(KMM_KEY_FORMAT_TEK == 0x00U);
+    REQUIRE(KMM_KEY_FORMAT_KEK == 0x80U);
+    REQUIRE(KMM_KEY_FORMAT_DELETE == 0x20U);
+    REQUIRE(KMM_BODY_FORMAT_TEK_INCLUDED == 0x80U);
+    REQUIRE(KMM_BODY_FORMAT_KEK_MISSING == 0x40U);
+
+    auto encodedKeyFormat = [](uint8_t format) {
+        KMMRekeyCommand command;
+        command.setSrcLLId(0x010203U);
+        command.setDstLLId(0x040506U);
+        command.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+
+        KeysetItem keyset;
+        keyset.keysetId(1U);
+        keyset.algId(ALGO_AES_256);
+        keyset.keyLength(1U);
+
+        KeyItem key;
+        const uint8_t material = 0x5AU;
+        key.keyFormat(format);
+        key.sln(1U);
+        key.kId(2U);
+        key.setKey(&material, 1U);
+        keyset.push_back(key);
+        command.setKeysets({ keyset });
+
+        std::vector<uint8_t> encoded(command.fullLength(), 0U);
+        command.encode(encoded.data());
+        return encoded[20U];
+    };
+
+    REQUIRE(encodedKeyFormat(KMM_KEY_FORMAT_TEK) == 0x00U);
+    REQUIRE(encodedKeyFormat(KMM_KEY_FORMAT_KEK) == 0x80U);
+    REQUIRE(encodedKeyFormat(KMM_KEY_FORMAT_TEK | KMM_KEY_FORMAT_DELETE) == 0x20U);
 }

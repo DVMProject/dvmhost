@@ -39,7 +39,9 @@ namespace p25
          * @{
          */
 
-        const uint32_t KMM_FRAME_LENGTH = 9U;
+        // message length counts Format + Dest RSI + Source RSI (7 octets),
+        // followed by optional MN/body/MAC; ID and Length are excluded
+        const uint32_t KMM_FRAME_LENGTH = 7U;
 
         /** @} */
 
@@ -111,6 +113,14 @@ namespace p25
              * @param[out] data Buffer to encode KMM MAC to.
              */
             void generateMAC(uint8_t* kek, uint8_t* data);
+            /**
+             * @brief Verify the MAC code for the given KMM frame.
+             * @param tek Traffic Encryption Key
+             * @param[in] data Buffer containing KMM frame data to verify.
+             * @param len Length of the buffer.
+             * @returns bool True, if the MAC is valid, otherwise false.
+             */
+            bool verifyMAC(const uint8_t* tek, const uint8_t* data, uint32_t len);
 
             /**
              * @brief Returns a string that represents the current KMM frame.

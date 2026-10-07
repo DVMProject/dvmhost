@@ -136,6 +136,30 @@ void KMMFrame::generateMAC(uint8_t* kek, uint8_t* data)
     }
 }
 
+/* Verify the MAC code for the given KMM frame. */
+
+bool KMMFrame::verifyMAC(const uint8_t* tek, const uint8_t* data, uint32_t len)
+{
+    if (tek == nullptr || data == nullptr || m_macType != KMM_MAC::ENH_MAC ||
+        m_messageFullLength > len || m_messageFullLength < P25DEF::KMM_AES_MAC_LENGTH + 5U)
+        return false;
+
+    UInt8Array candidate = std::make_unique<uint8_t[]>(m_messageFullLength);
+    ::memcpy(candidate.get(), data, m_messageFullLength);
+
+    uint8_t expected[P25DEF::KMM_AES_MAC_LENGTH];
+    const uint32_t macOffset = m_messageFullLength - (P25DEF::KMM_AES_MAC_LENGTH + 5U);
+    ::memcpy(expected, candidate.get() + macOffset, sizeof(expected));
+
+    generateMAC(const_cast<uint8_t*>(tek), candidate.get());
+
+    uint8_t different = 0U;
+    for (uint32_t i = 0U; i < sizeof(expected); ++i)
+        different |= expected[i] ^ candidate[macOffset + i];
+
+    return different == 0U;
+}
+
 /* Returns a string that represents the current KMM frame. */
 
 std::string KMMFrame::toString()

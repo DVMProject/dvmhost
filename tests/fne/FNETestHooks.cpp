@@ -70,6 +70,14 @@ FNEPeerConnection& FNETestHooks::addPeer(TrafficNetwork& network, uint32_t peerI
     return *connection;
 }
 
+/**
+ * @brief Passes an encoded KMM through the FNE OTAR message dispatcher.
+ * @param network The TrafficNetwork instance.
+ * @param packet The KMM packet data.
+ * @param llId The logical link ID.
+ * @param payloadSize The size of the processed payload.
+ * @return A unique pointer to the processed KMM frame, or nullptr if processing failed.
+ */
 std::unique_ptr<uint8_t[]> FNETestHooks::processOTARKMM(TrafficNetwork& network,
     const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize)
 {
@@ -81,9 +89,84 @@ std::unique_ptr<uint8_t[]> FNETestHooks::processOTARKMM(TrafficNetwork& network,
         false, &payloadSize);
 }
 
+/**
+ * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
+ * @param network The TrafficNetwork instance.
+ * @param packet The DLD packet data.
+ * @param llId The logical link ID.
+ * @param n The sequence number.
+ * @param encrypted Whether the packet is encrypted.
+ * @param algoId The algorithm ID used for encryption.
+ * @param kid The key ID used for encryption.
+ * @param mi The message integrity value.
+ * @return True if the packet was successfully processed, false otherwise.
+ */
+bool FNETestHooks::processOTARDLD(TrafficNetwork& network, const std::vector<uint8_t>& packet,
+    uint32_t llId, uint8_t n, bool encrypted, uint8_t algoId, uint16_t kid, const uint8_t* mi)
+{
+    if (packet.empty() || network.m_p25OTARService == nullptr)
+        return false;
+
+    return network.m_p25OTARService->processDLD(packet.data(), (uint32_t)packet.size(), llId, n,
+        encrypted, algoId, kid, mi);
+}
+
+/**
+ * @brief Passes a complete Version-0 DLI datagram through the network receive task.
+ * @param network The TrafficNetwork instance.
+ * @param datagram The DLI packet data.
+ * @return True if the packet was successfully processed, false otherwise.
+ */
+void FNETestHooks::processOTARDLI(TrafficNetwork& network, const std::vector<uint8_t>& datagram)
+{
+    if (datagram.empty() || network.m_p25OTARService == nullptr)
+        return;
+
+    OTARPacketRequest* req = new OTARPacketRequest();
+    req->obj = network.m_p25OTARService;
+    req->address = {};
+    req->addrLen = 0U;
+    req->length = (int)datagram.size();
+    req->buffer = new uint8_t[datagram.size()];
+    ::memcpy(req->buffer, datagram.data(), datagram.size());
+
+    P25OTARService::taskNetworkRx(req);
+}
+
+/**
+ * @brief Checks if the specified inbound message number exists for the given RSI.
+ * @param network The TrafficNetwork instance.
+ * @param rsi The RSI to check.
+ * @param mn The message number to check.
+ * @return True if the inbound message number exists and matches, false otherwise.
+ */
+bool FNETestHooks::hasOTARInboundMessageNumber(TrafficNetwork& network, uint32_t rsi, uint16_t mn)
+{
+    if (network.m_p25OTARService == nullptr)
+        return false;
+
+    auto it = network.m_p25OTARService->m_rsiInboundMessageNumber.find(rsi);
+    return it != network.m_p25OTARService->m_rsiInboundMessageNumber.end() && it->second == mn;
+}
+
+/**
+ * @brief Enables or disables KMF services for the specified TrafficNetwork.
+ * @param network The TrafficNetwork instance.
+ * @param enabled True to enable KMF services, false to disable.
+ */
 void FNETestHooks::setKMFServicesEnabled(TrafficNetwork& network, bool enabled)
 {
     network.m_kmfServicesEnabled = enabled;
+}
+
+/**
+ * @brief Adds a cryptographic key to the network's crypto lookup.
+ * @param network The TrafficNetwork instance.
+ * @param key The cryptographic key to add.
+ */
+void FNETestHooks::addCryptoKey(TrafficNetwork& network, const EKCKeyItem& key)
+{
+    network.m_cryptoLookup->addEntry(key);
 }
 
 // ---------------------------------------------------------------------------

@@ -29,8 +29,8 @@ KMMNegativeAck::KMMNegativeAck() : KMMFrame(),
     m_messageNo(0U),
     m_status(KMM_Status::CMD_NOT_PERFORMED)
 {
-    m_messageId = KMM_MessageType::NAK;
-    m_respKind = KMM_ResponseKind::IMMEDIATE;
+    KMMFrame::m_messageId = KMM_MessageType::NAK;
+    m_respKind = KMM_ResponseKind::NONE;
 }
 
 /* Finalizes a instance of the KMMNegativeAck class. */

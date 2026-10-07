@@ -605,15 +605,20 @@ namespace p25
         /** @brief KMM MAC Format - CMAC */
         const uint8_t   KMM_MAC_FORMAT_CMAC = 0x41U;
 
-        /** @brief KMM Keyset Format - KEKs */
-        const uint8_t  KEYSET_FORMAT_KEK = 0x80U;
+        /** @brief AACA-D Table 64 Body Format - reverse-warm-start TEK segment included. */
+        const uint8_t   KMM_BODY_FORMAT_TEK_INCLUDED = 0x80U;
+        /** @brief AACA-D Table 64 Body Format - KEK does not exist. */
+        const uint8_t   KMM_BODY_FORMAT_KEK_MISSING = 0x40U;
 
-        /** @brief KMM Body/Key Format - TEK Included */
-        const uint8_t   KEY_FORMAT_TEK = 0x80U;
-        /** @brief KMM Body/Key Format - KEK Exists */
-        const uint8_t   KEY_FORMAT_KEK_EXISTS = 0x40U;
-        /** @brief KMM Key Format - Delete Key */
-        const uint8_t   KEY_FORMAT_DELETE = 0x20U;
+        /** @brief AACA-D Table 70 Key Format - item is a TEK (T bit clear). */
+        const uint8_t   KMM_KEY_FORMAT_TEK = 0x00U;
+        /** @brief AACA-D Table 70 Key Format - item is a KEK (T bit set). */
+        const uint8_t   KMM_KEY_FORMAT_KEK = 0x80U;
+        /** @brief AACA-D Table 70 Key Format - delete/revoke item. */
+        const uint8_t   KMM_KEY_FORMAT_DELETE = 0x20U;
+
+        /** @brief AACA-D Table 71 Keyset Format - keyset contains KEKs. */
+        const uint8_t   KMM_KEYSET_FORMAT_KEK = 0x80U;
 
         /** @brief SNDCP version 1 */
         const uint8_t   SNDCP_VERSION_1 = 0x01U;

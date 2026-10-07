@@ -171,8 +171,8 @@ void P25Crypto::generateKeystream()
     case ALGO_AES_256:
         {
             if (m_keystream == nullptr)
-                m_keystream = new uint8_t[240U];
-            ::memset(m_keystream, 0x00U, 240U);
+                m_keystream = new uint8_t[528U];
+            ::memset(m_keystream, 0x00U, 528U);
 
             uint8_t* iv = expandMIToIV();
 
@@ -182,7 +182,7 @@ void P25Crypto::generateKeystream()
             ::memset(input, 0x00U, 16U);
             ::memcpy(input, iv, 16U);
 
-            for (uint32_t i = 0U; i < (240U / 16U); i++) {
+            for (uint32_t i = 0U; i < (528U / 16U); i++) {
                 uint8_t* output = aes.encryptECB(input, 16U, m_tek.get());
                 ::memcpy(m_keystream + (i * 16U), output, 16U);
                 ::memcpy(input, output, 16U);
@@ -671,16 +671,18 @@ UInt8Array P25Crypto::cryptAES_KMM_CMAC(const uint8_t* macKey, const uint8_t* ms
 
 /* Helper to crypt a P25 PDU frame using AES-256. */
 
-void P25Crypto::cryptAES_PDU(uint8_t* frame, uint8_t frameLen)
+void P25Crypto::cryptAES_PDU(uint8_t* frame, uint32_t frameLen)
 {
     if (m_keystream == nullptr)
         return;
 
+    // per AAAD-B the first OFB iteration is discarded -- generate enough
+    // contiguous stream for the complete AACA-D 512-octet logical message;
+    // repeating a shorter stream is not OFB and leaks plaintext relationships
     uint32_t offset = 16U;
-    for (uint8_t i = 0U; i < frameLen; i++) {
-        if (offset > 240U) {
-            offset = 16U;
-        }
+    for (uint32_t i = 0U; i < frameLen; i++) {
+        if (offset >= 528U)
+            return;
 
         frame[i] ^= m_keystream[offset];
         offset++;

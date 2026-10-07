@@ -15,6 +15,7 @@
 #define  __P25_KMM__KEYSET_ITEM_H__
 
 #include "common/Defines.h"
+#include "common/p25/P25Defines.h"
 #include "common/Utils.h"
 
 #include <cassert>
@@ -51,7 +52,7 @@ namespace p25
              * @brief Initializes a new instance of the KeyItem class.
              */
             KeyItem() :
-                m_keyFormat(0x80U/*P25DEF::KEY_FORMAT_TEK*/),
+                m_keyFormat(P25DEF::KMM_KEY_FORMAT_TEK),
                 m_sln(0U),
                 m_kId(0U),
                 m_keyLength(0U),
@@ -182,7 +183,7 @@ namespace p25
              */
             uint32_t length() const 
             {
-                uint32_t len = 4U;
+                uint32_t len = 5U; // format, keyset ID, ALGID, key length, key count
 
                 uint32_t keyItemLength = m_keys.size() * 5U;
                 uint32_t combinedKeyLength = m_keys.size() * m_keyLength;

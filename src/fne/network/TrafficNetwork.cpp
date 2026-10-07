@@ -3009,7 +3009,7 @@ void TrafficNetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId,
             ks.keyLength(keyLength);
 
             p25::kmm::KeyItem ki = p25::kmm::KeyItem();
-            ki.keyFormat(KEY_FORMAT_TEK);
+            ki.keyFormat(KMM_KEY_FORMAT_TEK);
             ki.kId(rspKi->kId());
             ki.sln(rspKi->sln());
             ki.setKey(key, keyLength);
@@ -3079,7 +3079,7 @@ void TrafficNetwork::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi
             ks.keyLength(keyLength);
 
             p25::kmm::KeyItem ki = p25::kmm::KeyItem();
-            ki.keyFormat(KEY_FORMAT_TEK);
+            ki.keyFormat(KMM_KEY_FORMAT_TEK);
             ki.kId(rspKi->kId());
             ki.sln(rspKi->sln());
             ki.setKey(key, keyLength);
