@@ -94,7 +94,8 @@ public:
      * @return Encoded response, or nullptr when the dispatcher produces no response.
      */
     static std::unique_ptr<uint8_t[]> processOTARKMM(network::TrafficNetwork& network,
-        const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize);
+        const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize,
+        uint8_t outerAlgoId = P25DEF::ALGO_UNENCRYPT, uint16_t outerKId = 0U);
     /**
      * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
      * @param network The TrafficNetwork that owns the OTAR service.

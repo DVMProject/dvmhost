@@ -79,14 +79,15 @@ FNEPeerConnection& FNETestHooks::addPeer(TrafficNetwork& network, uint32_t peerI
  * @return A unique pointer to the processed KMM frame, or nullptr if processing failed.
  */
 std::unique_ptr<uint8_t[]> FNETestHooks::processOTARKMM(TrafficNetwork& network,
-    const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize)
+    const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize,
+    uint8_t outerAlgoId, uint16_t outerKId)
 {
     payloadSize = 0U;
     if (packet.empty() || network.m_p25OTARService == nullptr)
         return nullptr;
 
     return network.m_p25OTARService->processKMM(packet.data(), (uint32_t)packet.size(), llId,
-        false, &payloadSize);
+        false, &payloadSize, outerAlgoId, outerKId);
 }
 
 /**

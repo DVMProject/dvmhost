@@ -208,6 +208,19 @@ namespace network
         UInt8Array write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize,
             const KMMAuthContext& auth);
 
+        /**
+         * @brief Builds an authenticated KMM Negative-Acknowledgment.
+         * @param kmmRSI Destination KMM Radio Set Identifier.
+         * @param messageId Message ID being rejected.
+         * @param messageNumber Message Number being rejected, or zero if absent.
+         * @param status AACA-D Table 56 status.
+         * @param[out] payloadSize Size of the returned KMM payload.
+         * @param auth Authentication context for the secured response.
+         * @returns Encoded KMM NACK, or nullptr when no authenticated response can be made.
+         */
+        UInt8Array write_KMM_NegativeAck(uint32_t kmmRSI, uint8_t messageId, uint16_t messageNumber,
+            uint8_t status, uint32_t* payloadSize, const KMMAuthContext& auth);
+
         /** 
          * @brief Encodes a response and mirrors an authenticated request's MAC/MN fields. 
          * @param frame KMM frame to encode.

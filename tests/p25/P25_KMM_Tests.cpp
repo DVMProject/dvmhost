@@ -14,6 +14,7 @@
 #include "common/p25/kmm/KMMDeregistrationResponse.h"
 #include "common/p25/kmm/KMMHello.h"
 #include "common/p25/kmm/KMMNoService.h"
+#include "common/p25/kmm/KMMNegativeAck.h"
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 
@@ -270,6 +271,84 @@ TEST_CASE("FNE OTAR authenticates and replay-checks KMM before dispatch", "[p25]
 
     std::vector<uint8_t> next = makeSigned(102U, KMM_HelloFlag::REKEY_REQUEST_UKEK);
     REQUIRE(FNETestHooks::processOTARKMM(harness.traffic, next, SU_RSI, size) != nullptr);
+}
+
+TEST_CASE("FNE OTAR returns secured RK3 KMM NACKs for validation failures", "[p25][kmm][otar][nack]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    constexpr uint16_t TEK_KID = 0x1234U;
+    uint8_t tek[32U];
+    for (uint32_t i = 0U; i < sizeof(tek); ++i)
+        tek[i] = (uint8_t)i;
+
+    EKCKeyItem item;
+    item.id(1U); item.algId(ALGO_AES_256); item.kId(TEK_KID); item.sln(1U);
+    item.keyMaterial("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F");
+    FNETestHooks::addCryptoKey(harness.traffic, item);
+
+    auto signedHello = [&](uint16_t mn) {
+        KMMHello hello;
+        hello.setDstLLId(WUID_FNE); hello.setSrcLLId(SU_RSI);
+        hello.setResponseKind(KMM_ResponseKind::IMMEDIATE);
+        hello.setHasMessageNumber(true); hello.setMessageNumber(mn);
+        hello.setMACType(KMM_MAC::ENH_MAC); hello.setMACAlgId(ALGO_AES_256);
+        hello.setMACKId(TEK_KID); hello.setMACFormat(KMM_MAC_FORMAT_CBC);
+        std::vector<uint8_t> bytes = encodeKMM(hello);
+        hello.generateMAC(tek, bytes.data());
+        return bytes;
+    };
+
+    auto requireNack = [&](const std::vector<uint8_t>& request, uint8_t status, uint16_t mn,
+        uint8_t rejectedMessageId = KMM_MessageType::HELLO) {
+        uint32_t size = 0U;
+        UInt8Array response = FNETestHooks::processOTARKMM(harness.traffic, request, SU_RSI,
+            size, ALGO_AES_256, TEK_KID);
+        REQUIRE(response != nullptr);
+        std::unique_ptr<KMMFrame> decoded = KMMFactory::create(response.get(), size);
+        REQUIRE(decoded != nullptr);
+        KMMNegativeAck* nack = dynamic_cast<KMMNegativeAck*>(decoded.get());
+        REQUIRE(nack != nullptr);
+        REQUIRE(nack->getResponseKind() == KMM_ResponseKind::NONE);
+        REQUIRE(nack->getMessageId() == rejectedMessageId);
+        REQUIRE(nack->getMessageNumber() == mn);
+        REQUIRE(nack->getStatus() == status);
+        REQUIRE(nack->getMACType() == KMM_MAC::ENH_MAC);
+        REQUIRE(nack->getMACKId() == TEK_KID);
+        REQUIRE(nack->verifyMAC(tek, response.get(), size));
+    };
+
+    std::vector<uint8_t> accepted = signedHello(100U);
+    uint32_t ignoredSize = 0U;
+    REQUIRE(FNETestHooks::processOTARKMM(harness.traffic, accepted, SU_RSI, ignoredSize,
+        ALGO_AES_256, TEK_KID) != nullptr);
+
+    std::vector<uint8_t> replay = signedHello(99U);
+    requireNack(replay, KMM_Status::INVALID_MSG_NUMBER, 99U);
+
+    std::vector<uint8_t> badMac = signedHello(101U);
+    badMac[12U] ^= 0x01U;
+    requireNack(badMac, KMM_Status::INVALID_MAC, 101U);
+
+    KMMHello noMac;
+    noMac.setDstLLId(WUID_FNE); noMac.setSrcLLId(SU_RSI);
+    noMac.setResponseKind(KMM_ResponseKind::IMMEDIATE);
+    noMac.setHasMessageNumber(true); noMac.setMessageNumber(102U);
+    requireNack(encodeKMM(noMac), KMM_Status::INVALID_MSG_NUMBER, 102U);
+
+    std::vector<uint8_t> unknownMessage = signedHello(103U);
+    unknownMessage[0U] = 0x7FU;
+    KMMHello signer;
+    signer.setHasMessageNumber(true); signer.setMessageNumber(103U);
+    signer.setMACType(KMM_MAC::ENH_MAC); signer.setMACAlgId(ALGO_AES_256);
+    signer.setMACKId(TEK_KID); signer.setMACFormat(KMM_MAC_FORMAT_CBC);
+    signer.fullLength();
+    signer.generateMAC(tek, unknownMessage.data());
+    requireNack(unknownMessage, KMM_Status::INVALID_MSG_ID, 103U, 0x7FU);
+
+    std::vector<uint8_t> missingMacKey = signedHello(104U);
+    SET_UINT16(0x4321U, missingMacKey.data(), missingMacKey.size() - 3U);
+    requireNack(missingMacKey, KMM_Status::ITEM_NOT_EXIST, 104U);
 }
 
 TEST_CASE("P25 OTAR DLD processes KMM through the packet-data service entry point", "[p25][kmm][otar][dld]")
