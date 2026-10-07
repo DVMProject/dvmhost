@@ -25,11 +25,11 @@ using namespace p25::kmm;
 /* Initializes a new instance of the KMMNegativeAck class. */
 
 KMMNegativeAck::KMMNegativeAck() : KMMFrame(),
-    m_messageId(0U),
+    m_nakMessageId(0U),
     m_messageNo(0U),
     m_status(KMM_Status::CMD_NOT_PERFORMED)
 {
-    KMMFrame::m_messageId = KMM_MessageType::NAK;
+    m_messageId = KMM_MessageType::NAK;
     m_respKind = KMM_ResponseKind::NONE;
 }
 
@@ -53,7 +53,7 @@ bool KMMNegativeAck::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_messageId = data[10U + m_bodyOffset];                     // Message ID
+    m_nakMessageId = data[10U + m_bodyOffset];                  // Message ID
     m_messageNo = GET_UINT16(data, 11U + m_bodyOffset);         // Message Number
     m_status = data[13U + m_bodyOffset];                        // Status
 
@@ -69,7 +69,7 @@ void KMMNegativeAck::encode(uint8_t* data)
 
     KMMFrame::encodeHeader(data);
 
-    data[10U + m_bodyOffset] = m_messageId;                     // Message ID
+    data[10U + m_bodyOffset] = m_nakMessageId;                  // Message ID
     SET_UINT16(m_messageNo, data, 11U + m_bodyOffset);          // Message Number
     data[13U + m_bodyOffset] = m_status;                        // Status
 }
@@ -91,7 +91,7 @@ void KMMNegativeAck::copy(const KMMNegativeAck& data)
 {
     KMMFrame::copy(data);
 
-    m_messageId = data.m_messageId;
+    m_nakMessageId = data.m_nakMessageId;
     m_messageNo = data.m_messageNo;
     m_status = data.m_status;
 }

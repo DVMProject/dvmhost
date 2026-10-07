@@ -10,12 +10,16 @@
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 #include "fne/network/P25OTARService.h"
+#include "common/p25/data/Assembler.h"
+#include "common/Utils.h"
 
 #include <cstring>
 #include <chrono>
 #include <stdexcept>
 
 using namespace network;
+using namespace p25::defines;
+using namespace p25::data;
 
 // ---------------------------------------------------------------------------
 //  Global Variables
@@ -80,14 +84,14 @@ FNEPeerConnection& FNETestHooks::addPeer(TrafficNetwork& network, uint32_t peerI
  */
 std::unique_ptr<uint8_t[]> FNETestHooks::processOTARKMM(TrafficNetwork& network,
     const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize,
-    uint8_t outerAlgoId, uint16_t outerKId)
+    uint8_t outerAlgoId, uint16_t outerKId, bool dataLinkIndependent)
 {
     payloadSize = 0U;
     if (packet.empty() || network.m_p25OTARService == nullptr)
         return nullptr;
 
     return network.m_p25OTARService->processKMM(packet.data(), (uint32_t)packet.size(), llId,
-        false, &payloadSize, outerAlgoId, outerKId);
+        false, &payloadSize, outerAlgoId, outerKId, nullptr, dataLinkIndependent);
 }
 
 /**
@@ -113,6 +117,64 @@ bool FNETestHooks::processOTARDLD(TrafficNetwork& network, const std::vector<uin
 }
 
 /**
+ * @brief Encodes and injects a complete DLD KMM through the P25 PDU assembler path.
+ * @param network The TrafficNetwork instance.
+ * @param packet The DLD packet data.
+ * @param llId The logical link ID.
+ * @param encrypted Whether the packet is encrypted.
+ * @param algoId The algorithm ID used for encryption.
+ * @param kid The key ID used for encryption.
+ * @param mi The message integrity value.
+ * @return True if the packet was successfully processed, false otherwise.
+ */
+bool FNETestHooks::processOTARDLDPDU(TrafficNetwork& network, const std::vector<uint8_t>& packet,
+    uint32_t llId, bool encrypted, uint8_t algoId, uint16_t kid, const uint8_t* mi)
+{
+    if (packet.empty() || network.m_tagP25 == nullptr)
+        return false;
+
+    p25::data::DataHeader header;
+    header.setFormat(PDUFormatType::CONFIRMED);
+    header.setMFId(MFG_STANDARD);
+    header.setAckNeeded(true);
+    header.setOutbound(false);
+    header.setSAP(encrypted ? PDUSAP::ENC_USER_DATA : PDUSAP::UNENC_KMM);
+    header.setLLId(llId);
+    header.setFullMessage(true);
+    header.setBlocksToFollow(1U);
+    if (encrypted) {
+        if (mi == nullptr)
+            return false;
+        header.setEXSAP(PDUSAP::UNENC_KMM);
+        header.setAlgId(algoId);
+        header.setKId(kid);
+        header.setMI(mi);
+    }
+    header.calculateLength((uint32_t)packet.size());
+
+    p25::data::Assembler assembler;
+    uint32_t bitLength = 0U;
+    UInt8Array assembled = assembler.assemble(header, false, encrypted, packet.data(), &bitLength);
+    if (assembled == nullptr || bitLength <= P25_PREAMBLE_LENGTH_BITS)
+        return false;
+
+    bitLength -= header.getPadLength() * 8U;
+    const uint32_t blockCount = (bitLength - P25_PREAMBLE_LENGTH_BITS) / P25_PDU_FEC_LENGTH_BITS;
+    auto* packetData = network.m_tagP25->packetData();
+    for (uint32_t block = 0U; block < blockCount; ++block) {
+        uint8_t envelope[24U + P25_PDU_FEC_LENGTH_BYTES] = { 0U };
+        SET_UINT24(P25_PDU_FEC_LENGTH_BYTES, envelope, 8U);
+        envelope[20U] = (uint8_t)(blockCount - 1U);
+        envelope[21U] = (uint8_t)block;
+        Utils::getBitRange(assembled.get(), envelope + 24U,
+            P25_PREAMBLE_LENGTH_BITS + block * P25_PDU_FEC_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);
+        if (!packetData->processFrame(envelope, sizeof(envelope), 1U, (uint16_t)block, 1U))
+            return false;
+    }
+    return true;
+}
+
+/**
  * @brief Passes a complete Version-0 DLI datagram through the network receive task.
  * @param network The TrafficNetwork instance.
  * @param datagram The DLI packet data.
@@ -132,6 +194,62 @@ void FNETestHooks::processOTARDLI(TrafficNetwork& network, const std::vector<uin
     ::memcpy(req->buffer, datagram.data(), datagram.size());
 
     P25OTARService::taskNetworkRx(req);
+}
+
+/**
+ * @brief Opens the real DLI UDP endpoint for an integration test.
+ * @param network The TrafficNetwork instance.
+ * @param address The IP address of the DLI UDP endpoint.
+ * @param port The port number of the DLI UDP endpoint.
+ * @return True if the endpoint was successfully opened, false otherwise.
+ */
+bool FNETestHooks::openOTARDLI(TrafficNetwork& network, const std::string& address, uint16_t port)
+{
+    return network.m_p25OTARService != nullptr && network.m_p25OTARService->open(address, port);
+}
+
+/**
+ * @brief Polls the real DLI UDP endpoint.
+ * @param network The TrafficNetwork instance.
+ * @param ms The number of milliseconds to wait.
+ */
+void FNETestHooks::clockOTARDLI(TrafficNetwork& network, uint32_t ms)
+{
+    if (network.m_p25OTARService != nullptr)
+        network.m_p25OTARService->clock(ms);
+}
+
+/**
+ * @brief Closes the real DLI UDP endpoint.
+ * @param network The TrafficNetwork instance.
+ */
+void FNETestHooks::closeOTARDLI(TrafficNetwork& network)
+{
+    if (network.m_p25OTARService != nullptr)
+        network.m_p25OTARService->close();
+}
+
+/**
+ * @brief Applies the OTAR outer encryption/decryption implementation.
+ * @param network The TrafficNetwork instance.
+ * @param algoId The algorithm ID used for encryption/decryption.
+ * @param kid The key ID used for encryption/decryption.
+ * @param mi The message integrity value.
+ * @param packet The packet data to be encrypted/decrypted.
+ * @param encrypt True to encrypt, false to decrypt.
+ * @return The resulting encrypted/decrypted packet.
+ */
+std::vector<uint8_t> FNETestHooks::cryptOTARKMM(TrafficNetwork& network, uint8_t algoId,
+    uint16_t kid, uint8_t* mi, const std::vector<uint8_t>& packet, bool encrypt)
+{
+    if (packet.empty() || network.m_p25OTARService == nullptr)
+        return {};
+
+    UInt8Array result = network.m_p25OTARService->cryptKMM(algoId, kid, mi,
+        packet.data(), (uint32_t)packet.size(), encrypt);
+    if (result == nullptr)
+        return {};
+    return std::vector<uint8_t>(result.get(), result.get() + packet.size());
 }
 
 /**

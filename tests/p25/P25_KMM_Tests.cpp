@@ -13,15 +13,26 @@
 #include "common/p25/kmm/KMMDeregistrationCommand.h"
 #include "common/p25/kmm/KMMDeregistrationResponse.h"
 #include "common/p25/kmm/KMMHello.h"
+#include "common/p25/kmm/KMMInventoryCommand.h"
 #include "common/p25/kmm/KMMNoService.h"
 #include "common/p25/kmm/KMMNegativeAck.h"
+#include "common/p25/kmm/KMMRekeyAck.h"
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
+#include "common/lookups/RadioIdLookup.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstring>
+#include <chrono>
+#include <thread>
 #include <vector>
+
+#if !defined(_WIN32)
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
 
 using namespace p25;
 using namespace p25::defines;
@@ -38,15 +49,17 @@ public:
     KMMFNEHarness() :
         host("fne-kmm-test.yml"),
         crypto("", "", "", false, 0U, true),
+        rid("", 0U, false, false),
         traffic(&host, "127.0.0.1", 62031U, 999999U, "test-password", "test-fne",
             false, false, false, false, true, true, true, true, true,
             0U, false, true, true, 5U, 10U, 2U)
     {
-        traffic.setLookups(nullptr, nullptr, nullptr, nullptr, &crypto, nullptr);
+        traffic.setLookups(&rid, nullptr, nullptr, nullptr, &crypto, nullptr);
     }
 
     HostFNE host;
     CryptoContainer crypto;
+    lookups::RadioIdLookup rid;
     network::TrafficNetwork traffic;
 };
 
@@ -216,6 +229,21 @@ TEST_CASE("FNE OTAR dispatcher follows AACA response-kind procedures", "[p25][km
         REQUIRE(decoded->getDstLLId() == SU_RSI);
         REQUIRE(decoded->getSrcLLId() == WUID_FNE);
     }
+
+    SECTION("security-sensitive KMM received without outer encryption is discarded") {
+        KMMRekeyAck ack;
+        ack.setDstLLId(KMF_RSI);
+        ack.setSrcLLId(SU_RSI);
+        ack.setResponseKind(KMM_ResponseKind::NONE);
+        ack.setMessageId(KMM_MessageType::REKEY_CMD);
+        ack.setNumberOfKeyStatus(0U);
+
+        uint32_t payloadSize = 99U;
+        UInt8Array response = FNETestHooks::processOTARKMM(harness.traffic,
+            encodeKMM(ack), SU_RSI, payloadSize);
+        REQUIRE(response == nullptr);
+        REQUIRE(payloadSize == 0U);
+    }
 }
 
 TEST_CASE("FNE OTAR authenticates and replay-checks KMM before dispatch", "[p25][kmm][otar][security]")
@@ -310,7 +338,7 @@ TEST_CASE("FNE OTAR returns secured RK3 KMM NACKs for validation failures", "[p2
         KMMNegativeAck* nack = dynamic_cast<KMMNegativeAck*>(decoded.get());
         REQUIRE(nack != nullptr);
         REQUIRE(nack->getResponseKind() == KMM_ResponseKind::NONE);
-        REQUIRE(nack->getMessageId() == rejectedMessageId);
+        REQUIRE(nack->getNakMessageId() == rejectedMessageId);
         REQUIRE(nack->getMessageNumber() == mn);
         REQUIRE(nack->getStatus() == status);
         REQUIRE(nack->getMACType() == KMM_MAC::ENH_MAC);
@@ -349,6 +377,17 @@ TEST_CASE("FNE OTAR returns secured RK3 KMM NACKs for validation failures", "[p2
     std::vector<uint8_t> missingMacKey = signedHello(104U);
     SET_UINT16(0x4321U, missingMacKey.data(), missingMacKey.size() - 3U);
     requireNack(missingMacKey, KMM_Status::ITEM_NOT_EXIST, 104U);
+
+    KMMInventoryCommand unsupportedProcedure;
+    unsupportedProcedure.setDstLLId(WUID_FNE); unsupportedProcedure.setSrcLLId(SU_RSI);
+    unsupportedProcedure.setResponseKind(KMM_ResponseKind::IMMEDIATE);
+    unsupportedProcedure.setHasMessageNumber(true); unsupportedProcedure.setMessageNumber(105U);
+    unsupportedProcedure.setMACType(KMM_MAC::ENH_MAC); unsupportedProcedure.setMACAlgId(ALGO_AES_256);
+    unsupportedProcedure.setMACKId(TEK_KID); unsupportedProcedure.setMACFormat(KMM_MAC_FORMAT_CBC);
+    unsupportedProcedure.setInventoryType(KMM_InventoryType::LIST_ACTIVE_KEYSET_IDS);
+    std::vector<uint8_t> unsupportedBytes = encodeKMM(unsupportedProcedure);
+    unsupportedProcedure.generateMAC(tek, unsupportedBytes.data());
+    requireNack(unsupportedBytes, KMM_Status::INVALID_MSG_ID, 105U, KMM_MessageType::INVENTORY_CMD);
 }
 
 TEST_CASE("P25 OTAR DLD processes KMM through the packet-data service entry point", "[p25][kmm][otar][dld]")
@@ -378,6 +417,26 @@ TEST_CASE("P25 OTAR DLD processes KMM through the packet-data service entry poin
 
     REQUIRE(FNETestHooks::processOTARDLD(harness.traffic, encoded, SU_RSI, 7U));
     REQUIRE(FNETestHooks::hasOTARInboundMessageNumber(harness.traffic, SU_RSI, MN));
+
+    SECTION("encrypted DLD decrypts through the Auxiliary ES context") {
+        hello.setMessageNumber(MN + 1U);
+        std::vector<uint8_t> next = encodeKMM(hello);
+        hello.generateMAC(tek, next.data());
+        uint8_t mi[MI_LENGTH_BYTES] = { 0x10U, 0x21U, 0x32U, 0x43U, 0x54U,
+            0x65U, 0x76U, 0x87U, 0x98U };
+        std::vector<uint8_t> encrypted = FNETestHooks::cryptOTARKMM(harness.traffic,
+            ALGO_AES_256, 0x1234U, mi, next, true);
+        REQUIRE(encrypted.size() == next.size());
+        REQUIRE(encrypted != next);
+        REQUIRE(FNETestHooks::processOTARDLDPDU(harness.traffic, encrypted, SU_RSI,
+            true, ALGO_AES_256, 0x1234U, mi));
+        REQUIRE(FNETestHooks::hasOTARInboundMessageNumber(harness.traffic, SU_RSI, MN + 1U));
+    }
+
+    SECTION("encrypted DLD without Auxiliary ES metadata is rejected") {
+        REQUIRE_FALSE(FNETestHooks::processOTARDLD(harness.traffic, encoded, SU_RSI, 10U,
+            true, ALGO_AES_256, 0x1234U, nullptr));
+    }
 
     std::vector<uint8_t> truncated(encoded.begin(), encoded.end() - 1U);
     REQUIRE_FALSE(FNETestHooks::processOTARDLD(harness.traffic, truncated, SU_RSI, 8U));
@@ -426,6 +485,23 @@ TEST_CASE("P25 OTAR DLI validates its Version-0 preamble and dispatches KMM", "[
     SECTION("valid clear DLI reaches the authenticated KMM dispatcher") {
         KMMFNEHarness harness;
         makeHarnessKey(harness);
+        FNETestHooks::setKMFServicesEnabled(harness.traffic, true);
+
+        KMMRegistrationCommand registration;
+        registration.setDstLLId(WUID_FNE);
+        registration.setSrcLLId(SU_RSI);
+        registration.setResponseKind(KMM_ResponseKind::IMMEDIATE);
+        registration.setKMFRSI(WUID_FNE);
+        uint32_t registrationResponseSize = 0U;
+        UInt8Array registrationResponse = FNETestHooks::processOTARKMM(harness.traffic,
+            encodeKMM(registration), SU_RSI, registrationResponseSize,
+            ALGO_UNENCRYPT, 0U, true);
+        REQUIRE(registrationResponse != nullptr);
+        std::unique_ptr<KMMFrame> decodedRegistration = KMMFactory::create(
+            registrationResponse.get(), registrationResponseSize);
+        REQUIRE(decodedRegistration != nullptr);
+        REQUIRE(decodedRegistration->getMessageId() == KMM_MessageType::REG_RSP);
+
         FNETestHooks::processOTARDLI(harness.traffic, datagram);
         REQUIRE(FNETestHooks::hasOTARInboundMessageNumber(harness.traffic, SU_RSI, MN));
     }
@@ -446,6 +522,73 @@ TEST_CASE("P25 OTAR DLI validates its Version-0 preamble and dispatches KMM", "[
         REQUIRE_FALSE(FNETestHooks::hasOTARInboundMessageNumber(harness.traffic, SU_RSI, MN));
     }
 }
+
+#if !defined(_WIN32)
+TEST_CASE("P25 OTAR DLI traverses the real UDP endpoint", "[p25][kmm][otar][dli][integration]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    FNETestHooks::setKMFServicesEnabled(harness.traffic, true);
+
+    int probe = ::socket(AF_INET, SOCK_DGRAM, 0);
+    REQUIRE(probe >= 0);
+    sockaddr_in probeAddress = {};
+    probeAddress.sin_family = AF_INET;
+    probeAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    probeAddress.sin_port = 0U;
+    REQUIRE(::bind(probe, reinterpret_cast<sockaddr*>(&probeAddress), sizeof(probeAddress)) == 0);
+    socklen_t probeLength = sizeof(probeAddress);
+    REQUIRE(::getsockname(probe, reinterpret_cast<sockaddr*>(&probeAddress), &probeLength) == 0);
+    const uint16_t serverPort = ntohs(probeAddress.sin_port);
+    ::close(probe);
+
+    REQUIRE(FNETestHooks::openOTARDLI(harness.traffic, "127.0.0.1", serverPort));
+
+    int client = ::socket(AF_INET, SOCK_DGRAM, 0);
+    REQUIRE(client >= 0);
+    sockaddr_in serverAddress = {};
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    serverAddress.sin_port = htons(serverPort);
+
+    KMMRegistrationCommand registration;
+    registration.setDstLLId(WUID_FNE);
+    registration.setSrcLLId(SU_RSI);
+    registration.setResponseKind(KMM_ResponseKind::IMMEDIATE);
+    registration.setKMFRSI(WUID_FNE);
+    std::vector<uint8_t> registrationKMM = encodeKMM(registration);
+    std::vector<uint8_t> datagram(14U + registrationKMM.size(), 0U);
+    datagram[0U] = 0U;
+    datagram[1U] = MFG_STANDARD;
+    datagram[2U] = ALGO_UNENCRYPT;
+    ::memcpy(datagram.data() + 14U, registrationKMM.data(), registrationKMM.size());
+    REQUIRE(::sendto(client, datagram.data(), datagram.size(), 0,
+        reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) == (ssize_t)datagram.size());
+
+    std::vector<uint8_t> response(512U, 0U);
+    ssize_t responseLength = -1;
+    for (uint32_t attempt = 0U; attempt < 100U && responseLength < 0; ++attempt) {
+        FNETestHooks::clockOTARDLI(harness.traffic);
+        responseLength = ::recvfrom(client, response.data(), response.size(), MSG_DONTWAIT, nullptr, nullptr);
+        if (responseLength < 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    REQUIRE(responseLength >= 24);
+    response.resize((size_t)responseLength);
+    REQUIRE(response[0U] == 0U);
+    REQUIRE(response[1U] == MFG_STANDARD);
+    REQUIRE(response[2U] == ALGO_UNENCRYPT);
+    std::unique_ptr<KMMFrame> decoded = KMMFactory::create(response.data() + 14U,
+        (uint32_t)response.size() - 14U);
+    REQUIRE(decoded != nullptr);
+    REQUIRE(decoded->getMessageId() == KMM_MessageType::REG_RSP);
+    REQUIRE(decoded->getDstLLId() == SU_RSI);
+
+    ::close(client);
+    FNETestHooks::closeOTARDLI(harness.traffic);
+}
+#endif
 
 TEST_CASE("KMM Key Format follows AACA-D Table 70", "[p25][kmm][key-format]")
 {

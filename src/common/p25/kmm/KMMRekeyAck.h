@@ -84,7 +84,7 @@ namespace p25
             /**
              * @brief 
              */
-            DECLARE_PROPERTY(uint8_t, messageId, MessageId);
+            DECLARE_PROPERTY(uint8_t, ackMessageId, AckMessageId);
             /**
              * @brief 
              */

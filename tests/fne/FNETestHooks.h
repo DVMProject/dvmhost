@@ -15,6 +15,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -95,7 +96,8 @@ public:
      */
     static std::unique_ptr<uint8_t[]> processOTARKMM(network::TrafficNetwork& network,
         const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize,
-        uint8_t outerAlgoId = P25DEF::ALGO_UNENCRYPT, uint16_t outerKId = 0U);
+        uint8_t outerAlgoId = P25DEF::ALGO_UNENCRYPT, uint16_t outerKId = 0U,
+        bool dataLinkIndependent = false);
     /**
      * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
      * @param network The TrafficNetwork that owns the OTAR service.
@@ -111,12 +113,57 @@ public:
     static bool processOTARDLD(network::TrafficNetwork& network, const std::vector<uint8_t>& packet,
         uint32_t llId, uint8_t n, bool encrypted = false, uint8_t algoId = P25DEF::ALGO_UNENCRYPT,
         uint16_t kid = 0U, const uint8_t* mi = nullptr);
+    /** 
+     * @brief Encodes and injects a complete DLD KMM through the P25 PDU assembler path.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param packet Encoded DLD bytes.
+     * @param llId Logical Link ID associated with the message.
+     * @param encrypted Whether the packet is encrypted.
+     * @param algoId The algorithm ID used for encryption.
+     * @param kid The key ID used for encryption.
+     * @param mi The message integrity value.
+     * @return True if the packet was successfully processed, false otherwise.
+     */
+    static bool processOTARDLDPDU(network::TrafficNetwork& network, const std::vector<uint8_t>& packet,
+        uint32_t llId, bool encrypted = false, uint8_t algoId = P25DEF::ALGO_UNENCRYPT,
+        uint16_t kid = 0U, const uint8_t* mi = nullptr);
     /**
      * @brief Passes a complete Version-0 DLI datagram through the network receive task.
      * @param network The TrafficNetwork that owns the OTAR service.
      * @param datagram Encoded DLI bytes.
      */
     static void processOTARDLI(network::TrafficNetwork& network, const std::vector<uint8_t>& datagram);
+    /** 
+     * @brief Opens the real DLI UDP endpoint for an integration test.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param address The IP address of the DLI UDP endpoint.
+     * @param port The port number of the DLI UDP endpoint.
+     * @return True if the endpoint was successfully opened, false otherwise.
+     */
+    static bool openOTARDLI(network::TrafficNetwork& network, const std::string& address, uint16_t port);
+    /** 
+     * @brief Polls the real DLI UDP endpoint.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param ms The number of milliseconds to wait.
+     */
+    static void clockOTARDLI(network::TrafficNetwork& network, uint32_t ms = 1U);
+    /** 
+     * @brief Closes the real DLI UDP endpoint.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     */
+    static void closeOTARDLI(network::TrafficNetwork& network);
+    /** 
+     * @brief Applies the OTAR outer encryption/decryption implementation.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param algoId The algorithm ID used for encryption/decryption.
+     * @param kid The key ID used for encryption/decryption.
+     * @param mi The message integrity value.
+     * @param packet The packet data to be encrypted/decrypted.
+     * @param encrypt True to encrypt, false to decrypt.
+     * @return The resulting encrypted/decrypted packet.
+     */
+    static std::vector<uint8_t> cryptOTARKMM(network::TrafficNetwork& network, uint8_t algoId,
+        uint16_t kid, uint8_t* mi, const std::vector<uint8_t>& packet, bool encrypt);
     /**
      * @brief Checks if the specified inbound message number exists for the given RSI.
      * @param network The TrafficNetwork that owns the OTAR service.

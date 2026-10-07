@@ -129,6 +129,7 @@ namespace network
         concurrent::unordered_map<uint32_t, uint16_t> m_rsiMessageNumber;
         concurrent::unordered_map<uint32_t, uint16_t> m_rsiInboundMessageNumber;
         concurrent::unordered_map<uint32_t, uint64_t> m_rsiInboundFingerprint;
+        concurrent::unordered_map<uint32_t, bool> m_dliRegistered;
 
         bool m_allowNoUKEKRekey;
 
@@ -163,7 +164,8 @@ namespace network
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
         UInt8Array processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize,
-            uint8_t algoId = P25DEF::ALGO_UNENCRYPT, uint16_t kid = 0U, const uint8_t* mi = nullptr);
+            uint8_t algoId = P25DEF::ALGO_UNENCRYPT, uint16_t kid = 0U, const uint8_t* mi = nullptr,
+            bool dataLinkIndependent = false);
 
         /**
          * @brief Helper used to return a Rekey-Command KMM to the calling SU.
