@@ -420,10 +420,10 @@ bool Network::open()
     m_status = NET_STAT_WAITING_CONNECT;
 
     // are we rotating IPs for HA reconnect?
-    if ((m_haIPs.size() - 1) > 1 && m_retryCount > 0U && !m_flaggedDuplicateConn &&
+    if (m_haIPs.size() > 1U && m_retryCount > 0U && !m_flaggedDuplicateConn &&
         m_maxRetryCount == MAX_RETRY_HA_RECONNECT) {
 
-        if (m_currentHAIP > (m_haIPs.size() - 1)) {
+        if (m_currentHAIP >= m_haIPs.size()) {
             m_currentHAIP = 0U;
         }
 
@@ -435,7 +435,7 @@ bool Network::open()
         m_address = entry.masterAddress;
         m_port = entry.masterPort;
 
-        LogInfoEx(LOG_NET, "PEER %u trying HA IP %s:%u", m_peerId, m_haIPs[m_currentHAIP].masterAddress.c_str(), m_haIPs[m_currentHAIP].masterPort);
+        LogInfoEx(LOG_NET, "PEER %u trying HA IP %s:%u", m_peerId, entry.masterAddress.c_str(), entry.masterPort);
     }
 
     m_timeoutTimer.start();
