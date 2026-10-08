@@ -416,6 +416,16 @@ bool Data::process(uint8_t* data, uint32_t len)
 
 bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uint32_t blockLength, uint16_t totalBlocks)
 {
+    // validate network block framing
+    bool rfAccepted = true;
+    if (data == nullptr || blockLength != P25_PDU_FEC_LENGTH_BYTES ||
+        len < (24U + blockLength) || totalBlocks == 0U ||
+        totalBlocks > P25_MAX_PDU_BLOCKS || currentBlock >= totalBlocks) {
+        LogError(LOG_NET, P25_PDU_STR ", invalid network block framing, block/length/total/input = %u/%u/%u/%u",
+            currentBlock, blockLength, totalBlocks, len);
+        return false;
+    }
+
     if (m_p25->m_netState != RS_NET_DATA) {
         m_p25->m_netState = RS_NET_DATA;
         m_inbound = false;
@@ -426,11 +436,29 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
 
     m_p25->m_networkWatchdog.start();
 
+    // check for inconsistent total block count
+    if (m_netDataBlockCnt > 0U && m_netTotalBlocks != totalBlocks) {
+        LogError(LOG_NET, P25_PDU_STR ", inconsistent total block count, received/expected = %u/%u",
+            totalBlocks, m_netTotalBlocks);
+        return false;
+    }
+
+    // check for duplicate received blocks
+    auto existing = m_netReceivedBlocks.find(currentBlock);
+    if (existing != m_netReceivedBlocks.end()) {
+        if (::memcmp(existing->second, data + 24U, blockLength) != 0) {
+            LogError(LOG_NET, P25_PDU_STR ", conflicting duplicate block %u", currentBlock);
+            return false;
+        }
+        LogInfoEx(LOG_NET, P25_PDU_STR ", ignoring identical duplicate block %u", currentBlock);
+        return true;
+    }
+
     // store the received block
     uint8_t* blockData = new uint8_t[blockLength];
     ::memcpy(blockData, data + 24U, blockLength);
-    m_netReceivedBlocks[currentBlock] = blockData;
-    m_netDataBlockCnt++;
+    m_netReceivedBlocks.emplace(currentBlock, blockData);
+    m_netDataBlockCnt = (uint16_t)m_netReceivedBlocks.size();
     m_netTotalBlocks = totalBlocks;
 
     if (m_p25->m_netState == RS_NET_DATA) {
@@ -558,7 +586,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
                                     }
                                 }
 
-                                writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
+                                rfAccepted = writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
                             }
                             break;
                             default:
@@ -569,7 +597,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
                                     LogInfoEx(LOG_NET, P25_PDU_STR ", transmitting network PDU, llId = %u", (m_netAssembler->getExtendedAddress()) ? m_netAssembler->dataHeader.getSrcLLId() : m_netAssembler->dataHeader.getLLId());
                                 }
 
-                                writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
+                                rfAccepted = writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
 
                                 ::ActivityLog("P25", false, "end of Net data transmission");
                                 break;
@@ -588,7 +616,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
         }
     }
 
-    return true;
+    return rfAccepted;
 }
 
 /* Helper to reset received network blocks. */
@@ -609,7 +637,7 @@ void Data::resetReceivedBlocks()
 
 /* Helper to write user data as a P25 PDU packet. */
 
-void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm)
+bool Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm)
 {
     assert(pduUserData != nullptr);
 
@@ -619,7 +647,7 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
     UInt8Array data = m_rfAssembler->assemble(dataHeader, extendedAddress, auxiliaryES, pduUserData, &bitLength);
 
     bool trackRetry = dataHeader.getFormat() == PDUFormatType::CONFIRMED && dataHeader.getAckNeeded();
-    writeRF_PDU(data.get(), bitLength, imm, false, dataHeader.getLLId(), trackRetry);
+    return writeRF_PDU(data.get(), bitLength, imm, false, dataHeader.getLLId(), trackRetry);
 }
 
 /* Helper to write user data as a P25 PDU packet. */
@@ -940,7 +968,7 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_
 
 /* Helper to write a P25 PDU packet. */
 
-void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry,
+bool Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry,
     uint32_t retryLlId, bool trackRetry)
 {
     assert(pdu != nullptr);
@@ -960,7 +988,7 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
         LogError(LOG_RF, P25_PDU_STR ", OSP frame exceeds native modem limit, blocks/bitLength/airBytes = %u/%u/%u",
             (bitLength > P25_PREAMBLE_LENGTH_BITS) ? ((bitLength - P25_PREAMBLE_LENGTH_BITS) / P25_PDU_FEC_LENGTH_BITS) - 1U : 0U,
             bitLength, newByteLength);
-        return;
+        return false;
     }
 
     m_p25->writeRF_TDU(true, imm);
@@ -994,25 +1022,27 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
 
     //Utils::dump("P25, Data::writeRF_PDU(), Raw PDU OSP", data, newByteLength + 2U);
 
+    bool queued = false;
     if (m_p25->m_duplex) {
         data[0U] = modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        m_p25->addFrame(data, newByteLength + 2U, false, imm);
+        queued = m_p25->addFrame(data, newByteLength + 2U, false, imm);
     }
 
     m_p25->writeRF_TDU(true, imm);
+    return queued;
 }
 
 /* Helper to write a network P25 PDU packet. */
 
-void Data::writeNet_PDU_Buffered()
+bool Data::writeNet_PDU_Buffered()
 {
     uint32_t bitLength = 0U;
     UInt8Array data = m_rfAssembler->assemble(m_netAssembler->dataHeader, m_netAssembler->getExtendedAddress(), m_netAssembler->getAuxiliaryES(), m_netPduUserData, &bitLength);
     bool trackRetry = m_netAssembler->dataHeader.getFormat() == PDUFormatType::CONFIRMED && m_netAssembler->dataHeader.getAckNeeded();
 
-    writeRF_PDU(data.get(), bitLength, false, false, m_netAssembler->dataHeader.getLLId(), trackRetry);
+    return writeRF_PDU(data.get(), bitLength, false, false, m_netAssembler->dataHeader.getLLId(), trackRetry);
 }
 
 /* Helper to re-write a received P25 PDU packet. */

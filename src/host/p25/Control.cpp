@@ -1380,7 +1380,7 @@ uint32_t Control::getLastSrcId() const
 
 /* Add data frame to the data ring buffer. */
 
-void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
+bool Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 {
     assert(data != nullptr);
 
@@ -1388,10 +1388,10 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 
     if (!net) {
         if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired())
-            return;
+            return false;
     } else {
         if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired())
-            return;
+            return false;
     }
 
     if (m_debug) {
@@ -1406,16 +1406,16 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
     if (imm) {
         // resize immediate queue if necessary (this shouldn't really ever happen)
         uint32_t space = m_txImmQueue.freeSpace();
-        if (space < (length + 1U)) {
+        if (space < (length + 2U)) {
             if (!net) {
                 uint32_t queueLen = m_txImmQueue.length();
                 m_txImmQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
                 LogError(LOG_P25, "overflow in the P25 queue while writing imm data; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", space, length, queueLen, m_txImmQueue.length(), fifoSpace);
-                return;
+                return false;
             }
             else {
                 LogError(LOG_P25, "overflow in the P25 queue while writing imm network data; queue free is %u, needed %u, fifoSpace = %u", space, length, fifoSpace);
-                return;
+                return false;
             }
         }
 
@@ -1425,24 +1425,22 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
         else
             lenBuffer[0U] = 0x00U;
         lenBuffer[1U] = length & 0xFFU;
-        m_txImmQueue.addData(lenBuffer, 2U);
 
-        m_txImmQueue.addData(data, length);
-        return;
+        return m_txImmQueue.addData(lenBuffer, 2U) && m_txImmQueue.addData(data, length);
     }
 
     // resize queue if necessary (this shouldn't really ever happen)
     uint32_t space = m_txQueue.freeSpace();
-    if (space < (length + 1U)) {
+    if (space < (length + 2U)) {
         if (!net) {
             uint32_t queueLen = m_txQueue.length();
             m_txQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
             LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", space, length, queueLen, m_txQueue.length(), fifoSpace);
-            return;
+            return false;
         }
         else {
             LogError(LOG_P25, "overflow in the P25 queue while writing network data; queue free is %u, needed %u, fifoSpace = %u", space, length, fifoSpace);
-            return;
+            return false;
         }
     }
 
@@ -1452,9 +1450,8 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
     else
         lenBuffer[0U] = 0x00U;
     lenBuffer[1U] = length & 0xFFU;
-    m_txQueue.addData(lenBuffer, 2U);
 
-    m_txQueue.addData(data, length);
+    return m_txQueue.addData(lenBuffer, 2U) && m_txQueue.addData(data, length);
 }
 
 /* Process a data frames from the network. */

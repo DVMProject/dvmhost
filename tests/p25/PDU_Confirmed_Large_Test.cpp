@@ -20,6 +20,7 @@ using namespace p25::data;
 #include <catch2/catch_test_macros.hpp>
 #include <stdlib.h>
 #include <time.h>
+#include <vector>
 
 TEST_CASE("P25 PDU Confirmed Large Test", "[p25][pdu_confirmed_large]") {
     bool failed = false;
@@ -116,4 +117,46 @@ TEST_CASE("P25 PDU Confirmed Large Test", "[p25][pdu_confirmed_large]") {
     }
 
     REQUIRE(failed==false);
+}
+
+TEST_CASE("P25 PDU assembler safely handles more than twenty encoded blocks",
+    "[p25][pdu][assembler][capacity]")
+{
+    std::vector<uint8_t> source(500U);
+    for (size_t i = 0U; i < source.size(); i++)
+        source[i] = (uint8_t)i;
+
+    DataHeader header;
+    header.setFormat(PDUFormatType::CONFIRMED);
+    header.setMFId(MFG_STANDARD);
+    header.setAckNeeded(true);
+    header.setOutbound(true);
+    header.setSAP(PDUSAP::USER_DATA);
+    header.setLLId(0x12345U);
+    header.setFullMessage(true);
+    header.calculateLength((uint32_t)source.size());
+    REQUIRE(header.getBlocksToFollow() > 20U);
+
+    Assembler encoder;
+    uint32_t bitLength = 0U;
+    UInt8Array encoded = encoder.assemble(header, false, false, source.data(), &bitLength);
+    REQUIRE(encoded != nullptr);
+
+    Assembler decoder;
+    uint8_t block[P25_PDU_FEC_LENGTH_BYTES] = { 0U };
+    uint32_t blockCount = 0U;
+    for (uint32_t offset = P25_PREAMBLE_LENGTH_BITS; offset < bitLength;
+        offset += P25_PDU_FEC_LENGTH_BITS, blockCount++) {
+        Utils::getBitRange(encoded.get(), block, offset, P25_PDU_FEC_LENGTH_BITS);
+        REQUIRE(decoder.disassemble(block, sizeof(block), blockCount == 0U));
+    }
+
+    REQUIRE(decoder.getComplete());
+    REQUIRE(decoder.getUserDataLength() == source.size());
+    std::vector<uint8_t> decoded(source.size());
+    decoder.getUserData(decoded.data());
+    CHECK(decoded == source);
+
+    Assembler invalidLength;
+    CHECK_FALSE(invalidLength.disassemble(block, sizeof(block) - 1U, true));
 }

@@ -83,7 +83,7 @@ P25PacketData::P25PacketData(TrafficNetwork* network, TagP25Data* tag, bool debu
 
     m_assembler = new data::Assembler();
     m_assembler->setBlockWriter([](const void* userContext, const uint8_t currentBlock, const uint8_t *data, uint32_t len, bool lastBlock) {
-        const UserContext* context = static_cast<const UserContext*>(userContext);
+        UserContext* context = const_cast<UserContext*>(static_cast<const UserContext*>(userContext));
         if (context == nullptr) {
             return;
         }
@@ -93,8 +93,9 @@ P25PacketData::P25PacketData(TrafficNetwork* network, TagP25Data* tag, bool debu
             return;
         }
 
-        packetData->writeNetwork(context->peerId, context->srcPeerId, context->peerNet, *(context->header), 
-            currentBlock, data, len, context->pktSeq, context->streamId);
+        if (!packetData->writeNetwork(context->peerId, context->srcPeerId, context->peerNet, *(context->header),
+            currentBlock, data, len, context->pktSeq, context->streamId))
+            context->success = false;
     });
 }
 
@@ -110,6 +111,12 @@ P25PacketData::~P25PacketData()
 
 bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
 {
+    // validate the incoming network data frame
+    if (data == nullptr || len < 24U) {
+        LogError(LOG_P25, P25_PDU_STR ", truncated network PDU header, len = %u", len);
+        return false;
+    }
+
     hrc::hrc_t pktTime = hrc::now();
 
     uint8_t totalBlocks = data[20U] + 1U;
@@ -170,9 +177,19 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     status->lastPacket = hrc::now();
     m_status.unlock();
 
-    // make sure we don't get a PDU with more blocks then we support
-    if (currentBlock >= P25_MAX_PDU_BLOCKS || status->totalBlocks > P25_MAX_PDU_BLOCKS) {
+    // network PDU messages always carry one 25-byte encoded CAI block after
+    // their 24-byte metadata header -- reject inconsistent framing before copy
+    if (blockLength != P25_PDU_FEC_LENGTH_BYTES || len < (24U + blockLength) ||
+        totalBlocks == 0U || currentBlock >= totalBlocks ||
+        currentBlock >= P25_MAX_PDU_BLOCKS || status->totalBlocks > P25_MAX_PDU_BLOCKS) {
         LogError(LOG_P25, P25_PDU_STR ", too many PDU blocks to process, %u > %u", currentBlock, P25_MAX_PDU_BLOCKS);
+        return false;
+    }
+
+    // check for inconsistent total block count
+    if (status->dataBlockCnt > 0U && status->totalBlocks != totalBlocks) {
+        LogError(LOG_P25, P25_PDU_STR ", inconsistent total block count, received/expected = %u/%u",
+            totalBlocks, status->totalBlocks);
         return false;
     }
 
@@ -180,10 +197,20 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         currentBlock, peerId, blockLength);
 
     // store the received block
+    auto existing = status->receivedBlocks.find(currentBlock);
+    if (existing != status->receivedBlocks.end()) {
+        if (::memcmp(existing->second, data + 24U, blockLength) != 0) {
+            LogError(LOG_P25, P25_PDU_STR ", conflicting duplicate block %u", currentBlock);
+            return false;
+        }
+        LogInfoEx(LOG_P25, P25_PDU_STR ", ignoring identical duplicate block %u", currentBlock);
+        return true;
+    }
+
     uint8_t* blockData = new uint8_t[blockLength];
     ::memcpy(blockData, data + 24U, blockLength);
-    status->receivedBlocks[currentBlock] = blockData;
-    status->dataBlockCnt++;
+    status->receivedBlocks.emplace(currentBlock, blockData);
+    status->dataBlockCnt = (uint16_t)status->receivedBlocks.size();
 
     totalBlocks = status->totalBlocks;
     if (status->dataBlockCnt == totalBlocks) {
@@ -413,7 +440,7 @@ void P25PacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, ui
 
 /* Helper used to return a KMM to the calling SU. */
 
-void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint8_t algId, uint16_t kId, const uint8_t* mi)
+bool P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint8_t algId, uint16_t kId, const uint8_t* mi)
 {
     // assemble a P25 PDU frame header for transport...
     data::DataHeader dataHeader = data::DataHeader();
@@ -429,7 +456,7 @@ void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t ll
     if (encrypted) {
         if (mi == nullptr) {
             LogError(LOG_P25, P25_PDU_STR ", missing MI for encrypted KMM, llId = %u", llId);
-            return;
+            return false;
         }
 
         dataHeader.setEXSAP(PDUSAP::UNENC_KMM);
@@ -445,7 +472,7 @@ void P25PacketData::write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t ll
     DECLARE_UINT8_ARRAY(pduUserData, pduLength);
     ::memcpy(pduUserData, data, len);
 
-    dispatchUserFrameToFNE(dataHeader, false, auxiliaryES, pduUserData);
+    return dispatchUserFrameToFNE(dataHeader, false, auxiliaryES, pduUserData);
 }
 
 /* Updates the timer by the passed number of milliseconds. */
@@ -511,9 +538,25 @@ void P25PacketData::clock(uint32_t ms)
     LogInfoEx(LOG_P25, "VTUN -> PDU IP Data (queued), dstIp = %s (%u), userDataLen = %u, proto = %02X%s, retries = %u",
         targetIP.c_str(), packet->llId, uint32_t(packet->userData.size()), protocol,
         (protocol == 0x01U) ? " (ICMP)" : "", packet->retryCount);
-    m_dataLinkManager.setReady(packet->llId, false);
-    dispatchUserFrameToFNE(packet->header, false, false, packet->userData.data());
-    m_packetScheduler.pop();
+
+    const bool confirmed = packet->header.getFormat() == PDUFormatType::CONFIRMED;
+    if (confirmed)
+        m_dataLinkManager.setReady(packet->llId, false);
+
+    if (dispatchUserFrameToFNE(packet->header, false, false, packet->userData.data())) {
+        m_packetScheduler.pop();
+    }
+    else {
+        if (confirmed)
+            m_dataLinkManager.setReady(packet->llId, true);
+
+        packet->dueAt = now + SUBSCRIBER_READY_RETRY_MS;
+        packet->retryCount++;
+        m_packetScheduler.rotate();
+
+        LogWarning(LOG_P25, P25_PDU_STR ", downlink dispatch rejected, dstIp = %s (%u), retry = %u",
+            targetIP.c_str(), packet->llId, packet->retryCount);
+    }
 #endif // !defined(_WIN32)
 }
 
@@ -569,8 +612,9 @@ void P25PacketData::dispatch(uint32_t peerId)
                 peerId, status->assembler.dataHeader.getFormat(), status->assembler.dataHeader.getResponseClass(), status->assembler.dataHeader.getResponseType(), status->assembler.dataHeader.getResponseStatus(),
                 status->assembler.dataHeader.getLLId(), status->assembler.dataHeader.getSrcLLId());
 
-        // bryanb: this is naive and possibly error prone
-        m_dataLinkManager.setReady(status->assembler.dataHeader.getSrcLLId(), true);
+        const uint32_t responseLlId = status->assembler.getExtendedAddress() ? status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
+        if (responseLlId != 0U)
+            m_dataLinkManager.setReady(responseLlId, true);
 
         if (status->assembler.dataHeader.getResponseClass() == PDUAckClass::ACK && status->assembler.dataHeader.getResponseType() == PDUAckType::ACK) {
             LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, response, OSP ACK, peer = %u, llId = %u, all blocks received OK, n = %u",
@@ -605,8 +649,13 @@ void P25PacketData::dispatch(uint32_t peerId)
         return;
     }
 
+    // handle unconfirmed PDU format and set the data link manager ready state if necessary
     if (status->assembler.dataHeader.getFormat() == PDUFormatType::UNCONFIRMED) {
-        m_dataLinkManager.setReady(status->assembler.dataHeader.getSrcLLId(), true);
+        const uint32_t responseLlId = status->assembler.getExtendedAddress() ?
+            status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
+
+        if (responseLlId != 0U)
+            m_dataLinkManager.setReady(responseLlId, true);
     }
 
     // do not route or inject incomplete/invalid confirmed payloads -- the empty
@@ -629,9 +678,9 @@ void P25PacketData::dispatch(uint32_t peerId)
     if (status->assembler.getAuxiliaryES())
         sap = status->assembler.dataHeader.getEXSAP();
 
-    // The peer is the only channel identity carried at this boundary. Preserve
-    // unknown channel fields as zero until peer metadata supplies them. A
-    // registration establishes location only after the binding is accepted.
+    // the peer is the only channel identity carried at this boundary -- preserve
+    // unknown channel fields as zero until peer metadata supplies them, a
+    // registration establishes location only after the binding is accepted
     if (sap != PDUSAP::CONV_DATA_REG && m_locationRegistry.learnFromInbound()) {
         uint32_t inboundLlId = status->assembler.getExtendedAddress() ?
             status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
@@ -952,7 +1001,7 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
 
 /* Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to neighbor FNE peers.) */
 
-void P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData)
+bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData)
 {
     uint32_t srcId = (extendedAddress) ? dataHeader.getSrcLLId() : dataHeader.getLLId();
     uint32_t dstId = dataHeader.getLLId();
@@ -972,9 +1021,10 @@ void P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
             routes.push_back(route);
     }
 
+    // if no routes are available, log a warning and return false
     if (routes.empty()) {
         LogWarning(LOG_P25, P25_PDU_STR ", no RF route for downlink, llId = %u", dstId);
-        return;
+        return false;
     }
 
     // update V(S) only after a usable RF route has been selected
@@ -985,17 +1035,18 @@ void P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
     dataHeader.setNs(sendSequence);
 
     // dispatch the user frame to each resolved RF route
+    bool dispatched = false;
     for (const DataRoute& route : routes) {
         auto localPeer = m_network->m_peers.find(route.peerId);
         if (localPeer != m_network->m_peers.end()) {
-            write_PDU_User(route.peerId, m_network->m_peerId, nullptr, dataHeader,
-                extendedAddress, auxiliaryES, pduUserData);
+            dispatched = write_PDU_User(route.peerId, m_network->m_peerId, nullptr, dataHeader,
+                extendedAddress, auxiliaryES, pduUserData) || dispatched;
         }
         else {
             for (const auto& peer : m_network->m_host->m_peerNetworks) {
                 if (peer.second->getPeerId() == route.peerId && peer.second->isEnabled()) {
-                    write_PDU_User(route.peerId, m_network->m_peerId, peer.second,
-                        dataHeader, extendedAddress, auxiliaryES, pduUserData);
+                    dispatched = write_PDU_User(route.peerId, m_network->m_peerId, peer.second,
+                        dataHeader, extendedAddress, auxiliaryES, pduUserData) || dispatched;
                     break;
                 }
             }
@@ -1006,6 +1057,7 @@ void P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
                 route.peerId, DUID::PDU, srcId, dstId);
         }
     }
+    return dispatched;
 }
 
 /* Helper used to process conventional data registration from PDU data. */
@@ -1422,7 +1474,7 @@ void P25PacketData::write_PDU_ARP_Reply(uint32_t targetAddr, uint32_t requestorL
 
 /* Helper to write user data as a P25 PDU packet. */
 
-void P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, data::DataHeader& dataHeader,
+bool P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, data::DataHeader& dataHeader,
     bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData)
 {
     uint32_t streamId = m_network->createStreamId();
@@ -1439,9 +1491,13 @@ void P25PacketData::write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network:
     context->header = new data::DataHeader(dataHeader);
     context->pktSeq = pktSeq;
     context->streamId = streamId;
+    context->success = true;
 
     m_assembler->assemble(dataHeader, extendedAddress, auxiliaryES, pduUserData, nullptr, context);
+    const bool success = context->success;
+    delete context->header;
     delete context;
+    return success;
 }
 
 /* Write data processed to the network. */

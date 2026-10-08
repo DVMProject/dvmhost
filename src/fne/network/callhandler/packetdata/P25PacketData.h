@@ -102,7 +102,7 @@ namespace network
                  * @param kId Encryption Key ID.
                  * @param mi 9-byte Encryption Message Indicator.
                  */
-                void write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted,
+                bool write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted,
                     uint8_t algId = P25DEF::ALGO_UNENCRYPT, uint16_t kId = 0U, const uint8_t* mi = nullptr);
 
                 /**
@@ -127,13 +127,14 @@ namespace network
                  * @ingroup fne_network
                  */
                 struct UserContext {
-                    void* obj;                      //!< Instance of the P25PacketData class.
-                    uint32_t peerId;                //!< Peer ID for this request.
-                    uint32_t srcPeerId;             //!< Source Peer ID for this request.
-                    network::PeerNetwork* peerNet;  //!< Instance of the peer network for an upstream peer.
-                    ::p25::data::DataHeader* header;  //!< PDU data header.
-                    uint16_t pktSeq;                //!< Packet sequence.
-                    uint32_t streamId;              //!< Stream ID.
+                    void* obj;                                  //!< Instance of the P25PacketData class.
+                    uint32_t peerId;                            //!< Peer ID for this request.
+                    uint32_t srcPeerId;                         //!< Source Peer ID for this request.
+                    network::PeerNetwork* peerNet;              //!< Instance of the peer network for an upstream peer.
+                    ::p25::data::DataHeader* header;            //!< PDU data header.
+                    uint16_t pktSeq;                            //!< Packet sequence.
+                    uint32_t streamId;                          //!< Stream ID.
+                    bool success;                               //!< Flag indicating every network block was accepted.
                 };
 
                 P25PacketScheduler m_packetScheduler;
@@ -150,7 +151,7 @@ namespace network
                     uint32_t peerId;                            //!< Peer ID
 
                     std::unordered_map<uint16_t, uint8_t*> receivedBlocks;
-                    ::p25::data::Assembler assembler;             //!< PDU Assembler Instance
+                    ::p25::data::Assembler assembler;           //!< PDU Assembler Instance
                     bool hasRxHeader;                           //!< Flag indicating whether or not a valid Rx header has been received
                     uint16_t dataBlockCnt;                      //!< Number of data blocks received
                     uint16_t totalBlocks;                       //!< Total number of blocks expected
@@ -237,7 +238,7 @@ namespace network
                  * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void dispatchUserFrameToFNE(::p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
+                bool dispatchUserFrameToFNE(::p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
                 /**
                  * @brief Helper used to process conventional data registration from PDU data.
@@ -276,7 +277,7 @@ namespace network
                  * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, ::p25::data::DataHeader& dataHeader,
+                bool write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, ::p25::data::DataHeader& dataHeader,
                     bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
                 /**

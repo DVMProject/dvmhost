@@ -55,8 +55,8 @@ Assembler::Assembler() :
     m_pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
     ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
-    m_rawPDU = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(m_rawPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+    m_rawPDU = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES];
+    ::memset(m_rawPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES);
 }
 
 /* Finalizes a instance of the Assembler class. */
@@ -67,6 +67,8 @@ Assembler::~Assembler()
         delete[] dataBlocks;
     if (m_pduUserData != nullptr)
         delete[] m_pduUserData;
+    if (m_rawPDU != nullptr)
+        delete[] m_rawPDU;
 }
 
 /* Helper to disassemble a P25 PDU frame into user data. */
@@ -74,6 +76,13 @@ Assembler::~Assembler()
 bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool resetState)
 {
     assert(pduBlock != nullptr);
+
+    if (blockLength != P25_PDU_FEC_LENGTH_BYTES) {
+        LogError(LOG_P25, P25_PDU_STR ", invalid encoded block length, %u != %u",
+            blockLength, P25_PDU_FEC_LENGTH_BYTES);
+        resetDisassemblyState();
+        return false;
+    }
 
     if (resetState) {
         resetDisassemblyState();
@@ -125,7 +134,17 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
         return true;
     }
     else {
-        ::memcpy(m_rawPDU + ((m_blockCount - 1U) * blockLength), pduBlock, blockLength);
+        const uint32_t rawOffset = (m_blockCount - 1U) * blockLength;
+        const uint32_t rawCapacity = P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES;
+        if (rawOffset > rawCapacity || blockLength > rawCapacity - rawOffset) {
+            LogError(LOG_P25, P25_PDU_STR ", encoded PDU exceeds assembler capacity, offset/length/capacity = %u/%u/%u",
+                rawOffset, blockLength, rawCapacity);
+            resetDisassemblyState();
+            return false;
+        }
+
+        ::memcpy(m_rawPDU + rawOffset, pduBlock, blockLength);
+
         m_dataOffset += blockLength;
         m_blockCount++;
 
@@ -545,7 +564,7 @@ void Assembler::resetDisassemblyState()
     m_dataOffset = 0U;
 
     ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
-    ::memset(m_rawPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+    ::memset(m_rawPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES);
 
     m_packetCRCFailed = false;
     m_complete = false;

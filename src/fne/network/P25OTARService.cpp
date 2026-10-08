@@ -229,9 +229,10 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
     // The payload is already decrypted. Preserve the outer encryption context so
     // processKMM can construct the encrypted/authenticated NACKs required by
     // AACA-D 6.22 and 7.4 without decrypting the request a second time.
+    std::vector<std::vector<uint8_t>> additionalResponses;
     UInt8Array pduUserData = processKMM(kmmPayload.get(), len, llId, false, &payloadSize,
         encrypted ? resolvedAlgoId : ALGO_UNENCRYPT, encrypted ? resolvedKId : 0U,
-        encrypted ? resolvedMI : nullptr);
+        encrypted ? resolvedMI : nullptr, false, &additionalResponses);
     if (pduUserData == nullptr || payloadSize == 0U) {
         // no OTAR response is required for this message; acknowledge successful processing
         m_packetData->write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, n, llId, false);
@@ -253,18 +254,54 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
         }
     }
 
-    if (responseEncrypted) {
-        // re-encrypt the KMM response
-        pduUserData = cryptKMM(resolvedAlgoId, resolvedKId, resolvedMI, pduUserData.get(), payloadSize, true);
-        if (pduUserData == nullptr) {
-            LogError(LOG_P25, P25_KMM_STR ", unable to encrypt KMM response, algoId = $%02X, kID = $%04X", resolvedAlgoId, resolvedKId);
+    // lambda function to handle dispatching of KMM responses, including encryption if required
+    auto dispatchResponse = [&](const uint8_t* response, uint32_t responseLength) -> bool {
+        uint8_t responseMI[MI_LENGTH_BYTES];
+        ::memset(responseMI, 0x00U, sizeof(responseMI));
+        const uint8_t* outgoing = response;
+
+        UInt8Array encryptedResponse;
+        if (responseEncrypted) {
+            P25Crypto responseCrypto;
+            responseCrypto.generateMI();
+            responseCrypto.getMI(responseMI);
+            encryptedResponse = cryptKMM(resolvedAlgoId, resolvedKId, responseMI, response, responseLength, true);
+            if (encryptedResponse == nullptr)
+                return false;
+
+            outgoing = encryptedResponse.get();
+        }
+
+        return m_packetData->write_PDU_KMM(outgoing, responseLength, llId, responseEncrypted,
+            resolvedAlgoId, resolvedKId, responseEncrypted ? responseMI : nullptr);
+    };
+
+    // dispatch the initial KMM response
+    if (!dispatchResponse(pduUserData.get(), payloadSize)) {
+        if (responseEncrypted) {
+            LogError(LOG_P25, P25_KMM_STR ", unable to encrypt or dispatch KMM response, algoId = $%02X, kID = $%04X", resolvedAlgoId, resolvedKId);
+        }
+        else {
+            LogError(LOG_P25, P25_KMM_STR ", unable to dispatch KMM response, llId = %u", llId);
+        }
+
+        sendNack(PDUAckType::NACK_UNDELIVERABLE);
+        return false;
+    }
+
+    // dispatch any additional Rekey Command responses
+    for (const std::vector<uint8_t>& response : additionalResponses) {
+        if (!dispatchResponse(response.data(), (uint32_t)response.size())) {
+            LogError(LOG_P25, P25_KMM_STR ", unable to dispatch additional Rekey Command, llId = %u", llId);
             sendNack(PDUAckType::NACK_UNDELIVERABLE);
             return false;
         }
     }
 
-    m_packetData->write_PDU_KMM(pduUserData.get(), payloadSize, llId, responseEncrypted,
-        resolvedAlgoId, resolvedKId, resolvedMI);
+    /**
+     * The CAI data-link ACK covers receipt of the triggering request. Each RK3
+     * Rekey Command is acknowledged separately by its Rekey-Acknowledgment.
+     */
     m_packetData->write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, n, llId, false);
     return true;
 }
@@ -396,8 +433,9 @@ void P25OTARService::taskNetworkRx(OTARPacketRequest* req)
             }
 
             uint32_t payloadSize = 0U;
+            std::vector<std::vector<uint8_t>> additionalResponses;
             UInt8Array pduUserData = network->processKMM(buffer.get(), kmmLength, 0U, false, &payloadSize,
-                encrypted ? algoId : ALGO_UNENCRYPT, encrypted ? kid : 0U, encrypted ? mi : nullptr, true);
+                encrypted ? algoId : ALGO_UNENCRYPT, encrypted ? kid : 0U, encrypted ? mi : nullptr, true, &additionalResponses);
             if (pduUserData == nullptr || payloadSize == 0U) {
                 if (network->m_debug)
                     LogDebug(LOG_P25, P25_KMM_STR ", no KMM response generated for network request");
@@ -424,31 +462,47 @@ void P25OTARService::taskNetworkRx(OTARPacketRequest* req)
                 }
             }
 
-            if (responseEncrypted) {
-                // re-encrypt the KMM response
-                pduUserData = network->cryptKMM(algoId, kid, mi, pduUserData.get(), payloadSize, true);
-                if (pduUserData == nullptr) {
-                    LogError(LOG_P25, P25_KMM_STR ", unable to encrypt KMM response, algoId = $%02X, kID = $%04X", algoId, kid);
-                    if (req->buffer != nullptr)
-                        delete[] req->buffer;
-                    delete req;
-                    return;
+            // lambda function to send KMM responses, handling encryption if necessary
+            auto sendResponse = [&](const uint8_t* response, uint32_t responseLength) -> bool {
+                uint8_t responseMI[MI_LENGTH_BYTES] = { 0U };
+                const uint8_t* outgoing = response;
+                UInt8Array encryptedResponse;
+                if (responseEncrypted) {
+                    encryptedResponse = network->cryptKMM(algoId, kid, responseMI, response, responseLength, true);
+                    if (encryptedResponse == nullptr)
+                        return false;
+                    outgoing = encryptedResponse.get();
+                }
+
+                UInt8Array datagram = std::make_unique<uint8_t[]>(responseLength + 14U);
+                ::memset(datagram.get(), 0x00U, responseLength + 14U);
+
+                datagram[0U] = 0U;
+                datagram[1U] = MFG_STANDARD;
+                datagram[2U] = responseEncrypted ? algoId : ALGO_UNENCRYPT;
+                SET_UINT16(responseEncrypted ? kid : 0U, datagram.get(), 3U);
+
+                if (responseEncrypted)
+                    ::memcpy(datagram.get() + 5U, responseMI, MI_LENGTH_BYTES);
+
+                ::memcpy(datagram.get() + 14U, outgoing, responseLength);
+
+                return network->m_frameQueue->write(datagram.get(), responseLength + 14U,
+                    req->address, req->addrLen);
+            };
+
+            // send the initial DLI KMM response
+            if (!sendResponse(pduUserData.get(), payloadSize)) {
+                LogError(LOG_P25, P25_KMM_STR ", unable to send DLI KMM response");
+            }
+            else {
+                for (const std::vector<uint8_t>& response : additionalResponses) {
+                    if (!sendResponse(response.data(), (uint32_t)response.size())) {
+                        LogError(LOG_P25, P25_KMM_STR ", unable to send additional DLI Rekey Command");
+                        break;
+                    }
                 }
             }
-
-            UInt8Array datagram = std::make_unique<uint8_t[]>(payloadSize + 14U);
-            ::memset(datagram.get(), 0x00U, payloadSize + 14U);
-
-            datagram[0U] = 0U; // Version-0 preamble format
-            datagram[1U] = MFG_STANDARD;
-            datagram[2U] = responseEncrypted ? algoId : ALGO_UNENCRYPT;
-            SET_UINT16(responseEncrypted ? kid : 0U, datagram.get(), 3U);
-
-            if (responseEncrypted)
-                ::memcpy(datagram.get() + 5U, mi, MI_LENGTH_BYTES);
-            ::memcpy(datagram.get() + 14U, pduUserData.get(), payloadSize);
-
-            network->m_frameQueue->write(datagram.get(), payloadSize + 14U, req->address, req->addrLen);
         }
 
         if (req->buffer != nullptr)
@@ -522,7 +576,7 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
 /* Helper used to process KMM frames. */
 
 UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize,
-    uint8_t algoId, uint16_t kid, const uint8_t* mi, bool dataLinkIndependent)
+    uint8_t algoId, uint16_t kid, const uint8_t* mi, bool dataLinkIndependent, std::vector<std::vector<uint8_t>>* additionalResponses)
 {
     if (payloadSize != nullptr)
         *payloadSize = 0U;
@@ -640,7 +694,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         return nullptr;
     }
 
-    // bryanb: yay CPP lambdas!
+    // lambda function to create a negative acknowledgment (NACK) for the KMM frame
     auto makeNack = [&](uint8_t status) -> UInt8Array {
         // table 55 requires a NACK to be encrypted and authenticated - prefer
         // the request MAC TEK; when it is unavailable, the outer AES TEK is the
@@ -664,12 +718,13 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
             status, payloadSize, auth);
     };
 
-    if (frame->getMACType() == KMM_MAC::NO_MAC &&
-        (frame->getHasMessageNumber() || !allowsUnauthenticatedKMM(frame->getMessageId()))) {
+    // check if a MAC is required and present for the KMM frame
+    if (frame->getMACType() == KMM_MAC::NO_MAC && (frame->getHasMessageNumber() || !allowsUnauthenticatedKMM(frame->getMessageId()))) {
         LogWarning(LOG_P25, P25_KMM_STR ", MAC required for message type/MN, RSI = %u", frame->getSrcLLId());
         return makeNack(KMM_Status::INVALID_MSG_NUMBER);
     }
 
+    // verify the MAC if it is present
     if (frame->getMACType() != KMM_MAC::NO_MAC) {
         if (frame->getMACType() != KMM_MAC::ENH_MAC || frame->getMACAlgId() != ALGO_AES_256 ||
             (frame->getMACFormat() != KMM_MAC_FORMAT_CBC && frame->getMACFormat() != KMM_MAC_FORMAT_CMAC)) {
@@ -695,6 +750,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         }
     }
 
+    // validate the inbound message number (MN) and maintain a fingerprint for replay protection
     if (frame->getHasMessageNumber()) {
         const uint32_t rsi = frame->getSrcLLId();
         const uint16_t received = frame->getMessageNumber();
@@ -733,6 +789,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
     if (m_rsiMessageNumber.find(llId) == m_rsiMessageNumber.end())
         m_rsiMessageNumber[llId] = 0U;
 
+    // handle the KMM message based on its type
     switch (frame->getMessageId()) {
         case KMM_MessageType::HELLO:
         {
@@ -793,7 +850,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
                         LogInfoEx(LOG_P25, P25_KMM_STR ", %s, no UKEK found for rekey request, llId = %u", kmm->toString().c_str(), llId);
                         return write_KMM_NoService(llId, kmm->getSrcLLId(), payloadSize, auth);
                     } else {
-                        return write_KMM_Rekey_Command(llId, kmm->getSrcLLId(), kmm->getFlag(), payloadSize, auth);
+                        return write_KMM_Rekey_Command(llId, kmm->getSrcLLId(), kmm->getFlag(), payloadSize, auth, additionalResponses);
                     }
                 } else {
                     LogInfoEx(LOG_P25, P25_KMM_STR ", %s, rekey request denied, llId = %u", kmm->toString().c_str(), llId);
@@ -905,7 +962,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 /* Helper used to return a Rekey-Command KMM to the calling SU. */
 
 UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRSI, uint8_t flags, uint32_t* payloadSize,
-    const KMMAuthContext& auth)
+    const KMMAuthContext& auth, std::vector<std::vector<uint8_t>>* additionalResponses)
 {
     uint8_t mi[MI_LENGTH_BYTES];
     ::memset(mi, 0x00U, MI_LENGTH_BYTES);
@@ -932,6 +989,7 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
     uint8_t kekAlgId = P25DEF::ALGO_UNENCRYPT;
     uint16_t kekKId = 0U;
 
+    // Attempt to find the UKEK (User Key Encryption Key) for the given RSI (Rekey Sequence Identifier)
     ::EKCKeyItem keyItem = m_network->m_cryptoLookup->findUKEK(kmmRSI);
     if (!keyItem.isInvalid()) {
         uint8_t keyLength = keyItem.getKey(kekKey);
@@ -996,6 +1054,7 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
         }
     }
 
+    // ensure that a valid MAC TEK (Traffic Encryption Key) has been selected for the KMM response
     if (macTekItem.isInvalid()) {
         LogError(LOG_P25, P25_KMM_STR ", %s, no common AES TEK available for MAC, RSI = %u",
             outKmm.toString().c_str(), kmmRSI);
@@ -1016,6 +1075,7 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
     else
         ks.keyLength(P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
 
+    // iterate through all available AES-256 keys and prepare them for inclusion in the KMM response
     for (EKCKeyItem keyItem : m_network->m_cryptoLookup->keys()) {
         if (keyItem.algId() != ALGO_AES_256) {
             LogWarning(LOG_P25, P25_KMM_STR", %s, ignoring kId = %u, is not an AES-256 key, llId = %u, RSI = %u", outKmm.toString().c_str(),
@@ -1061,32 +1121,82 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
         return nullptr;
     }
 
-    std::vector<KeysetItem> keysets;
-    keysets.push_back(ks);
+    // AACA-D permits a multi-KMM response and defines the D bit as
+    // "more to follow". Emit independently authenticated RK3 Rekey Commands,
+    // each with its own monotonically increasing MN and no more than four
+    // wrapped keys. Each command is answered by its own Rekey-Acknowledgment.
+    static constexpr size_t MAX_KEYS_PER_REKEY = 4U;
+    static constexpr uint32_t MAX_NATIVE_ENCRYPTED_KMM_LENGTH = (19U * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES) - 13U - 4U;
+    const std::vector<p25::kmm::KeyItem> keys = ks.keys();
+    const size_t batchCount = (keys.size() + MAX_KEYS_PER_REKEY - 1U) / MAX_KEYS_PER_REKEY;
+    UInt8Array firstFrame;
 
-    outKmm.setKeysets(keysets);
+    // prepare to batch keys into multiple RK3 Rekey Commands if necessary
+    if (additionalResponses != nullptr)
+        additionalResponses->clear();
 
-    if (outKmm.fullLength() > 512U) {
-        LogError(LOG_P25, P25_KMM_STR ", %s, rekey exceeds AACA-D DLD maximum, len = %u, llId = %u, RSI = %u",
-            outKmm.toString().c_str(), outKmm.fullLength(), outKmm.getSrcLLId(), outKmm.getDstLLId());
-        return nullptr;
+    // iterate over each batch of keys and construct the corresponding RK3 Rekey Command
+    for (size_t batchIndex = 0U; batchIndex < batchCount; batchIndex++) {
+        KeysetItem batchKeyset;
+        batchKeyset.keysetId(ks.keysetId());
+        batchKeyset.algId(ks.algId());
+        batchKeyset.keyLength(ks.keyLength());
+
+        const size_t begin = batchIndex * MAX_KEYS_PER_REKEY;
+        const size_t end = std::min(begin + MAX_KEYS_PER_REKEY, keys.size());
+        for (size_t i = begin; i < end; i++)
+            batchKeyset.push_back(keys[i]);
+
+        // KMMRekeyCommand owns its MI buffer and is intentionally built per
+        // packet here -- do not copy outKmm: the KMM classes are not
+        // safely copyable, and every RK3 is an independent authenticated KMM
+        KMMRekeyCommand batch;
+        batch.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+        batch.setSrcLLId(WUID_FNE);
+        batch.setDstLLId(kmmRSI);
+        batch.setMACType(KMM_MAC::ENH_MAC);
+        batch.setMACFormat(auth.authenticated ? auth.format : KMM_MAC_FORMAT_CBC);
+        batch.setHasMessageNumber(true);
+        batch.setAlgId(kekAlgId);
+        batch.setKId(kekKId);
+        batch.setMACAlgId(macTekItem.algId());
+        batch.setMACKId((uint16_t)macTekItem.kId());
+        batch.setKeysets(std::vector<KeysetItem>{batchKeyset});
+        batch.setMessageNumber((uint16_t)(mn + batchIndex));
+        batch.setComplete((batchIndex + 1U) == batchCount);
+
+        // check if the frame length exceeds the maximum allowed native encrypted KMM length
+        const uint32_t frameLength = batch.fullLength();
+        if (frameLength > MAX_NATIVE_ENCRYPTED_KMM_LENGTH) {
+            LogError(LOG_P25, P25_KMM_STR ", %s, four-key rekey batch exceeds native PDU transport, len/max = %u/%u, llId = %u, RSI = %u",
+                batch.toString().c_str(), frameLength, MAX_NATIVE_ENCRYPTED_KMM_LENGTH,
+                batch.getSrcLLId(), batch.getDstLLId());
+            return write_KMM_NoService(llId, kmmRSI, payloadSize, auth);
+        }
+
+        std::vector<uint8_t> encoded(frameLength, 0x00U);
+        batch.encode(encoded.data());
+        batch.generateMAC(macTek, encoded.data());
+
+        if (m_verbose) {
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u, batch = %u/%u, keyCount = %u, moreToFollow = %u",
+                batch.toString().c_str(), batch.getSrcLLId(), batch.getDstLLId(), uint32_t(batchIndex + 1U),
+                uint32_t(batchCount), uint32_t(end - begin), batch.getComplete() ? 0U : 1U);
+        }
+
+        if (batchIndex == 0U) {
+            if (payloadSize != nullptr)
+                *payloadSize = frameLength;
+            firstFrame = std::make_unique<uint8_t[]>(frameLength);
+            ::memcpy(firstFrame.get(), encoded.data(), frameLength);
+        }
+        else if (additionalResponses != nullptr) {
+            additionalResponses->push_back(std::move(encoded));
+        }
     }
 
-    if (m_verbose) {
-        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u, keyCount = %u", outKmm.toString().c_str(),
-            outKmm.getSrcLLId(), outKmm.getDstLLId(), ks.keys().size());
-    }
-
-    const uint32_t frameLength = outKmm.fullLength();
-    if (payloadSize != nullptr)
-        *payloadSize = frameLength;
-
-    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(frameLength);
-    outKmm.encode(kmmFrame.get());
-    outKmm.generateMAC(macTek, kmmFrame.get());
-
-    m_rsiMessageNumber[llId] = (uint16_t)(mn + 1U);
-    return kmmFrame;
+    m_rsiMessageNumber[llId] = (uint16_t)(mn + batchCount);
+    return firstFrame;
 }
 
 /* Helper used to return a Registration-Command KMM to the calling SU. */

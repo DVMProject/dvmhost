@@ -99,6 +99,15 @@ public:
         uint8_t outerAlgoId = P25DEF::ALGO_UNENCRYPT, uint16_t outerKId = 0U,
         bool dataLinkIndependent = false);
     /**
+     * @brief Builds an OTAR rekey command for the specified logical link ID and KMM RSI.
+     * @param network The TrafficNetwork instance.
+     * @param llId The logical link ID.
+     * @param kmmRSI The KMM RSI value.
+     * @return A vector of vectors containing the OTAR rekey frames.
+     */
+    static std::vector<std::vector<uint8_t>> buildOTARRekey(network::TrafficNetwork& network,
+        uint32_t llId, uint32_t kmmRSI);
+    /**
      * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
      * @param network The TrafficNetwork that owns the OTAR service.
      * @param packet Encoded DLD bytes.

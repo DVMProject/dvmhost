@@ -161,11 +161,16 @@ namespace network
          * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
          * @param llId Logical Link ID.
          * @param[out] payloadSize Size of the returned KMM payload.
+         * @param algoId Algorithm ID.
+         * @param kid Key ID.
+         * @param mi Message Indicator.
+         * @param dataLinkIndependent Flag indicating whether the KMM frame is data-link independent.
+         * @param additionalResponses Optional container for additional KMM responses.
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
         UInt8Array processKMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted, uint32_t* payloadSize,
             uint8_t algoId = P25DEF::ALGO_UNENCRYPT, uint16_t kid = 0U, const uint8_t* mi = nullptr,
-            bool dataLinkIndependent = false);
+            bool dataLinkIndependent = false, std::vector<std::vector<uint8_t>>* additionalResponses = nullptr);
 
         /**
          * @brief Helper used to return a Rekey-Command KMM to the calling SU.
@@ -174,10 +179,11 @@ namespace network
          * @param flags Hello KMM flags.
          * @param[out] payloadSize Size of the returned KMM payload.
          * @param auth Authentication context containing MAC/MN fields to mirror.
+         * @param additionalResponses Optional container for additional KMM responses.
          * @returns UInt8Array Buffer containing the processed KMM frame (if any).
          */
         UInt8Array write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRSI, uint8_t flags, uint32_t* payloadSize,
-            const KMMAuthContext& auth);
+            const KMMAuthContext& auth, std::vector<std::vector<uint8_t>>* additionalResponses = nullptr);
 
         /**
          * @brief Helper used to return a Registration-Command KMM to the calling SU.

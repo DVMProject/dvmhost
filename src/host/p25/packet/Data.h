@@ -86,7 +86,7 @@ namespace p25
              * @param pduUserData Buffer containing user data to transmit.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              */
-            void writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm = false);
+            bool writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm = false);
             /**
              * @brief Helper to write user data as a P25 PDU packet.
              * @param dataHeader Instance of a PDU data header.
@@ -219,14 +219,16 @@ namespace p25
              * @param bitlength Length of PDU in bits.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              * @param ackRetry Flag indicating the PDU is being sent as an acknowledged retry.
+             * @param retryLlId Logical Link ID for retrying the PDU.
+             * @param trackRetry Flag indicating whether or not to track the retry.
              */
-            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false,
-                bool ackRetry = false, uint32_t retryLlId = 0U, bool trackRetry = false);
+            bool writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false, bool ackRetry = false,
+                uint32_t retryLlId = 0U, bool trackRetry = false);
             /**
              * @brief Helper to write a network P25 PDU packet.
              * This will take buffered network PDU data and repeat it over the air.
              */
-            void writeNet_PDU_Buffered();
+            bool writeNet_PDU_Buffered();
             /**
              * @brief Helper to re-write a received P25 PDU packet.
              * This will take buffered received PDU data and repeat it over the air.

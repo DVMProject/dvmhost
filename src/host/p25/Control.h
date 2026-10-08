@@ -434,7 +434,7 @@ namespace p25
          * @param net Flag indicating whether the data came from the network or not
          * @param imm Flag indicating whether or not the data is priority and is added to the immediate queue.
          */
-        void addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
+        bool addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
 
         /**
          * @brief Process a data frames from the network.

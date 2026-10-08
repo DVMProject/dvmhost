@@ -95,6 +95,37 @@ std::unique_ptr<uint8_t[]> FNETestHooks::processOTARKMM(TrafficNetwork& network,
 }
 
 /**
+ * @brief Builds an OTAR rekey command for the specified logical link ID and KMM RSI.
+ * @param network The TrafficNetwork instance.
+ * @param llId The logical link ID.
+ * @param kmmRSI The KMM RSI value.
+ * @return A vector of vectors containing the OTAR rekey frames.
+ */
+std::vector<std::vector<uint8_t>> FNETestHooks::buildOTARRekey(TrafficNetwork& network,
+    uint32_t llId, uint32_t kmmRSI)
+{
+    std::vector<std::vector<uint8_t>> frames;
+    if (network.m_p25OTARService == nullptr)
+        return frames;
+
+    P25OTARService::KMMAuthContext auth;
+    uint32_t firstLength = 0U;
+    std::vector<std::vector<uint8_t>> additional;
+    const bool previousAllowClear = network.m_p25OTARService->m_allowNoUKEKRekey;
+    network.m_p25OTARService->m_allowNoUKEKRekey = true;
+    UInt8Array first = network.m_p25OTARService->write_KMM_Rekey_Command(llId, kmmRSI,
+        KMM_HelloFlag::REKEY_REQUEST_NO_UKEK, &firstLength, auth, &additional);
+    network.m_p25OTARService->m_allowNoUKEKRekey = previousAllowClear;
+    if (first == nullptr || firstLength == 0U)
+        return frames;
+
+    frames.emplace_back(first.get(), first.get() + firstLength);
+    for (std::vector<uint8_t>& frame : additional)
+        frames.push_back(std::move(frame));
+    return frames;
+}
+
+/**
  * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
  * @param network The TrafficNetwork instance.
  * @param packet The DLD packet data.

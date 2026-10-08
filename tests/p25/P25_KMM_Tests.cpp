@@ -17,6 +17,7 @@
 #include "common/p25/kmm/KMMNoService.h"
 #include "common/p25/kmm/KMMNegativeAck.h"
 #include "common/p25/kmm/KMMRekeyAck.h"
+#include "common/p25/kmm/KMMRekeyCommand.h"
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 #include "common/lookups/RadioIdLookup.h"
@@ -520,6 +521,57 @@ TEST_CASE("P25 OTAR DLI validates its Version-0 preamble and dispatches KMM", "[
         datagram.resize(14U + 466U, 0U);
         FNETestHooks::processOTARDLI(harness.traffic, datagram);
         REQUIRE_FALSE(FNETestHooks::hasOTARInboundMessageNumber(harness.traffic, SU_RSI, MN));
+    }
+}
+
+TEST_CASE("P25 OTAR Rekey Commands batch four keys per KMM", "[p25][kmm][otar][rekey]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    std::vector<uint16_t> allowed;
+
+    for (uint16_t i = 0U; i < 9U; i++) {
+        EKCKeyItem key;
+        key.id(i + 1U);
+        key.algId(ALGO_AES_256);
+        key.kId((uint16_t)(0x2000U + i));
+        key.sln((uint16_t)(0x0100U + i));
+        key.keyMaterial("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F");
+        FNETestHooks::addCryptoKey(harness.traffic, key);
+        allowed.push_back((uint16_t)key.kId());
+    }
+
+    EKCKeyItem ukek;
+    ukek.id(100U);
+    ukek.rsiId(SU_RSI);
+    ukek.algId(ALGO_AES_256);
+    ukek.kId(0x1001U);
+    ukek.sln(0x0002U);
+    ukek.keyMaterial("101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F");
+    FNETestHooks::addCryptoKey(harness.traffic, ukek);
+    harness.rid.addEntry(SU_RSI, true, "batch-test", "", true, true, allowed);
+
+    std::vector<std::vector<uint8_t>> frames =
+        FNETestHooks::buildOTARRekey(harness.traffic, SU_RSI, SU_RSI);
+    REQUIRE(frames.size() == 3U);
+
+    const uint32_t expectedCounts[] = { 4U, 4U, 1U };
+    for (size_t i = 0U; i < frames.size(); i++) {
+        REQUIRE(frames[i].size() >= 3U);
+        const uint32_t declaredLength = (((uint32_t)frames[i][1U] << 8U) | frames[i][2U]) + 3U;
+        REQUIRE(declaredLength == frames[i].size());
+        // The bounded air-facing factory deliberately rejects nested-count
+        // KMMs until it has a dedicated structural validator.  This is a
+        // trusted, locally encoded RK3, so use the normal typed decoder here.
+        std::unique_ptr<KMMFrame> decoded = KMMFactory::create(frames[i].data());
+        REQUIRE(decoded != nullptr);
+        KMMRekeyCommand* rekey = dynamic_cast<KMMRekeyCommand*>(decoded.get());
+        REQUIRE(rekey != nullptr);
+        REQUIRE(rekey->getKeysets().size() == 1U);
+        CHECK(rekey->getKeysets()[0U].keys().size() == expectedCounts[i]);
+        CHECK(rekey->getMessageNumber() == i);
+        CHECK(rekey->getComplete() == (i + 1U == frames.size()));
+        CHECK(frames[i].size() <= 287U);
     }
 }
 
