@@ -9,6 +9,8 @@
  */
 #include "fne/Defines.h"
 #include "common/p25/kmm/KMMFactory.h"
+#include "common/p25/data/ConventionalRegistration.h"
+#include "common/p25/data/IPv4Packet.h"
 #include "common/p25/sndcp/SNDCPFactory.h"
 #include "common/p25/Sync.h"
 #include "common/edac/CRC.h"
@@ -63,9 +65,10 @@ P25PacketData::P25PacketData(TrafficNetwork* network, TagP25Data* tag, bool debu
     m_queuedFrameBytes(0U),
     m_status(),
     m_arpTable(),
-    m_readyForNextPkt(),
-    m_suSendSeq(),
-    m_suRecvSeq(),
+    m_bindingRegistry(),
+    m_dataLinkManager(),
+    m_conventionalDataService(m_bindingRegistry, m_dataLinkManager),
+    m_scepService(m_bindingRegistry),
     m_debug(debug)
 {
     assert(network != nullptr);
@@ -219,7 +222,7 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     status->hasRxHeader = true;
                     status->llId = status->assembler.dataHeader.getLLId();
 
-                    m_readyForNextPkt[status->llId] = true;
+                    m_dataLinkManager.setReady(status->llId, true);
 
                     // is this a response header?
                     if (status->assembler.dataHeader.getFormat() == PDUFormatType::RSP) {
@@ -304,55 +307,42 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 #if !defined(_WIN32)
-    // validate minimum IPv4 header size
-    if (len < sizeof(struct ip)) {
-        LogError(LOG_P25, "VTUN packet too small: %u bytes (need minimum %u for IPv4 header)", len, (uint32_t)sizeof(struct ip));
+    p25::data::IPDecodeResult decoded = m_scepService.decode(data, len);
+    if (decoded.result != p25::data::ConvergenceResult::OK) {
+        LogError(LOG_P25, "VTUN SCEP packet rejected, length = %u, reason = %u",
+            len, uint8_t(decoded.result));
         return;
     }
+    const p25::data::IPv4Packet& ipPacket = decoded.packet;
 
-    // check IP version (must be IPv4)
-    if ((data[0] & 0xF0) != 0x40) {
-        LogWarning(LOG_P25, "VTUN non-IPv4 packet received, version = %u", (data[0] >> 4));
-        return;
-    }
-
-    // validate Internet Header Length
-    uint8_t ihl = (data[0] & 0x0F) * 4;  // IHL in 32-bit words, convert to bytes
-    if (len < ihl || ihl < 20U) {
-        LogError(LOG_P25, "VTUN packet has invalid or truncated IP header: len=%u, IHL=%u", len, ihl);
-        return;
-    }
-
-    struct ip* ipHeader = (struct ip*)data;
+    uint32_t networkSrcAddr = htonl(ipPacket.sourceAddress);
+    uint32_t networkDstAddr = htonl(ipPacket.destinationAddress);
 
     char srcIp[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(ipHeader->ip_src), srcIp, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &networkSrcAddr, srcIp, INET_ADDRSTRLEN);
 
     char dstIp[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(ipHeader->ip_dst), dstIp, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &networkDstAddr, dstIp, INET_ADDRSTRLEN);
 
-    uint8_t proto = ipHeader->ip_p;
-    uint16_t pktLen = Utils::reverseEndian(ipHeader->ip_len); // bryanb: this could be problematic on different endianness
-
-    // validate IP total length field against actual received length
-    if (pktLen > len) {
-        LogError(LOG_P25, "VTUN IP total length field (%u) exceeds actual packet size (%u)", pktLen, len);
-        return;
-    }
-
-    if (pktLen < ihl) {
-        LogError(LOG_P25, "VTUN IP total length (%u) is less than header length (%u)", pktLen, ihl);
-        return;
-    }
+    uint8_t proto = ipPacket.protocol;
+    uint16_t pktLen = ipPacket.totalLength;
 
 #if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame() packet", data, pktLen);
 #endif
 
-    uint32_t llId = getLLIdAddress(Utils::reverseEndian(ipHeader->ip_dst.s_addr));
+    // lazily materialize provisioned static SCEP bindings before routing
+    getLLIdAddress(ipPacket.destinationAddress);
+    p25::data::IPEncodeResult route = m_scepService.encode(data, len);
+    if (route.result != p25::data::ConvergenceResult::OK) {
+        LogWarning(LOG_P25, "VTUN SCEP route rejected, dstIp = %s, reason = %u",
+            __IP_FROM_UINT(ipPacket.destinationAddress).c_str(), uint8_t(route.result));
+        return;
+    }
+    uint32_t llId = route.llId;
 
-    uint32_t srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
-    uint32_t tgtProtoAddr = Utils::reverseEndian(ipHeader->ip_dst.s_addr);
+    uint32_t srcProtoAddr = ipPacket.sourceAddress;
+    uint32_t tgtProtoAddr = ipPacket.destinationAddress;
 
     std::string srcIpStr = __IP_FROM_UINT(srcProtoAddr);
     std::string tgtIpStr = __IP_FROM_UINT(tgtProtoAddr);
@@ -363,9 +353,10 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
 
     // assemble a P25 PDU frame header for transport...
     data::DataHeader* pktHeader = new data::DataHeader();
-    pktHeader->setFormat(PDUFormatType::CONFIRMED);
+    bool confirmed = route.delivery == p25::data::DataDeliveryMode::CONFIRMED;
+    pktHeader->setFormat(confirmed ? PDUFormatType::CONFIRMED : PDUFormatType::UNCONFIRMED);
     pktHeader->setMFId(MFG_STANDARD);
-    pktHeader->setAckNeeded(true);
+    pktHeader->setAckNeeded(confirmed);
     pktHeader->setOutbound(true);
     pktHeader->setSAP(PDUSAP::PACKET_DATA);
     pktHeader->setLLId(llId);
@@ -513,6 +504,7 @@ void P25PacketData::clock(uint32_t ms)
 {
 #if !defined(_WIN32)
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_conventionalDataService.expire(now);
 
     if (m_queuedFrames.size() == 0U) {
         return;
@@ -533,7 +525,7 @@ void P25PacketData::clock(uint32_t ms)
 
             if (frame->retryCnt >= (MAX_PKT_RETRY_CNT * 2U) && frame->extendRetry) {
                 LogWarning(LOG_P25, P25_PDU_STR ", max packet retry count exceeded, dropping packet, dstIp = %s", __IP_FROM_UINT(frame->tgtProtoAddr).c_str());
-                m_readyForNextPkt[frame->llId] = true; // force ready for next packet
+                m_dataLinkManager.setReady(frame->llId, true); // force ready for next packet
                 goto pkt_clock_abort;
             }
 
@@ -541,10 +533,8 @@ void P25PacketData::clock(uint32_t ms)
 
             // extract protocol for logging
             uint8_t proto = 0x00;
-            if (frame->userDataLen >= 20) {
-                struct ip* ipHeader = (struct ip*)(frame->userData);
-                proto = ipHeader->ip_p;
-            }
+            if (frame->userDataLen >= 20U)
+                proto = frame->userData[9U];
 
             LogInfoEx(LOG_P25, "VTUN -> PDU IP Data (queued), dstIp = %s (%u), userDataLen = %u, proto = %02X%s, retries = %u", 
                 tgtIpStr.c_str(), frame->llId, frame->userDataLen, proto, (proto == 0x01) ? " (ICMP)" : "", frame->retryCnt);
@@ -567,9 +557,8 @@ void P25PacketData::clock(uint32_t ms)
             }
 
             // is the SU ready for the next packet?
-            auto ready = std::find_if(m_readyForNextPkt.begin(), m_readyForNextPkt.end(), [=](ReadyForNextPktPair x) { return x.first == frame->llId; });
-            if (ready != m_readyForNextPkt.end()) {
-                if (!ready->second) {
+            if (m_dataLinkManager.hasState(frame->llId)) {
+                if (!m_dataLinkManager.isReady(frame->llId)) {
                     LogWarning(LOG_P25, P25_PDU_STR ", subscriber not ready, dstIp = %s (%u), proto = %02X%s, will retry in %ums", 
                         tgtIpStr.c_str(), frame->llId, proto, (proto == 0x01) ? " (ICMP)" : "", SUBSCRIBER_READY_RETRY_MS);
                     processed = false;
@@ -580,7 +569,7 @@ void P25PacketData::clock(uint32_t ms)
                 }
             }
 
-            m_readyForNextPkt[frame->llId] = false;
+            m_dataLinkManager.setReady(frame->llId, false);
             //LogDebugEx(LOG_P25, "P25PacketData::clock()", "dispatching queued PDU to llId %u (proto = %02X)", frame->llId, proto);
             dispatchUserFrameToFNE(*frame->header, false, false, frame->userData);
         }
@@ -664,7 +653,7 @@ void P25PacketData::dispatch(uint32_t peerId)
                 status->assembler.dataHeader.getLLId(), status->assembler.dataHeader.getSrcLLId());
 
         // bryanb: this is naive and possibly error prone
-        m_readyForNextPkt[status->assembler.dataHeader.getSrcLLId()] = true;
+        m_dataLinkManager.setReady(status->assembler.dataHeader.getSrcLLId(), true);
 
         if (status->assembler.dataHeader.getResponseClass() == PDUAckClass::ACK && status->assembler.dataHeader.getResponseType() == PDUAckType::ACK) {
             LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, response, OSP ACK, peer = %u, llId = %u, all blocks received OK, n = %u",
@@ -700,7 +689,23 @@ void P25PacketData::dispatch(uint32_t peerId)
     }
 
     if (status->assembler.dataHeader.getFormat() == PDUFormatType::UNCONFIRMED) {
-        m_readyForNextPkt[status->assembler.dataHeader.getSrcLLId()] = true;
+        m_dataLinkManager.setReady(status->assembler.dataHeader.getSrcLLId(), true);
+    }
+
+    // do not route or inject incomplete/invalid confirmed payloads -- the empty
+    // ACK_RETRY is the interoperable whole-PDU fallback until bitmap-selective
+    // retry is implemented; a complete packet with a bad CRC is explicitly NACKed
+    if (status->assembler.dataHeader.getFormat() == PDUFormatType::CONFIRMED &&
+        (status->assembler.getUndecodableBlockCount() > 0U ||
+         status->assembler.getPacketCRCFailed())) {
+        const uint32_t srcLlId = status->assembler.getExtendedAddress() ? status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
+        const uint32_t dstLlId = status->assembler.dataHeader.getLLId();
+        const uint8_t responseClass = status->assembler.getUndecodableBlockCount() > 0U ? PDUAckClass::ACK_RETRY : PDUAckClass::NACK;
+        const uint8_t responseType = status->assembler.getUndecodableBlockCount() > 0U ? PDUAckType::ACK : PDUAckType::NACK_PACKET_CRC;
+
+        write_PDU_Ack_Response(responseClass, responseType, status->assembler.dataHeader.getNs(), srcLlId, 
+            status->assembler.getExtendedAddress(), dstLlId);
+        return;
     }
 
     uint8_t sap = (status->assembler.getExtendedAddress()) ? status->assembler.dataHeader.getEXSAP() : status->assembler.dataHeader.getSAP();
@@ -749,14 +754,7 @@ void P25PacketData::dispatch(uint32_t peerId)
                 m_arpTable[srcHWAddr] = srcProtoAddr;
 
                 // is the SU ready for the next packet?
-                auto ready = std::find_if(m_readyForNextPkt.begin(), m_readyForNextPkt.end(), [=](ReadyForNextPktPair x) { return x.first == srcHWAddr; });
-                if (ready != m_readyForNextPkt.end()) {
-                    if (!ready->second) {
-                        m_readyForNextPkt[srcHWAddr] = true;
-                    }
-                } else {
-                    m_readyForNextPkt[srcHWAddr] = true;
-                }
+                m_dataLinkManager.setReady(srcHWAddr, true);
             }
         }
 #else
@@ -778,103 +776,70 @@ void P25PacketData::dispatch(uint32_t peerId)
         if (!status->assembler.getExtendedAddress())
             dstLlId = WUID_FNE;
 
-        // validate minimum IP header size
-        if (status->pduUserDataLength < sizeof(struct ip)) {
-            LogError(LOG_P25, P25_PDU_STR ", PACKET_DATA too small, %u bytes", 
-                status->pduUserDataLength);
+        p25::data::IPDecodeResult decoded = m_scepService.decode(status->pduUserData,
+            status->pduUserDataLength);
+        if (decoded.result != p25::data::ConvergenceResult::OK) {
+            LogError(LOG_P25, P25_PDU_STR ", SCEP uplink decode rejected, length = %u, reason = %u",
+                status->pduUserDataLength, uint8_t(decoded.result));
+            break;
+        }
+        const p25::data::IPv4Packet& ipPacket = decoded.packet;
+
+        // provisioned static entries become typed bindings on first use -- ARP
+        // observations are intentionally not consulted for authorization
+        getIPAddress(srcLlId);
+        p25::data::ConvergenceResult authorization =
+            m_scepService.authorizeUplink(srcLlId, ipPacket);
+        if (authorization != p25::data::ConvergenceResult::OK) {
+            LogWarning(LOG_P25, P25_PDU_STR ", SCEP uplink unauthorized, llId = %u, srcIp = %s, reason = %u",
+                srcLlId, __IP_FROM_UINT(ipPacket.sourceAddress).c_str(), uint8_t(authorization));
+            write_PDU_Ack_Response(PDUAckClass::NACK, PDUAckType::NACK_INVL_USER,
+                status->assembler.dataHeader.getNs(), srcLlId,
+                status->assembler.getExtendedAddress(), dstLlId);
             break;
         }
 
-        struct ip* ipHeader = (struct ip*)(status->pduUserData);
-
-        // verify IPv4 version
-        if ((status->pduUserData[0] & 0xF0) != 0x40) {
-            LogWarning(LOG_P25, P25_PDU_STR ", PACKET_DATA non-IPv4 packet");
-            break;
-        }
-
-        // validate IP header length
-        uint8_t ihl = (status->pduUserData[0] & 0x0F) * 4;
-        if (ihl < sizeof(struct ip) || ihl > status->pduUserDataLength) {
-            LogError(LOG_P25, P25_PDU_STR ", PACKET_DATA invalid IHL, ihl = %u", ihl);
-            break;
-        }
+        uint32_t networkSrcAddr = htonl(ipPacket.sourceAddress);
+        uint32_t networkDstAddr = htonl(ipPacket.destinationAddress);
+        uint16_t pktLen = ipPacket.totalLength;
 
         char srcIp[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(ipHeader->ip_src), srcIp, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &networkSrcAddr, srcIp, INET_ADDRSTRLEN);
 
         char dstIp[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(ipHeader->ip_dst), dstIp, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &networkDstAddr, dstIp, INET_ADDRSTRLEN);
 
-        uint8_t proto = ipHeader->ip_p;
-        uint16_t pktLen = Utils::reverseEndian(ipHeader->ip_len); // bryanb: this could be problematic on different endianness
+        uint8_t proto = ipPacket.protocol;
 
-        // reflect broadcast messages back to the CAI network
-        bool handled = false;
-        if (status->assembler.dataHeader.getLLId() == WUID_ALL) {
-            LogInfoEx(LOG_P25, "PDU -> VTUN, IP Data, repeated to CAI, broadcast packet, dstIp = %s (%u)", 
-                dstIp, status->assembler.dataHeader.getLLId());
-
-            dispatchUserFrameToFNE(status->assembler.dataHeader, status->assembler.getExtendedAddress(), 
-                status->assembler.getAuxiliaryES(), status->pduUserData);
-            handled = true;
-
-            // is the source SU one we have proper ARP entries for?
-            auto arpEntry = std::find_if(m_arpTable.begin(), m_arpTable.end(), [=](ArpTablePair x) { return x.first == status->assembler.dataHeader.getSrcLLId(); });
-            if (arpEntry == m_arpTable.end()) {
-                uint32_t srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
-                LogInfoEx(LOG_P25, P25_PDU_STR ", adding ARP entry, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), status->assembler.dataHeader.getSrcLLId());
-                m_arpTable[status->assembler.dataHeader.getSrcLLId()] = Utils::reverseEndian(ipHeader->ip_src.s_addr);
-            }
-        }
-
-        // is the target SU one we have proper ARP entries for?
-        auto arpEntry = std::find_if(m_arpTable.begin(), m_arpTable.end(), [=](ArpTablePair x) { return x.first == status->assembler.dataHeader.getLLId(); });
-        if (arpEntry != m_arpTable.end()) {
-            LogInfoEx(LOG_P25, "PDU -> VTUN, IP Data, repeated to CAI, destination IP has a CAI ARP table entry, dstIp = %s (%u)", 
-                dstIp, status->assembler.dataHeader.getLLId());
-
-            dispatchUserFrameToFNE(status->assembler.dataHeader, status->assembler.getExtendedAddress(), status->assembler.getAuxiliaryES(),
-                status->pduUserData);
-            handled = true;
-
-            // is the source SU one we have proper ARP entries for?
-            auto arpEntry = std::find_if(m_arpTable.begin(), m_arpTable.end(), [=](ArpTablePair x) { return x.first == status->assembler.dataHeader.getSrcLLId(); });
-            if (arpEntry == m_arpTable.end()) {
-                uint32_t srcProtoAddr = Utils::reverseEndian(ipHeader->ip_src.s_addr);
-                LogInfoEx(LOG_P25, P25_PDU_STR ", adding ARP entry, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), status->assembler.dataHeader.getSrcLLId());
-                m_arpTable[status->assembler.dataHeader.getSrcLLId()] = Utils::reverseEndian(ipHeader->ip_src.s_addr);
-            }
-        }
+        // decide whether this datagram also needs CAI delivery, but do not
+        // reflect it until sequence/duplicate validation has succeeded
+        bool reflectBroadcast = status->assembler.dataHeader.getLLId() == WUID_ALL;
+        uint32_t routedLlId = m_scepService.routeDownlink(ipPacket.destinationAddress);
+        bool reflectRouted = routedLlId != 0U;
+        bool handled = reflectBroadcast || reflectRouted;
 
         // sequence validation - check N(S) against V(R)
         uint8_t receivedNs = status->assembler.dataHeader.getNs();
         bool synchronize = status->assembler.dataHeader.getSynchronize();
 
-        // Initialize V(R) if first packet from this LLId
-        auto recvSeqIt = m_suRecvSeq.find(srcLlId);
-        if (recvSeqIt == m_suRecvSeq.end()) {
-            m_suRecvSeq[srcLlId] = 0U;
+        uint8_t expectedNs = 0U;
+        uint32_t packetFingerprint = p25::data::DataLinkManager::fingerprint(
+            status->pduUserData, pktLen);
+        p25::data::ReceiveSequenceResult sequenceResult =
+            m_dataLinkManager.acceptReceiveSequence(srcLlId, receivedNs, synchronize,
+                packetFingerprint, expectedNs);
+        if (sequenceResult == p25::data::ReceiveSequenceResult::DUPLICATE) {
+            // re-ACK a duplicate, but never deliver the IP datagram twice
+            if (status->assembler.getExtendedAddress()) {
+                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, receivedNs,
+                    srcLlId, true, dstLlId);
+            } else {
+                write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, receivedNs,
+                    srcLlId, false);
+            }
+            break;
         }
-
-        uint8_t expectedNs = m_suRecvSeq[srcLlId];
-        bool sequenceValid = false;
-
-        // handle synchronize flag - resets receive window per TIA-102
-        if (synchronize) {
-            //LogDebugEx(LOG_P25, "P25PacketData::dispatch()", "synchronize flag set by llId %u, resetting V(R) from %u to %u", 
-            //    srcLlId, expectedNs, (receivedNs + 1) % 8);
-            m_suRecvSeq[srcLlId] = (receivedNs + 1) % 8;
-            sequenceValid = true;
-        }
-        else if (receivedNs == expectedNs || receivedNs == (expectedNs + 1) % 8) {
-            // accept if N(S) == V(R) or V(R)+1 (allows one-ahead windowing)
-            m_suRecvSeq[srcLlId] = (receivedNs + 1) % 8;
-            sequenceValid = true;
-            //LogDebugEx(LOG_P25, "P25PacketData::dispatch()", "sequence valid, llId %u, N(S) = %u, V(R) now = %u", 
-            //    srcLlId, receivedNs, m_suRecvSeq[srcLlId]);
-        }
-        else {
+        if (sequenceResult == p25::data::ReceiveSequenceResult::OUT_OF_SEQUENCE) {
             // out of sequence - send NACK_OUT_OF_SEQ
             LogWarning(LOG_P25, P25_PDU_STR ", NACK_OUT_OF_SEQ, llId %u, expected N(S) %u or %u, received N(S) = %u", 
                 srcLlId, expectedNs, (expectedNs + 1) % 8, receivedNs);
@@ -886,8 +851,12 @@ void P25PacketData::dispatch(uint32_t peerId)
             break; // don't process out-of-sequence packet
         }
 
-        if (!sequenceValid) {
-            break; // should never reach here due to logic above, but safety check
+        if (handled) {
+            LogInfoEx(LOG_P25, "PDU -> VTUN, IP Data, repeated to CAI, dstIp = %s (%u)",
+                dstIp, reflectBroadcast ? WUID_ALL : routedLlId);
+            dispatchUserFrameToFNE(status->assembler.dataHeader,
+                status->assembler.getExtendedAddress(), status->assembler.getAuxiliaryES(),
+                status->pduUserData);
         }
 
         // transmit packet to IP network
@@ -907,10 +876,10 @@ void P25PacketData::dispatch(uint32_t peerId)
         if (!handled) {
             //LogDebugEx(LOG_P25, "P25PacketData::dispatch()", "marking llId %u ready for next packet (proto = %02X)", srcLlId, proto);
             if (status->assembler.getExtendedAddress()) {
-                m_readyForNextPkt[srcLlId] = true;
+                m_dataLinkManager.setReady(srcLlId, true);
                 write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, receivedNs, srcLlId, true, dstLlId);
             } else {
-                m_readyForNextPkt[srcLlId] = true;
+                m_dataLinkManager.setReady(srcLlId, true);
                 write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, receivedNs, srcLlId, false);
             }
         }
@@ -1026,15 +995,13 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
     uint32_t srcId = (extendedAddress) ? dataHeader.getSrcLLId() : dataHeader.getLLId();
     uint32_t dstId = dataHeader.getLLId();
 
-    // update the sequence number
-    m_suSendSeq[srcId]++;
-    if (m_suSendSeq[srcId] >= 8U)
-    {
-        m_suSendSeq[srcId] = 0U;
+    // update V(S) independently for each logical link
+    bool synchronize = false;
+    uint8_t sendSequence = m_dataLinkManager.nextSendSequence(srcId, synchronize);
+    if (synchronize) {
         dataHeader.setSynchronize(true);
     }
-
-    dataHeader.setNs(m_suSendSeq[srcId]);
+    dataHeader.setNs(sendSequence);
 
     /*
     ** MASTER TRAFFIC
@@ -1056,37 +1023,62 @@ void P25PacketData::dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bo
 
 bool P25PacketData::processConvDataReg(RxStatus* status)
 {
-    uint8_t regType = (status->pduUserData[0U] >> 4) & 0x0F;
-    switch (regType) {
-    case PDURegType::CONNECT:
-    {
-        uint32_t llId = (status->pduUserData[1U] << 16) + (status->pduUserData[2U] << 8) + status->pduUserData[3U];
-        uint32_t ipAddr = (status->pduUserData[8U] << 24) + (status->pduUserData[9U] << 16) + (status->pduUserData[10U] << 8) + status->pduUserData[11U];
-
-        if (ipAddr == 0U) {
-            LogWarning(LOG_P25, P25_PDU_STR ", CONNECT (Registration Request Connect) with zero IP address, llId = %u", llId);
-            ipAddr = getIPAddress(llId);
-        }
-
-        LogInfoEx(LOG_P25, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
-        m_arpTable[llId] = ipAddr; // update ARP table
-    }
-    break;
-    case PDURegType::DISCONNECT:
-    {
-        uint32_t llId = (status->pduUserData[1U] << 16) + (status->pduUserData[2U] << 8) + status->pduUserData[3U];
-
-        LogInfoEx(LOG_P25, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
-
-        m_arpTable.erase(llId);
-    }
-    break;
-    default:
-        LogError(LOG_P25, "P25 unhandled PDU registration type, regType = $%02X", regType);
-        break;
+    if (status == nullptr || status->pduUserData == nullptr) {
+        LogError(LOG_P25, P25_PDU_STR ", truncated conventional registration payload");
+        return false;
     }
 
-    return true;
+    p25::data::ConventionalRegistration registration;
+    if (!p25::data::ConventionalRegistration::decode(status->pduUserData,
+        status->pduUserDataLength, registration)) {
+        LogError(LOG_P25, P25_PDU_STR ", invalid conventional registration payload");
+        return false;
+    }
+
+    p25::data::ConventionalRegistrationProvisioning provisioning;
+    lookups::RadioId rid = m_network->m_ridLookup->find(registration.llId);
+    provisioning.known = !rid.radioDefault();
+    provisioning.enabled = provisioning.known && rid.radioEnabled();
+    provisioning.allowDynamicAddress = provisioning.enabled && rid.radioIPAddress().empty();
+    if (provisioning.enabled && !rid.radioIPAddress().empty())
+        provisioning.staticIPAddress = __IP_FROM_STR(rid.radioIPAddress());
+
+    uint32_t headerLlId = status->assembler.getExtendedAddress() ?
+        status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
+    p25::data::ConventionalRegistrationResult result = m_conventionalDataService.process(
+        status->pduUserData, status->pduUserDataLength, headerLlId, provisioning);
+
+    if (result.decision == p25::data::RegistrationDecision::DISCONNECTED) {
+        m_arpTable.erase(registration.llId);
+        LogInfoEx(LOG_P25, P25_PDU_STR ", DISCONNECT, llId = %u", registration.llId);
+        return true;
+    }
+
+    // only the FNE emits the registration decision -- the host merely validates
+    // and forwards the request, so an ACCEPT always reflects installed state
+    uint8_t responseData[p25::data::ConventionalRegistration::LENGTH];
+    if (!result.response.encode(responseData, sizeof(responseData)))
+        return false;
+
+    data::DataHeader responseHeader;
+    responseHeader.setFormat(PDUFormatType::CONFIRMED);
+    responseHeader.setMFId(MFG_STANDARD);
+    responseHeader.setAckNeeded(true);
+    responseHeader.setOutbound(true);
+    responseHeader.setSAP(PDUSAP::CONV_DATA_REG);
+    responseHeader.setLLId(registration.llId);
+    responseHeader.calculateLength(sizeof(responseData));
+    dispatchUserFrameToFNE(responseHeader, false, false, responseData);
+
+    if (result.decision == p25::data::RegistrationDecision::ACCEPT) {
+        LogInfoEx(LOG_P25, P25_PDU_STR ", registration ACCEPT, llId = %u, ipAddr = %s",
+            registration.llId, __IP_FROM_UINT(result.response.ipAddress).c_str());
+        return true;
+    }
+
+    LogWarning(LOG_P25, P25_PDU_STR ", registration DENY, llId = %u, reason = %u",
+        registration.llId, uint8_t(result.denyReason));
+    return false;
 }
 
 /* Helper used to process SNDCP control data from PDU data. */
@@ -1199,7 +1191,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                     rspHeader.calculateLength(13U);
 
                     m_arpTable[llId] = staticIP;
-                    m_readyForNextPkt[llId] = true;
+                    m_dataLinkManager.setReady(llId, true);
 
                     dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
 
@@ -1264,7 +1256,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                     rspHeader.calculateLength(13U);
 
                     m_arpTable[llId] = dynamicIP;
-                    m_readyForNextPkt[llId] = true;
+                    m_dataLinkManager.setReady(llId, true);
 
                     dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
 
@@ -1310,7 +1302,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                 isp->getDeactType());
 
             m_arpTable.erase(llId);
-            m_readyForNextPkt.erase(llId);
+            m_dataLinkManager.erase(llId);
 
             // send ACK response
             write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 
@@ -1505,18 +1497,18 @@ uint32_t P25PacketData::getIPAddress(uint32_t llId)
         return 0U;
     }
 
-    if (hasARPEntry(llId)) {
-        return m_arpTable[llId];
-    } else {
-        // do we have a static entry for this LLID?
-        lookups::RadioId rid = m_network->m_ridLookup->find(llId);
-        if (!rid.radioDefault()) {
-            if (rid.radioEnabled()) {
-                std::string addr = rid.radioIPAddress();
-                uint32_t ipAddr = __IP_FROM_STR(addr);
-                return ipAddr;
-            }
-        }
+    const p25::data::IPBinding* binding = m_bindingRegistry.findByLLId(llId);
+    if (binding != nullptr && binding->authorized) {
+        return binding->ipAddress;
+    }
+
+    // provisioned RID addresses are authoritative; ARP is discovery only and
+    // must never create packet-data authorization
+    lookups::RadioId rid = m_network->m_ridLookup->find(llId);
+    if (!rid.radioDefault() && rid.radioEnabled() && !rid.radioIPAddress().empty()) {
+        uint32_t ipAddr = __IP_FROM_STR(rid.radioIPAddress());
+        if (ipAddr != 0U && m_conventionalDataService.installStatic(llId, ipAddr))
+            return ipAddr;
     }
 
     return 0U;
@@ -1530,12 +1522,9 @@ uint32_t P25PacketData::getLLIdAddress(uint32_t addr)
         return 0U;
     }
 
-    // lookup ARP table entry
-    for (auto entry : m_arpTable) {
-        if (entry.second == addr) {
-            return entry.first;
-        }
-    }
+    const p25::data::IPBinding* binding = m_bindingRegistry.findByIPAddress(addr);
+    if (binding != nullptr && binding->authorized)
+        return binding->link.llId;
 
     // lookup IP from static RID table
     std::string ipAddr = __IP_FROM_UINT(addr);
@@ -1548,7 +1537,8 @@ uint32_t P25PacketData::getLLIdAddress(uint32_t addr)
         return false; 
     });
     if (it != ridTable.end()) {
-        return it->first;
+        if (m_conventionalDataService.installStatic(it->first, addr))
+            return it->first;
     }
 
     return 0U;

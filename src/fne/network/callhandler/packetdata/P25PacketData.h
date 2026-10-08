@@ -22,6 +22,9 @@
 #include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/Assembler.h"
+#include "common/p25/data/ConventionalDataService.h"
+#include "common/p25/data/IPConvergenceService.h"
+#include "common/p25/data/PacketDataState.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/DataBlock.h"
 #include "network/TrafficNetwork.h"
@@ -228,10 +231,10 @@ namespace network
 
                 typedef std::pair<const uint32_t, uint32_t> ArpTablePair;
                 std::unordered_map<uint32_t, uint32_t> m_arpTable;
-                typedef std::pair<const uint32_t, bool> ReadyForNextPktPair;
-                std::unordered_map<uint32_t, bool> m_readyForNextPkt;
-                std::unordered_map<uint32_t, uint8_t> m_suSendSeq;      // V(S) send state variable per LLId
-                std::unordered_map<uint32_t, uint8_t> m_suRecvSeq;      // V(R) receive state variable per LLId
+                p25::data::DataBindingRegistry m_bindingRegistry;
+                p25::data::DataLinkManager m_dataLinkManager;
+                p25::data::ConventionalDataService m_conventionalDataService;
+                p25::data::SCEPService m_scepService;
 
                 bool m_debug;
 

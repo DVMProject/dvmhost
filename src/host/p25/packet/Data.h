@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace p25
 {
@@ -76,13 +77,6 @@ namespace p25
             bool processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uint32_t blockLength,
                 uint16_t totalBlocks);
             /** @} */
-
-            /**
-             * @brief Helper to check if a logical link ID has registered with data services.
-             * @param llId Logical Link ID.
-             * @returns bool True, if ID has registered, otherwise false.
-             */
-            bool hasLLIdFNEReg(uint32_t llId) const;
 
             /**
              * @brief Helper to write user data as a P25 PDU packet.
@@ -142,16 +136,29 @@ namespace p25
             uint16_t m_netDataBlockCnt;
             uint16_t m_netTotalBlocks;
 
-            uint8_t* m_retryPDUData;
-            uint32_t m_retryPDUBitLength;
-            uint8_t m_retryCount;
+            /**
+             * @brief Structure to maintain the retry state of a PDU.
+             */
+            struct RetryPDUState {
+                /**
+                 * @brief Buffer containing the PDU data.
+                 */
+                std::vector<uint8_t> data;
+                /**
+                 * @brief Length of the PDU in bits.
+                 */
+                uint32_t bitLength = 0U;
+                /**
+                 * @brief Number of times the PDU has been retried.
+                 */
+                uint8_t retryCount = 0U;
+            };
+            std::unordered_map<uint32_t, RetryPDUState> m_retryPDUState;
 
             uint8_t* m_rfPduUserData;
             uint32_t m_rfPduUserDataLength;
             uint8_t* m_netPduUserData;
             uint32_t m_netPduUserDataLength;
-
-            std::unordered_map<uint32_t, uint32_t> m_fneRegTable;
 
             std::unordered_map<uint32_t, defines::SNDCPState::E> m_sndcpStateTable;
             std::unordered_map<uint32_t, Timer> m_sndcpReadyTimers;
@@ -184,7 +191,7 @@ namespace p25
              * @param pduUserData Buffer containing user data to transmit.
              * @returns bool True, if conventional data registration data was processed, otherwise false.
              */
-            bool processConvDataReg(const uint8_t* pduUserData);
+            bool processConvDataReg(const uint8_t* pduUserData, uint32_t length);
             /**
              * @brief Helper used to process SNDCP control data from PDU data.
              * @param pduUserData Buffer containing user data to transmit.
@@ -213,7 +220,8 @@ namespace p25
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              * @param ackRetry Flag indicating the PDU is being sent as an acknowledged retry.
              */
-            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false, bool ackRetry = false);
+            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false,
+                bool ackRetry = false, uint32_t retryLlId = 0U, bool trackRetry = false);
             /**
              * @brief Helper to write a network P25 PDU packet.
              * This will take buffered network PDU data and repeat it over the air.
@@ -224,14 +232,6 @@ namespace p25
              * This will take buffered received PDU data and repeat it over the air.
              */
             void writeRF_PDU_Buffered();
-            /**
-             * @brief Helper to write a PDU registration response.
-             * @param regType Registration Response.
-             * @param llId Logical Link ID.
-             * @param ipAddr 
-             * @param mfId 
-             */
-            void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, uint32_t ipAddr);
             /**
              * @brief Helper to write a PDU acknowledge response.
              * @param ackClass Acknowledgement Class.

@@ -11,6 +11,7 @@
 #include "Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/acl/AccessControl.h"
+#include "common/p25/data/ConventionalRegistration.h"
 #include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/sndcp/SNDCPFactory.h"
 #include "common/p25/P25Utils.h"
@@ -137,13 +138,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 if (m_rfAssembler->dataHeader.getResponseClass() == PDUAckClass::ACK && m_rfAssembler->dataHeader.getResponseType() == PDUAckType::ACK) {
                     LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK, llId = %u, all blocks received OK, n = %u",
                         m_rfAssembler->dataHeader.getLLId(), m_rfAssembler->dataHeader.getResponseStatus());
-                    if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
-                        delete[] m_retryPDUData;
-                        m_retryPDUData = nullptr;
-
-                        m_retryPDUBitLength = 0U;
-                        m_retryCount = 0U;
-                    }
+                    m_retryPDUState.erase(m_rfAssembler->dataHeader.getLLId());
                 } else {
                     if (m_rfAssembler->dataHeader.getResponseClass() == PDUAckClass::NACK) {
                         switch (m_rfAssembler->dataHeader.getResponseType()) {
@@ -174,18 +169,16 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                         // really this is supposed to check the bit field in the included response 
                         // and only return those bits -- but we're responding with the entire previous packet...
-                        if (m_retryPDUData != nullptr && m_retryPDUBitLength > 0U) {
-                            if (m_retryCount < MAX_PDU_RETRY_CNT) {
+                        uint32_t retryLlId = m_rfAssembler->dataHeader.getLLId();
+                        auto retry = m_retryPDUState.find(retryLlId);
+                        if (retry != m_retryPDUState.end() && retry->second.bitLength > 0U && !retry->second.data.empty()) {
+                            if (retry->second.retryCount < MAX_PDU_RETRY_CNT) {
                                 m_p25->writeRF_Preamble();
-                                writeRF_PDU(m_retryPDUData, m_retryPDUBitLength, false, true);
-                                m_retryCount++;
+                                writeRF_PDU(retry->second.data.data(), retry->second.bitLength, false, true, retryLlId, false);
+                                retry->second.retryCount++;
                             }
                             else {
-                                delete[] m_retryPDUData;
-                                m_retryPDUData = nullptr;
-
-                                m_retryPDUBitLength = 0U;
-                                m_retryCount = 0U;
+                                m_retryPDUState.erase(retry);
 
                                 LogInfoEx(LOG_RF, P25_PDU_STR ", ISP, response, OSP ACK RETRY, llId = %u, exceeded retries, undeliverable",
                                     m_rfAssembler->dataHeader.getLLId());
@@ -260,6 +253,26 @@ bool Data::process(uint8_t* data, uint32_t len)
                 m_rfPduUserDataLength = m_rfAssembler->getUserDataLength();
                 m_rfAssembler->getUserData(m_rfPduUserData);
 
+                // never expose a partially decoded or CRC-invalid confirmed packet to
+                // registration, routing, or the IP side -- a response without a bitmap
+                // requests a conservative whole-PDU retry; selective retry can be added
+                // later without weakening this integrity boundary
+                if (m_rfAssembler->dataHeader.getFormat() == PDUFormatType::CONFIRMED && (m_rfAssembler->getUndecodableBlockCount() > 0U || m_rfAssembler->getPacketCRCFailed())) {
+                    const uint8_t responseClass = m_rfAssembler->getUndecodableBlockCount() > 0U ? PDUAckClass::ACK_RETRY : PDUAckClass::NACK;
+                    const uint8_t responseType = m_rfAssembler->getUndecodableBlockCount() > 0U ? PDUAckType::ACK : PDUAckType::NACK_PACKET_CRC;
+
+                    writeRF_PDU_Ack_Response(responseClass, responseType,
+                        m_rfAssembler->dataHeader.getNs(), m_rfAssembler->dataHeader.getLLId(),
+                        m_rfAssembler->getExtendedAddress(), m_rfAssembler->dataHeader.getSrcLLId());
+
+                    m_rfPDUCount = 0U;
+                    m_rfPDUBits = 0U;
+                    m_rfPduUserDataLength = 0U;
+                    ::memset(m_rfPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+                    m_p25->m_rfState = RS_RF_LISTENING;
+                    return true;
+                }
+
                 uint8_t sap = (m_rfAssembler->getExtendedAddress()) ? m_rfAssembler->dataHeader.getEXSAP() : m_rfAssembler->dataHeader.getSAP();
                 if (m_rfAssembler->getAuxiliaryES())
                     sap = m_rfAssembler->dataHeader.getEXSAP();
@@ -271,6 +284,12 @@ bool Data::process(uint8_t* data, uint32_t len)
                 switch (sap) {
                 case PDUSAP::ARP:
                 {
+                    if (m_rfPduUserDataLength < P25_PDU_ARP_PCKT_LENGTH) {
+                        LogWarning(LOG_RF, P25_PDU_STR ", ignoring truncated ARP payload, length = %u",
+                            m_rfPduUserDataLength);
+                        break;
+                    }
+
                     /* bryanb: quick and dirty ARP logging */
                     uint8_t arpPacket[P25_PDU_ARP_PCKT_LENGTH];
                     ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
@@ -321,9 +340,10 @@ bool Data::process(uint8_t* data, uint32_t len)
                             m_rfAssembler->dataHeader.getBlocksToFollow());
                     }
 
-                    processConvDataReg(m_rfPduUserData);
-                    writeNet_PDU_User(m_rfAssembler->dataHeader, m_rfAssembler->getExtendedAddress(), m_rfAssembler->getAuxiliaryES(), 
-                        m_rfPduUserData);
+                    if (processConvDataReg(m_rfPduUserData, m_rfPduUserDataLength)) {
+                        writeNet_PDU_User(m_rfAssembler->dataHeader, m_rfAssembler->getExtendedAddress(), m_rfAssembler->getAuxiliaryES(),
+                            m_rfPduUserData);
+                    }
                 }
                 break;
                 case PDUSAP::UNENC_KMM:
@@ -511,9 +531,15 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
 
                             // handle standard P25 service access points
                             switch (sap) {
-                            case PDUSAP::ARP:
-                            {
-                                /* bryanb: quick and dirty ARP logging */
+                        case PDUSAP::ARP:
+                        {
+                            if (m_netPduUserDataLength < P25_PDU_ARP_PCKT_LENGTH) {
+                                LogWarning(LOG_NET, P25_PDU_STR ", ignoring truncated ARP payload, length = %u",
+                                    m_netPduUserDataLength);
+                                break;
+                            }
+
+                            /* bryanb: quick and dirty ARP logging */
                                 uint8_t arpPacket[P25_PDU_ARP_PCKT_LENGTH];
                                 ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
                                 ::memcpy(arpPacket, m_netPduUserData, P25_PDU_ARP_PCKT_LENGTH);
@@ -581,24 +607,6 @@ void Data::resetReceivedBlocks()
     m_netTotalBlocks = 0U;
 }
 
-/* Helper to check if a logical link ID has registered with data services. */
-
-bool Data::hasLLIdFNEReg(uint32_t llId) const
-{
-    // lookup dynamic FNE registration table entry
-    try {
-        ulong64_t tblIpAddr = m_fneRegTable.at(llId);
-        if (tblIpAddr != 0U) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    } catch (...) {
-        return false;
-    }
-}
-
 /* Helper to write user data as a P25 PDU packet. */
 
 void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm)
@@ -610,7 +618,8 @@ void Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
     uint32_t bitLength = 0U;
     UInt8Array data = m_rfAssembler->assemble(dataHeader, extendedAddress, auxiliaryES, pduUserData, &bitLength);
 
-    writeRF_PDU(data.get(), bitLength, imm);
+    bool trackRetry = dataHeader.getFormat() == PDUFormatType::CONFIRMED && dataHeader.getAckNeeded();
+    writeRF_PDU(data.get(), bitLength, imm, false, dataHeader.getLLId(), trackRetry);
 }
 
 /* Helper to write user data as a P25 PDU packet. */
@@ -775,14 +784,11 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_netReceivedBlocks(),
     m_netDataBlockCnt(0U),
     m_netTotalBlocks(0U),
-    m_retryPDUData(nullptr),
-    m_retryPDUBitLength(0U),
-    m_retryCount(0U),
+    m_retryPDUState(),
     m_rfPduUserData(nullptr),
     m_rfPduUserDataLength(0U),
     m_netPduUserData(nullptr),
     m_netPduUserDataLength(0U),
-    m_fneRegTable(),
     m_sndcpStateTable(),
     m_sndcpReadyTimers(),
     m_sndcpStandbyTimers(),
@@ -810,8 +816,6 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_netPduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
     ::memset(m_netPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
-    m_fneRegTable.clear();
-
     m_sndcpStateTable.clear();
     m_sndcpReadyTimers.clear();
     m_sndcpStandbyTimers.clear();
@@ -826,74 +830,39 @@ Data::~Data()
 
     delete[] m_rfPDU;
 
-    if (m_retryPDUData != nullptr)
-        delete[] m_retryPDUData;
-
     delete[] m_rfPduUserData;
     delete[] m_netPduUserData;
 }
 
 /* Helper used to process conventional data registration from PDU data. */
 
-bool Data::processConvDataReg(const uint8_t* pduUserData)
+bool Data::processConvDataReg(const uint8_t* pduUserData, uint32_t length)
 {
-    uint8_t regType = (pduUserData[0U] >> 4) & 0x0F;
-    switch (regType) {
-    case PDURegType::CONNECT:
-    {
-        uint32_t llId = (pduUserData[1U] << 16) + (pduUserData[2U] << 8) + pduUserData[3U];
-        uint32_t ipAddr = (pduUserData[8U] << 24) + (pduUserData[9U] << 16) + (pduUserData[10U] << 8) + pduUserData[11U];
-
-        if (m_verbose) {
-            LogInfoEx(LOG_RF, P25_PDU_STR ", CONNECT (Registration Request Connect), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
-        }
-
-        if (!acl::AccessControl::validateSrcId(llId)) {
-            LogWarning(LOG_RF, P25_PDU_STR ", DENY (Registration Response Deny), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
-            writeRF_PDU_Reg_Response(PDURegType::DENY, llId, ipAddr);
-        }
-        else {
-            if (!hasLLIdFNEReg(llId)) {
-                // update dynamic FNE registration table entry
-                m_fneRegTable[llId] = ipAddr;
-            }
-
-            if (m_verbose) {
-                LogInfoEx(LOG_RF, P25_PDU_STR ", ACCEPT (Registration Response Accept), llId = %u, ipAddr = %s", llId, __IP_FROM_UINT(ipAddr).c_str());
-            }
-
-            writeRF_PDU_Reg_Response(PDURegType::ACCEPT, llId, ipAddr);
-        }
-    }
-    break;
-    case PDURegType::DISCONNECT:
-    {
-        uint32_t llId = (pduUserData[1U] << 16) + (pduUserData[2U] << 8) + pduUserData[3U];
-
-        if (m_verbose) {
-            LogInfoEx(LOG_RF, P25_PDU_STR ", DISCONNECT (Registration Request Disconnect), llId = %u", llId);
-        }
-
-        // acknowledge
-        writeRF_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, m_rfAssembler->dataHeader.getNs(), llId, false);
-
-        if (hasLLIdFNEReg(llId)) {
-            // remove dynamic FNE registration table entry
-            try {
-                m_fneRegTable.at(llId);
-                m_fneRegTable.erase(llId);
-            }
-            catch (...) {
-                // stub
-            }
-        }
-    }
-    break;
-    default:
-        LogError(LOG_RF, "P25 unhandled PDU registration type, regType = $%02X", regType);
-        break;
+    if (pduUserData == nullptr || length < ConventionalRegistration::DISCONNECT_LENGTH) {
+        LogError(LOG_RF, P25_PDU_STR ", truncated conventional registration payload, length = %u", length);
+        return false;
     }
 
+    ConventionalRegistration registration;
+    if (!ConventionalRegistration::decode(pduUserData, length, registration)) {
+        LogError(LOG_RF, P25_PDU_STR ", invalid conventional registration payload");
+        return false;
+    }
+
+    if (registration.type != PDURegType::CONNECT &&
+        registration.type != PDURegType::DISCONNECT)
+        return false;
+
+    uint32_t headerLlId = m_rfAssembler->getExtendedAddress() ?
+        m_rfAssembler->dataHeader.getSrcLLId() : m_rfAssembler->dataHeader.getLLId();
+    if (headerLlId != 0U && headerLlId != registration.llId) {
+        LogWarning(LOG_RF, P25_PDU_STR ", conventional registration identity mismatch, header = %u, payload = %u",
+            headerLlId, registration.llId);
+        return false;
+    }
+
+    // authorization and the ACCEPT/DENY response are FNE-owned -- returning true
+    // here only permits this validated request to be forwarded to that service
     return true;
 }
 
@@ -971,7 +940,8 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_
 
 /* Helper to write a P25 PDU packet. */
 
-void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry)
+void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry,
+    uint32_t retryLlId, bool trackRetry)
 {
     assert(pdu != nullptr);
     assert(bitLength > 0U);
@@ -981,22 +951,18 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
     for (uint8_t i = 0U; i < 5U; i++)
         m_p25->writeRF_Nulls();
 
-    if (!ackRetry) {
-        if (m_retryPDUData != nullptr)
-            delete m_retryPDUData;
-
-        // store PDU for ACK RETRY logic
-        m_retryCount = 0U;
-        m_retryPDUBitLength = bitLength;
+    if (!ackRetry && trackRetry && retryLlId != 0U) {
+        // store confirmed transactions independently per logical link
         uint32_t retryByteLength = bitLength / 8U;
-        if ((retryByteLength % 8U) > 0U)
+        if ((bitLength % 8U) > 0U)
             retryByteLength++;
 
-        m_retryPDUData = new uint8_t[retryByteLength];
-        ::memcpy(m_retryPDUData, pdu, retryByteLength);
-    } else {
-        LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, ack retry, bitLength = %u",
-                   m_retryPDUBitLength);
+        RetryPDUState& retry = m_retryPDUState[retryLlId];
+        retry.data.assign(pdu, pdu + retryByteLength);
+        retry.bitLength = bitLength;
+        retry.retryCount = 0U;
+    } else if (ackRetry) {
+        LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, ack retry, bitLength = %u", bitLength);
     }
 
     uint8_t data[P25_PDU_FRAME_LENGTH_BYTES + 2U];
@@ -1036,7 +1002,9 @@ void Data::writeNet_PDU_Buffered()
 {
     uint32_t bitLength = 0U;
     UInt8Array data = m_rfAssembler->assemble(m_netAssembler->dataHeader, m_netAssembler->getExtendedAddress(), m_netAssembler->getAuxiliaryES(), m_netPduUserData, &bitLength);
-    writeRF_PDU(data.get(), bitLength);
+    bool trackRetry = m_netAssembler->dataHeader.getFormat() == PDUFormatType::CONFIRMED && m_netAssembler->dataHeader.getAckNeeded();
+
+    writeRF_PDU(data.get(), bitLength, false, false, m_netAssembler->dataHeader.getLLId(), trackRetry);
 }
 
 /* Helper to re-write a received P25 PDU packet. */
@@ -1046,44 +1014,6 @@ void Data::writeRF_PDU_Buffered()
     uint32_t bitLength = 0U;
     UInt8Array data = m_rfAssembler->assemble(m_rfAssembler->dataHeader, m_rfAssembler->getExtendedAddress(), m_rfAssembler->getAuxiliaryES(), m_rfPduUserData, &bitLength);
     writeRF_PDU(data.get(), bitLength);
-}
-
-/* Helper to write a PDU registration response. */
-
-void Data::writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, uint32_t ipAddr)
-{
-    if ((regType != PDURegType::ACCEPT) && (regType != PDURegType::DENY))
-        return;
-
-    uint8_t pduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
-    ::memset(pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
-
-    DataHeader rspHeader = DataHeader();
-    rspHeader.setFormat(PDUFormatType::CONFIRMED);
-    rspHeader.setMFId(m_rfAssembler->dataHeader.getMFId());
-    rspHeader.setAckNeeded(true);
-    rspHeader.setOutbound(true);
-    rspHeader.setSAP(PDUSAP::CONV_DATA_REG);
-    rspHeader.setSynchronize(true);
-    rspHeader.setLLId(llId);
-    rspHeader.setBlocksToFollow(1U);
-
-    pduUserData[0U] = ((regType & 0x0FU) << 4);                                 // Registration Type & Options
-    pduUserData[1U] = (llId >> 16) & 0xFFU;                                     // Logical Link ID
-    pduUserData[2U] = (llId >> 8) & 0xFFU;
-    pduUserData[3U] = (llId >> 0) & 0xFFU;
-    if (regType == PDURegType::ACCEPT) {
-        pduUserData[8U] = (ipAddr >> 24) & 0xFFU;                               // IP Address
-        pduUserData[9U] = (ipAddr >> 16) & 0xFFU;
-        pduUserData[10U] = (ipAddr >> 8) & 0xFFU;
-        pduUserData[11U] = (ipAddr >> 0) & 0xFFU;
-    }
-
-    if (m_dumpPDUData)
-        Utils::dump(1U, "P25, PDU Registration Response", pduUserData, 12U);
-
-    rspHeader.calculateLength(12U);
-    writeRF_PDU_User(rspHeader, false, false, pduUserData);
 }
 
 /* Helper to write a PDU acknowledge response. */
