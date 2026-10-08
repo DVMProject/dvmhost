@@ -155,6 +155,18 @@ namespace network
         UInt8Array cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, const uint8_t* buffer, uint32_t len, bool encrypt = false);
 
         /**
+         * @brief Resolves the required outer-encryption context for a locally generated KMM response.
+         * @param[in] data Encoded plaintext KMM response.
+         * @param len Length of the encoded response.
+         * @param[in,out] encrypted Whether outer encryption is already in use or is required.
+         * @param[in,out] algoId Outer-encryption algorithm ID.
+         * @param[in,out] kid Outer-encryption key ID.
+         * @return True when the response has a valid usable security context.
+         */
+        bool resolveResponseSecurity(const uint8_t* data, uint32_t len, bool& encrypted,
+            uint8_t& algoId, uint16_t& kid) const;
+
+        /**
          * @brief Helper used to process KMM frames.
          * @param[in] data Network data buffer.
          * @param len Length of data.

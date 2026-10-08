@@ -126,6 +126,25 @@ std::vector<std::vector<uint8_t>> FNETestHooks::buildOTARRekey(TrafficNetwork& n
 }
 
 /**
+ * @brief Resolves the security parameters of an OTAR response packet.
+ * @param network The TrafficNetwork instance.
+ * @param packet The OTAR response packet data.
+ * @param encrypted Output flag indicating if the packet is encrypted.
+ * @param algoId Output parameter for the algorithm ID used for encryption.
+ * @param kid Output parameter for the key ID used for encryption.
+ * @return True if the security parameters were successfully resolved, false otherwise.
+ */
+bool FNETestHooks::resolveOTARResponseSecurity(TrafficNetwork& network,
+    const std::vector<uint8_t>& packet, bool& encrypted, uint8_t& algoId, uint16_t& kid)
+{
+    if (packet.empty() || network.m_p25OTARService == nullptr)
+        return false;
+
+    return network.m_p25OTARService->resolveResponseSecurity(packet.data(),
+        (uint32_t)packet.size(), encrypted, algoId, kid);
+}
+
+/**
  * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
  * @param network The TrafficNetwork instance.
  * @param packet The DLD packet data.

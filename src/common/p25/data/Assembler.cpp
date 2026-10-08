@@ -218,9 +218,9 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
 
                             dataHeader.decodeAuxES(secondHeader);
                             if (s_verbose) {
-                                LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, algoId = $%02X, kId = $%04X",
-                                    dataBlocks[i].getSerialNo(), dataBlocks[i].getFormat(), dataBlocks[i].getLastBlock(), dataHeader.getEXSAP(),
-                                    dataHeader.getAlgId(), dataHeader.getKId());
+                                LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, exSAP = $%02X, algoId = $%02X, kId = $%04X",
+                                    dataBlocks[i].getSerialNo(), dataBlocks[i].getFormat(), dataBlocks[i].getLastBlock(), dataHeader.getSAP(),
+                                    dataHeader.getEXSAP(), dataHeader.getAlgId(), dataHeader.getKId());
 
                                 if (dataHeader.getAlgId() != ALGO_UNENCRYPT) {
                                     uint8_t mi[MI_LENGTH_BYTES];
@@ -432,8 +432,8 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
             dataHeader.encodeAuxES(packetData);
 
             if (s_verbose) {
-                LogInfoEx(LOG_P25, P25_PDU_STR ", OSP, auxiliary ES, algId = $%02X, kId = $%04X",
-                    dataHeader.getAlgId(), dataHeader.getKId());
+                LogInfoEx(LOG_P25, P25_PDU_STR ", OSP, auxiliary ES, exSAP = $%02X, algId = $%02X, kId = $%04X",
+                    dataHeader.getEXSAP(), dataHeader.getAlgId(), dataHeader.getKId());
 
                 if (dataHeader.getAlgId() != ALGO_UNENCRYPT) {
                     uint8_t mi[MI_LENGTH_BYTES];

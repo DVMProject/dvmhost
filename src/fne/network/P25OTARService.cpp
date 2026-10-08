@@ -177,6 +177,62 @@ P25OTARService::~P25OTARService()
         delete m_socket;
 }
 
+/* Resolves the required outer-encryption context for a generated response. */
+
+bool P25OTARService::resolveResponseSecurity(const uint8_t* data, uint32_t len, bool& encrypted,
+    uint8_t& algoId, uint16_t& kid) const
+{
+    if (data == nullptr) {
+        LogError(LOG_P25, P25_KMM_STR ", cannot resolve outer encryption for a null generated response");
+        return false;
+    }
+
+    const uint8_t messageId = len > 0U ? data[0U] : KMM_MessageType::NULL_CMD;
+    const uint32_t declaredLength = len >= 3U ?
+        ((((uint32_t)data[1U] << 8U) | data[2U]) + 3U) : 0U;
+    if (len < 10U || len > 512U || declaredLength != len) {
+        LogError(LOG_P25, P25_KMM_STR ", cannot outer-encrypt generated KMM: invalid length, messageId = $%02X, declared/actual = %u/%u",
+            messageId, declaredLength, len);
+        return false;
+    }
+
+    if (encrypted || !requiresEncryptedKMM(messageId))
+        return true;
+
+    // This is locally generated and its total length has already been checked.
+    // Decode only the common header: the bounded air-facing factory intentionally
+    // rejects nested-count messages such as RK3 until it has a structural validator.
+    KMMOpaqueFrame response;
+    if (!response.decode(data) || response.getMACType() != KMM_MAC::ENH_MAC ||
+        response.getMACAlgId() != ALGO_AES_256 || response.getMACKId() == 0U) {
+        LogError(LOG_P25, P25_KMM_STR ", generated KMM requires outer encryption but has no usable enhanced-MAC TEK context, messageId = $%02X, macType = $%02X, macAlgId = $%02X, macKId = $%04X",
+            messageId, response.getMACType(), response.getMACAlgId(), response.getMACKId());
+        return false;
+    }
+
+    EKCKeyItem outerTek = m_network->m_cryptoLookup->find(response.getMACKId());
+    if (outerTek.isInvalid()) {
+        LogError(LOG_P25, P25_KMM_STR ", generated KMM requires outer encryption but MAC TEK was not found, messageId = $%02X, algId = $%02X, kId = $%04X",
+            messageId, response.getMACAlgId(), response.getMACKId());
+        return false;
+    }
+    if (outerTek.algId() != response.getMACAlgId()) {
+        LogError(LOG_P25, P25_KMM_STR ", generated KMM outer TEK algorithm mismatch, messageId = $%02X, required/found algId = $%02X/$%02X, kId = $%04X",
+            messageId, response.getMACAlgId(), outerTek.algId(), response.getMACKId());
+        return false;
+    }
+
+    algoId = response.getMACAlgId();
+    kid = response.getMACKId();
+    encrypted = true;
+    if (m_debug) {
+        LogDebugEx(LOG_P25, "P25OTARService::resolveResponseSecurity()",
+            "selected outer encryption for generated KMM, messageId = $%02X, algId = $%02X, kId = $%04X",
+            messageId, algoId, kid);
+    }
+    return true;
+}
+
 /* Helper used to process KMM frames from PDU data. */
 
 bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId, uint8_t n, bool encrypted,
@@ -240,19 +296,17 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
     }
 
     bool responseEncrypted = encrypted;
-    if (!responseEncrypted) {
-        std::unique_ptr<KMMFrame> response = KMMFactory::create(pduUserData.get(), payloadSize);
-        if (response != nullptr && requiresEncryptedKMM(response->getMessageId())) {
-            if (response->getMACType() != KMM_MAC::ENH_MAC || response->getMACAlgId() != ALGO_AES_256) {
-                LogError(LOG_P25, P25_KMM_STR ", secured response has no usable outer TEK context");
-                sendNack(PDUAckType::NACK_UNDELIVERABLE);
-                return false;
-            }
-            resolvedAlgoId = response->getMACAlgId();
-            resolvedKId = response->getMACKId();
-            responseEncrypted = true;
-        }
+    if (!resolveResponseSecurity(pduUserData.get(), payloadSize, responseEncrypted,
+        resolvedAlgoId, resolvedKId)) {
+        LogError(LOG_P25, P25_KMM_STR ", secured response has no usable outer TEK context");
+        sendNack(PDUAckType::NACK_UNDELIVERABLE);
+        return false;
     }
+
+    // Complete the inbound confirmed-delivery transaction before starting the
+    // independent outbound KMM transaction. The SU is still in stop-and-wait
+    // for this N(R) and may discard an RK3 transmitted ahead of it.
+    m_packetData->write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, n, llId, false);
 
     // lambda function to handle dispatching of KMM responses, including encryption if required
     auto dispatchResponse = [&](const uint8_t* response, uint32_t responseLength) -> bool {
@@ -262,9 +316,6 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
 
         UInt8Array encryptedResponse;
         if (responseEncrypted) {
-            P25Crypto responseCrypto;
-            responseCrypto.generateMI();
-            responseCrypto.getMI(responseMI);
             encryptedResponse = cryptKMM(resolvedAlgoId, resolvedKId, responseMI, response, responseLength, true);
             if (encryptedResponse == nullptr)
                 return false;
@@ -285,7 +336,6 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
             LogError(LOG_P25, P25_KMM_STR ", unable to dispatch KMM response, llId = %u", llId);
         }
 
-        sendNack(PDUAckType::NACK_UNDELIVERABLE);
         return false;
     }
 
@@ -293,16 +343,10 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
     for (const std::vector<uint8_t>& response : additionalResponses) {
         if (!dispatchResponse(response.data(), (uint32_t)response.size())) {
             LogError(LOG_P25, P25_KMM_STR ", unable to dispatch additional Rekey Command, llId = %u", llId);
-            sendNack(PDUAckType::NACK_UNDELIVERABLE);
             return false;
         }
     }
 
-    /**
-     * The CAI data-link ACK covers receipt of the triggering request. Each RK3
-     * Rekey Command is acknowledged separately by its Rekey-Acknowledgment.
-     */
-    m_packetData->write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, n, llId, false);
     return true;
 }
 
@@ -447,19 +491,12 @@ void P25OTARService::taskNetworkRx(OTARPacketRequest* req)
             }
 
             bool responseEncrypted = encrypted;
-            if (!responseEncrypted) {
-                std::unique_ptr<KMMFrame> response = KMMFactory::create(pduUserData.get(), payloadSize);
-                if (response != nullptr && requiresEncryptedKMM(response->getMessageId())) {
-                    if (response->getMACType() != KMM_MAC::ENH_MAC || response->getMACAlgId() != ALGO_AES_256) {
-                        LogError(LOG_P25, P25_KMM_STR ", secured DLI response has no usable outer TEK context");
-                        if (req->buffer != nullptr) delete[] req->buffer;
-                        delete req;
-                        return;
-                    }
-                    algoId = response->getMACAlgId();
-                    kid = response->getMACKId();
-                    responseEncrypted = true;
-                }
+            if (!network->resolveResponseSecurity(pduUserData.get(), payloadSize,
+                responseEncrypted, algoId, kid)) {
+                LogError(LOG_P25, P25_KMM_STR ", secured DLI response has no usable outer TEK context");
+                if (req->buffer != nullptr) delete[] req->buffer;
+                delete req;
+                return;
             }
 
             // lambda function to send KMM responses, handling encryption if necessary
@@ -568,6 +605,10 @@ UInt8Array P25OTARService::cryptKMM(uint8_t algoId, uint16_t kid, uint8_t* mi, c
             LogError(LOG_P25, "unsupported KEK algorithm, algoId = $%02X", algoId);
             break;
         }
+    }
+    else {
+        LogError(LOG_P25, P25_KMM_STR ", unable to %s outer KMM, KEK not found, algId = $%02X, kId = $%04X",
+            encrypt ? "encrypt" : "decrypt", algoId, kid);
     }
 
     return nullptr;

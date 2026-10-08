@@ -108,6 +108,17 @@ public:
     static std::vector<std::vector<uint8_t>> buildOTARRekey(network::TrafficNetwork& network,
         uint32_t llId, uint32_t kmmRSI);
     /**
+     * @brief Resolves the outer security context selected for a generated response.
+     * @param network The TrafficNetwork instance.
+     * @param packet The OTAR response packet data.
+     * @param encrypted Output flag indicating if the packet is encrypted.
+     * @param algoId Output parameter for the algorithm ID used for encryption.
+     * @param kid Output parameter for the key ID used for encryption.
+     * @return True if the security parameters were successfully resolved, false otherwise.
+     */
+    static bool resolveOTARResponseSecurity(network::TrafficNetwork& network,
+        const std::vector<uint8_t>& packet, bool& encrypted, uint8_t& algoId, uint16_t& kid);
+    /**
      * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
      * @param network The TrafficNetwork that owns the OTAR service.
      * @param packet Encoded DLD bytes.

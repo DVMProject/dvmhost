@@ -555,6 +555,15 @@ TEST_CASE("P25 OTAR Rekey Commands batch four keys per KMM", "[p25][kmm][otar][r
         FNETestHooks::buildOTARRekey(harness.traffic, SU_RSI, SU_RSI);
     REQUIRE(frames.size() == 3U);
 
+    bool outerEncrypted = false;
+    uint8_t outerAlgId = ALGO_UNENCRYPT;
+    uint16_t outerKId = 0U;
+    REQUIRE(FNETestHooks::resolveOTARResponseSecurity(harness.traffic, frames[0U],
+        outerEncrypted, outerAlgId, outerKId));
+    CHECK(outerEncrypted);
+    CHECK(outerAlgId == ALGO_AES_256);
+    CHECK(outerKId == allowed[0U]);
+
     const uint32_t expectedCounts[] = { 4U, 4U, 1U };
     for (size_t i = 0U; i < frames.size(); i++) {
         REQUIRE(frames[i].size() >= 3U);

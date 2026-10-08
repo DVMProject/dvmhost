@@ -186,13 +186,6 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         return false;
     }
 
-    // check for inconsistent total block count
-    if (status->dataBlockCnt > 0U && status->totalBlocks != totalBlocks) {
-        LogError(LOG_P25, P25_PDU_STR ", inconsistent total block count, received/expected = %u/%u",
-            totalBlocks, status->totalBlocks);
-        return false;
-    }
-
     LogInfoEx(LOG_NET, P25_PDU_STR ", received block %u, peerId = %u, len = %u",
         currentBlock, peerId, blockLength);
 

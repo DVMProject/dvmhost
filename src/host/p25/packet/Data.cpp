@@ -559,15 +559,15 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
 
                             // handle standard P25 service access points
                             switch (sap) {
-                        case PDUSAP::ARP:
-                        {
-                            if (m_netPduUserDataLength < P25_PDU_ARP_PCKT_LENGTH) {
-                                LogWarning(LOG_NET, P25_PDU_STR ", ignoring truncated ARP payload, length = %u",
-                                    m_netPduUserDataLength);
-                                break;
-                            }
+                            case PDUSAP::ARP:
+                            {
+                                if (m_netPduUserDataLength < P25_PDU_ARP_PCKT_LENGTH) {
+                                    LogWarning(LOG_NET, P25_PDU_STR ", ignoring truncated ARP payload, length = %u",
+                                        m_netPduUserDataLength);
+                                    break;
+                                }
 
-                            /* bryanb: quick and dirty ARP logging */
+                                /* bryanb: quick and dirty ARP logging */
                                 uint8_t arpPacket[P25_PDU_ARP_PCKT_LENGTH];
                                 ::memset(arpPacket, 0x00U, P25_PDU_ARP_PCKT_LENGTH);
                                 ::memcpy(arpPacket, m_netPduUserData, P25_PDU_ARP_PCKT_LENGTH);
