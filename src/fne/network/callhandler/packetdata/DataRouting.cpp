@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Digital Voice Modem - Common Library
+ * Digital Voice Modem - Converged FNE Software
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
  *
  */
-#include "common/p25/data/DataRouting.h"
+#include "network/callhandler/packetdata/DataRouting.h"
 
-using namespace p25::data;
+using namespace network::callhandler::packetdata;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -17,22 +17,22 @@ using namespace p25::data;
 
 /* Observes a route neighbor with the given link-layer ID and IP address. */
 
-void RouteNeighborCache::observe(uint32_t llId, uint32_t ipAddress, uint64_t nowMs)
+void RouteNeighborCache::observe(uint32_t subscriberId, uint32_t ipAddress, uint64_t nowMs)
 {
-    if (llId == 0U || ipAddress == 0U)
+    if (subscriberId == 0U || ipAddress == 0U)
         return;
 
-    RouteNeighbor& neighbor = m_neighbors[llId];
-    neighbor.llId = llId;
+    RouteNeighbor& neighbor = m_neighbors[subscriberId];
+    neighbor.subscriberId = subscriberId;
     neighbor.ipAddress = ipAddress;
     neighbor.lastSeen = nowMs;
 }
 
 /* Erases a route neighbor with the given link-layer ID. */
 
-bool RouteNeighborCache::erase(uint32_t llId)
+bool RouteNeighborCache::erase(uint32_t subscriberId)
 {
-    return m_neighbors.erase(llId) > 0U;
+    return m_neighbors.erase(subscriberId) > 0U;
 }
 
 /* Clears all observed route neighbors. */
@@ -44,9 +44,9 @@ void RouteNeighborCache::clear()
 
 /* Finds a route neighbor by its link-layer ID. */
 
-const RouteNeighbor* RouteNeighborCache::findByLLId(uint32_t llId) const
+const RouteNeighbor* RouteNeighborCache::findBySubscriberId(uint32_t subscriberId) const
 {
-    auto it = m_neighbors.find(llId);
+    auto it = m_neighbors.find(subscriberId);
     return it == m_neighbors.end() ? nullptr : &it->second;
 }
 
@@ -165,6 +165,7 @@ DataRoute DataLocationRegistry::resolve(uint32_t llId, AccessMode mode, uint64_t
     result.peerId = it->second.peerId;
     result.channelId = it->second.channelId;
     result.channelNo = it->second.channelNo;
+    result.slotNo = it->second.slotNo;
     result.lastSeen = it->second.lastSeen;
     result.valid = true;
 

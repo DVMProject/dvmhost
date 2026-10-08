@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Digital Voice Modem - Common Library
+ * Digital Voice Modem - Converged FNE Software
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
  *
  */
-#include "common/p25/data/PacketScheduler.h"
+#include "network/callhandler/packetdata/DMRPacketScheduler.h"
 
 #include <utility>
 
-using namespace p25::data;
+using namespace network::callhandler::packetdata;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Initializes a new instance of the PacketScheduler class. */
+/* Initializes a new instance of the DMRPacketScheduler class. */
 
-PacketScheduler::PacketScheduler(uint32_t maxFrames, uint32_t maxBytes) :
+DMRPacketScheduler::DMRPacketScheduler(uint32_t maxFrames, uint32_t maxBytes) :
     m_maxFrames(maxFrames),
     m_maxBytes(maxBytes),
     m_byteCount(0U),
@@ -28,9 +28,9 @@ PacketScheduler::PacketScheduler(uint32_t maxFrames, uint32_t maxBytes) :
     /* stub */
 }
 
-/* Enqueues a scheduled packet into the scheduler. */
+/* Enqueues a scheduled DMR packet. */
 
-uint32_t PacketScheduler::enqueue(ScheduledDataPacket&& packet)
+uint32_t DMRPacketScheduler::enqueue(ScheduledDMRDataPacket&& packet)
 {
     uint32_t dropped = 0U;
     uint32_t packetBytes = uint32_t(packet.userData.size());
@@ -51,14 +51,14 @@ uint32_t PacketScheduler::enqueue(ScheduledDataPacket&& packet)
 
 /* Gets the next queued packet. */
 
-ScheduledDataPacket* PacketScheduler::front()
+ScheduledDMRDataPacket* DMRPacketScheduler::front()
 {
     return m_packets.empty() ? nullptr : &m_packets.front();
 }
 
 /* Removes the next queued packet. */
 
-void PacketScheduler::pop()
+void DMRPacketScheduler::pop()
 {
     if (m_packets.empty())
         return;
@@ -70,7 +70,7 @@ void PacketScheduler::pop()
 
 /* Moves the next queued packet to the back of the queue. */
 
-void PacketScheduler::rotate()
+void DMRPacketScheduler::rotate()
 {
     if (m_packets.size() < 2U)
         return;
@@ -79,9 +79,9 @@ void PacketScheduler::rotate()
     m_packets.pop_front();
 }
 
-/* Clears all queued packets from the scheduler. */
+/* Clears all queued packets. */
 
-void PacketScheduler::clear()
+void DMRPacketScheduler::clear()
 {
     m_packets.clear();
     m_byteCount = 0U;

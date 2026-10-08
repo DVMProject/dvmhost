@@ -27,6 +27,7 @@ using namespace system_clock;
 using namespace network;
 using namespace network::callhandler;
 using namespace network::callhandler::packetdata;
+using namespace network::callhandler::packetdata::p25data;
 using namespace p25;
 using namespace p25::defines;
 using namespace p25::data;
@@ -366,7 +367,7 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame(), pduUserData", pduUserData, pduLength);
 //#endif
 
-    ScheduledDataPacket packet;
+    ScheduledP25DataPacket packet;
     packet.header = pktHeader;
     packet.llId = llId;
     packet.targetIPAddress = tgtProtoAddr;
@@ -460,7 +461,7 @@ void P25PacketData::clock(uint32_t ms)
         return;
     }
 
-    ScheduledDataPacket* packet = m_packetScheduler.front();
+    ScheduledP25DataPacket* packet = m_packetScheduler.front();
     if (packet == nullptr || now <= packet->dueAt)
         return;
 
@@ -1471,7 +1472,7 @@ bool P25PacketData::hasARPEntry(uint32_t llId) const
         return false;
     }
 
-    const RouteNeighbor* neighbor = m_neighborCache.findByLLId(llId);
+    const RouteNeighbor* neighbor = m_neighborCache.findBySubscriberId(llId);
     return neighbor != nullptr && neighbor->ipAddress != 0U;
 }
 

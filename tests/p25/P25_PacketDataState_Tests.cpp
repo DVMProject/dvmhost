@@ -10,15 +10,17 @@
 #include "host/Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/ConventionalRegistration.h"
-#include "common/p25/data/ConventionalDataService.h"
-#include "common/p25/data/IPConvergenceService.h"
 #include "common/p25/data/IPv4Packet.h"
-#include "common/p25/data/PacketDataState.h"
-#include "common/p25/data/DataRouting.h"
-#include "common/p25/data/PacketScheduler.h"
+#include "network/callhandler/packetdata/p25/PacketDataState.h"
+#include "network/callhandler/packetdata/DataRouting.h"
+#include "network/callhandler/packetdata/P25PacketScheduler.h"
+#include "network/callhandler/packetdata/p25/ConventionalDataService.h"
+#include "network/callhandler/packetdata/p25/IPConvergenceService.h"
 
 using namespace p25::data;
 using namespace p25::defines;
+using namespace network::callhandler::packetdata::p25data;
+using namespace network::callhandler::packetdata;
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -375,6 +377,7 @@ TEST_CASE("P25 conventional locations move, expire, and resolve targeted routes"
     location.peerId = 10U;
     location.channelId = 1U;
     location.channelNo = 101U;
+    location.slotNo = 2U;
     location.lastSeen = 1000U;
     REQUIRE(locations.updateConventional(1001U, location));
 
@@ -383,6 +386,7 @@ TEST_CASE("P25 conventional locations move, expire, and resolve targeted routes"
     CHECK(route.peerId == 10U);
     CHECK(route.channelId == 1U);
     CHECK(route.channelNo == 101U);
+    CHECK(route.slotNo == 2U);
 
     // Later inbound traffic moves the subscriber to peer B.
     location.peerId = 20U;
@@ -451,8 +455,8 @@ TEST_CASE("P25 neighbor observations do not create bindings or routes",
     DataLocationRegistry locations;
 
     neighbors.observe(1001U, 0x0A000001U, 10U);
-    REQUIRE(neighbors.findByLLId(1001U) != nullptr);
-    CHECK(neighbors.findByIPAddress(0x0A000001U)->llId == 1001U);
+    REQUIRE(neighbors.findBySubscriberId(1001U) != nullptr);
+    CHECK(neighbors.findByIPAddress(0x0A000001U)->subscriberId == 1001U);
     CHECK(bindings.findByLLId(1001U) == nullptr);
     CHECK_FALSE(locations.resolve(1001U, AccessMode::CONVENTIONAL).valid);
 }
@@ -460,13 +464,13 @@ TEST_CASE("P25 neighbor observations do not create bindings or routes",
 TEST_CASE("P25 packet scheduler bounds and rotates queued downlinks",
     "[p25][packet-data][scheduler]")
 {
-    PacketScheduler scheduler(2U, 8U);
-    ScheduledDataPacket first;
+    P25PacketScheduler scheduler(2U, 8U);
+    ScheduledP25DataPacket first;
     first.llId = 1U;
     first.userData.assign(4U, 0x11U);
     CHECK(scheduler.enqueue(std::move(first)) == 0U);
 
-    ScheduledDataPacket second;
+    ScheduledP25DataPacket second;
     second.llId = 2U;
     second.userData.assign(4U, 0x22U);
     CHECK(scheduler.enqueue(std::move(second)) == 0U);
@@ -476,7 +480,7 @@ TEST_CASE("P25 packet scheduler bounds and rotates queued downlinks",
     scheduler.rotate();
     CHECK(scheduler.front()->llId == 2U);
 
-    ScheduledDataPacket third;
+    ScheduledP25DataPacket third;
     third.llId = 3U;
     third.userData.assign(4U, 0x33U);
     CHECK(scheduler.enqueue(std::move(third)) == 1U);
@@ -487,7 +491,7 @@ TEST_CASE("P25 packet scheduler bounds and rotates queued downlinks",
 TEST_CASE("P25 scheduled packet header assignment owns an independent copy",
     "[p25][packet-data][scheduler][memory]")
 {
-    PacketScheduler scheduler(1U, 64U);
+    P25PacketScheduler scheduler(1U, 64U);
     std::array<uint8_t, MI_LENGTH_BYTES> originalMI {
         0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xABU, 0xCDU, 0xEFU, 0x10U
     };
@@ -498,7 +502,7 @@ TEST_CASE("P25 scheduled packet header assignment owns an independent copy",
         source.setSAP(PDUSAP::PACKET_DATA);
         source.setMI(originalMI.data());
 
-        ScheduledDataPacket packet;
+        ScheduledP25DataPacket packet;
         packet.header = source;
         packet.userData.assign(20U, 0x55U);
         REQUIRE(scheduler.enqueue(std::move(packet)) == 0U);

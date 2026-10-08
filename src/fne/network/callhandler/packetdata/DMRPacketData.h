@@ -9,24 +9,23 @@
  */
 /**
  * @file DMRPacketData.h
- * @ingroup fne_callhandler
+ * @ingroup fne_packetdata
  * @file DMRPacketData.cpp
- * @ingroup fne_callhandler
+ * @ingroup fne_packetdata
  */
 #if !defined(__PACKETDATA__DMR_PACKET_DATA_H__)
 #define __PACKETDATA__DMR_PACKET_DATA_H__
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
-#include "common/concurrent/deque.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/DataHeader.h"
 #include "network/TrafficNetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/callhandler/TagDMRData.h"
-
-#include <deque>
+#include "network/callhandler/packetdata/DataRouting.h"
+#include "network/callhandler/packetdata/DMRPacketScheduler.h"
 
 namespace network
 {
@@ -40,7 +39,7 @@ namespace network
 
             /**
              * @brief Implements the DMR packet data handler.
-             * @ingroup fne_callhandler
+             * @ingroup fne_packetdata
              */
             class HOST_SW_API DMRPacketData {
             public:
@@ -101,24 +100,7 @@ namespace network
                 TrafficNetwork* m_network;
                 TagDMRData *m_tag;
 
-                /**
-                 * @brief Represents a queued data frame from the VTUN.
-                 */
-                class QueuedDataFrame {
-                public:
-                    dmr::data::DataHeader* header;  //!< Instance of a PDU data header.
-                    uint32_t dstId;                 //!< Destination Radio ID
-                    uint32_t tgtProtoAddr;          //!< Target Protocol Address
-
-                    uint8_t* userData;              //!< Raw data buffer
-                    uint32_t userDataLen;           //!< Length of raw data buffer
-
-                    uint64_t timestamp;             //!< Timestamp in milliseconds
-                    uint8_t retryCnt;               //!< Packet Retry Counter
-                    bool extendRetry;               //!< Flag indicating whether or not to extend the retry count for this packet.
-                };
-                concurrent::deque<QueuedDataFrame*> m_queuedFrames;
-                uint32_t m_queuedFrameBytes;
+                DMRPacketScheduler m_packetScheduler;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -186,8 +168,8 @@ namespace network
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
                 concurrent::unordered_map<uint32_t, RxStatus*> m_status;
 
-                typedef std::pair<const uint32_t, uint32_t> ArpTablePair;
-                std::unordered_map<uint32_t, uint32_t> m_arpTable;
+                RouteNeighborCache m_neighborCache;
+                DataLocationRegistry m_locationRegistry;
                 typedef std::pair<const uint32_t, bool> ReadyForNextPktPair;
                 std::unordered_map<uint32_t, bool> m_readyForNextPkt;
                 std::unordered_map<uint32_t, uint8_t> m_suSendSeq;

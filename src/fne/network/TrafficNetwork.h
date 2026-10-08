@@ -16,6 +16,10 @@
  * @brief Implementation for the FNE call handlers.
  * @ingroup fne_network
  *
+ * @defgroup fne_packetdata Packet Data Handlers
+ * @brief Implementation for the FNE packet data handlers.
+ * @ingroup fne_callhandler
+ *
  * @file TrafficNetwork.h
  * @ingroup fne_network
  * @file TrafficNetwork.cpp

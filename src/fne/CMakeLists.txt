@@ -14,6 +14,8 @@ file(GLOB dvmfne_SRC
     "src/fne/network/callhandler/*.cpp"
     "src/fne/network/callhandler/packetdata/*.h"
     "src/fne/network/callhandler/packetdata/*.cpp"
+    "src/fne/network/callhandler/packetdata/p25/*.h"
+    "src/fne/network/callhandler/packetdata/p25/*.cpp"
     "src/fne/network/influxdb/*.h"
     "src/fne/network/influxdb/*.cpp"
     "src/fne/network/packet/*.h"

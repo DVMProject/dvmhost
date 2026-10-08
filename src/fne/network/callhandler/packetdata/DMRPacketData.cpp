@@ -30,6 +30,7 @@ using namespace dmr::defines;
 
 #include <cassert>
 #include <chrono>
+#include <utility>
 
 #if !defined(_WIN32)
 #include <netinet/ip.h>
@@ -44,6 +45,7 @@ const uint8_t MAX_PKT_RETRY_CNT = 2U;
 
 const uint32_t INTERPACKET_DELAY = 100U; // milliseconds
 const uint32_t ARP_RETRY_MS = 5000U; // milliseconds
+const uint32_t CONVENTIONAL_LOCATION_MAX_AGE_MS = 300000U; // 5 minutes
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -54,10 +56,10 @@ const uint32_t ARP_RETRY_MS = 5000U; // milliseconds
 DMRPacketData::DMRPacketData(TrafficNetwork* network, TagDMRData* tag, bool debug) :
     m_network(network),
     m_tag(tag),
-    m_queuedFrames(),
-    m_queuedFrameBytes(0U),
+    m_packetScheduler(network->m_vtunQueueMaxFrames, network->m_vtunQueueMaxBytes),
     m_status(),
-    m_arpTable(),
+    m_neighborCache(),
+    m_locationRegistry(CONVENTIONAL_LOCATION_MAX_AGE_MS),
     m_readyForNextPkt(),
     m_suSendSeq(),
     m_debug(debug)
@@ -70,17 +72,7 @@ DMRPacketData::DMRPacketData(TrafficNetwork* network, TagDMRData* tag, bool debu
 
 DMRPacketData::~DMRPacketData()
 {
-    while (m_queuedFrames.size() > 0U) {
-        QueuedDataFrame* frame = m_queuedFrames[0U];
-        m_queuedFrames.pop_front();
-        if (frame != nullptr) {
-            if (frame->header != nullptr)
-                delete frame->header;
-            if (frame->userData != nullptr)
-                delete[] frame->userData;
-            delete frame;
-        }
-    }
+    /* stub */
 }
 
 /* Process a data frame from the network. */
@@ -248,16 +240,25 @@ bool DMRPacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 }
             }
 
+            uint32_t srcId = status->header.getSrcId();
+            if (m_locationRegistry.learnFromInbound() && srcId != 0U && srcId != DMRDEF::WUID_ALL) {
+                ConventionalLocation location;
+                location.peerId = peerId;
+                location.slotNo = status->slotNo;
+                location.lastSeen = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
+                m_locationRegistry.updateConventional(srcId, location);
+            }
+
             status->callBusy = true;
 
             dispatch(peerId, dmrData, data, len);
 
             uint64_t duration = hrc::diff(pktTime, status->callStartTime);
             bool gi = status->header.getGI();
-            uint32_t srcId = status->header.getSrcId();
             uint32_t dstId = status->header.getDstId();
             LogInfoEx((fromUpstream) ? LOG_PEER : LOG_MASTER, "DMR, Data Call End, peer = %u, slot = %u, srcId = %u, dstId = %u, group = %u, blocks = %u, duration = %u, streamId = %u, fromUpstream = %u",
-                peerId, srcId, dstId, gi, status->header.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
+                peerId, status->slotNo, srcId, dstId, gi, status->header.getBlocksToFollow(), duration / 1000, streamId, fromUpstream);
 
             TrafficNetwork::MetricsLogging::incrementCallsProcessed(m_network);
 
@@ -334,77 +335,35 @@ void DMRPacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
         srcIpStr.c_str(), DMRDEF::WUID_IPI, tgtIpStr.c_str(), dstId, pktLen, proto);
 
     // assemble a DMR PDU frame header for transport...
-    dmr::data::DataHeader* pktHeader = new dmr::data::DataHeader();
-    pktHeader->setDPF(DPF::CONFIRMED_DATA);
-    pktHeader->setA(true);
-    pktHeader->setSAP(PDUSAP::PACKET_DATA);
-    pktHeader->setSrcId(DMRDEF::WUID_IPI);
-    pktHeader->setDstId(dstId);
-    pktHeader->setGI(false);
-    pktHeader->setFullMesage(true);
+    dmr::data::DataHeader pktHeader;
+    pktHeader.setDPF(DPF::CONFIRMED_DATA);
+    pktHeader.setA(true);
+    pktHeader.setSAP(PDUSAP::PACKET_DATA);
+    pktHeader.setSrcId(DMRDEF::WUID_IPI);
+    pktHeader.setDstId(dstId);
+    pktHeader.setGI(false);
+    pktHeader.setFullMesage(true);
 
     // bryanb: we are always sending data as 3/4 rate?
-    pktHeader->calculateLength(DataType::RATE_34_DATA, pktLen);
+    pktHeader.calculateLength(DataType::RATE_34_DATA, pktLen);
 
     uint32_t pduLength = pktLen;
 
     DECLARE_UINT8_ARRAY(pduUserData, pduLength);
     ::memcpy(pduUserData, data, pktLen);
 
-    if (pduLength > m_network->m_vtunQueueMaxBytes) {
-        LogWarning(LOG_DMR, "VTUN queue drop, frame too large for queue cap, frameBytes = %u, capBytes = %u",
-            pduLength, m_network->m_vtunQueueMaxBytes);
-        return;
-    }
+    ScheduledDMRDataPacket packet;
+    packet.header = pktHeader;
+    packet.dstId = dstId;
+    packet.targetIPAddress = tgtProtoAddr;
+    packet.dueAt = now + INTERPACKET_DELAY;
+    packet.userData.assign(pduUserData, pduUserData + pduLength);
 
-    uint32_t droppedFrames = 0U;
-    while (m_queuedFrames.size() >= m_network->m_vtunQueueMaxFrames ||
-           (m_queuedFrameBytes + pduLength) > m_network->m_vtunQueueMaxBytes) {
-        if (m_queuedFrames.size() == 0U) {
-            break;
-        }
-
-        QueuedDataFrame* oldFrame = m_queuedFrames[0U];
-        m_queuedFrames.pop_front();
-        if (oldFrame != nullptr) {
-            if (oldFrame->userDataLen <= m_queuedFrameBytes) {
-                m_queuedFrameBytes -= oldFrame->userDataLen;
-            }
-            else {
-                m_queuedFrameBytes = 0U;
-            }
-
-            if (oldFrame->header != nullptr)
-                delete oldFrame->header;
-            if (oldFrame->userData != nullptr)
-                delete[] oldFrame->userData;
-            delete oldFrame;
-        }
-
-        droppedFrames++;
-    }
-
+    uint32_t droppedFrames = m_packetScheduler.enqueue(std::move(packet));
     if (droppedFrames > 0U) {
-        LogWarning(LOG_DMR, "VTUN queue cap reached, dropped %u oldest frame(s), queuedFrames = %u, queuedBytes = %u",
-            droppedFrames, (uint32_t)m_queuedFrames.size(), m_queuedFrameBytes);
+        LogWarning(LOG_DMR, "VTUN queue cap reached, dropped %u frame(s), queuedFrames = %u, queuedBytes = %u",
+            droppedFrames, uint32_t(m_packetScheduler.size()), m_packetScheduler.byteCount());
     }
-
-    // queue frame for dispatch
-    QueuedDataFrame* qf = new QueuedDataFrame();
-    qf->retryCnt = 0U;
-    qf->extendRetry = false;
-    qf->timestamp = now + INTERPACKET_DELAY;
-
-    qf->header = pktHeader;
-    qf->dstId = dstId;
-    qf->tgtProtoAddr = tgtProtoAddr;
-
-    qf->userData = new uint8_t[pduLength];
-    ::memcpy(qf->userData, pduUserData, pduLength);
-    qf->userDataLen = pduLength;
-
-    m_queuedFrames.push_back(qf);
-    m_queuedFrameBytes += pduLength;
 #endif // !defined(_WIN32)
 }
 
@@ -434,53 +393,51 @@ void DMRPacketData::write_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, ui
 void DMRPacketData::clock(uint32_t ms)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_locationRegistry.expire(now);
 
-    if (m_queuedFrames.size() == 0U) {
+    if (m_packetScheduler.empty()) {
         return;
     }
 
-    // transmit queued data frames
-    auto& frame = m_queuedFrames[0];
-    if (frame != nullptr) {
-        if (now >= frame->timestamp) {
-            // check if we have an ARP entry for the destination
-            if (!hasARPEntry(frame->dstId)) {
-                if (frame->retryCnt < MAX_PKT_RETRY_CNT || frame->extendRetry) {
-                    // send ARP request
-                    write_PDU_ARP(frame->tgtProtoAddr);
-                    frame->timestamp = now + ARP_RETRY_MS;
-                    frame->retryCnt++;
-                } else {
-                    LogWarning(LOG_DMR, "DMR, failed to resolve ARP for dstId %u", frame->dstId);
-                    if (frame->userDataLen <= m_queuedFrameBytes) {
-                        m_queuedFrameBytes -= frame->userDataLen;
-                    }
-                    else {
-                        m_queuedFrameBytes = 0U;
-                    }
-                    delete frame->header;
-                    delete[] frame->userData;
-                    delete frame;
-                    m_queuedFrames.pop_front();
-                }
-            } else {
-                // transmit the PDU frame
-                dispatchUserFrameToFNE(*frame->header, frame->userData);
+    ScheduledDMRDataPacket* packet = m_packetScheduler.front();
+    if (packet == nullptr || now < packet->dueAt)
+        return;
 
-                if (frame->userDataLen <= m_queuedFrameBytes) {
-                    m_queuedFrameBytes -= frame->userDataLen;
-                }
-                else {
-                    m_queuedFrameBytes = 0U;
-                }
+    if (packet->retryCount >= MAX_PKT_RETRY_CNT) {
+        LogWarning(LOG_DMR, "DMR, max packet retry count exceeded, dropping packet, dstId = %u",
+            packet->dstId);
+        m_packetScheduler.pop();
+        return;
+    }
 
-                delete frame->header;
-                delete[] frame->userData;
-                delete frame;
-                m_queuedFrames.pop_front();
+    // check if we have an ARP entry for the destination
+    if (!hasARPEntry(packet->dstId)) {
+        write_PDU_ARP(packet->targetIPAddress);
+        packet->dueAt = now + ARP_RETRY_MS;
+        packet->retryCount++;
+        return;
+    }
+
+    if (packet->dstId != DMRDEF::WUID_ALL) {
+        DataRoute route = m_locationRegistry.resolve(packet->dstId,
+            AccessMode::CONVENTIONAL, now);
+        if (!route.valid) {
+            UnknownLocationPolicy policy = m_locationRegistry.unknownLocationPolicy();
+            if (policy == UnknownLocationPolicy::DROP) {
+                m_packetScheduler.pop();
+                return;
             }
+            if (policy == UnknownLocationPolicy::ARP)
+                write_PDU_ARP(packet->targetIPAddress);
+
+            packet->dueAt = now + ARP_RETRY_MS;
+            packet->retryCount++;
+            return;
         }
     }
+
+    dispatchUserFrameToFNE(packet->header, packet->userData.data());
+    m_packetScheduler.pop();
 }
 
 /* Helper to cleanup any call's left in a dangling state without any further updates. */
@@ -576,13 +533,13 @@ void DMRPacketData::dispatch(uint32_t peerId, dmr::data::NetData& dmrData, const
 
             if (opcode == DMR_PDU_ARP_REQUEST) {
                 LogInfoEx(LOG_DMR, "DMR, ARP request, who has %s? tell %s (%u)", __IP_FROM_UINT(tgtProtoAddr).c_str(), __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
-                m_arpTable[srcHWAddr] = srcProtoAddr; // update ARP table
+                m_neighborCache.observe(srcHWAddr, srcProtoAddr); // update neighbor cache
                 if (tgtProtoAddr == fneIPv4) {
                     write_PDU_ARP_Reply(fneIPv4, srcHWAddr, srcProtoAddr, DMRDEF::WUID_ALLL);
                 }
             } else if (opcode == DMR_PDU_ARP_REPLY) {
                 LogInfoEx(LOG_DMR, "DMR, ARP reply, %s is at %u", __IP_FROM_UINT(srcProtoAddr).c_str(), srcHWAddr);
-                m_arpTable[srcHWAddr] = srcProtoAddr; // update ARP table
+                m_neighborCache.observe(srcHWAddr, srcProtoAddr); // update neighbor cache
             }
 #endif // !defined(_WIN32)
         }
@@ -679,6 +636,34 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
     uint32_t srcId = status->header.getSrcId();
     uint32_t dstId = status->header.getDstId();
 
+    std::vector<DataRoute> routes;
+    bool groupDelivery = status->header.getGI() || dstId == DMRDEF::WUID_ALL;
+    if (groupDelivery) {
+        std::vector<uint32_t> availablePeers;
+        for (const auto& peer : m_network->m_peers)
+            availablePeers.push_back(peer.first);
+        for (const auto& peer : m_network->m_host->m_peerNetworks) {
+            if (peer.second->isEnabled())
+                availablePeers.push_back(peer.second->getPeerId());
+        }
+        routes = m_locationRegistry.resolveGroup(availablePeers);
+    }
+    else {
+        uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        DataRoute route = m_locationRegistry.resolve(dstId, AccessMode::CONVENTIONAL, now);
+        if (!route.valid) {
+            LogWarning(LOG_DMR, "DMR, no RF route for relayed packet, dstId = %u", dstId);
+            return;
+        }
+        routes.push_back(route);
+    }
+
+    auto selectedPeer = [&routes](uint32_t candidatePeerId) {
+        return std::any_of(routes.cbegin(), routes.cend(),
+            [candidatePeerId](const DataRoute& route) { return route.peerId == candidatePeerId; });
+    };
+
     /*
     ** MASTER TRAFFIC
     */
@@ -686,7 +671,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
     // repeat traffic to the connected peers
     if (m_network->m_peers.size() > 0U) {
         for (auto peer : m_network->m_peers) {
-            if (peerId != peer.first) {
+            if (peerId != peer.first && selectedPeer(peer.first)) {
                 // is this peer ignored?
                 if (!m_tag->isPeerPermitted(peer.first, dmrData, streamId)) {
                     continue;
@@ -712,7 +697,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
 
             // don't try to repeat traffic to the source peer...if this traffic
             // is coming from a neighbor FNE peer
-            if (dstPeerId != peerId) {
+            if (dstPeerId != peerId && selectedPeer(dstPeerId)) {
                 // skip peer if it isn't enabled
                 if (!peer.second->isEnabled()) {
                     continue;
@@ -739,6 +724,26 @@ void DMRPacketData::dispatchUserFrameToFNE(dmr::data::DataHeader& dataHeader, ui
 {
     uint32_t srcId = dataHeader.getSrcId();
     uint32_t dstId = dataHeader.getDstId();
+
+    std::vector<DataRoute> routes;
+    if (dataHeader.getGI() || dstId == DMRDEF::WUID_ALL) {
+        std::vector<uint32_t> availablePeers;
+        for (const auto& peer : m_network->m_peers)
+            availablePeers.push_back(peer.first);
+        routes = m_locationRegistry.resolveGroup(availablePeers);
+    }
+    else {
+        uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        DataRoute route = m_locationRegistry.resolve(dstId, AccessMode::CONVENTIONAL, now);
+        if (route.valid)
+            routes.push_back(route);
+    }
+
+    if (routes.empty()) {
+        LogWarning(LOG_DMR, "DMR, no RF route for downlink, dstId = %u", dstId);
+        return;
+    }
 
     // update the sequence number
     m_suSendSeq[srcId]++;
@@ -768,7 +773,6 @@ void DMRPacketData::dispatchUserFrameToFNE(dmr::data::DataHeader& dataHeader, ui
         */
 
         dmr::data::NetData dmrData;
-        dmrData.setSlotNo(1U);
         dmrData.setSrcId(srcId);
         dmrData.setDstId(dstId);
         dmrData.setFLCO(FLCO::PRIVATE);
@@ -776,18 +780,29 @@ void DMRPacketData::dispatchUserFrameToFNE(dmr::data::DataHeader& dataHeader, ui
         dmrData.setSeqNo(0U);
         dmrData.setDataType((currentBlock == 0U) ? DataType::DATA_HEADER : DataType::RATE_34_DATA);
 
-        // create DMR network message
-        uint32_t messageLength = 0U;
-        UInt8Array message = m_network->createDMR_Message(messageLength, streamId, dmrData);
-        if (message != nullptr) {
-            // copy the DMR frame data
+        for (const DataRoute& route : routes) {
+            dmrData.setSlotNo(route.slotNo != 0U ? route.slotNo : 1U);
+
+            uint32_t messageLength = 0U;
+            UInt8Array message = m_network->createDMR_Message(messageLength, streamId, dmrData);
+            if (message == nullptr)
+                continue;
             ::memcpy(message.get() + 20U, data, len);
 
-            // repeat traffic to the connected peers
-            if (m_network->m_peers.size() > 0U) {
-                for (auto peer : m_network->m_peers) {
-                    m_network->writePeer(peer.first, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, 
-                        message.get(), messageLength, pktSeq, streamId);
+            auto localPeer = m_network->m_peers.find(route.peerId);
+            if (localPeer != m_network->m_peers.end()) {
+                m_network->writePeer(route.peerId, m_network->m_peerId,
+                    { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR },
+                    message.get(), messageLength, pktSeq, streamId);
+            }
+            else {
+                for (const auto& peer : m_network->m_host->m_peerNetworks) {
+                    if (peer.second->getPeerId() == route.peerId && peer.second->isEnabled()) {
+                        peer.second->writeMaster(
+                            { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR },
+                            message.get(), messageLength, pktSeq, streamId);
+                        break;
+                    }
                 }
             }
         }
@@ -891,18 +906,8 @@ bool DMRPacketData::hasARPEntry(uint32_t id) const
         return false;
     }
 
-    // lookup ARP table entry
-    try {
-        uint32_t addr = m_arpTable.at(id);
-        if (addr != 0U) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    } catch (...) {
-        return false;
-    }
+    const RouteNeighbor* neighbor = m_neighborCache.findBySubscriberId(id);
+    return neighbor != nullptr && neighbor->ipAddress != 0U;
 }
 
 /* Helper to get the IP address for the given radio ID. */
@@ -914,7 +919,8 @@ uint32_t DMRPacketData::getIPAddress(uint32_t id)
     }
 
     if (hasARPEntry(id)) {
-        return m_arpTable[id];
+        const RouteNeighbor* neighbor = m_neighborCache.findBySubscriberId(id);
+        return neighbor != nullptr ? neighbor->ipAddress : 0U;
     } else {
         // do we have a static entry for this ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(id);
@@ -938,11 +944,9 @@ uint32_t DMRPacketData::getRadioIdAddress(uint32_t addr)
         return 0U;
     }
 
-    for (auto entry : m_arpTable) {
-        if (entry.second == addr) {
-            return entry.first;
-        }
-    }
+    const RouteNeighbor* neighbor = m_neighborCache.findByIPAddress(addr);
+    if (neighbor != nullptr)
+        return neighbor->subscriberId;
 
     // check if we have an entry in the RID lookup
     std::string ipAddr = __IP_FROM_UINT(addr);
@@ -955,7 +959,7 @@ uint32_t DMRPacketData::getRadioIdAddress(uint32_t addr)
         return false; 
     });
     if (it != ridTable.end()) {
-        m_arpTable[it->first] = addr;
+        m_neighborCache.observe(it->first, addr);
         return it->first;
     }
 

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Digital Voice Modem - Common Library
+ * Digital Voice Modem - Converged FNE Software
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
  *
  */
-#include "common/p25/data/PacketDataState.h"
+#include "network/callhandler/packetdata/p25/PacketDataState.h"
 
-using namespace p25::data;
+using namespace network::callhandler::packetdata::p25data;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
