@@ -54,6 +54,13 @@ namespace p25
             ~DataHeader();
 
             /**
+             * @brief Equals operator.
+             * @param header Instance of DataHeader class to copy from.
+             * @return Reference to this instance.
+             */
+            DataHeader& operator=(const DataHeader& header);
+
+            /**
              * @brief Decodes P25 PDU data header.
              * @param[in] data Buffer containing a PDU data header to decode.
              * @param noTrellis Flag indicating not to perform Trellis decoding.

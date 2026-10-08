@@ -18,20 +18,19 @@
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
-#include "common/concurrent/deque.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/Assembler.h"
 #include "common/p25/data/ConventionalDataService.h"
 #include "common/p25/data/IPConvergenceService.h"
 #include "common/p25/data/PacketDataState.h"
+#include "common/p25/data/DataRouting.h"
+#include "common/p25/data/PacketScheduler.h"
 #include "common/p25/data/DataHeader.h"
 #include "common/p25/data/DataBlock.h"
 #include "network/TrafficNetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/callhandler/TagP25Data.h"
-
-#include <deque>
 
 namespace network
 {
@@ -137,24 +136,7 @@ namespace network
                     uint32_t streamId;              //!< Stream ID.
                 };
 
-                /**
-                 * @brief Represents a queued data frame from the VTUN.
-                 */
-                class QueuedDataFrame {
-                public:
-                    p25::data::DataHeader* header;  //!< Instance of a PDU data header.
-                    uint32_t llId;                  //!< Logical Link ID
-                    uint32_t tgtProtoAddr;          //!< Target Protocol Address
-
-                    uint8_t* userData;              //!< Raw data buffer
-                    uint32_t userDataLen;           //!< Length of raw data buffer
-
-                    uint64_t timestamp;             //!< Timestamp in milliseconds
-                    uint8_t retryCnt;               //!< Packet Retry Counter
-                    bool extendRetry;               //!< Flag indicating whether or not to extend the retry count for this packet.
-                };
-                concurrent::deque<QueuedDataFrame*> m_queuedFrames;
-                uint32_t m_queuedFrameBytes;
+                p25::data::PacketScheduler m_packetScheduler;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -229,9 +211,9 @@ namespace network
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
                 concurrent::unordered_map<uint32_t, RxStatus*> m_status;
 
-                typedef std::pair<const uint32_t, uint32_t> ArpTablePair;
-                std::unordered_map<uint32_t, uint32_t> m_arpTable;
+                p25::data::RouteNeighborCache m_neighborCache;
                 p25::data::DataBindingRegistry m_bindingRegistry;
+                p25::data::DataLocationRegistry m_locationRegistry;
                 p25::data::DataLinkManager m_dataLinkManager;
                 p25::data::ConventionalDataService m_conventionalDataService;
                 p25::data::SCEPService m_scepService;

@@ -112,6 +112,16 @@ DataHeader::~DataHeader()
     }
 }
 
+/* Equals operator. */
+
+DataHeader& DataHeader::operator=(const DataHeader& header)
+{
+    if (&header != this)
+        copy(header);
+
+    return *this;
+}
+
 /* Decodes P25 PDU data header. */
 
 bool DataHeader::decode(const uint8_t* data, bool noTrellis)

@@ -195,6 +195,13 @@ namespace p25
              */
             size_t registrationCount() const noexcept { return m_registrations.size(); }
 
+            /**
+             * @brief Converts a registration deny reason to a string representation.
+             * @param reason The registration deny reason.
+             * @return A string representation of the registration deny reason.
+             */
+            static std::string denyReasonToString(RegistrationDenyReason reason);
+
         private:
             /**
              * @brief Represents the state of a registration.

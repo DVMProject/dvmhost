@@ -165,6 +165,22 @@ bool ConventionalDataService::isRegistered(uint32_t llId) const
     return m_registrations.find(llId) != m_registrations.end();
 }
 
+/* Converts a registration deny reason to a string representation. */
+
+std::string ConventionalDataService::denyReasonToString(RegistrationDenyReason reason)
+{
+    switch (reason) {
+        case RegistrationDenyReason::MALFORMED: return "MALFORMED";
+        case RegistrationDenyReason::IDENTITY_MISMATCH: return "IDENTITY_MISMATCH";
+        case RegistrationDenyReason::NOT_PROVISIONED: return "NOT_PROVISIONED";
+        case RegistrationDenyReason::DISABLED: return "DISABLED";
+        case RegistrationDenyReason::UNSUPPORTED_OPTIONS: return "UNSUPPORTED_OPTIONS";
+        case RegistrationDenyReason::ADDRESS_UNAVAILABLE: return "ADDRESS_UNAVAILABLE";
+        case RegistrationDenyReason::ADDRESS_CONFLICT: return "ADDRESS_CONFLICT";
+        default: return "UNKNOWN";
+    }
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
