@@ -50,6 +50,11 @@ namespace p25
             const uint32_t  DFSI_MOT_TDULC_LEN = 21U;
 
             const uint32_t  DFSI_PDU_BLOCK_CNT = 4U;
+            const uint32_t  DFSI_MAX_PDU_BLOCKS = 33U;
+            const uint32_t  DFSI_PDU_RESERVED_LENGTH_BYTES = 1U;
+            const uint32_t  DFSI_PDU_UNCONFIRMED_BLOCK_LENGTH_BYTES = 13U;  // 12 data + reserved
+            const uint32_t  DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES = 18U;    // sequence/flag + 16 data + reserved
+            const uint32_t  DFSI_PDU_END_METADATA_LENGTH_BYTES = 2U;
 
             const uint32_t  DFSI_TIA_VHDR_LEN = 22U;
 

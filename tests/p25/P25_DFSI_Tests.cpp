@@ -129,3 +129,31 @@ TEST_CASE("DFSI StartOfStream and FullRateVoice encode/decode round-trips", "[p2
         REQUIRE(rx.additionalData == nullptr);
     }
 }
+
+TEST_CASE("DFSI PDU wire lengths follow known captures", "[p25][dfsi][pdu]")
+{
+    constexpr uint32_t headerPrefix = DFSI_MOT_START_LEN +
+        P25_PDU_HEADER_LENGTH_BYTES + DFSI_PDU_RESERVED_LENGTH_BYTES;
+
+    REQUIRE(DFSI_MAX_PDU_BLOCKS == 33U);
+    REQUIRE(DFSI_PDU_UNCONFIRMED_BLOCK_LENGTH_BYTES == 13U);
+    REQUIRE(DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES == 18U);
+
+    // HDEND12/18: embedded start, header + SQ, three blocks.
+    REQUIRE(headerPrefix + (3U * DFSI_PDU_UNCONFIRMED_BLOCK_LENGTH_BYTES) +
+        DFSI_PDU_END_METADATA_LENGTH_BYTES == 63U);
+    REQUIRE(headerPrefix + (3U * DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES) +
+        DFSI_PDU_END_METADATA_LENGTH_BYTES == 78U);
+
+    // HDR12/18: embedded start, header, three blocks.
+    REQUIRE(headerPrefix + (3U * DFSI_PDU_UNCONFIRMED_BLOCK_LENGTH_BYTES) + 1U == 62U);
+    REQUIRE(headerPrefix + (3U * DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES) + 1U == 77U);
+
+    // Four-block middle and END packets.
+    REQUIRE(1U + (4U * DFSI_PDU_UNCONFIRMED_BLOCK_LENGTH_BYTES) + 1U == 54U);
+    REQUIRE(1U + (4U * DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES) + 1U == 74U);
+    REQUIRE(1U + (4U * DFSI_PDU_UNCONFIRMED_BLOCK_LENGTH_BYTES) +
+        DFSI_PDU_END_METADATA_LENGTH_BYTES == 55U);
+    REQUIRE(1U + (4U * DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES) +
+        DFSI_PDU_END_METADATA_LENGTH_BYTES == 75U);
+}
