@@ -159,7 +159,7 @@ void TrafficNetwork::PacketHandler::keyRequest(TrafficNetwork* network, NetPacke
 
                                 modifyKeyRsp.encode(buffer + 11U);
 
-                                network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+                                network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.fullLength() + 11U,
                                     RTP_END_OF_CALL_SEQ, network->createStreamId());
                             } else {
                                 // attempt to forward KMM key request to replica masters

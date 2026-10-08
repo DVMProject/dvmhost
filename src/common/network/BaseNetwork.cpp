@@ -149,9 +149,9 @@ bool BaseNetwork::writeKeyReq(const uint16_t kId, const uint8_t algId, const uin
 
     modifyKeyCmd.encode(buffer + 11U);
 
-    //Utils::dump("BaseNetwork::writeKeyReq(), KMM Buffer", buffer, modifyKeyCmd.length() + 11U);
+    //Utils::dump("BaseNetwork::writeKeyReq(), KMM Buffer", buffer, modifyKeyCmd.fullLength() + 11U);
 
-    return writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.length() + 11U, RTP_END_OF_CALL_SEQ, 0U);
+    return writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.fullLength() + 11U, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes LLA enc. key request to the network. */
@@ -181,9 +181,9 @@ bool BaseNetwork::writeLLAKeyReq(const uint32_t srcId)
 
     modifyKeyCmd.encode(buffer + 11U);
 
-    //Utils::dump("BaseNetwork::writeLLAKeyReq(), KMM Buffer", buffer, modifyKeyCmd.length() + 11U);
+    //Utils::dump("BaseNetwork::writeLLAKeyReq(), KMM Buffer", buffer, modifyKeyCmd.fullLength() + 11U);
 
-    return writeMaster({ NET_FUNC::KEY_LLA_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.length() + 11U, RTP_END_OF_CALL_SEQ, 0U);
+    return writeMaster({ NET_FUNC::KEY_LLA_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.fullLength() + 11U, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes the local activity log to the network. */

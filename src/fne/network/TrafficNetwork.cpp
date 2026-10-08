@@ -3019,7 +3019,7 @@ void TrafficNetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId,
 
             modifyKeyRsp.encode(buffer + 11U);
 
-            writePeer(peerId, m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+            writePeer(peerId, m_peerId, { NET_FUNC::KEY_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.fullLength() + 11U,
                 RTP_END_OF_CALL_SEQ, createStreamId());
 
             peersToRemove.push_back(peerId);
@@ -3089,7 +3089,7 @@ void TrafficNetwork::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi
 
             modifyKeyRsp.encode(buffer + 11U);
 
-            writePeer(peerId, m_peerId, { NET_FUNC::KEY_LLA_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.length() + 11U, 
+            writePeer(peerId, m_peerId, { NET_FUNC::KEY_LLA_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.fullLength() + 11U,
                 RTP_END_OF_CALL_SEQ, createStreamId());
 
             peersToRemove.push_back(peerId);
