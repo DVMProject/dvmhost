@@ -273,6 +273,9 @@ bool P25OTARService::processDLD(const uint8_t* data, uint32_t len, uint32_t llId
             sendNack(PDUAckType::NACK_UNDELIVERABLE);
             return false;
         }
+
+        if (m_debug)
+            Utils::dump(1U, "P25OTARService::processDLD(), Decrypted KMM", kmmPayload.get(), len);
     }
 
     if (len < 10U || len > 512U || ((((uint32_t)kmmPayload[1U] << 8U) | kmmPayload[2U]) + 3U) != len) {
@@ -786,6 +789,14 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         macTek.getKey(tek);
 
         if (!frame->verifyMAC(tek, buffer.get(), len)) {
+            if (frame->getMessageId() == KMM_MessageType::NAK) {
+                KMMNegativeAck* nack = static_cast<KMMNegativeAck*>(frame.get());
+                LogWarning(LOG_P25, P25_KMM_STR ", received unauthenticated KMM NACK, RSI = %u, rejectedMessageId = $%02X, rejectedMN = %u, status = $%02X, headerMN = %u, macKId = $%04X, macFormat = $%02X",
+                    frame->getSrcLLId(), nack->getNakMessageId(), nack->getMessageNumber(),
+                    nack->getStatus(), nack->KMMFrame::getMessageNumber(), frame->getMACKId(),
+                    frame->getMACFormat());
+                logResponseStatus(llId, nack->toString(), nack->getStatus());
+            }
             LogWarning(LOG_P25, P25_KMM_STR ", invalid MAC, RSI = %u", frame->getSrcLLId());
             return makeNack(KMM_Status::INVALID_MAC);
         }
@@ -827,11 +838,22 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
     }
 
     // maintain outbound state independently from the validated inbound MN
+    // AACA-A 13.6.4 initializes the SU's last valid MN (MNL) to zero and
+    // applies a strict advance for a new RK3 message, so the first KMF MN must
+    // be one -- sending zero is rejected as a replay before the KMM is processed
     if (m_rsiMessageNumber.find(llId) == m_rsiMessageNumber.end())
-        m_rsiMessageNumber[llId] = 0U;
+        m_rsiMessageNumber[llId] = 1U;
 
     // handle the KMM message based on its type
     switch (frame->getMessageId()) {
+        case KMM_MessageType::CHANGEOVER_RSP:
+        {
+            KMMChangeover* kmm = static_cast<KMMChangeover*>(frame.get());
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, supersededKeysetId = $%02X, activeKeysetId = $%02X", kmm->toString().c_str(),
+                llId, kmm->getSupersededKeysetId(), kmm->getActiveKeysetId());
+        }
+        break;
+
         case KMM_MessageType::HELLO:
         {
             KMMHello* kmm = static_cast<KMMHello*>(frame.get());
@@ -904,8 +926,9 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         case KMM_MessageType::NAK:
         {
             KMMNegativeAck* kmm = static_cast<KMMNegativeAck*>(frame.get());
-            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, nackMessageId = $%02X, messageNo = %u, status = $%02X", kmm->toString().c_str(),
-                llId, kmm->getNakMessageId(), kmm->getMessageNumber(), kmm->getStatus());
+            LogWarning(LOG_P25, P25_KMM_STR ", authenticated %s, llId = %u, rejectedMessageId = $%02X, rejectedMN = %u, status = $%02X, headerMN = %u",
+                kmm->toString().c_str(), llId, kmm->getNakMessageId(),
+                kmm->getMessageNumber(), kmm->getStatus(), kmm->KMMFrame::getMessageNumber());
             logResponseStatus(llId, kmm->toString(), kmm->getStatus());
         }
         break;
@@ -1008,7 +1031,8 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
     uint8_t mi[MI_LENGTH_BYTES];
     ::memset(mi, 0x00U, MI_LENGTH_BYTES);
 
-    uint16_t mn = 0U;
+    // Zero is the SU's initial MNL, not a valid first non-retry RK3 MNR.
+    uint16_t mn = 1U;
     if (m_rsiMessageNumber.find(llId) != m_rsiMessageNumber.end()) {
         mn = m_rsiMessageNumber[llId];
     }

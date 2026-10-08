@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -40,6 +40,9 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data)
     uint8_t messageId = data[0U];                                                   // Message ID
 
     switch (messageId) {
+    case KMM_MessageType::CHANGEOVER_CMD:
+    case KMM_MessageType::CHANGEOVER_RSP:
+        return decode(new KMMChangeover(), data);
     case KMM_MessageType::HELLO:
         return decode(new KMMHello(), data);
     case KMM_MessageType::INVENTORY_CMD:

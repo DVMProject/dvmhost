@@ -452,6 +452,40 @@ TEST_CASE("P25 OTAR DLD processes KMM through the packet-data service entry poin
     REQUIRE_FALSE(FNETestHooks::hasOTARInboundMessageNumber(harness.traffic, SU_RSI + 1U, MN + 1U));
 }
 
+TEST_CASE("P25 FNE accepts a KMM immediately after a PDU response", "[p25][kmm][otar][pdu-state]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    constexpr uint16_t MN = 1U;
+    uint8_t tek[32U];
+    for (uint32_t i = 0U; i < sizeof(tek); ++i)
+        tek[i] = (uint8_t)i;
+
+    EKCKeyItem item;
+    item.id(1U); item.algId(ALGO_AES_256); item.kId(0x1234U); item.sln(1U);
+    item.keyMaterial("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F");
+    FNETestHooks::addCryptoKey(harness.traffic, item);
+
+    REQUIRE(FNETestHooks::processP25PDUResponse(harness.traffic, SU_RSI, 5U));
+
+    KMMHello hello;
+    hello.setDstLLId(WUID_FNE);
+    hello.setSrcLLId(SU_RSI);
+    hello.setResponseKind(KMM_ResponseKind::NONE);
+    hello.setHasMessageNumber(true);
+    hello.setMessageNumber(MN);
+    hello.setFlag(KMM_HelloFlag::IDENT_ONLY);
+    hello.setMACType(KMM_MAC::ENH_MAC);
+    hello.setMACAlgId(ALGO_AES_256);
+    hello.setMACKId(0x1234U);
+    hello.setMACFormat(KMM_MAC_FORMAT_CBC);
+
+    std::vector<uint8_t> encoded = encodeKMM(hello);
+    hello.generateMAC(tek, encoded.data());
+    REQUIRE(FNETestHooks::processOTARDLDPDU(harness.traffic, encoded, SU_RSI));
+    REQUIRE(FNETestHooks::hasOTARInboundMessageNumber(harness.traffic, SU_RSI, MN));
+}
+
 TEST_CASE("P25 OTAR DLI validates its Version-0 preamble and dispatches KMM", "[p25][kmm][otar][dli]")
 {
     constexpr uint32_t SU_RSI = 0x654321U;
@@ -578,7 +612,9 @@ TEST_CASE("P25 OTAR Rekey Commands batch four keys per KMM", "[p25][kmm][otar][r
         REQUIRE(rekey != nullptr);
         REQUIRE(rekey->getKeysets().size() == 1U);
         CHECK(rekey->getKeysets()[0U].keys().size() == expectedCounts[i]);
-        CHECK(rekey->getMessageNumber() == i);
+        // A new RK3 uses Rule 1 message-number validation. The SU initializes
+        // MNL to zero, so the first valid outbound KMF message number is one.
+        CHECK(rekey->getMessageNumber() == i + 1U);
         CHECK(rekey->getComplete() == (i + 1U == frames.size()));
         CHECK(frames[i].size() <= 287U);
     }

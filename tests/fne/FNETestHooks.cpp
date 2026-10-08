@@ -223,6 +223,35 @@ bool FNETestHooks::processOTARDLDPDU(TrafficNetwork& network, const std::vector<
     return true;
 }
 
+/** Injects a one-block PDU response through the FNE packet-data receiver. */
+
+bool FNETestHooks::processP25PDUResponse(TrafficNetwork& network, uint32_t llId,
+    uint8_t responseStatus)
+{
+    if (network.m_tagP25 == nullptr)
+        return false;
+
+    p25::data::DataHeader header;
+    header.setFormat(PDUFormatType::RSP);
+    header.setMFId(MFG_STANDARD);
+    header.setOutbound(false);
+    header.setResponseClass(PDUAckClass::ACK);
+    header.setResponseType(PDUAckType::ACK);
+    header.setResponseStatus(responseStatus);
+    header.setLLId(llId);
+    header.setFullMessage(true);
+    header.setBlocksToFollow(0U);
+
+    uint8_t envelope[24U + P25_PDU_FEC_LENGTH_BYTES] = { 0U };
+    SET_UINT24(P25_PDU_FEC_LENGTH_BYTES, envelope, 8U);
+    envelope[20U] = 0U;
+    envelope[21U] = 0U;
+    header.encode(envelope + 24U);
+
+    return network.m_tagP25->packetData()->processFrame(envelope, sizeof(envelope),
+        1U, 0U, 1U);
+}
+
 /**
  * @brief Passes a complete Version-0 DLI datagram through the network receive task.
  * @param network The TrafficNetwork instance.

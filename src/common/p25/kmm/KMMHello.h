@@ -44,6 +44,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM hello message.
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMHello : public KMMFrame {
         public:
             /**

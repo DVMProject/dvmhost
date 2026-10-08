@@ -4,20 +4,21 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
- * @file KMMDeregistrationResponse.h
+ * @file KMMChangeover.h
  * @ingroup p25_kmm
- * @file KMMDeregistrationResponse.cpp
+ * @file KMMChangeover.cpp
  * @ingroup p25_kmm
  */
-#if !defined(__P25_KMM__KMM_DEREGISTRATION_RSP_H__)
-#define  __P25_KMM__KMM_DEREGISTRATION_RSP_H__
+#if !defined(__P25_KMM__KMM_CHANGEOVER_H__)
+#define  __P25_KMM__KMM_CHANGEOVER_H__
 
 #include "common/Defines.h"
 #include "common/p25/kmm/KMMFrame.h"
+#include "common/p25/kmm/KeysetItem.h"
 #include "common/Utils.h"
 
 #include <string>
@@ -28,36 +29,23 @@ namespace p25
     namespace kmm
     {
         // ---------------------------------------------------------------------------
-        //  Constants
-        // ---------------------------------------------------------------------------
-
-        /**
-         * @addtogroup p25_kmm
-         * @{
-         */
-
-         const uint32_t KMM_BODY_DEREGISTRATION_RSP_LENGTH = 1U;
-
-         /** @} */
- 
-        // ---------------------------------------------------------------------------
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
         /**
-         * @brief Represents a KMM deregistration response.
+         * @brief Represents a KMM changeover command/response.
          * @ingroup p25_kmm
          */
-        class DVM_COMMON_API KMMDeregistrationResponse : public KMMFrame {
+        class DVM_COMMON_API KMMChangeover : public KMMFrame {
         public:
             /**
-             * @brief Initializes a new instance of the KMMDeregistrationResponse class.
+             * @brief Initializes a new instance of the KMMChangeover class.
              */
-            KMMDeregistrationResponse();
+            KMMChangeover();
             /**
-             * @brief Finalizes a instance of the KMMDeregistrationResponse class.
+             * @brief Finalizes a instance of the KMMChangeover class.
              */
-            ~KMMDeregistrationResponse();
+            ~KMMChangeover();
 
             /**
              * @brief Gets the byte length of this KMMFrame.
@@ -66,13 +54,13 @@ namespace p25
             uint32_t length() const override;
 
             /**
-             * @brief Decode a KMM deregistration response.
+             * @brief Decode a KMM changeover command.
              * @param[in] data Buffer containing KMM frame data to decode.
              * @returns bool True, if decoded, otherwise false.
              */
             bool decode(const uint8_t* data) override;
             /**
-             * @brief Encode a KMM deregistration response.
+             * @brief Encode a KMM changeover command.
              * @param[out] data Buffer to encode KMM frame data to.
              */
             void encode(uint8_t* data) override;
@@ -85,13 +73,17 @@ namespace p25
 
         public:
             /**
-             * @brief Deregistration response status.
+             * @brief Superseded keyset ID.
              */
-            DECLARE_PROPERTY(uint8_t, status, Status);
+            DECLARE_PROPERTY(uint8_t, supersededKeysetId, SupersededKeysetId);
+            /**
+             * @brief Active keyset ID.
+             */
+            DECLARE_PROPERTY(uint8_t, activeKeysetId, ActiveKeysetId);
 
-            DECLARE_COPY(KMMDeregistrationResponse);
+            DECLARE_COPY(KMMChangeover);
         };
     } // namespace kmm
 } // namespace p25
 
-#endif // __P25_KMM__KMM_DEREGISTRATION_RSP_H__
+#endif // __P25_KMM__KMM_CHANGEOVER_H__

@@ -44,6 +44,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM registration response.
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMRegistrationResponse : public KMMFrame {
         public:
             /**

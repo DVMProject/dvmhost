@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,6 +21,7 @@
 #include "common/p25/kmm/KeysetItem.h"
 
 #include "common/p25/kmm/KMMFrame.h"
+#include "common/p25/kmm/KMMChangeover.h"
 #include "common/p25/kmm/KMMDeregistrationCommand.h"
 #include "common/p25/kmm/KMMDeregistrationResponse.h"
 #include "common/p25/kmm/KMMHello.h"

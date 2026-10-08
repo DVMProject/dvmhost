@@ -45,6 +45,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM rekey command.
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMRekeyCommand : public KMMFrame {
         public:
             /**

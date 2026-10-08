@@ -434,25 +434,36 @@ UInt8Array P25Crypto::cryptAES_KMM_CBC(const uint8_t* macKey, const uint8_t* msg
         0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U
     };
 
+    if (macKey == nullptr || msg == nullptr ||
+        msgLen < (KMM_AES_MAC_LENGTH + 5U))
+        return nullptr;
+
     AES aes = AES(AESKeyLength::AES_256);
 
-    // pad the message as necessary
-    size_t paddedLen = msgLen + (AES::BLOCK_BYTES_LEN - (msgLen % AES::BLOCK_BYTES_LEN));
+    // AACA-A 13.5.2 authenticates the complete KMM except for the MAC field
+    // itself. The MAC length, algorithm ID, key ID, and format that follow the
+    // MAC field remain part of the authenticated data.
+    const size_t macOffset = msgLen - (KMM_AES_MAC_LENGTH + 5U);
+    const size_t authLen = msgLen - KMM_AES_MAC_LENGTH;
+    const size_t paddedLen = ((authLen + AES::BLOCK_BYTES_LEN - 1U) / AES::BLOCK_BYTES_LEN) * AES::BLOCK_BYTES_LEN;
+    if (paddedLen == 0U || paddedLen > TEMP_BUFFER_LEN)
+        return nullptr;
+
     uint8_t paddedMessage[TEMP_BUFFER_LEN];
     ::memset(paddedMessage, 0x00U, TEMP_BUFFER_LEN);
 
-    ::memcpy(paddedMessage, msg, msgLen - KMM_AES_MAC_LENGTH - 5U);
-    ::memcpy(paddedMessage + msgLen - KMM_AES_MAC_LENGTH - 5U, msg + msgLen - 5U, 5U);
+    ::memcpy(paddedMessage, msg, macOffset);
+    ::memcpy(paddedMessage + macOffset, msg + msgLen - 5U, 5U);
 
     // perform AES-CBC encryption
     uint8_t* tempBuf = aes.encryptCBC(paddedMessage, paddedLen, macKey, iv);
 
-    UInt8Array wrappedKey = std::unique_ptr<uint8_t[]>(new uint8_t[8U]);
-    ::memset(wrappedKey.get(), 0x00U, 8U);
-    ::memcpy(wrappedKey.get(), tempBuf + (msgLen - AES::BLOCK_BYTES_LEN), 8U);
+    UInt8Array mac = std::unique_ptr<uint8_t[]>(new uint8_t[KMM_AES_MAC_LENGTH]);
+    ::memset(mac.get(), 0x00U, KMM_AES_MAC_LENGTH);
+    ::memcpy(mac.get(), tempBuf + paddedLen - AES::BLOCK_BYTES_LEN, KMM_AES_MAC_LENGTH);
 
     delete[] tempBuf;
-    return wrappedKey;
+    return mac;
 }
 
 /* Helper to generate a P25 KMM CMAC MAC key with the given AES-256 KEK. */

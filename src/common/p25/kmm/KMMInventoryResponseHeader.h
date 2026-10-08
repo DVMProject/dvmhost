@@ -44,6 +44,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM inventory response header.
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMInventoryResponseHeader : public KMMFrame {
         public:
             /**

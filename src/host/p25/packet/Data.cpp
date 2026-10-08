@@ -36,9 +36,13 @@ using namespace p25::packet;
 // ---------------------------------------------------------------------------
 
 const uint8_t MAX_PDU_RETRY_CNT = 2U;
-const uint32_t CONV_REG_WAIT_TIMEOUT = 750U; // ms
 const uint32_t SNDCP_READY_TIMEOUT = 10U;
 const uint32_t SNDCP_STANDBY_TIMEOUT = 60U;
+
+// Native air-interface modems do not report a PDU transaction-complete event.
+// Leave enough time for the modem TX tail to expire before starting another
+// complete PDU transaction. DFSI/V.24 supplies its own transaction framing.
+#define P25_PDU_NATIVE_MODEM_GUARD_MS 750U
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -174,7 +178,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         if (retry != m_retryPDUState.end() && retry->second.bitLength > 0U && !retry->second.data.empty()) {
                             if (retry->second.retryCount < MAX_PDU_RETRY_CNT) {
                                 m_p25->writeRF_Preamble();
-                                writeRF_PDU(retry->second.data.data(), retry->second.bitLength, false, true, retryLlId, false);
+                                queueRF_PDU(retry->second.data.data(), retry->second.bitLength, false, true, retryLlId, false);
                                 retry->second.retryCount++;
                             }
                             else {
@@ -641,13 +645,11 @@ bool Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, 
 {
     assert(pduUserData != nullptr);
 
-    m_p25->writeRF_TDU(true, imm);
-
     uint32_t bitLength = 0U;
     UInt8Array data = m_rfAssembler->assemble(dataHeader, extendedAddress, auxiliaryES, pduUserData, &bitLength);
 
     bool trackRetry = dataHeader.getFormat() == PDUFormatType::CONFIRMED && dataHeader.getAckNeeded();
-    return writeRF_PDU(data.get(), bitLength, imm, false, dataHeader.getLLId(), trackRetry);
+    return queueRF_PDU(data.get(), bitLength, imm, false, dataHeader.getLLId(), trackRetry);
 }
 
 /* Helper to write user data as a P25 PDU packet. */
@@ -664,6 +666,44 @@ void Data::writeNet_PDU_User(data::DataHeader& dataHeader, bool extendedAddress,
 
 void Data::clock(uint32_t ms)
 {
+    PendingPDU pending;
+    bool dispatchPending = false;
+
+    // scope is intentional
+    {
+        std::lock_guard<std::mutex> lock(m_pduPacingMutex);
+        if (m_pduPacingRemainingMs > ms)
+            m_pduPacingRemainingMs -= ms;
+        else
+            m_pduPacingRemainingMs = 0U;
+
+        if (m_pduPacingRemainingMs == 0U && !m_pendingPDUs.empty()) {
+            pending = std::move(m_pendingPDUs.front());
+            m_pendingPDUs.pop_front();
+            dispatchPending = true;
+        }
+    }
+
+    if (dispatchPending) {
+        bool queued = writeRF_PDU(pending.data.data(), pending.bitLength, pending.imm, pending.ackRetry,
+            pending.retryLlId, pending.trackRetry);
+
+        // scope is intentional
+        {
+            std::lock_guard<std::mutex> lock(m_pduPacingMutex);
+            if (queued)
+                m_pduPacingRemainingMs = P25_PDU_NATIVE_MODEM_GUARD_MS;
+        }
+
+        if (!queued) {
+            LogError(LOG_RF, P25_PDU_STR ", unable to dispatch paced PDU, llId = %u, bitLength = %u",
+                pending.retryLlId, pending.bitLength);
+        }
+        else if (m_debug) {
+            LogDebugEx(LOG_RF, "Data::clock()", "dispatched paced native-modem PDU");
+        }
+    }
+
     if (m_p25->m_sndcpSupport) {
         // clock all the SNDCP ready timers
         std::vector<uint32_t> sndcpReadyExpired = std::vector<uint32_t>();
@@ -813,6 +853,9 @@ Data::Data(Control* p25, bool dumpPDUData, bool repeatPDU, bool debug, bool verb
     m_netDataBlockCnt(0U),
     m_netTotalBlocks(0U),
     m_retryPDUState(),
+    m_pendingPDUs(),
+    m_pduPacingRemainingMs(0U),
+    m_pduPacingMutex(),
     m_rfPduUserData(nullptr),
     m_rfPduUserDataLength(0U),
     m_netPduUserData(nullptr),
@@ -966,7 +1009,50 @@ void Data::writeNetwork(const uint8_t currentBlock, const uint8_t* data, uint32_
     m_p25->m_network->writeP25PDU(m_rfAssembler->dataHeader, currentBlock, data, len, lastBlock);
 }
 
-/* Helper to write a P25 PDU packet. */
+/* Helper to queue a complete P25 PDU packet. */
+
+bool Data::queueRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry,
+    uint32_t retryLlId, bool trackRetry)
+{
+    assert(pdu != nullptr);
+    assert(bitLength > 0U);
+
+    // Pacing is required only for native dedicated/hotspot modem transports.
+    // Keep the entire PDU transaction together; spacing individual modem
+    // chunks would corrupt the CAI transmission.
+    if (!m_p25->m_isModemDFSI) {
+        std::lock_guard<std::mutex> lock(m_pduPacingMutex);
+        if (m_pduPacingRemainingMs > 0U || !m_pendingPDUs.empty()) {
+            PendingPDU pending;
+
+            uint32_t byteLength = (bitLength + 7U) / 8U;
+            pending.data.assign(pdu, pdu + byteLength);
+            pending.bitLength = bitLength;
+            pending.imm = imm;
+            pending.ackRetry = ackRetry;
+            pending.retryLlId = retryLlId;
+            pending.trackRetry = trackRetry;
+
+            m_pendingPDUs.push_back(std::move(pending));
+
+            if (m_debug) {
+                LogDebugEx(LOG_RF, "Data::writeRF_PDU()", "deferred native-modem PDU by up to %u ms, pending = %u, llId = %u",
+                    m_pduPacingRemainingMs, uint32_t(m_pendingPDUs.size()), retryLlId);
+            }
+
+            return true;
+        }
+    }
+
+    bool queued = writeRF_PDU(pdu, bitLength, imm, ackRetry, retryLlId, trackRetry);
+    if (queued && !m_p25->m_isModemDFSI) {
+        std::lock_guard<std::mutex> lock(m_pduPacingMutex);
+        m_pduPacingRemainingMs = P25_PDU_NATIVE_MODEM_GUARD_MS;
+    }
+    return queued;
+}
+
+/* Helper to write a complete P25 PDU transaction without applying the native-modem guard. */
 
 bool Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry,
     uint32_t retryLlId, bool trackRetry)
@@ -1042,7 +1128,7 @@ bool Data::writeNet_PDU_Buffered()
     UInt8Array data = m_rfAssembler->assemble(m_netAssembler->dataHeader, m_netAssembler->getExtendedAddress(), m_netAssembler->getAuxiliaryES(), m_netPduUserData, &bitLength);
     bool trackRetry = m_netAssembler->dataHeader.getFormat() == PDUFormatType::CONFIRMED && m_netAssembler->dataHeader.getAckNeeded();
 
-    return writeRF_PDU(data.get(), bitLength, false, false, m_netAssembler->dataHeader.getLLId(), trackRetry);
+    return queueRF_PDU(data.get(), bitLength, false, false, m_netAssembler->dataHeader.getLLId(), trackRetry);
 }
 
 /* Helper to re-write a received P25 PDU packet. */
@@ -1051,7 +1137,7 @@ void Data::writeRF_PDU_Buffered()
 {
     uint32_t bitLength = 0U;
     UInt8Array data = m_rfAssembler->assemble(m_rfAssembler->dataHeader, m_rfAssembler->getExtendedAddress(), m_rfAssembler->getAuxiliaryES(), m_rfPduUserData, &bitLength);
-    writeRF_PDU(data.get(), bitLength);
+    queueRF_PDU(data.get(), bitLength);
 }
 
 /* Helper to write a PDU acknowledge response. */
@@ -1097,5 +1183,5 @@ void Data::writeRF_PDU_Ack_Response(uint8_t ackClass, uint8_t ackType, uint8_t a
             rspHeader.getResponseClass(), rspHeader.getResponseType(), rspHeader.getResponseStatus(), rspHeader.getLLId(), rspHeader.getSrcLLId());
     }
 
-    writeRF_PDU(data, bitLength);
+    queueRF_PDU(data, bitLength);
 }

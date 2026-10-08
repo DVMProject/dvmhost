@@ -45,6 +45,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM Unable-To-Decrypt command.
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMUnableToDecrypt : public KMMFrame {
         public:
             /**

@@ -148,6 +148,15 @@ public:
         uint32_t llId, bool encrypted = false, uint8_t algoId = P25DEF::ALGO_UNENCRYPT,
         uint16_t kid = 0U, const uint8_t* mi = nullptr);
     /**
+     * @brief Injects a one-block PDU response through the FNE packet-data receiver.
+     * @param network The TrafficNetwork that owns the packet-data receiver.
+     * @param llId Logical Link ID associated with the response.
+     * @param responseStatus Response status/N(R) value.
+     * @return True if the response was processed successfully.
+     */
+    static bool processP25PDUResponse(network::TrafficNetwork& network, uint32_t llId,
+        uint8_t responseStatus);
+    /**
      * @brief Passes a complete Version-0 DLI datagram through the network receive task.
      * @param network The TrafficNetwork that owns the OTAR service.
      * @param datagram Encoded DLI bytes.

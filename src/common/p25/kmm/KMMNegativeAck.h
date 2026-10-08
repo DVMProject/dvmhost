@@ -44,6 +44,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM negative acknowledgment (NAK).
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMNegativeAck : public KMMFrame {
         public:
             /**

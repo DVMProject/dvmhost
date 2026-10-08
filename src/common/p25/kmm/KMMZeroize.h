@@ -31,6 +31,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM zeroize command.
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMZeroize : public KMMFrame {
         public:
             /**
@@ -43,13 +47,13 @@ namespace p25
             ~KMMZeroize();
 
             /**
-             * @brief Decode a KMM hello.
+             * @brief Decode a KMM zeroize command.
              * @param[in] data Buffer containing KMM frame data to decode.
              * @returns bool True, if decoded, otherwise false.
              */
             bool decode(const uint8_t* data) override;
             /**
-             * @brief Encode a KMM hello.
+             * @brief Encode a KMM zeroize command.
              * @param[out] data Buffer to encode KMM frame data to.
              */
             void encode(uint8_t* data) override;

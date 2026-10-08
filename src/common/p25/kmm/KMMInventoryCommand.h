@@ -44,6 +44,10 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
+        /**
+         * @brief Represents a KMM inventory command.
+         * @ingroup p25_kmm
+         */
         class DVM_COMMON_API KMMInventoryCommand : public KMMFrame {
         public:
             /**

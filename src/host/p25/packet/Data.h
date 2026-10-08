@@ -27,6 +27,8 @@
 #include "p25/Control.h"
 
 #include <cstdio>
+#include <deque>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -155,6 +157,18 @@ namespace p25
             };
             std::unordered_map<uint32_t, RetryPDUState> m_retryPDUState;
 
+            struct PendingPDU {
+                std::vector<uint8_t> data;
+                uint32_t bitLength = 0U;
+                bool imm = false;
+                bool ackRetry = false;
+                uint32_t retryLlId = 0U;
+                bool trackRetry = false;
+            };
+            std::deque<PendingPDU> m_pendingPDUs;
+            uint32_t m_pduPacingRemainingMs;
+            std::mutex m_pduPacingMutex;
+
             uint8_t* m_rfPduUserData;
             uint32_t m_rfPduUserDataLength;
             uint8_t* m_netPduUserData;
@@ -214,7 +228,7 @@ namespace p25
             void resetReceivedBlocks();
 
             /**
-             * @brief Helper to write a P25 PDU packet.
+             * @brief Helper to queue a complete P25 PDU packet.
              * @param[in] pdu Constructed PDU to transmit.
              * @param bitlength Length of PDU in bits.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
@@ -222,8 +236,20 @@ namespace p25
              * @param retryLlId Logical Link ID for retrying the PDU.
              * @param trackRetry Flag indicating whether or not to track the retry.
              */
-            bool writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false, bool ackRetry = false,
+            bool queueRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false, bool ackRetry = false,
                 uint32_t retryLlId = 0U, bool trackRetry = false);
+            /**
+             * @brief Helper to write a complete P25 PDU transaction without applying the native-modem guard.
+             * @param pdu Constructed PDU to transmit.
+             * @param bitLength Length of PDU in bits.
+             * @param imm Flag indicating the PDU should be written to the immediate queue.
+             * @param ackRetry Flag indicating the PDU is being sent as an acknowledged retry.
+             * @param retryLlId Logical Link ID for retrying the PDU.
+             * @param trackRetry Flag indicating whether or not to track the retry.
+             * @returns bool True, if the PDU was successfully written, otherwise false.
+             */
+            bool writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry,
+                uint32_t retryLlId, bool trackRetry);
             /**
              * @brief Helper to write a network P25 PDU packet.
              * This will take buffered network PDU data and repeat it over the air.

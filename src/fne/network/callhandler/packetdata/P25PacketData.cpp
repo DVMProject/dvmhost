@@ -193,11 +193,11 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
     auto existing = status->receivedBlocks.find(currentBlock);
     if (existing != status->receivedBlocks.end()) {
         if (::memcmp(existing->second, data + 24U, blockLength) != 0) {
-            LogError(LOG_P25, P25_PDU_STR ", conflicting duplicate block %u", currentBlock);
+            LogWarning(LOG_P25, P25_PDU_STR ", conflicting duplicate block %u", currentBlock);
             return false;
+        } else {
+            LogWarning(LOG_P25, P25_PDU_STR ", ignoring identical duplicate block %u", currentBlock);
         }
-        LogInfoEx(LOG_P25, P25_PDU_STR ", ignoring identical duplicate block %u", currentBlock);
-        return true;
     }
 
     uint8_t* blockData = new uint8_t[blockLength];
@@ -239,8 +239,14 @@ bool P25PacketData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                     // is this a response header?
                     if (status->assembler.dataHeader.getFormat() == PDUFormatType::RSP) {
                         dispatch(peerId);
-                        status->streamId = 0U;
-                        status->clearReceivedBlocks();
+
+                        // A response PDU is a complete one-block transaction.
+                        // Do not retain an RxStatus with totalBlocks reset to
+                        // zero: the next PDU from this peer would reuse it and
+                        // could never satisfy dataBlockCnt == totalBlocks.
+                        m_status.erase(peerId);
+                        delete status;
+                        status = nullptr;
                         return true;
                     }
 
