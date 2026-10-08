@@ -158,7 +158,6 @@ bool FNETestHooks::processOTARDLDPDU(TrafficNetwork& network, const std::vector<
     if (assembled == nullptr || bitLength <= P25_PREAMBLE_LENGTH_BITS)
         return false;
 
-    bitLength -= header.getPadLength() * 8U;
     const uint32_t blockCount = (bitLength - P25_PREAMBLE_LENGTH_BITS) / P25_PDU_FEC_LENGTH_BITS;
     auto* packetData = network.m_tagP25->packetData();
     for (uint32_t block = 0U; block < blockCount; ++block) {

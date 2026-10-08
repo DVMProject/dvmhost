@@ -231,12 +231,6 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
 
                     dataBlocks[i].getData(m_pduUserData + dataOffset);
 
-                    // is this the first unconfirmed data block after a auxiliary ES header?
-                    if (i == 0U && dataHeader.getFormat() == PDUFormatType::UNCONFIRMED && m_auxiliaryES) {
-                        uint8_t exSAP = m_pduUserData[0U]; // first byte of the first data block after an aux ES header is the extended SAP
-                        dataHeader.setEXSAP(exSAP);
-                    }
-
                     dataOffset += (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
                     m_dataBlockCnt++;
                 }
@@ -273,6 +267,12 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
 
                 offset += P25_PDU_FEC_LENGTH_BYTES;
             }
+
+            // an unconfirmed Auxiliary ES header is 13 octets and crosses the
+            // first 12-octet block boundary -- resolve EXSAP after all blocks
+            // have been copied into the contiguous PDU buffer
+            if (dataHeader.getFormat() == PDUFormatType::UNCONFIRMED && m_auxiliaryES && blocksToFollow > 1U)
+                dataHeader.setEXSAP(m_pduUserData[P25_PDU_HEADER_LENGTH_BYTES] & 0x3FU);
 
 #if DEBUG_P25_PDU_DATA
             LogDebugEx(LOG_P25, "Assembler::disassemble()", "packetLength = %u, secondHeaderOffset = %u, padLength = %u, pduLength = %u", packetLength, secondHeaderOffset, padLength, dataHeader.getPDULength());
@@ -346,9 +346,9 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
     if (assembledBitLength != nullptr)
         *assembledBitLength = 0U;
 
+    // padding is already contained in the payload capacity of the blocks
+    // declared by BTF; it does not extend the CAI frame
     uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
-    if (dataHeader.getPadLength() > 0U)
-        bitLength += (dataHeader.getPadLength() * 8U);
 
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 

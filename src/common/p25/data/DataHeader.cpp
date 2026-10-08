@@ -445,6 +445,8 @@ bool DataHeader::decodeAuxES(const uint8_t* data)
 
         m_exSap = m_auxESData[12U] & 0x3FU;                                     // Service Access Point
     } else if (m_fmt == PDUFormatType::UNCONFIRMED) {
+        // only the first 12 octets fit in block zero.  Assembler resolves the
+        // thirteenth octet (EXSAP) after the next block is available
         ::memcpy(m_auxESData, data, P25_PDU_HEADER_LENGTH_BYTES);
 
 #if DEBUG_P25_PDU_DATA
@@ -650,8 +652,8 @@ uint32_t DataHeader::getAuxiliaryESData(uint8_t* buffer) const
         ::memcpy(buffer, m_auxESData, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
         return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
     } else {
-        ::memcpy(buffer, m_auxESData, P25_PDU_HEADER_LENGTH_BYTES);
-        return P25_PDU_HEADER_LENGTH_BYTES;
+        ::memcpy(buffer, m_auxESData, P25_PDU_HEADER_LENGTH_BYTES + 1U);
+        return P25_PDU_HEADER_LENGTH_BYTES + 1U;
     }
 }
 
@@ -674,13 +676,10 @@ void DataHeader::calculateLength(uint32_t packetLength)
 
     uint32_t blockLen = (m_fmt == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
 
-    if (len > blockLen) {
-        m_padLength = blockLen - (len % blockLen);
-        m_blocksToFollow = (uint8_t)ceilf((float)len / (float)blockLen);
-    } else {
-        m_padLength = 0U;
+    m_padLength = (blockLen - (len % blockLen)) % blockLen;
+    m_blocksToFollow = (uint8_t)((len + blockLen - 1U) / blockLen);
+    if (m_blocksToFollow == 0U)
         m_blocksToFollow = 1U;
-    }
 }
 
 /* Helper to determine the pad length for a given packet length. */
@@ -689,10 +688,10 @@ uint32_t DataHeader::calculatePadLength(uint8_t fmt, uint32_t packetLength)
 {
     uint32_t len = packetLength + 4U; // packet length + CRC32
     if (fmt == PDUFormatType::CONFIRMED) {
-        return P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - (len % P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+        return (P25_PDU_CONFIRMED_DATA_LENGTH_BYTES - (len % P25_PDU_CONFIRMED_DATA_LENGTH_BYTES)) % P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
     }
     else {
-        return P25_PDU_UNCONFIRMED_LENGTH_BYTES - (len % P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+        return (P25_PDU_UNCONFIRMED_LENGTH_BYTES - (len % P25_PDU_UNCONFIRMED_LENGTH_BYTES)) % P25_PDU_UNCONFIRMED_LENGTH_BYTES;
     }
 }
 

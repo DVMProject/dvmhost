@@ -1866,43 +1866,47 @@ bool Modem::writeP25Frame(const uint8_t* data, uint32_t length, bool imm)
             return false;
         }
 
-        DECLARE_UINT8_ARRAY(buffer, MAX_LENGTH);
+        // the serialized modem message includes framing bytes in addition to
+        // the caller's tagged P25 frame
+        DECLARE_UINT8_ARRAY(buffer, MAX_LENGTH + 3U);
 
-        if (length < 252U) {
+        const uint32_t p25Length = length;
+        uint32_t serializedLength = 0U;
+
+        if (p25Length < 252U) {
+            serializedLength = p25Length + 2U;
             buffer[0U] = DVM_SHORT_FRAME_START;
-            buffer[1U] = length + 2U;
+            buffer[1U] = serializedLength;
             buffer[2U] = CMD_P25_DATA;
-            ::memcpy(buffer + 3U, data + 1U, length - 1U);
+            ::memcpy(buffer + 3U, data + 1U, p25Length - 1U);
         } else {
-            length += 3U;
+            serializedLength = p25Length + 3U;
             buffer[0U] = DVM_LONG_FRAME_START;
-            buffer[1U] = (length >> 8U) & 0xFFU;
-            buffer[2U] = (length & 0xFFU);
+            buffer[1U] = (serializedLength >> 8U) & 0xFFU;
+            buffer[2U] = serializedLength & 0xFFU;
             buffer[3U] = CMD_P25_DATA;
-            ::memcpy(buffer + 4U, data + 1U, length - 1U);
+            ::memcpy(buffer + 4U, data + 1U, p25Length - 1U);
         }
-
-        uint32_t len = length + 2U;
 
         // write or buffer P25 data to air interface
         // for V.24/DFSI, the modem status space value may lag call startup; do
         // not block initial Net->RF frames solely on stale p25Space
-        if (m_p25Space >= length || isV24Connected()) {
+        if (m_p25Space >= p25Length || isV24Connected()) {
             if (m_debug)
-                LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "immediate write (len %u)", length);
+                LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "immediate write (len %u)", p25Length);
             if (m_trace)
-                Utils::dump(1U, "Modem::writeP25Frame(), Immediate TX P25 Data", buffer + 3U, length - 3U);
+                Utils::dump(1U, "Modem::writeP25Frame(), Immediate TX P25 Data", data + 1U, p25Length - 1U);
 
-            int ret = write(buffer, len, imm);
-            if (ret != int(len)) {
+            int ret = write(buffer, serializedLength, imm);
+            if (ret != int(serializedLength)) {
                 LogError(LOG_MODEM, "Error writing P25 data");
                 return false;
             }
 
-            m_p25Space -= length;
+            m_p25Space -= p25Length;
             if ((int32_t)m_p25Space < 0) {
                 if (m_debug)
-                    LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "p25Space underflow, space = %u, length = %u", m_p25Space, length);
+                    LogDebugEx(LOG_MODEM, "Modem::writeP25Frame()", "p25Space underflow, space = %u, length = %u", m_p25Space, p25Length);
                 m_p25Space = 0U;
             }
         }

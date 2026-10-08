@@ -80,9 +80,6 @@ TEST_CASE("P25 PDU Confirmed Large Test", "[p25][pdu_confirmed_large]") {
         uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
 
-        // for the purposes of our test we strip the pad bit length from the bit length
-        bitLength -= dataHeader.getPadLength() * 8U;
-
         uint32_t blockCnt = 0U;
         for (uint32_t i = P25_PREAMBLE_LENGTH_BITS; i < bitLength; i += P25_PDU_FEC_LENGTH_BITS) {
             ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);

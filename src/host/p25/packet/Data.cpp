@@ -946,6 +946,23 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
     assert(pdu != nullptr);
     assert(bitLength > 0U);
 
+    // status insertion expands the no-status bitstream -- encode into a
+    // dynamically sized staging buffer first, then enforce the native modem's
+    // single-frame CAI limit before queuing or recording retry state
+    const uint32_t stagingBytes = ((bitLength * 2U) + 7U) / 8U;
+    UInt8Array dataArray = std::make_unique<uint8_t[]>(stagingBytes + 2U);
+    uint8_t* data = dataArray.get();
+    ::memset(data, 0x00U, stagingBytes + 2U);
+
+    uint32_t newBitLength = P25Utils::encodeByLength(pdu, data + 2U, bitLength);
+    uint32_t newByteLength = (newBitLength + 7U) / 8U;
+    if (newByteLength > P25_PDU_FRAME_LENGTH_BYTES) {
+        LogError(LOG_RF, P25_PDU_STR ", OSP frame exceeds native modem limit, blocks/bitLength/airBytes = %u/%u/%u",
+            (bitLength > P25_PREAMBLE_LENGTH_BITS) ? ((bitLength - P25_PREAMBLE_LENGTH_BITS) / P25_PDU_FEC_LENGTH_BITS) - 1U : 0U,
+            bitLength, newByteLength);
+        return;
+    }
+
     m_p25->writeRF_TDU(true, imm);
 
     for (uint8_t i = 0U; i < 5U; i++)
@@ -964,15 +981,6 @@ void Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
     } else if (ackRetry) {
         LogInfoEx(LOG_RF, P25_PDU_STR ", OSP, ack retry, bitLength = %u", bitLength);
     }
-
-    uint8_t data[P25_PDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(data, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
-
-    // add the data
-    uint32_t newBitLength = P25Utils::encodeByLength(pdu, data + 2U, bitLength);
-    uint32_t newByteLength = newBitLength / 8U;
-    if ((newBitLength % 8U) > 0U)
-        newByteLength++;
 
     // generate Sync
     Sync::addP25Sync(data + 2U);
