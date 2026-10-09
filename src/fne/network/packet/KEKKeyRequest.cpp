@@ -21,9 +21,9 @@ using namespace network;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Handles NET_FUNC::KEY_LLA_REQ packets. */
+/* Handles NET_FUNC::KEY_KEK_REQ packets. */
 
-void TrafficNetwork::PacketHandler::llaKeyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::kekKeyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     using namespace p25::defines;
     using namespace p25::kmm;
@@ -59,18 +59,27 @@ void TrafficNetwork::PacketHandler::llaKeyRequest(TrafficNetwork* network, NetPa
                     {
                         KMMModifyKey* modifyKey = static_cast<KMMModifyKey*>(frame.get());
 
-                        if (modifyKey->getAlgId() == ALGO_AES_128 && modifyKey->getDstLLId() > 0U) {
+                        if ((modifyKey->getAlgId() == ALGO_AES_128 || modifyKey->getAlgId() == ALGO_AES_256) &&
+                            modifyKey->getDstLLId() > 0U) {
                             if (network->m_debug)
-                                LogDebugEx(LOG_MASTER, "TrafficNetwork::taskNetworkRx()", "PEER %u (%s) LLA enc. key request received, dstLLId = %u, algId = %u, kId = %u", peerId, connection->identWithQualifier().c_str(), 
+                                LogDebugEx(LOG_MASTER, "TrafficNetwork::taskNetworkRx()", "PEER %u (%s) UKEK/LLA enc. key request received, dstLLId = %u, algId = %u, kId = %u", peerId, connection->identWithQualifier().c_str(), 
                                     modifyKey->getDstLLId(), modifyKey->getAlgId(), modifyKey->getKId());
 
                             uint32_t requestingRid = modifyKey->getDstLLId();
 
-                            LogInfoEx(LOG_MASTER, "PEER %u (%s) requested LLA enc. key, rsi = %u", peerId, connection->identWithQualifier().c_str(),
-                                requestingRid);
+                            // determine if the request is for a UKEK or LLA encryption key
+                            const bool ukekRequest = modifyKey->getAlgId() == ALGO_AES_256;
+                            if (ukekRequest && connection->peerClass() != PEER_CONN_CLASS_NEIGHBOR) {
+                                LogError(LOG_MASTER, "PEER %u (%s) requested UKEK but is not a neighbor FNE, no response",
+                                    peerId, connection->identWithQualifier().c_str());
+                                return;
+                            }
 
-                            ::EKCKeyItem keyItem = network->m_cryptoLookup->findLLA(requestingRid);
-                            if (!keyItem.isInvalid()) {
+                            LogInfoEx(LOG_MASTER, "PEER %u (%s) requested %s key, rsi = %u", peerId, connection->identWithQualifier().c_str(), ukekRequest ? "UKEK" : "LLA enc.", requestingRid);
+
+                            ::EKCKeyItem keyItem = ukekRequest ? network->m_cryptoLookup->findUKEK(requestingRid) :
+                                network->m_cryptoLookup->findLLA(requestingRid);
+                            if (!keyItem.isInvalid() && keyItem.algId() == modifyKey->getAlgId()) {
                                 uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
                                 ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                 uint8_t keyLength = keyItem.getKey(key);
@@ -120,7 +129,7 @@ void TrafficNetwork::PacketHandler::llaKeyRequest(TrafficNetwork* network, NetPa
                                 ks.keyLength(keyLength);
 
                                 p25::kmm::KeyItem ki = p25::kmm::KeyItem();
-                                ki.keyFormat(KMM_KEY_FORMAT_TEK);
+                                ki.keyFormat(ukekRequest ? KMM_KEY_FORMAT_KEK : KMM_KEY_FORMAT_TEK);
                                 ki.kId((uint16_t)keyItem.kId());
                                 ki.sln((uint16_t)keyItem.sln());
                                 ki.setKey(key, keyLength);
@@ -130,7 +139,7 @@ void TrafficNetwork::PacketHandler::llaKeyRequest(TrafficNetwork* network, NetPa
 
                                 modifyKeyRsp.encode(buffer + 11U);
 
-                                network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_LLA_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.fullLength() + 11U,
+                                network->writePeer(peerId, network->m_peerId, { NET_FUNC::KEY_KEK_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.fullLength() + 11U,
                                     RTP_END_OF_CALL_SEQ, network->createStreamId());
                             } else {
                                 // attempt to forward KMM key request to replica masters
@@ -141,13 +150,13 @@ void TrafficNetwork::PacketHandler::llaKeyRequest(TrafficNetwork* network, NetPa
                                                 LogInfoEx(LOG_PEER, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, rsi = %u", peerId, connection->identWithQualifier().c_str(),
                                                     modifyKey->getAlgId(), requestingRid);
 
-                                                bool locked = network->s_llaKeyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
-                                                network->m_peerReplicaLLAKeyQueue[peerId] = modifyKey->getDstLLId();
+                                                {
+                                                    std::lock_guard<std::timed_mutex> lock(network->s_kekKeyQueueMutex);
+                                                    network->m_peerReplicaKEKKeyQueue[peerId] =
+                                                        ((uint32_t)modifyKey->getAlgId() << 24U) | (modifyKey->getDstLLId() & 0xFFFFFFU);
+                                                }
 
-                                                if (locked)
-                                                    network->s_llaKeyQueueMutex.unlock();
-
-                                                peer.second->writeMaster({ NET_FUNC::KEY_LLA_REQ, NET_SUBFUNC::NOP }, 
+                                                peer.second->writeMaster({ NET_FUNC::KEY_KEK_REQ, NET_SUBFUNC::NOP }, 
                                                     req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false);
                                             }
                                         }

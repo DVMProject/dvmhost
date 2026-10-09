@@ -1102,8 +1102,10 @@ bool Data::writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ac
     // generate NID
     m_p25->m_nid.encode(data + 2U, DUID::PDU);
 
-    // add status bits
-    P25Utils::addStatusBits(data + 2U, newBitLength, m_inbound, true);
+    // advertise the inbound channel as idle when no RF PDU is being received
+    // the remaining, alternating status-symbol positions stay "unknown" as
+    // required by P25Utils::addStatusBits()
+    P25Utils::addStatusBits(data + 2U, newBitLength, m_inbound, false);
     P25Utils::setStatusBitsStartIdle(data + 2U);
 
     //Utils::dump("P25, Data::writeRF_PDU(), Raw PDU OSP", data, newByteLength + 2U);

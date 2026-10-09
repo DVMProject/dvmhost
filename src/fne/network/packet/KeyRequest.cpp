@@ -101,7 +101,7 @@ void TrafficNetwork::PacketHandler::keyRequest(TrafficNetwork* network, NetPacke
                             LogInfoEx(LOG_MASTER, "PEER %u (%s) requested enc. key, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                 modifyKey->getAlgId(), modifyKey->getKId());
                             ::EKCKeyItem keyItem = network->m_cryptoLookup->find(modifyKey->getKId());
-                            if (!keyItem.isInvalid()) {
+                            if (!keyItem.isInvalid() && keyItem.algId() == modifyKey->getAlgId()) {
                                 uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
                                 ::memset(key, 0x00U, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
                                 uint8_t keyLength = keyItem.getKey(key);
@@ -170,11 +170,10 @@ void TrafficNetwork::PacketHandler::keyRequest(TrafficNetwork* network, NetPacke
                                                 LogInfoEx(LOG_PEER, "PEER %u (%s) no local key or container, requesting key from upstream master, algId = $%02X, kID = $%04X", peerId, connection->identWithQualifier().c_str(),
                                                     modifyKey->getAlgId(), modifyKey->getKId());
 
-                                                bool locked = network->s_keyQueueMutex.try_lock_for(std::chrono::milliseconds(60));
-                                                network->m_peerReplicaKeyQueue[peerId] = modifyKey->getKId();
-
-                                                if (locked)
-                                                    network->s_keyQueueMutex.unlock();
+                                                {
+                                                    std::lock_guard<std::timed_mutex> lock(network->s_keyQueueMutex);
+                                                    network->m_peerReplicaKeyQueue[peerId] = modifyKey->getKId();
+                                                }
 
                                                 peer.second->writeMaster({ NET_FUNC::KEY_REQ, NET_SUBFUNC::NOP }, 
                                                     req->buffer, req->length, RTP_END_OF_CALL_SEQ, 0U, false);

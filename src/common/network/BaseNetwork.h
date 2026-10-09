@@ -478,6 +478,13 @@ namespace network
         bool writeLLAKeyReq(const uint32_t srcId);
 
         /**
+         * @brief Writes a UKEK enc. key request to the network.
+         * @param rsi Source Radio ID.
+         * @returns bool True, if request was sent, otherwise false.
+         */
+        bool writeUKEKReq(const uint32_t rsi);
+
+        /**
          * @brief Writes the local activity log to the network.
          * \code{.unparsed}
          *  Below is the representation of the data layout for the activity log message.

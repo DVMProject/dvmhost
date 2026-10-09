@@ -74,7 +74,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_nxdnInCallCallback(nullptr),
     m_analogInCallCallback(nullptr),
     m_keyRespCallback(nullptr),
-    m_llaKeyRespCallback(nullptr)
+    m_kekKeyRespCallback(nullptr)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -350,7 +350,7 @@ void Network::clock(uint32_t ms)
             { NET_FUNC::ACK, &Network::PacketHandler::ack },
 
             { NET_FUNC::KEY_RSP, &Network::PacketHandler::keyResponse },
-            { NET_FUNC::KEY_LLA_RSP, &Network::PacketHandler::llaKeyResponse },
+            { NET_FUNC::KEY_KEK_RSP, &Network::PacketHandler::kekKeyResponse },
 
             { NET_FUNC::MST_DISC, &Network::PacketHandler::masterDisconnect },
 

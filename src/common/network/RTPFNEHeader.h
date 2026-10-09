@@ -68,8 +68,8 @@ namespace network
             ACK = 0x7EU,                            //!< Packet Acknowledge
             NAK = 0x7FU,                            //!< Packet Negative Acknowledge
 
-            KEY_LLA_REQ = 0x80U,                    //!< Encryption Key LLA Request
-            KEY_LLA_RSP = 0x81U,                    //!< Encryption Key LLA Response
+            KEY_KEK_REQ = 0x80U,                    //!< Encryption Key LLA/UKEK Request
+            KEY_KEK_RSP = 0x81U,                    //!< Encryption Key LLA/UKEK Response
 
             RADIO_ALIAS_SYNC = 0x85U,               //!< Radio Alias List Sync
 

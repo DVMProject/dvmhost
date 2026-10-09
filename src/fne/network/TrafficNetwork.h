@@ -375,6 +375,7 @@ namespace network
         bool m_kmfAllowRID0;
         bool m_kmfEncKeyRequest;
         uint8_t* m_kmfPresharedKey;
+        bool m_kmfWarmStart;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::RadioAliasLookup* m_ridAliasLookup;
@@ -395,8 +396,8 @@ namespace network
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
-        static std::timed_mutex s_llaKeyQueueMutex;
-        std::unordered_map<uint32_t, uint32_t> m_peerReplicaLLAKeyQueue;
+        static std::timed_mutex s_kekKeyQueueMutex;
+        std::unordered_map<uint32_t, uint32_t> m_peerReplicaKEKKeyQueue; // value packs algId in high byte, and RSI in low 24 bits
 
         fne_lookups::AffiliationLookup* m_globalAff;
 
@@ -623,7 +624,7 @@ namespace network
              */
             static void keyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
             /**
-             * @brief Handles NET_FUNC::KEY_LLA_REQ packets.
+             * @brief Handles NET_FUNC::KEY_KEK_REQ packets.
              * @param network Instance of the TrafficNetwork class.
              * @param req Instance of the NetPacketRequest structure.
              * @param peerId Peer ID.
@@ -631,7 +632,7 @@ namespace network
              * @param streamId Stream ID.
              * @param now Current time in milliseconds.
              */
-            static void llaKeyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+            static void kekKeyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
         };
 
         /**
@@ -807,6 +808,21 @@ namespace network
          * @param exceptPeerId Optional peer ID to skip.
          */
         void replicatePatchStatus(json::object obj, uint32_t exceptPeerId = 0U);
+
+        /**
+         * @brief Serializes and queues a patch status transfer payload.
+         * @param connection Destination connection.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if message was queued, otherwise false.
+         */
+        bool writePatchStatusPayload(FNEPeerConnection* connection, json::object obj);
+        /**
+         * @brief Serializes and queues a patch status replication payload.
+         * @param connection Destination neighbor connection.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if message was queued, otherwise false.
+         */
+        bool writePatchStatusReplicationPayload(FNEPeerConnection* connection, json::object obj);
 
         /*
         ** ACL Message Writing
@@ -1072,20 +1088,22 @@ namespace network
          */
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen);
 
-        /**
-         * @brief Serializes and queues a patch status transfer payload.
-         * @param connection Destination connection.
-         * @param obj Patch status JSON payload.
-         * @returns bool True, if message was queued, otherwise false.
+        /*
+        ** Key Request
+        */
+
+        /** 
+         * @brief Sends a TEK query to each enabled upstream replica master. 
+         * @param kid Key ID for the TEK query.
+         * @param algId Algorithm ID for the TEK query.
+         * @param requestingRSI RSI of the requesting entity.
          */
-        bool writePatchStatusPayload(FNEPeerConnection* connection, json::object obj);
-        /**
-         * @brief Serializes and queues a patch status replication payload.
-         * @param connection Destination neighbor connection.
-         * @param obj Patch status JSON payload.
-         * @returns bool True, if message was queued, otherwise false.
+        bool requestUpstreamTEK(uint16_t kid, uint8_t algId, uint32_t requestingRSI);
+        /** 
+         * @brief Sends a UKEK query to each enabled upstream replica master. 
+         * @param rsi RSI of the requesting entity.
          */
-        bool writePatchStatusReplicationPayload(FNEPeerConnection* connection, json::object obj);
+        bool requestUpstreamUKEK(uint32_t rsi);
 
         /*
         ** Internal KMM Callback.
@@ -1095,17 +1113,18 @@ namespace network
          * @brief Helper to process a FNE KMM TEK response.
          * @param ki Key Item.
          * @param algId Algorithm ID.
+         * @param algId Algorithm ID.
          * @param keyLength Length of key in bytes.
          */
         void processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
 
         /**
-         * @brief Helper to process a FNE KMM LLA response.
-         * @param srcId Source Radio ID for the LLA response.
+         * @brief Helper to process a FNE KMM UKEK/LLA response.
+         * @param srcId Source Radio ID for the UKEK/LLA response.
          * @param ki Key Item.
          * @param keyLength Length of key in bytes.
          */
-        void processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* ki, uint8_t keyLength);
+        void processKEKResponse(uint32_t srcId, p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
 
         /*
         ** Metrics Helpers

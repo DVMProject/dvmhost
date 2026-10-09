@@ -125,8 +125,15 @@ std::vector<std::vector<uint8_t>> FNETestHooks::buildOTARRekey(TrafficNetwork& n
     return frames;
 }
 
-/** Builds an OTAR Changeover Command without dispatching it. */
-
+/**
+ * @brief Builds an OTAR Changeover Command without dispatching it.
+ * @param network The TrafficNetwork instance.
+ * @param llId The logical link ID.
+ * @param kmmRSI The KMM RSI value.
+ * @param supersededKeysetId The ID of the superseded keyset.
+ * @param activeKeysetId The ID of the active keyset.
+ * @return A vector containing the encoded OTAR Changeover Command.
+ */
 std::vector<uint8_t> FNETestHooks::buildOTARChangeover(TrafficNetwork& network,
     uint32_t llId, uint32_t kmmRSI, uint8_t supersededKeysetId, uint8_t activeKeysetId)
 {
@@ -140,6 +147,102 @@ std::vector<uint8_t> FNETestHooks::buildOTARChangeover(TrafficNetwork& network,
         return {};
 
     return std::vector<uint8_t>(encoded.get(), encoded.get() + length);
+}
+
+/**
+ * @brief Builds an OTAR Warm Start Command without dispatching it.
+ * @param network The TrafficNetwork instance.
+ * @param llId The logical link ID.
+ * @param kmmRSI The KMM RSI value.
+ * @return A vector containing the encoded OTAR Warm Start Command.
+ */
+std::vector<uint8_t> FNETestHooks::buildOTARWarmStart(TrafficNetwork& network,
+    uint32_t llId, uint32_t kmmRSI)
+{
+    if (network.m_p25OTARService == nullptr)
+        return {};
+    uint32_t length = 0U;
+    UInt8Array encoded = network.m_p25OTARService->write_KMM_WarmStart_Command(llId, kmmRSI, &length);
+    if (encoded == nullptr || length == 0U)
+        return {};
+    return std::vector<uint8_t>(encoded.get(), encoded.get() + length);
+}
+
+/**
+ * @brief Retrieves the temporary TEK for an OTAR Warm Start transaction.
+ * @param network The TrafficNetwork instance.
+ * @param rsi The RSI associated with the Warm Start transaction.
+ * @param kid Output parameter for the key ID.
+ * @param key Output parameter for the temporary TEK.
+ * @return True if the temporary TEK was successfully retrieved, false otherwise.
+ */
+bool FNETestHooks::getOTARWarmStartTEK(TrafficNetwork& network, uint32_t rsi,
+    uint16_t& kid, std::vector<uint8_t>& key)
+{
+    if (network.m_p25OTARService == nullptr)
+        return false;
+    std::lock_guard<std::mutex> lock(network.m_p25OTARService->m_warmStartMutex);
+    auto it = network.m_p25OTARService->m_warmStartTransactions.find(rsi);
+    if (it == network.m_p25OTARService->m_warmStartTransactions.end())
+        return false;
+    kid = it->second.temporaryKId;
+    key.assign(it->second.temporaryTEK.begin(), it->second.temporaryTEK.end());
+    return true;
+}
+
+/**
+ * @brief Checks if there is an active OTAR Warm Start transaction for the given RSI.
+ * @param network The TrafficNetwork instance.
+ * @param rsi The RSI to check.
+ * @return True if there is an active Warm Start transaction, false otherwise.
+ */
+bool FNETestHooks::hasOTARWarmStart(TrafficNetwork& network, uint32_t rsi)
+{
+    if (network.m_p25OTARService == nullptr)
+        return false;
+    std::lock_guard<std::mutex> lock(network.m_p25OTARService->m_warmStartMutex);
+    return network.m_p25OTARService->m_warmStartTransactions.find(rsi) !=
+        network.m_p25OTARService->m_warmStartTransactions.end();
+}
+
+/**
+ * @brief Injects and resolves an upstream TEK response through the OTAR cache.
+ * @param network The TrafficNetwork instance.
+ * @param key The KMM key item representing the TEK.
+ * @param algId The algorithm ID used for the TEK.
+ * @param keyLength The length of the TEK.
+ * @return True if the TEK was successfully cached and resolved, false otherwise.
+ */
+bool FNETestHooks::cacheOTARTEK(TrafficNetwork& network,
+    const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength)
+{
+    if (network.m_p25OTARService == nullptr)
+        return false;
+    network.m_p25OTARService->cacheUpstreamTEK(key, algId, keyLength);
+    const uint32_t id = ((uint32_t)algId << 16U) | key.kId();
+    auto it = network.m_p25OTARService->m_upstreamTEKs.find(id);
+    return it != network.m_p25OTARService->m_upstreamTEKs.end() &&
+        it->second.algorithmId == algId && it->second.keyLength == keyLength;
+}
+
+/**
+ * @brief Injects and resolves an upstream UKEK response through the OTAR cache.
+ * @param network The TrafficNetwork instance.
+ * @param rsi The RSI associated with the UKEK.
+ * @param key The KMM key item representing the UKEK.
+ * @param algId The algorithm ID used for the UKEK.
+ * @param keyLength The length of the UKEK.
+ * @return True if the UKEK was successfully cached and resolved, false otherwise.
+ */
+bool FNETestHooks::cacheOTARUKEK(TrafficNetwork& network, uint32_t rsi,
+    const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength)
+{
+    if (network.m_p25OTARService == nullptr)
+        return false;
+    network.m_p25OTARService->cacheUpstreamUKEK(rsi, key, algId, keyLength);
+    auto it = network.m_p25OTARService->m_upstreamUKEKs.find(rsi);
+    return it != network.m_p25OTARService->m_upstreamUKEKs.end() &&
+        it->second.algorithmId == algId && it->second.keyLength == keyLength;
 }
 
 /**
@@ -381,6 +484,16 @@ void FNETestHooks::setKMFServicesEnabled(TrafficNetwork& network, bool enabled)
 void FNETestHooks::addCryptoKey(TrafficNetwork& network, const EKCKeyItem& key)
 {
     network.m_cryptoLookup->addEntry(key);
+}
+
+/**
+ * @brief Adds a UKEK to the test crypto container.
+ * @param network The TrafficNetwork instance.
+ * @param key The UKEK key item to add.
+ */
+void FNETestHooks::addCryptoUKEK(TrafficNetwork& network, const EKCKeyItem& key)
+{
+    network.m_cryptoLookup->addUKEK(key);
 }
 
 // ---------------------------------------------------------------------------

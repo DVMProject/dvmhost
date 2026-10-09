@@ -9,6 +9,7 @@
  */
 #include "host/Defines.h"
 #include "common/p25/P25Defines.h"
+#include "common/p25/Crypto.h"
 #include "common/p25/kmm/KMMFactory.h"
 #include "common/p25/kmm/KMMChangeover.h"
 #include "common/p25/kmm/KMMDeregistrationCommand.h"
@@ -19,6 +20,7 @@
 #include "common/p25/kmm/KMMNegativeAck.h"
 #include "common/p25/kmm/KMMRekeyAck.h"
 #include "common/p25/kmm/KMMRekeyCommand.h"
+#include "common/p25/kmm/KMMWarmStartCommand.h"
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 #include "common/lookups/RadioIdLookup.h"
@@ -133,6 +135,160 @@ TEST_CASE("KMM factory decodes encoded HELLO and NO_SERVICE frames", "[p25][kmm]
         std::unique_ptr<KMMFrame> frame = KMMFactory::create(buffer);
         REQUIRE(frame == nullptr);
     }
+}
+
+TEST_CASE("KMM Warm-Start Command round-trips its wrapped temporary TEK", "[p25][kmm][warm-start]")
+{
+    uint8_t wrapped[P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES];
+    for (uint8_t i = 0U; i < sizeof(wrapped); ++i)
+        wrapped[i] = i;
+
+    KeyItem key;
+    key.keyFormat(KMM_KEY_FORMAT_TEK);
+    key.sln(0U);
+    key.kId(0x4567U);
+    key.setKey(wrapped, sizeof(wrapped));
+
+    KMMWarmStartCommand tx;
+    tx.setDstLLId(0x123456U);
+    tx.setSrcLLId(WUID_FNE);
+    tx.setHasMessageNumber(true);
+    tx.setMessageNumber(7U);
+    tx.setMACType(KMM_MAC::ENH_MAC);
+    tx.setMACAlgId(ALGO_AES_256);
+    tx.setMACKId(0x4567U);
+    tx.setMACFormat(KMM_MAC_FORMAT_CMAC);
+    tx.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+    tx.setKEKAlgId(ALGO_AES_256);
+    tx.setKEKKId(0x1122U);
+    tx.setKeyLength(sizeof(wrapped));
+    tx.setTEKAlgId(ALGO_AES_256);
+    tx.setKey(key);
+
+    std::vector<uint8_t> encoded = encodeKMM(tx);
+    std::unique_ptr<KMMFrame> base = KMMFactory::create(encoded.data(), encoded.size());
+    REQUIRE(base != nullptr);
+    KMMWarmStartCommand* rx = dynamic_cast<KMMWarmStartCommand*>(base.get());
+    REQUIRE(rx != nullptr);
+    REQUIRE(rx->getMessageNumber() == 7U);
+    REQUIRE(rx->getKEKAlgId() == ALGO_AES_256);
+    REQUIRE(rx->getKEKKId() == 0x1122U);
+    REQUIRE(rx->getKeyLength() == sizeof(wrapped));
+    REQUIRE(rx->getTEKAlgId() == ALGO_AES_256);
+    REQUIRE(rx->getKey().keyFormat() == KMM_KEY_FORMAT_TEK);
+    REQUIRE(rx->getKey().sln() == 0U);
+    REQUIRE(rx->getKey().kId() == 0x4567U);
+
+    uint8_t decoded[sizeof(wrapped)] = { 0U };
+    rx->getKey().getKey(decoded);
+    REQUIRE(::memcmp(decoded, wrapped, sizeof(wrapped)) == 0);
+
+    encoded[10U + 2U + 4U + 2U] = KMM_KEY_FORMAT_KEK;
+    REQUIRE(KMMFactory::create(encoded.data(), encoded.size()) == nullptr);
+}
+
+TEST_CASE("P25 OTAR Warm Start transitions through temporary TEK Rekey", "[p25][kmm][otar][warm-start]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    constexpr uint16_t UKEK_KID = 0x1001U;
+    constexpr uint16_t FINAL_KID = 0x2001U;
+    const char* ukekHex = "101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F";
+    const char* finalHex = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F";
+
+    EKCKeyItem ukek;
+    ukek.id(1U); ukek.rsiId(SU_RSI); ukek.algId(ALGO_AES_256);
+    ukek.kId(UKEK_KID); ukek.sln(0U); ukek.keyMaterial(ukekHex);
+    FNETestHooks::addCryptoUKEK(harness.traffic, ukek);
+
+    EKCKeyItem finalTEK;
+    finalTEK.id(2U); finalTEK.algId(ALGO_AES_256); finalTEK.kId(FINAL_KID);
+    finalTEK.sln(1U); finalTEK.keyMaterial(finalHex);
+    FNETestHooks::addCryptoKey(harness.traffic, finalTEK);
+    harness.rid.addEntry(SU_RSI, true, "warm-start-test", "", true, true, { FINAL_KID });
+
+    FNETestHooks::setKMFServicesEnabled(harness.traffic, true);
+    KMMHello hello;
+    hello.setDstLLId(WUID_FNE); hello.setSrcLLId(SU_RSI);
+    hello.setResponseKind(KMM_ResponseKind::IMMEDIATE);
+    hello.setFlag(KMM_HelloFlag::REKEY_REQUEST_UKEK);
+    std::vector<uint8_t> helloBytes = encodeKMM(hello);
+    uint32_t commandLength = 0U;
+    UInt8Array commandResponse = FNETestHooks::processOTARKMM(harness.traffic,
+        helloBytes, SU_RSI, commandLength);
+    REQUIRE(commandResponse != nullptr);
+    std::vector<uint8_t> commandBytes(commandResponse.get(), commandResponse.get() + commandLength);
+    REQUIRE_FALSE(commandBytes.empty());
+    std::unique_ptr<KMMFrame> commandBase = KMMFactory::create(commandBytes.data(), commandBytes.size());
+    REQUIRE(commandBase != nullptr);
+    KMMWarmStartCommand* command = dynamic_cast<KMMWarmStartCommand*>(commandBase.get());
+    REQUIRE(command != nullptr);
+    CHECK(command->getMessageNumber() == 3U);
+    CHECK(command->getMACFormat() == KMM_MAC_FORMAT_CBC);
+    CHECK(command->getKEKKId() == UKEK_KID);
+    CHECK(command->getKeyLength() == P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
+
+    uint16_t temporaryKId = 0U;
+    std::vector<uint8_t> temporaryTEK;
+    REQUIRE(FNETestHooks::getOTARWarmStartTEK(harness.traffic, SU_RSI,
+        temporaryKId, temporaryTEK));
+    REQUIRE(temporaryTEK.size() == P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+    CHECK(command->getKey().kId() == temporaryKId);
+    REQUIRE(command->verifyMAC(temporaryTEK.data(), commandBytes.data(), commandBytes.size()));
+
+    uint8_t wrapped[P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES] = { 0U };
+    command->getKey().getKey(wrapped);
+    uint8_t ukekBytes[P25DEF::MAX_ENC_KEY_LENGTH_BYTES] = {
+        0x10U,0x11U,0x12U,0x13U,0x14U,0x15U,0x16U,0x17U,
+        0x18U,0x19U,0x1AU,0x1BU,0x1CU,0x1DU,0x1EU,0x1FU,
+        0x20U,0x21U,0x22U,0x23U,0x24U,0x25U,0x26U,0x27U,
+        0x28U,0x29U,0x2AU,0x2BU,0x2CU,0x2DU,0x2EU,0x2FU };
+    p25::crypto::P25Crypto crypto;
+    UInt8Array unwrapped = crypto.decryptAES_TEK(ukekBytes, wrapped, sizeof(wrapped));
+    REQUIRE(unwrapped != nullptr);
+    REQUIRE(::memcmp(unwrapped.get(), temporaryTEK.data(), temporaryTEK.size()) == 0);
+
+    KeyStatus warmStatus;
+    warmStatus.algId(ALGO_AES_256); warmStatus.kId(temporaryKId);
+    warmStatus.status(KMM_Status::CMD_PERFORMED);
+    KMMRekeyAck warmAck;
+    warmAck.setDstLLId(WUID_FNE); warmAck.setSrcLLId(SU_RSI);
+    warmAck.setHasMessageNumber(true); warmAck.setMessageNumber(command->getMessageNumber());
+    warmAck.setMACType(KMM_MAC::ENH_MAC); warmAck.setMACAlgId(ALGO_AES_256);
+    warmAck.setMACKId(temporaryKId); warmAck.setMACFormat(KMM_MAC_FORMAT_CMAC);
+    warmAck.setAckMessageId(KMM_MessageType::WARM_START_CMD);
+    warmAck.setNumberOfKeyStatus(1U); warmAck.setKeyStatus({ warmStatus });
+    std::vector<uint8_t> warmAckBytes = encodeKMM(warmAck);
+    warmAck.generateMAC(temporaryTEK.data(), warmAckBytes.data());
+
+    uint32_t rekeyLength = 0U;
+    UInt8Array rekeyBytes = FNETestHooks::processOTARKMM(harness.traffic, warmAckBytes,
+        SU_RSI, rekeyLength, ALGO_AES_256, temporaryKId);
+    REQUIRE(rekeyBytes != nullptr);
+    std::unique_ptr<KMMFrame> rekeyBase = KMMFactory::create(rekeyBytes.get());
+    KMMRekeyCommand* rekey = dynamic_cast<KMMRekeyCommand*>(rekeyBase.get());
+    REQUIRE(rekey != nullptr);
+    CHECK(rekey->getKId() == temporaryKId);
+    REQUIRE(rekey->verifyMAC(temporaryTEK.data(), rekeyBytes.get(), rekeyLength));
+
+    uint8_t finalKey[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
+    finalTEK.getKey(finalKey);
+    KeyStatus rekeyStatus;
+    rekeyStatus.algId(ALGO_AES_256); rekeyStatus.kId(FINAL_KID);
+    rekeyStatus.status(KMM_Status::CMD_PERFORMED);
+    KMMRekeyAck finalAck;
+    finalAck.setDstLLId(WUID_FNE); finalAck.setSrcLLId(SU_RSI);
+    finalAck.setHasMessageNumber(true); finalAck.setMessageNumber(rekey->getMessageNumber());
+    finalAck.setMACType(KMM_MAC::ENH_MAC); finalAck.setMACAlgId(ALGO_AES_256);
+    finalAck.setMACKId(FINAL_KID); finalAck.setMACFormat(KMM_MAC_FORMAT_CMAC);
+    finalAck.setAckMessageId(KMM_MessageType::REKEY_CMD);
+    finalAck.setNumberOfKeyStatus(1U); finalAck.setKeyStatus({ rekeyStatus });
+    std::vector<uint8_t> finalAckBytes = encodeKMM(finalAck);
+    finalAck.generateMAC(finalKey, finalAckBytes.data());
+    uint32_t finalResponseLength = 0U;
+    REQUIRE(FNETestHooks::processOTARKMM(harness.traffic, finalAckBytes, SU_RSI,
+        finalResponseLength, ALGO_AES_256, FINAL_KID) == nullptr);
+    CHECK_FALSE(FNETestHooks::hasOTARWarmStart(harness.traffic, SU_RSI));
 }
 
 TEST_CASE("KMM air-facing factory rejects malformed lengths", "[p25][kmm][security]")
@@ -613,9 +769,9 @@ TEST_CASE("P25 OTAR Rekey Commands batch four keys per KMM", "[p25][kmm][otar][r
         REQUIRE(rekey != nullptr);
         REQUIRE(rekey->getKeysets().size() == 1U);
         CHECK(rekey->getKeysets()[0U].keys().size() == expectedCounts[i]);
-        // A new RK3 uses Rule 1 message-number validation. The SU initializes
-        // MNL to zero, so the first valid outbound KMF message number is one.
-        CHECK(rekey->getMessageNumber() == i + 1U);
+        // A new RK3 uses Rule 1 message-number validation. The interoperating
+        // Bootstrap past the Harris subscriber's retained MNL values one and two.
+        CHECK(rekey->getMessageNumber() == i + 3U);
         CHECK(rekey->getComplete() == (i + 1U == frames.size()));
         CHECK(frames[i].size() <= 287U);
     }
@@ -654,7 +810,7 @@ TEST_CASE("P25 OTAR builds authenticated Changeover Commands without dispatching
     CHECK(changeover->getSupersededKeysetId() == SUPERSEDED_KEYSET);
     CHECK(changeover->getActiveKeysetId() == ACTIVE_KEYSET);
     CHECK(changeover->getHasMessageNumber());
-    CHECK(changeover->getMessageNumber() == 1U);
+    CHECK(changeover->getMessageNumber() == 3U);
     CHECK(changeover->getMACType() == KMM_MAC::ENH_MAC);
     CHECK(changeover->getMACAlgId() == ALGO_AES_256);
     CHECK(changeover->getMACKId() == TEK_KID);
@@ -671,6 +827,30 @@ TEST_CASE("P25 OTAR builds authenticated Changeover Commands without dispatching
     CHECK(encrypted);
     CHECK(algoId == ALGO_AES_256);
     CHECK(kid == TEK_KID);
+}
+
+TEST_CASE("P25 OTAR accepts upstream TEK and UKEK responses", "[p25][kmm][otar][upstream-keys]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    uint8_t material[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
+    for (uint32_t i = 0U; i < sizeof(material); ++i)
+        material[i] = (uint8_t)i;
+
+    p25::kmm::KeyItem tek;
+    tek.keyFormat(KMM_KEY_FORMAT_TEK);
+    tek.kId(0x1234U);
+    tek.sln(1U);
+    tek.setKey(material, sizeof(material));
+    CHECK(FNETestHooks::cacheOTARTEK(harness.traffic, tek, ALGO_AES_256, sizeof(material)));
+
+    p25::kmm::KeyItem ukek;
+    ukek.keyFormat(KMM_KEY_FORMAT_KEK);
+    ukek.kId(0x4321U);
+    ukek.sln(0U);
+    ukek.setKey(material, sizeof(material));
+    CHECK(FNETestHooks::cacheOTARUKEK(harness.traffic, SU_RSI, ukek,
+        ALGO_AES_256, sizeof(material)));
 }
 
 #if !defined(_WIN32)

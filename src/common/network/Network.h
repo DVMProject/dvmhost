@@ -313,10 +313,10 @@ namespace network
          */
         void setKeyResponseCallback(std::function<void(p25::kmm::KeyItem, uint8_t, uint8_t)>&& callback) { m_keyRespCallback = callback; }
         /**
-         * @brief Helper to set the LLA encryption key response callback.
+         * @brief Helper to set the UKEK/LLA encryption key response callback.
          * @param callback 
          */
-        void setLLAKeyResponseCallback(std::function<void(uint32_t, p25::kmm::KeyItem, uint8_t)>&& callback) { m_llaKeyRespCallback = callback; }
+        void setKEKKeyResponseCallback(std::function<void(uint32_t, p25::kmm::KeyItem, uint8_t, uint8_t)>&& callback) { m_kekKeyRespCallback = callback; }
 
     public:
         /**
@@ -441,10 +441,10 @@ namespace network
          */
         std::function<void(p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)> m_keyRespCallback;
         /**
-         * @brief LLA Encryption Key Response Function Callback.
-         *  (This is called once the master responds to a key LLA request.)
+         * @brief LLA/UKEK Encryption Key Response Function Callback.
+         *  (This is called once the master responds to a key KEK request.)
          */
-        std::function<void(uint32_t rsi, p25::kmm::KeyItem ki, uint8_t keyLength)> m_llaKeyRespCallback;
+        std::function<void(uint32_t rsi, p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)> m_kekKeyRespCallback;
 
         using PacketHandlerFunc = bool (*)(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
             const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
@@ -543,7 +543,7 @@ namespace network
             static bool keyResponse(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
                 const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
             /**
-             * @brief Handles NET_FUNC::KEY_LLA_RSP packets.
+             * @brief Handles NET_FUNC::KEY_KEK_RSP packets.
              * @param network Instance of the TrafficNetwork class.
              * @param peerId Peer ID.
              * @param streamId Stream ID.
@@ -554,7 +554,7 @@ namespace network
              * @param length Length of buffer.
              * @returns bool True, if the packet was handled, otherwise false.
              */
-            static bool llaKeyResponse(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+            static bool kekKeyResponse(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
                 const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
 
             /**

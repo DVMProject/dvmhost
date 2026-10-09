@@ -18,9 +18,9 @@ using namespace network;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Handles NET_FUNC::KEY_LLA_RSP packets. */
+/* Handles NET_FUNC::KEY_KEK_RSP packets. */
 
-bool Network::PacketHandler::llaKeyResponse(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+bool Network::PacketHandler::kekKeyResponse(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
     const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length)
 {
     (void)peerId;
@@ -69,6 +69,8 @@ bool Network::PacketHandler::llaKeyResponse(Network* network, uint32_t peerId, u
                                     break;
 
                                 case P25DEF::ALGO_AES_256:
+                                    keyLength = P25DEF::MAX_ENC_KEY_LENGTH_BYTES;
+                                    break;
                                 default:
                                     LogWarning(LOG_NET, "PEER %u, unknown algorithm ID $%02X, unable to determine key length", network->m_peerId, ks.algId());
                                     break;
@@ -85,7 +87,7 @@ bool Network::PacketHandler::llaKeyResponse(Network* network, uint32_t peerId, u
                             }
                             else {
                                 if (modifyKey->getDecryptInfoFmt() == KMM_DECRYPT_PEER_ENC) {
-                                    LogInfoEx(LOG_NET, "PEER %u, received encrypted LLA enc. key, but no preshared key available, algId = $%02X, kID = $%04X", network->m_peerId,
+                                    LogInfoEx(LOG_NET, "PEER %u, received encrypted UKEK/LLA enc. key, but no preshared key available, algId = $%02X, kID = $%04X", network->m_peerId,
                                         ks.algId(), ki.kId());
                                     break;
                                 }
@@ -93,8 +95,8 @@ bool Network::PacketHandler::llaKeyResponse(Network* network, uint32_t peerId, u
                         }
 
                         // fire off key response callback if we have one
-                        if (network->m_llaKeyRespCallback != nullptr) {
-                            network->m_llaKeyRespCallback(modifyKey->getDstLLId(), ki, ks.keyLength());
+                        if (network->m_kekKeyRespCallback != nullptr) {
+                            network->m_kekKeyRespCallback(modifyKey->getDstLLId(), ki, ks.algId(), ks.keyLength());
                         }
                     }
                 }

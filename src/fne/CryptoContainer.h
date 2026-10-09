@@ -215,6 +215,11 @@ public:
      * @param key Key Item.
      */
     void addEntry(EKCKeyItem key);
+    /** 
+     * @brief Adds or replaces a User Key Encryption Key. 
+     * @param key Key Item representing the UKEK.
+     */
+    void addUKEK(EKCKeyItem key);
     /**
      * @brief Erases an existing entry from the lookup table by the specified unique ID.
      * @param id Unique ID to erase.

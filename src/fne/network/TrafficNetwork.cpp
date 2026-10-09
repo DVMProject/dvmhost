@@ -50,7 +50,7 @@ const uint32_t FIXED_HA_UPDATE_INTERVAL = 30U; // 30s
 // ---------------------------------------------------------------------------
 
 std::timed_mutex TrafficNetwork::s_keyQueueMutex;
-std::timed_mutex TrafficNetwork::s_llaKeyQueueMutex;
+std::timed_mutex TrafficNetwork::s_kekKeyQueueMutex;
 
 std::array<std::mutex, PEER_STATE_LOCK_STRIPES> TrafficNetwork::s_peerStateLocks;
 
@@ -92,6 +92,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_kmfAllowRID0(false),
     m_kmfEncKeyRequest(false),
     m_kmfPresharedKey(nullptr),
+    m_kmfWarmStart(true),
     m_ridLookup(nullptr),
     m_ridAliasLookup(nullptr),
     m_tidLookup(nullptr),
@@ -104,7 +105,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_peerAffiliations(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
-    m_peerReplicaLLAKeyQueue(),
+    m_peerReplicaKEKKeyQueue(),
     m_globalAff(nullptr),
     m_treeRoot(nullptr),
     m_treeLock(),
@@ -336,6 +337,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
     LogWarning(LOG_MASTER, "FNE is compiled without OpenSSL support, KMF services are unavailable.");
 #endif // ENABLE_SSL
     m_kmfAllowRID0 = conf["kmfAllowRID0"].as<bool>(false);
+    m_kmfWarmStart = conf["kmfWarmStart"].as<bool>(true);
 
     // scope is intentional
     {
@@ -529,6 +531,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("    P25 OTAR KMF Listening Address: %s", m_address.c_str());
         LogInfo("    P25 OTAR KMF Listening Port: %u", kmfOtarPort);
         LogInfo("    P25 KMF Allow RID 0 Requests: %s", m_kmfAllowRID0 ? "yes" : "no");
+        LogInfo("    P25 KMF Warm Start Requests Allowed: %s", m_kmfWarmStart ? "yes" : "no");
         LogInfo("    P25 KMF Peer Request Encrypted: %s", m_kmfEncKeyRequest ? "yes" : "no");
         if (!m_encryptedTrafficConn && !m_kmfEncKeyRequest) {
             LogWarning(LOG_MASTER, "Peers can make key requests, but the encrypted traffic connection is not enabled and KMF requests are not encrypted! Key requests will be sent in the clear.");
@@ -800,13 +803,15 @@ void TrafficNetwork::clock(uint32_t ms)
                     // perform peer replica maintainence tasks
                     if (peer.second->isEnabled() && peer.second->getRemotePeerId() > 0U &&
                         peer.second->isReplica()) {
+                        // attach key response handlers if not already attached
                         if (!peer.second->getAttachedKeyRSPHandler()) {
                             peer.second->setAttachedKeyRSPHandler(true); // this is the only place this should happen
                             peer.second->setKeyResponseCallback([=](p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
                                 processTEKResponse(&ki, algId, keyLength);
                             });
-                            peer.second->setLLAKeyResponseCallback([=](uint32_t srcId, p25::kmm::KeyItem ki, uint8_t keyLength) {
-                                processLLAResponse(srcId, &ki, keyLength);
+
+                            peer.second->setKEKKeyResponseCallback([=](uint32_t srcId, p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
+                                processKEKResponse(srcId, &ki, algId, keyLength);
                             });
                         }
 
@@ -1216,7 +1221,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                 { NET_FUNC::INCALL_CTRL, &TrafficNetwork::PacketHandler::inCallControl },
 
                 { NET_FUNC::KEY_REQ, &TrafficNetwork::PacketHandler::keyRequest },
-                { NET_FUNC::KEY_LLA_REQ, &TrafficNetwork::PacketHandler::llaKeyRequest },
+                { NET_FUNC::KEY_KEK_REQ, &TrafficNetwork::PacketHandler::kekKeyRequest },
             };
 
             // dispatch to the appropriate handler based on the function opcode
@@ -2962,6 +2967,64 @@ bool TrafficNetwork::writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK
 }
 
 /*
+** Key Request
+*/
+
+/* Sends a TEK query to each enabled upstream replica master. */
+
+bool TrafficNetwork::requestUpstreamTEK(uint16_t kid, uint8_t algId, uint32_t requestingRSI)
+{
+    bool sent = false;
+    for (auto& peer : m_host->m_peerNetworks) {
+        PeerNetwork* upstream = peer.second;
+        if (upstream == nullptr || !upstream->isEnabled() || !upstream->isReplica())
+            continue;
+
+        // attach key response handlers if not already attached
+        if (!upstream->getAttachedKeyRSPHandler()) {
+            upstream->setAttachedKeyRSPHandler(true);
+            upstream->setKeyResponseCallback([this](p25::kmm::KeyItem ki, uint8_t responseAlgId, uint8_t keyLength) {
+                processTEKResponse(&ki, responseAlgId, keyLength);
+            });
+
+            upstream->setKEKKeyResponseCallback([this](uint32_t rsi, p25::kmm::KeyItem ki, uint8_t responseAlgId, uint8_t keyLength) {
+                processKEKResponse(rsi, &ki, responseAlgId, keyLength);
+            });
+        }
+
+        sent = upstream->writeKeyReq(kid, algId, requestingRSI) || sent;
+    }
+    return sent;
+}
+
+/* Sends a UKEK query to each enabled upstream replica master. */
+
+bool TrafficNetwork::requestUpstreamUKEK(uint32_t rsi)
+{
+    bool sent = false;
+    for (auto& peer : m_host->m_peerNetworks) {
+        PeerNetwork* upstream = peer.second;
+        if (upstream == nullptr || !upstream->isEnabled() || !upstream->isReplica())
+            continue;
+
+        // attach key response handlers if not already attached
+        if (!upstream->getAttachedKeyRSPHandler()) {
+            upstream->setAttachedKeyRSPHandler(true);
+            upstream->setKeyResponseCallback([this](p25::kmm::KeyItem ki, uint8_t responseAlgId, uint8_t keyLength) {
+                processTEKResponse(&ki, responseAlgId, keyLength);
+            });
+
+            upstream->setKEKKeyResponseCallback([this](uint32_t responseRSI, p25::kmm::KeyItem ki, uint8_t responseAlgId, uint8_t keyLength) {
+                processKEKResponse(responseRSI, &ki, responseAlgId, keyLength);
+            });
+        }
+
+        sent = upstream->writeUKEKReq(rsi) || sent;
+    }
+    return sent;
+}
+
+/*
 ** Internal KMM Callback.
 */
 
@@ -2976,6 +3039,9 @@ void TrafficNetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId,
         return;
 
     LogInfoEx(LOG_PEER, "upstream master enc. key, algId = $%02X, kID = $%04X", algId, rspKi->kId());
+
+    if (m_p25OTARService != nullptr)
+        m_p25OTARService->cacheUpstreamTEK(*rspKi, algId, keyLength);
 
     s_keyQueueMutex.lock();
 
@@ -3033,9 +3099,9 @@ void TrafficNetwork::processTEKResponse(p25::kmm::KeyItem* rspKi, uint8_t algId,
     s_keyQueueMutex.unlock();
 }
 
-/* Helper to process a FNE KMM LLA response. */
+/* Helper to process a FNE KMM UKEK/LLA response. */
 
-void TrafficNetwork::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi, uint8_t keyLength)
+void TrafficNetwork::processKEKResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi, uint8_t algId, uint8_t keyLength)
 {
     using namespace p25::defines;
     using namespace p25::kmm;
@@ -3045,12 +3111,16 @@ void TrafficNetwork::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi
 
     LogInfoEx(LOG_PEER, "upstream master LLA enc. key, rsi = %u", srcId);
 
-    s_llaKeyQueueMutex.lock();
+    if (algId == ALGO_AES_256 && m_p25OTARService != nullptr)
+        m_p25OTARService->cacheUpstreamUKEK(srcId, *rspKi, algId, keyLength);
+
+    s_kekKeyQueueMutex.lock();
 
     std::vector<uint32_t> peersToRemove;
-    for (auto entry : m_peerReplicaLLAKeyQueue) {
-        uint32_t requestingRid = entry.second;
-        if (requestingRid == srcId) {
+    for (auto entry : m_peerReplicaKEKKeyQueue) {
+        uint8_t requestedAlgId = (uint8_t)(entry.second >> 24U);
+        uint32_t requestingRid = entry.second & 0xFFFFFFU;
+        if (requestingRid == srcId && requestedAlgId == algId) {
             uint32_t peerId = entry.first;
 
             uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
@@ -3058,8 +3128,8 @@ void TrafficNetwork::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi
             rspKi->getKey(key);
 
             if (m_debug) {
-                LogDebugEx(LOG_HOST, "TrafficNetwork::processLLAResponse()", "keyLength = %u", keyLength);
-                Utils::dump(1U, "TrafficNetwork::processLLAResponse(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
+                LogDebugEx(LOG_HOST, "TrafficNetwork::processKEKResponse()", "keyLength = %u", keyLength);
+                Utils::dump(1U, "TrafficNetwork::processKEKResponse(), Key", key, P25DEF::MAX_ENC_KEY_LENGTH_BYTES);
             }
 
             // build response buffer
@@ -3068,14 +3138,14 @@ void TrafficNetwork::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi
 
             KMMModifyKey modifyKeyRsp = KMMModifyKey();
             modifyKeyRsp.setDecryptInfoFmt(m_kmfEncKeyRequest ? KMM_DECRYPT_PEER_ENC : KMM_DECRYPT_INSTRUCT_NONE);
-            modifyKeyRsp.setAlgId(ALGO_AES_128);
+            modifyKeyRsp.setAlgId(algId);
             modifyKeyRsp.setKId(0U);
             modifyKeyRsp.setSrcLLId(WUID_FNE);
             modifyKeyRsp.setDstLLId(srcId);
 
             KeysetItem ks = KeysetItem();
             ks.keysetId(1U);
-            ks.algId(ALGO_AES_128);
+            ks.algId(algId);
             ks.keyLength(keyLength);
 
             p25::kmm::KeyItem ki = p25::kmm::KeyItem();
@@ -3089,18 +3159,18 @@ void TrafficNetwork::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi
 
             modifyKeyRsp.encode(buffer + 11U);
 
-            writePeer(peerId, m_peerId, { NET_FUNC::KEY_LLA_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.fullLength() + 11U,
+            writePeer(peerId, m_peerId, { NET_FUNC::KEY_KEK_RSP, NET_SUBFUNC::NOP }, buffer, modifyKeyRsp.fullLength() + 11U,
                 RTP_END_OF_CALL_SEQ, createStreamId());
 
             peersToRemove.push_back(peerId);
         } else {
-            LogError(LOG_PEER, "upstream master LLA enc. key, peerId = %u, requestingRSI = %u, rsi = %u -- mismatch!", entry.first, requestingRid, srcId);
+            LogError(LOG_PEER, "upstream master UKEK/LLA enc. key, peerId = %u, requestingRSI = %u, rsi = %u -- mismatch!", entry.first, requestingRid, srcId);
         }
     }
 
     // remove peers who were sent keys
     for (auto& peerId : peersToRemove)
-        m_peerReplicaLLAKeyQueue.erase(peerId);
+        m_peerReplicaKEKKeyQueue.erase(peerId);
 
-    s_llaKeyQueueMutex.unlock();
+    s_kekKeyQueueMutex.unlock();
 }

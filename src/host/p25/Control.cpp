@@ -257,7 +257,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     if (m_control->m_requireLLAForReg) {
         if (m_network != nullptr) {
-            m_network->setLLAKeyResponseCallback([=](uint32_t srcId, p25::kmm::KeyItem ki, uint8_t keyLength) {
+            m_network->setKEKKeyResponseCallback([=](uint32_t srcId, p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
+                (void)algId;
                 processLLAResponse(srcId, &ki, keyLength);
             });
         }

@@ -78,7 +78,7 @@ void KMMFrame::generateMAC(uint8_t* kek, uint8_t* data)
         return;
     }
 
-    if (m_macKId == 0U) {
+    if (m_macKId == 0U && m_messageId != KMM_MessageType::WARM_START_CMD) {
         ::LogError(LOG_P25, "KMMFrame::generateMAC(), MAC key ID is not set, aborting MAC signing");
         return;
     }

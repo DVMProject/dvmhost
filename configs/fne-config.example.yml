@@ -203,6 +203,8 @@ master:
     #   (This field *must* be 32 hex bytes in length or 64 characters
     #    0 - 9, A - F.)
     kmfPresharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+    # Flag indicating whether or not P25 OTAR KMF services will allow a warm start rekey request.
+    kmfWarmStart: true
     # Flag indicating whether or not verbose debug logging for P25 OTAR KMF services is enabled.
     kmfDebug: false
 

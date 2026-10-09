@@ -258,6 +258,26 @@ void CryptoContainer::addEntry(EKCKeyItem key)
     }
 }
 
+/* Adds or replaces a User Key Encryption Key by RSI and KID. */
+
+void CryptoContainer::addUKEK(EKCKeyItem key)
+{
+    if (key.isInvalid())
+        return;
+
+    std::lock_guard<std::mutex> lock(s_mutex);
+    auto it = std::find_if(m_ukeks.begin(), m_ukeks.end(),
+        [&](const EKCKeyItem& item) 
+        {
+            return item.rsiId() == key.rsiId() && item.kId() == key.kId();
+        });
+    if (it != m_ukeks.end()) {
+        *it = key;
+    } else {
+        m_ukeks.push_back(key);
+    }
+}
+
 /* Erases an existing entry from the lookup table by the specified unique ID. */
 
 void CryptoContainer::eraseEntry(uint32_t id)

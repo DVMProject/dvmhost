@@ -517,6 +517,7 @@ namespace p25
 
                 REKEY_ACK = 0x1DU,                      //!< Rekey Ack
                 REKEY_CMD = 0x1EU,                      //!< Rekey Command
+                WARM_START_CMD = 0x20U,                 //!< Warm-Start Command
 
                 ZEROIZE_CMD = 0x21U,                    //!< Zeroize Command
                 ZEROIZE_RSP = 0x22U,                    //!< Zeroize Response

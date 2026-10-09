@@ -118,6 +118,55 @@ public:
      */
     static std::vector<uint8_t> buildOTARChangeover(network::TrafficNetwork& network,
         uint32_t llId, uint32_t kmmRSI, uint8_t supersededKeysetId, uint8_t activeKeysetId);
+    /** 
+     * @brief Builds and records an OTAR Warm-Start Command. 
+     * @param network The TrafficNetwork instance.
+     * @param llId Logical Link ID used for message-number tracking.
+     * @param kmmRSI Destination KMM RSI.
+     * @return Encoded command, or an empty vector when it cannot be built.
+     * 
+     */
+    static std::vector<uint8_t> buildOTARWarmStart(network::TrafficNetwork& network,
+        uint32_t llId, uint32_t kmmRSI);
+    /** 
+     * @brief Retrieves an active Warm-Start temporary key for transaction tests. 
+     * @param network The TrafficNetwork instance.
+     * @param rsi The RSI for which to retrieve the temporary key.
+     * @param kid Output parameter for the key ID of the temporary key.
+     * @param key Output parameter for the temporary key bytes.
+     * @return True if an active Warm-Start temporary key exists, false otherwise.
+     *
+     */
+    static bool getOTARWarmStartTEK(network::TrafficNetwork& network, uint32_t rsi,
+        uint16_t& kid, std::vector<uint8_t>& key);
+    /** 
+     * @brief Returns whether an active Warm-Start transaction exists.
+     * @param network The TrafficNetwork instance.
+     * @param rsi The RSI for which to check the Warm-Start transaction.
+     * @return True if an active Warm-Start transaction exists, false otherwise.
+     */
+    static bool hasOTARWarmStart(network::TrafficNetwork& network, uint32_t rsi);
+    /** 
+     * @brief Injects and verifies an upstream TEK response in the OTAR cache.
+     * @param network The TrafficNetwork instance.
+     * @param key The key item to cache.
+     * @param algId The algorithm ID of the key.
+     * @param keyLength The length of the key in bytes.
+     * @return True if the key was successfully cached, false otherwise.
+     */
+    static bool cacheOTARTEK(network::TrafficNetwork& network,
+        const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength);
+    /**
+     * @brief Injects and verifies an upstream UKEK response in the OTAR cache.
+     * @param network The TrafficNetwork instance.
+     * @param rsi The RSI for which to cache the UKEK.
+     * @param key The key item to cache.
+     * @param algId The algorithm ID of the key.
+     * @param keyLength The length of the key in bytes.
+     * @return True if the key was successfully cached, false otherwise.
+     */
+    static bool cacheOTARUKEK(network::TrafficNetwork& network, uint32_t rsi,
+        const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength);
     /**
      * @brief Resolves the outer security context selected for a generated response.
      * @param network The TrafficNetwork instance.
@@ -224,6 +273,12 @@ public:
      * @param key The cryptographic key to add.
      */
     static void addCryptoKey(network::TrafficNetwork& network, const EKCKeyItem& key);
+    /** 
+     * @brief Adds a UKEK to the test crypto container.
+     * @param network The TrafficNetwork instance.
+     * @param key The UKEK key item to add.
+     */
+    static void addCryptoUKEK(network::TrafficNetwork& network, const EKCKeyItem& key);
 };
 
 #endif // __FNE_TEST_HOOKS_H__
