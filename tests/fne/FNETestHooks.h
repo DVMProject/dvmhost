@@ -108,6 +108,17 @@ public:
     static std::vector<std::vector<uint8_t>> buildOTARRekey(network::TrafficNetwork& network,
         uint32_t llId, uint32_t kmmRSI);
     /**
+     * @brief Builds an OTAR Changeover Command without dispatching it.
+     * @param network The TrafficNetwork instance.
+     * @param llId Logical Link ID used for message-number tracking.
+     * @param kmmRSI Destination KMM RSI.
+     * @param supersededKeysetId Keyset ID being superseded.
+     * @param activeKeysetId Keyset ID becoming active.
+     * @return Encoded command, or an empty vector when it cannot be built.
+     */
+    static std::vector<uint8_t> buildOTARChangeover(network::TrafficNetwork& network,
+        uint32_t llId, uint32_t kmmRSI, uint8_t supersededKeysetId, uint8_t activeKeysetId);
+    /**
      * @brief Resolves the outer security context selected for a generated response.
      * @param network The TrafficNetwork instance.
      * @param packet The OTAR response packet data.

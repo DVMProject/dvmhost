@@ -198,6 +198,18 @@ namespace network
             const KMMAuthContext& auth, std::vector<std::vector<uint8_t>>* additionalResponses = nullptr);
 
         /**
+         * @brief Builds an authenticated Changeover-Command KMM for an SU.
+         * @param llId Logical Link Address used to track the outbound message number.
+         * @param kmmRSI Destination KMM Radio Set Identifier.
+         * @param supersededKeysetId Keyset ID being superseded.
+         * @param activeKeysetId Keyset ID becoming active.
+         * @param[out] payloadSize Size of the returned KMM payload.
+         * @returns Encoded KMM Changeover Command, or nullptr if no authorized MAC TEK is available.
+         */
+        UInt8Array write_KMM_Changeover_Command(uint32_t llId, uint32_t kmmRSI,
+            uint8_t supersededKeysetId, uint8_t activeKeysetId, uint32_t* payloadSize);
+
+        /**
          * @brief Helper used to return a Registration-Command KMM to the calling SU.
          * @param llId Logical Link Address.
          * @param kmmRSI KMM Radio Set Identifier.

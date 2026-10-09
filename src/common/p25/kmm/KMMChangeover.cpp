@@ -82,6 +82,9 @@ void KMMChangeover::encode(uint8_t* data)
 
 std::string KMMChangeover::toString()
 {
+    if (m_messageId == KMM_MessageType::CHANGEOVER_RSP)
+        return std::string("KMM, CHANGEOVER_RSP (Changeover Response)");
+
     return std::string("KMM, CHANGEOVER_CMD (Changeover Command)");
 }
 

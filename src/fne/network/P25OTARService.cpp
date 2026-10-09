@@ -58,6 +58,8 @@ using namespace p25::kmm;
 bool isSupportedKMM(uint8_t messageId)
 {
     switch (messageId) {
+    case KMM_MessageType::CHANGEOVER_CMD:
+    case KMM_MessageType::CHANGEOVER_RSP:
     case KMM_MessageType::HELLO:
     case KMM_MessageType::INVENTORY_CMD:
     case KMM_MessageType::INVENTORY_RSP:
@@ -1262,6 +1264,73 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
 
     m_rsiMessageNumber[llId] = (uint16_t)(mn + batchCount);
     return firstFrame;
+}
+
+/* Helper used to build a Changeover-Command KMM for an SU. */
+
+UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t kmmRSI,
+    uint8_t supersededKeysetId, uint8_t activeKeysetId, uint32_t* payloadSize)
+{
+    if (payloadSize != nullptr)
+        *payloadSize = 0U;
+
+    lookups::RadioId ridEntry = m_network->m_ridLookup->find(kmmRSI);
+    if (ridEntry.radioDefault() || !ridEntry.radioEnabled() || !ridEntry.canRekey()) {
+        LogWarning(LOG_P25, P25_KMM_STR ", cannot build Changeover Command; RID %u has no eligible key policy", kmmRSI);
+        return nullptr;
+    }
+
+    const std::vector<uint16_t> allowedKIds = ridEntry.allowedKIds();
+    EKCKeyItem macTekItem;
+    for (const EKCKeyItem& candidate : m_network->m_cryptoLookup->keys()) {
+        if (candidate.algId() == ALGO_AES_256 &&
+            (allowedKIds.empty() || std::find(allowedKIds.begin(), allowedKIds.end(),
+                (uint16_t)candidate.kId()) != allowedKIds.end())) {
+            macTekItem = candidate;
+            break;
+        }
+    }
+
+    if (macTekItem.isInvalid()) {
+        LogError(LOG_P25, P25_KMM_STR ", cannot build Changeover Command; no authorized AES TEK for RSI = %u", kmmRSI);
+        return nullptr;
+    }
+
+    uint16_t mn = 1U;
+    if (m_rsiMessageNumber.find(llId) != m_rsiMessageNumber.end())
+        mn = m_rsiMessageNumber[llId];
+
+    KMMChangeover outKmm;
+    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setDstLLId(kmmRSI);
+    outKmm.setSupersededKeysetId(supersededKeysetId);
+    outKmm.setActiveKeysetId(activeKeysetId);
+    outKmm.setHasMessageNumber(true);
+    outKmm.setMessageNumber(mn);
+    outKmm.setMACType(KMM_MAC::ENH_MAC);
+    outKmm.setMACAlgId(macTekItem.algId());
+    outKmm.setMACKId((uint16_t)macTekItem.kId());
+    outKmm.setMACFormat(KMM_MAC_FORMAT_CBC);
+
+    const uint32_t frameLength = outKmm.fullLength();
+    UInt8Array encoded = std::make_unique<uint8_t[]>(frameLength);
+    ::memset(encoded.get(), 0x00U, frameLength);
+    outKmm.encode(encoded.get());
+
+    uint8_t macTek[P25DEF::MAX_ENC_KEY_LENGTH_BYTES] = { 0U };
+    macTekItem.getKey(macTek);
+    outKmm.generateMAC(macTek, encoded.get());
+
+    if (payloadSize != nullptr)
+        *payloadSize = frameLength;
+    m_rsiMessageNumber[llId] = (uint16_t)(mn + 1U);
+
+    if (m_verbose) {
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u, supersededKeysetId = $%02X, activeKeysetId = $%02X",
+            outKmm.toString().c_str(), llId, kmmRSI, supersededKeysetId, activeKeysetId);
+    }
+
+    return encoded;
 }
 
 /* Helper used to return a Registration-Command KMM to the calling SU. */

@@ -10,6 +10,7 @@
 #include "host/Defines.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/kmm/KMMFactory.h"
+#include "common/p25/kmm/KMMChangeover.h"
 #include "common/p25/kmm/KMMDeregistrationCommand.h"
 #include "common/p25/kmm/KMMDeregistrationResponse.h"
 #include "common/p25/kmm/KMMHello.h"
@@ -618,6 +619,58 @@ TEST_CASE("P25 OTAR Rekey Commands batch four keys per KMM", "[p25][kmm][otar][r
         CHECK(rekey->getComplete() == (i + 1U == frames.size()));
         CHECK(frames[i].size() <= 287U);
     }
+}
+
+TEST_CASE("P25 OTAR builds authenticated Changeover Commands without dispatching them",
+    "[p25][kmm][otar][changeover]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    constexpr uint16_t TEK_KID = 0x2345U;
+    constexpr uint8_t SUPERSEDED_KEYSET = 0x01U;
+    constexpr uint8_t ACTIVE_KEYSET = 0x02U;
+
+    EKCKeyItem tek;
+    tek.id(1U);
+    tek.algId(ALGO_AES_256);
+    tek.kId(TEK_KID);
+    tek.sln(1U);
+    tek.keyMaterial("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F");
+    FNETestHooks::addCryptoKey(harness.traffic, tek);
+    harness.rid.addEntry(SU_RSI, true, "changeover-test", "", true, true, { TEK_KID });
+
+    const std::vector<uint8_t> encoded = FNETestHooks::buildOTARChangeover(harness.traffic,
+        SU_RSI, SU_RSI, SUPERSEDED_KEYSET, ACTIVE_KEYSET);
+    REQUIRE_FALSE(encoded.empty());
+
+    std::unique_ptr<KMMFrame> base = KMMFactory::create(encoded.data(), (uint32_t)encoded.size());
+    REQUIRE(base != nullptr);
+    KMMChangeover* changeover = dynamic_cast<KMMChangeover*>(base.get());
+    REQUIRE(changeover != nullptr);
+    CHECK(changeover->getMessageId() == KMM_MessageType::CHANGEOVER_CMD);
+    CHECK(changeover->getResponseKind() == KMM_ResponseKind::IMMEDIATE);
+    CHECK(changeover->getSrcLLId() == WUID_FNE);
+    CHECK(changeover->getDstLLId() == SU_RSI);
+    CHECK(changeover->getSupersededKeysetId() == SUPERSEDED_KEYSET);
+    CHECK(changeover->getActiveKeysetId() == ACTIVE_KEYSET);
+    CHECK(changeover->getHasMessageNumber());
+    CHECK(changeover->getMessageNumber() == 1U);
+    CHECK(changeover->getMACType() == KMM_MAC::ENH_MAC);
+    CHECK(changeover->getMACAlgId() == ALGO_AES_256);
+    CHECK(changeover->getMACKId() == TEK_KID);
+
+    uint8_t material[P25DEF::MAX_ENC_KEY_LENGTH_BYTES] = { 0U };
+    tek.getKey(material);
+    CHECK(changeover->verifyMAC(material, encoded.data(), (uint32_t)encoded.size()));
+
+    bool encrypted = false;
+    uint8_t algoId = ALGO_UNENCRYPT;
+    uint16_t kid = 0U;
+    REQUIRE(FNETestHooks::resolveOTARResponseSecurity(harness.traffic, encoded,
+        encrypted, algoId, kid));
+    CHECK(encrypted);
+    CHECK(algoId == ALGO_AES_256);
+    CHECK(kid == TEK_KID);
 }
 
 #if !defined(_WIN32)

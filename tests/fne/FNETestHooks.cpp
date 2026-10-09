@@ -125,6 +125,23 @@ std::vector<std::vector<uint8_t>> FNETestHooks::buildOTARRekey(TrafficNetwork& n
     return frames;
 }
 
+/** Builds an OTAR Changeover Command without dispatching it. */
+
+std::vector<uint8_t> FNETestHooks::buildOTARChangeover(TrafficNetwork& network,
+    uint32_t llId, uint32_t kmmRSI, uint8_t supersededKeysetId, uint8_t activeKeysetId)
+{
+    if (network.m_p25OTARService == nullptr)
+        return {};
+
+    uint32_t length = 0U;
+    UInt8Array encoded = network.m_p25OTARService->write_KMM_Changeover_Command(llId,
+        kmmRSI, supersededKeysetId, activeKeysetId, &length);
+    if (encoded == nullptr || length == 0U)
+        return {};
+
+    return std::vector<uint8_t>(encoded.get(), encoded.get() + length);
+}
+
 /**
  * @brief Resolves the security parameters of an OTAR response packet.
  * @param network The TrafficNetwork instance.

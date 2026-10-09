@@ -135,6 +135,12 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data, uint32_t len)
 
     const uint32_t available = bodyEnd - body;
     switch (data[0U]) {
+    case KMM_MessageType::CHANGEOVER_CMD:
+    case KMM_MessageType::CHANGEOVER_RSP:
+        if (available < 1U || data[body] == 0U ||
+            available != 1U + (uint32_t)data[body] * 2U)
+            return nullptr;
+        break;
     case KMM_MessageType::HELLO:
     case KMM_MessageType::INVENTORY_CMD:
     case KMM_MessageType::DEREG_RSP:
