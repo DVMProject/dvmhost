@@ -215,6 +215,15 @@ namespace dmr
          * @param dstId Destination ID.
          */
         void touchGrantTG(uint32_t dstId);
+        /**
+         * @brief Reissues a missing Tier III grant when a subscriber starts
+         * traffic directly on a retained payload channel.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination ID.
+         * @param grp Flag indicating group traffic.
+         * @returns bool True if no grant was needed or a grant was issued.
+         */
+        bool ensureTSCCPayloadGrant(uint32_t srcId, uint32_t dstId, bool grp);
         /** @} */
 
         /**

@@ -121,6 +121,18 @@ public:
      * @return bool True if frame processing succeeds.
      */
     static bool dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId, bool group = true);
+    /**
+     * @brief Configures one slot as a co-located Tier III control channel for tests.
+     */
+    static void dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot);
+    /**
+     * @brief Gets the active Tier III payload destination for a slot.
+     */
+    static uint32_t dmrPayloadDstId(const dmr::Slot& slot);
+    /**
+     * @brief Tests whether the shared DMR affiliation table contains a grant.
+     */
+    static bool dmrIsGranted(const dmr::Slot& slot, uint32_t dstId);
     /** @} */
 
     /**

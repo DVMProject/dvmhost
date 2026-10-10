@@ -42,13 +42,22 @@ bool DMRAffiliationLookup::grantCh(uint32_t dstId, uint32_t srcId, uint32_t gran
 
 /* Helper to grant a channel and slot. */
 
-bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool grp, bool netGranted)
+bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool grp, bool netGranted, uint32_t chNo)
 {
-    if (dstId == 0U) {
+    if (dstId == 0U || slot == 0U || slot > 2U) {
         return false;
     }
 
-    uint32_t chNo = getAvailableChannelForSlot(slot);
+    if (chNo != 0U) {
+        for (auto entry : m_grantChSlotTable) {
+            if (std::get<0>(entry.second) == chNo && std::get<1>(entry.second) == slot)
+                return false;
+        }
+    }
+    else {
+        chNo = getAvailableChannelForSlot(slot);
+    }
+
     if (chNo == 0U) {
         return false;
     }
@@ -290,53 +299,23 @@ uint8_t DMRAffiliationLookup::getAvailableSlotForChannel(uint32_t chNo) const
 
     __spinlock();
 
-    uint8_t slot = 1U;
-
-    // lookup dynamic channel slot grant table entry
-    bool grantedSlot = false;
-    int slotCount = 0U;
+    bool slot1Busy = chNo == m_tsccChNo && m_tsccSlot == 1U;
+    bool slot2Busy = chNo == m_tsccChNo && m_tsccSlot == 2U;
     for (auto entry : m_grantChSlotTable) {
         uint32_t foundChNo = std::get<0>(entry.second);
-        if (foundChNo == chNo)
-        {
-            uint8_t foundSlot = std::get<1>(entry.second);
-            if (slot == foundSlot) {
-                switch (foundSlot) {
-                case 1U:
-                    slot = 2U;
-                    break;
-                case 2U:
-                    slot = 1U;
-                    break;
-                }
+        if (foundChNo != chNo)
+            continue;
 
-                grantedSlot = true;
-                slotCount++;
-            }
-        }
+        uint8_t foundSlot = std::get<1>(entry.second);
+        if (foundSlot == 1U)
+            slot1Busy = true;
+        if (foundSlot == 2U)
+            slot2Busy = true;
     }
 
-    if (slotCount == 2U) {
-        slot = 0U;
-        return slot;
-    }
-
-    // are we trying to assign the TSCC slot?
-    if (chNo == m_tsccChNo && slot == m_tsccSlot) {
-        if (!grantedSlot) {
-            // since we didn't find a slot being granted out -- utilize the slot opposing the TSCC
-            switch (m_tsccSlot) {
-            case 1U:
-                slot = 2U;
-                break;
-            case 2U:
-                slot = 1U;
-                break;
-            }
-        } else {
-            slot = 0U; // TSCC is not assignable
-        }
-    }
-
-    return slot;
+    if (!slot1Busy)
+        return 1U;
+    if (!slot2Busy)
+        return 2U;
+    return 0U;
 }

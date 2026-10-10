@@ -163,6 +163,29 @@ bool HostTestHooks::dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_
     return slot.processFrame(frame, sizeof(frame));
 }
 
+/* Configures a co-located DMR Tier III control channel. */
+
+void HostTestHooks::dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot)
+{
+    control.m_enableTSCC = true;
+    control.m_tsccSlotNo = tsccSlot;
+    dmr::Slot::s_channelNo = channelNo;
+
+    dmr::Slot* slot = tsccSlot == 1U ? control.m_slot1 : control.m_slot2;
+    slot->setTSCC(true, false);
+}
+
+/* Gets the active DMR Tier III payload destination. */
+
+uint32_t HostTestHooks::dmrPayloadDstId(const dmr::Slot& slot) { return slot.m_tsccPayloadDstId; }
+
+/* Tests whether a DMR Tier III grant exists. */
+
+bool HostTestHooks::dmrIsGranted(const dmr::Slot& slot, uint32_t dstId)
+{
+    return slot.s_affiliations->isGranted(dstId);
+}
+
 /* Gets a P25 Phase 2 slot for tests. */
 
 p25::phase2::Slot& HostTestHooks::p25P2Slot(p25::phase2::Control& control, uint32_t slotNo)

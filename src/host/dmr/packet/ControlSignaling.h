@@ -156,7 +156,8 @@ namespace dmr
              * @param skip Flag indicating normal grant checking is skipped.
              * @param chNo Channel Number.
              */
-            bool writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
+            bool writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false,
+                uint32_t chNo = 0U, uint8_t preferredSlot = 0U);
             /**
              * @brief Helper to write a data grant packet.
              * @param srcId Source Radio ID.

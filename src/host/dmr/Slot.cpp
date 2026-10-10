@@ -962,6 +962,56 @@ void Slot::touchGrantTG(uint32_t dstId)
     }
 }
 
+/* Reissues a missing grant for traffic beginning on a retained payload channel. */
+
+bool Slot::ensureTSCCPayloadGrant(uint32_t srcId, uint32_t dstId, bool grp)
+{
+    Slot* tscc = s_dmr->getTSCCSlot();
+    if (tscc == this)
+        return true;
+
+    // A normal RAND/grant activation already identifies this payload call.
+    // Only synthesize the grant when the subscriber re-keys directly on the
+    // retained traffic channel without returning to the TSCC.
+    if (m_tsccPayloadDstId != 0U)
+        return true;
+
+    bool granted = false;
+    if (tscc != nullptr && tscc->m_enableTSCC) {
+        granted = tscc->m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp,
+            true, false, s_channelNo, (uint8_t)m_slotNo);
+    }
+    else if (m_notifyCC && !s_controlChData.address().empty() && s_controlChData.port() != 0U) {
+        json::object req = json::object();
+        req["dstId"].set<uint32_t>(dstId);
+        req["srcId"].set<uint32_t>(srcId);
+        uint8_t slot = (uint8_t)m_slotNo;
+        req["slot"].set<uint8_t>(slot);
+        req["group"].set<bool>(grp);
+        req["chNo"].set<uint32_t>(s_channelNo);
+
+        bool rpcAccepted = false;
+        bool sent = g_RPC->req(RPC_TOUCH_DMR_TG, req,
+            [=, &rpcAccepted](json::object& req, json::object& reply) {
+                (void)reply;
+                rpcAccepted = req["status"].is<int>() &&
+                    req["status"].get<int>() == network::NetRPC::OK;
+            }, s_controlChData.address(), s_controlChData.port(), true);
+        granted = sent && rpcAccepted;
+    }
+    else {
+        // Conventional/non-trunked operation has no TSCC grant to maintain.
+        return true;
+    }
+
+    if (!granted) {
+        LogWarning(LOG_RF, "DMR Slot %u, unable to reissue missing payload grant, srcId = %u, dstId = %u",
+            m_slotNo, srcId, dstId);
+    }
+
+    return granted;
+}
+
 /* Clears the current operating RF state back to idle. */
 
 void Slot::clearRFReject()
@@ -1303,6 +1353,10 @@ void Slot::processFrameLoss(RPT_RF_LOSS_TYPE type)
             if (!tscc->m_enableTSCC) {
                 notifyCC_ReleaseGrant(m_rfLC->getDstId());
             }
+        }
+        else if (m_rfLC != nullptr) {
+            notifyCC_ReleaseGrant(m_rfLC->getDstId());
+            s_dmr->tsccClearActivatedSlot(m_slotNo);
         }
 
         if (m_rfTimeout) {

@@ -832,7 +832,7 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
 
 /* Helper to write a grant packet. */
 
-bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
+bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo, uint8_t preferredSlot)
 {
     Slot* tscc = m_slot->s_dmr->getTSCCSlot();
 
@@ -887,7 +887,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         if (!tscc->s_affiliations->isGranted(dstId)) {
             ::lookups::TalkgroupRuleGroupVoice groupVoice = tscc->s_tidLookup->find(dstId);
-            slot = groupVoice.source().tgSlot();
+            slot = preferredSlot != 0U ? preferredSlot : groupVoice.source().tgSlot();
 
             if (grp && !tscc->m_ignoreAffiliationCheck) {
                 // is this an affiliation required group?
@@ -924,7 +924,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            uint32_t availChNo = tscc->s_affiliations->getAvailableChannelForSlot(slot);
+            uint32_t availChNo = chNo != 0U ? chNo : tscc->s_affiliations->getAvailableChannelForSlot(slot);
             if (availChNo == 0U) {
                 if (grp) {
                     if (!net) {
@@ -950,7 +950,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
             else {
-                if (tscc->s_affiliations->grantChSlot(dstId, srcId, slot, GRANT_TIMER_TIMEOUT, grp, net)) {
+                if (tscc->s_affiliations->grantChSlot(dstId, srcId, slot, GRANT_TIMER_TIMEOUT, grp, net, availChNo)) {
                     chNo = tscc->s_affiliations->getGrantedCh(dstId);
                     slot = tscc->s_affiliations->getGrantedSlot(dstId);
                     //tscc->s_siteData.setChCnt(tscc->s_affiliations->getRFChCnt() + tscc->s_affiliations->getGrantedRFChCnt());

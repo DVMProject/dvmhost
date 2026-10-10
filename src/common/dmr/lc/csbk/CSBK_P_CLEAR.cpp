@@ -60,7 +60,6 @@ void CSBK_P_CLEAR::encode(uint8_t* data)
     ulong64_t csbkValue = 0U;
 
     csbkValue = (csbkValue << 12) + (m_logicalCh1 & 0xFFFU);                        // Logical Physical Channel 1
-    csbkValue = (csbkValue << 1) + 0U;                                              // Reserved
     csbkValue = (csbkValue << 3) + 0U;                                              // Reserved
     csbkValue = (csbkValue << 1) + ((m_GI) ? 1U : 0U);                              // Group/Individual Flag
     csbkValue = (csbkValue << 24) + m_dstId;                                        // Talkgroup ID

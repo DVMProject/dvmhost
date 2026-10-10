@@ -86,6 +86,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (checkRFTrafficCollision(dstId))
                 return false;
 
+            if (!m_slot->ensureTSCCPayloadGrant(srcId, dstId, flco == FLCO::GROUP))
+                return false;
+
             if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
                 m_slot->confirmTSCCPayloadActive();
             }
@@ -585,6 +588,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 CHECK_AUTHORITATIVE(dstId);
 
                 if (checkRFTrafficCollision(dstId))
+                    return false;
+
+                if (!m_slot->ensureTSCCPayloadGrant(srcId, dstId, flco == FLCO::GROUP))
                     return false;
 
                 // validate the source RID

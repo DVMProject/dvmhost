@@ -924,6 +924,24 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
         return;
     }
 
+    Slot* tscc = getTSCCSlot();
+    if (tscc != nullptr && tscc->m_enableTSCC && !tscc->s_affiliations->isGranted(dstId) &&
+        req["srcId"].is<int>() && req["group"].is<bool>() && req["chNo"].is<int>()) {
+        uint32_t srcId = req["srcId"].get<uint32_t>();
+        bool group = req["group"].get<bool>();
+        uint32_t chNo = req["chNo"].get<uint32_t>();
+        ::lookups::VoiceChData voiceCh = tscc->s_affiliations->rfCh()->getRFChData(chNo);
+        if (!voiceCh.isValidCh()) {
+            g_RPC->defaultResponse(reply, "DMR payload channel is not configured", network::NetRPC::INVALID_ARGS);
+            return;
+        }
+        if (!tscc->m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, group,
+            true, false, chNo, slot)) {
+            g_RPC->defaultResponse(reply, "failed to recreate DMR payload grant", network::NetRPC::BAD_REQUEST);
+            return;
+        }
+    }
+
     // LogDebugEx(LOG_DMR, "Control::RPC_touchGrantTG()", "callback, dstId = %u, slot = %u", dstId, slot);
 
     switch (slot) {

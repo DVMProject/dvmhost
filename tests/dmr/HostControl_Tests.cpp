@@ -775,6 +775,39 @@ TEST_CASE("DMR processFrame accepts a synthetic RF voice call on the targeted sl
     REQUIRE(harness.m_control->getLastDstId(1U) == 2001U);
 }
 
+TEST_CASE("DMR Tier III re-key on a retained payload channel recreates its grant", "[dmr][tier3][host][control][rf]")
+{
+    DMRHostHarness harness;
+    REQUIRE(harness.m_chLookup.initializeRFCh(101U));
+    HostTestHooks::dmrEnableTier3(*harness.m_control, 101U, 1U);
+
+    dmr::Slot* payload = HostTestHooks::dmrSlot2(*harness.m_control);
+    REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*payload, 1001U, 2001U));
+    CHECK(HostTestHooks::dmrIsGranted(*payload, 2001U));
+    CHECK(HostTestHooks::dmrPayloadDstId(*payload) == 2001U);
+
+    uint8_t terminator[dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    terminator[0U] = modem::TAG_DATA;
+    terminator[1U] = dmr::defines::SYNC_DATA | dmr::defines::DataType::TERMINATOR_WITH_LC;
+    buildDMRTerminatorPayload(terminator + 2U, 1001U, 2001U, true);
+    REQUIRE(payload->processFrame(terminator, sizeof(terminator)));
+    CHECK_FALSE(HostTestHooks::dmrIsGranted(*payload, 2001U));
+    CHECK(HostTestHooks::dmrPayloadDstId(*payload) == 0U);
+
+    // Some subscribers remain on the payload channel during hangtime and
+    // begin transmitting without another RAND request on the TSCC.
+    REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*payload, 1002U, 2001U));
+    CHECK(HostTestHooks::dmrIsGranted(*payload, 2001U));
+    CHECK(HostTestHooks::dmrPayloadDstId(*payload) == 2001U);
+
+    terminator[0U] = modem::TAG_DATA;
+    terminator[1U] = dmr::defines::SYNC_DATA | dmr::defines::DataType::TERMINATOR_WITH_LC;
+    buildDMRTerminatorPayload(terminator + 2U, 1002U, 2001U, true);
+    REQUIRE(payload->processFrame(terminator, sizeof(terminator)));
+    CHECK_FALSE(HostTestHooks::dmrIsGranted(*payload, 2001U));
+    CHECK(HostTestHooks::dmrPayloadDstId(*payload) == 0U);
+}
+
 TEST_CASE("DMR rfTGHang expiry ends active RF call and returns slot to listening", "[dmr][host][control][rf]")
 {
     DMRHostHarness harness;

@@ -83,8 +83,10 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
                 m_tscc->s_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
-                m_slot->clearTSCCActivated();
             }
+        }
+        else {
+            m_slot->notifyCC_ReleaseGrant(m_slot->m_rfLC->getDstId());
         }
 
         if (m_slot->m_rssi != 0U) {
@@ -387,8 +389,10 @@ void Data::processNetwork(const data::NetData& dmrData)
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
                 m_tscc->s_affiliations->releaseGrant(m_slot->m_netLC->getDstId(), false);
-                m_slot->clearTSCCActivated();
             }
+        }
+        else {
+            m_slot->notifyCC_ReleaseGrant(m_slot->m_netLC->getDstId());
         }
 
         // We've received the voice header and terminator haven't we?
