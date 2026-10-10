@@ -45,7 +45,7 @@ bool CSBK_ACK_RSP::decode(const uint8_t* data)
 
     m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                          // Group/Individual Flag
     m_reason = (uint8_t)((csbkValue >> 33) & 0xFFU);                                // Reason Code
-    m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                              // Target Radio Address
+    m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
     return true;

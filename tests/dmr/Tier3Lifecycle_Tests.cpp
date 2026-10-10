@@ -10,6 +10,7 @@
 
 #include "host/Defines.h"
 #include "common/dmr/DMRDefines.h"
+#include "common/dmr/lc/csbk/CSBK_ACK_RSP.h"
 #include "common/dmr/lc/csbk/CSBK_MAINT.h"
 #include "common/dmr/lc/csbk/CSBK_P_CLEAR.h"
 #include "common/lookups/ChannelLookup.h"
@@ -19,6 +20,25 @@
 
 using namespace dmr::defines;
 using namespace dmr::lc::csbk;
+
+TEST_CASE("DMR Tier III acknowledgement preserves 24-bit target addresses", "[dmr][tier3][csbk]")
+{
+    CSBK_ACK_RSP encoded;
+    encoded.setLastBlock(true);
+    encoded.setReason(ReasonCode::TS_ACK_RSN_MSG);
+    encoded.setResponse(0x55U);
+    encoded.setDstId(0xABCDEFU);
+    encoded.setSrcId(WUID_TSI);
+
+    uint8_t burst[DMR_FRAME_LENGTH_BYTES] = { 0U };
+    encoded.encode(burst);
+
+    CSBK_ACK_RSP decoded;
+    decoded.setDataType(DataType::CSBK);
+    REQUIRE(decoded.decode(burst));
+    CHECK(decoded.getDstId() == 0xABCDEFU);
+    CHECK(decoded.getSrcId() == WUID_TSI);
+}
 
 TEST_CASE("DMR Tier III maintenance preserves 24-bit addresses", "[dmr][tier3][csbk]")
 {
