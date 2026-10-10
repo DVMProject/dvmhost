@@ -119,7 +119,10 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
         return decode(new CSBK_NACK_RSP(), data, dataType);
 
     /** Tier 3 */
+    case CSBKO::AHOY:
+        return decode(new CSBK_AHOY(), data, dataType);
     case CSBKO::ACK_RSP:
+    case CSBKO::ACK_RSP_U:
         return decode(new CSBK_ACK_RSP(), data, dataType);
     case CSBKO::BROADCAST:
         return decode(new CSBK_BROADCAST(), data, dataType);

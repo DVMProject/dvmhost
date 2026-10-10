@@ -55,6 +55,7 @@ namespace dmr
 
     class HOST_SW_API Slot;
     namespace packet { class HOST_SW_API ControlSignaling; }
+    namespace packet { class HOST_SW_API Data; }
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -307,6 +308,8 @@ namespace dmr
 
     private:
         friend class Slot;
+        friend class packet::ControlSignaling;
+        friend class packet::Data;
 #if defined(CATCH2_TEST_COMPILATION)
         friend class ::HostTestHooks;
 #endif
@@ -327,6 +330,7 @@ namespace dmr
         ::lookups::TalkgroupRulesLookup* m_tidLookup;
 
         bool m_enableTSCC;
+        bool m_requireAuthForReg;
 
         uint16_t m_tsccCnt;
         Timer m_tsccCntInterval;
@@ -344,6 +348,14 @@ namespace dmr
          * @brief Process a data frames from the network.
          */
         void processNetwork();
+        /**
+         * @brief Helper to process a registration authentication key.
+         * @param srcId Source Radio ID.
+         * @param key Key item containing the authentication key.
+         * @param algId Algorithm ID.
+         * @param keyLength Length of the key.
+         */
+        void processRegistrationAuthKey(uint32_t srcId, const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength);
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.

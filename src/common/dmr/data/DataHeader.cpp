@@ -61,11 +61,11 @@ DataHeader::DataHeader() :
     m_rspStatus(0U),
     m_srcPort(0U),
     m_dstPort(0U),
+    m_UDTO(0U),
     m_bptc(),
     m_data(nullptr),
     m_SF(false),
-    m_PF(false),
-    m_UDTO(0U)
+    m_PF(false)
 {
     m_data = new uint8_t[DMR_LC_HEADER_LENGTH_BYTES];
     ::memset(m_data, 0x00U, DMR_LC_HEADER_LENGTH_BYTES);

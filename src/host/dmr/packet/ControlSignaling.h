@@ -140,6 +140,15 @@ namespace dmr
              */
             void writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint8_t responseInfo);
             /**
+             * @brief Helper to write an AHOY packet.
+             * @param dstId Destination ID.
+             * @param serviceKind Service Kind.
+             * @param sourceOrChallenge Source or Challenge ID.
+             * @param gi Flag indicating whether the GI bit is set.
+             * @param appendedBlocks Number of appended blocks.
+             */
+            void writeRF_CSBK_AHOY(uint32_t dstId, uint8_t serviceKind, uint32_t sourceOrChallenge, bool gi, uint8_t appendedBlocks);
+            /**
              * @brief Helper to write a NACK RSP packet.
              * @param dstId Destination ID.
              * @param reason Denial Reason.

@@ -237,7 +237,6 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     }
                     break;
                 case ServiceKind::IND_DATA_CALL:
-                case ServiceKind::IND_UDT_DATA_CALL:
                     // make sure control data is supported
                     IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
@@ -254,8 +253,24 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), false);
                     break;
+                case ServiceKind::IND_UDT_DATA_CALL:
+                    // make sure control data is supported
+                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::IND_UDT_DATA_CALL, srcId);
+
+                    // validate the source RID
+                    VALID_SRCID(csbk->toString(), ServiceKind::IND_UDT_DATA_CALL, srcId);
+
+                    // validate the target RID
+                    VALID_DSTID(csbk->toString(), ServiceKind::IND_UDT_DATA_CALL, srcId, dstId);
+
+                    // verify the source RID is registered
+                    VERIFY_SRCID_REG(csbk->toString(), ServiceKind::IND_UDT_DATA_CALL, srcId);
+
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
+
+                    m_slot->beginUDT(srcId, dstId, isp->getServiceKind());
+                    break;
                 case ServiceKind::GRP_DATA_CALL:
-                case ServiceKind::GRP_UDT_DATA_CALL:
                     // make sure control data is supported
                     IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::GRP_VOICE_CALL, srcId);
 
@@ -269,11 +284,28 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                     writeRF_CSBK_Data_Grant(srcId, dstId, isp->getServiceOptions(), true);
                     break;
+                case ServiceKind::GRP_UDT_DATA_CALL:
+                    // make sure control data is supported
+                    IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::GRP_UDT_DATA_CALL, srcId);
+
+                    // validate the source RID
+                    VALID_SRCID(csbk->toString(), ServiceKind::GRP_UDT_DATA_CALL, srcId);
+
+                    // validate the talkgroup ID
+                    VALID_TGID(csbk->toString(), ServiceKind::GRP_UDT_DATA_CALL, srcId, dstId);
+
+                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 1U);
+
+                    m_slot->beginUDT(srcId, dstId, isp->getServiceKind());
+                    break;
                 case ServiceKind::REG_SVC:
                     // make sure control data is supported
                     IS_SUPPORT_CONTROL_CHECK(csbk->toString(), ServiceKind::REG_SVC, srcId);
 
-                    writeRF_CSBK_U_Reg_Rsp(srcId, isp->getServiceOptions());
+                    if (m_slot->s_dmr->m_requireAuthForReg && (isp->getServiceOptions() & 0x01U) != 0U)
+                        m_slot->beginRegistrationAuth(srcId, isp->getServiceOptions());
+                    else
+                        writeRF_CSBK_U_Reg_Rsp(srcId, isp->getServiceOptions());
                     break;
                 default:
                     LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access), unhandled service, serviceKind = %02X", m_slot->m_slotNo, isp->getServiceKind());
@@ -284,9 +316,15 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         }
         break;
         case CSBKO::ACK_RSP:
+        case CSBKO::ACK_RSP_U:
         {
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
             ::ActivityLog("DMR", true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+            CSBK_ACK_RSP* ack = static_cast<CSBK_ACK_RSP*>(csbk.get());
+            if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_AUTH_RESP)
+                m_slot->processRegistrationAuthResponse(srcId, dstId);
+            else if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_MSG)
+                m_slot->processUDTAcknowledgement(srcId);
         }
         break;
         case CSBKO::EXT_FNCT:
@@ -805,6 +843,30 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
     if (m_verbose) {
         LogInfoEx(LOG_DMR, "DMR Slot %u, CSBK, %s, reason = $%02X (%s), srcId = %u, dstId = %u",
             m_slot->m_slotNo, csbk->toString().c_str(), reason, DMRUtils::rsnToString(reason).c_str(),
+            csbk->getSrcId(), csbk->getDstId());
+    }
+
+    writeRF_CSBK_Imm(csbk.get());
+}
+
+/* Helper to write an AHOY packet. */
+
+void ControlSignaling::writeRF_CSBK_AHOY(uint32_t dstId, uint8_t serviceKind,
+    uint32_t sourceOrChallenge, bool gi, uint8_t appendedBlocks)
+{
+    std::unique_ptr<CSBK_AHOY> csbk = std::make_unique<CSBK_AHOY>();
+    csbk->setServiceKind(serviceKind);
+    csbk->setServiceKindFlag(false);
+    csbk->setServiceOptionsMirror(0U);
+    csbk->setAmbientListening(false);
+    csbk->setAppendedBlocks(appendedBlocks);
+    csbk->setGI(gi);
+    csbk->setDstId(dstId);
+    csbk->setSrcId(sourceOrChallenge);
+
+    if (m_verbose) {
+        LogInfoEx(LOG_DMR, "DMR Slot %u, CSBK, %s, serviceKind = $%02X, srcId = %u, dstId = %u",
+            m_slot->m_slotNo, csbk->toString().c_str(), serviceKind,
             csbk->getSrcId(), csbk->getDstId());
     }
 

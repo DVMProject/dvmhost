@@ -194,6 +194,9 @@ protocols:
             slot: 1
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
+            # Require ETSI DMR authentication before accepting unit registration. The 16-byte
+            # authentication key is requested from the upstream FNE through the existing LLA key path.
+            requireAuthForReg: false
         
         # Flag indicating whether or not network calls will generate a channel grant.
         #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup

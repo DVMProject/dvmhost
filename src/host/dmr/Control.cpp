@@ -12,6 +12,7 @@
 #include "common/dmr/acl/AccessControl.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/dmr/lc/csbk/CSBKFactory.h"
+#include "common/RC4Crypto.h"
 #include "common/Log.h"
 #include "dmr/Control.h"
 #include "Host.h"
@@ -21,6 +22,32 @@ using namespace dmr::defines;
 
 #include <cassert>
 #include <algorithm>
+#include <memory>
+#include <random>
+
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Calculates the registration authentication response.
+ * @param challenge Registration challenge.
+ * @param key Authentication key.
+ * @return Calculated registration authentication response.
+ */
+uint32_t calculateRegistrationAuthResponse(uint32_t challenge, const uint8_t key[16U])
+{
+    uint8_t rc4Key[19U];
+    rc4Key[0U] = (uint8_t)((challenge >> 16U) & 0xFFU);
+    rc4Key[1U] = (uint8_t)((challenge >> 8U) & 0xFFU);
+    rc4Key[2U] = (uint8_t)(challenge & 0xFFU);
+    ::memcpy(rc4Key + 3U, key, 16U);
+
+    crypto::RC4 rc4;
+    std::unique_ptr<uint8_t[]> stream(rc4.keystream(259U, rc4Key, sizeof(rc4Key)));
+    return ((uint32_t)stream[256U] << 16U) |
+        ((uint32_t)stream[257U] << 8U) | stream[258U];
+}
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -43,6 +70,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
     m_enableTSCC(false),
+    m_requireAuthForReg(false),
     m_tsccCnt(0U),
     m_tsccCntInterval(1000U, 0U, DMR_SLOT_TIME / 2U),
     m_tsccSlotNo(0U),
@@ -104,6 +132,17 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         backOff = 15U;
 
     yaml::Node control = dmrProtocol["control"];
+    m_requireAuthForReg = control["requireAuthForReg"].as<bool>(false);
+    if (m_requireAuthForReg && m_network != nullptr) {
+        m_network->setKEKKeyResponseCallback([this](uint32_t srcId, p25::kmm::KeyItem key,
+            uint8_t algId, uint8_t keyLength) {
+            processRegistrationAuthKey(srcId, key, algId, keyLength);
+        });
+    } else if (m_requireAuthForReg) {
+        LogWarning(LOG_DMR, "DMR registration authentication disabled; no FNE network is configured");
+        m_requireAuthForReg = false;
+    }
+
     bool enableTSCC = control["enable"].as<bool>(false);
     bool dedicatedTSCC = false;
     if (enableTSCC) {
@@ -796,6 +835,39 @@ void Control::processNetwork()
             m_slot2->processNetwork(data);
             break;
     }
+}
+
+/* Helper to process a registration authentication key. */
+
+void Control::processRegistrationAuthKey(uint32_t srcId, const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength)
+{
+    (void)algId; // The FNE labels this shared 16-byte key as the P25 AES-128 KEK type.
+    Slot* tscc = getTSCCSlot();
+    if (tscc == nullptr)
+        return;
+
+    auto it = tscc->m_authTransactions.find(srcId);
+    if (it == tscc->m_authTransactions.end())
+        return;
+
+    if (keyLength != 16U) {
+        tscc->m_authTransactions.erase(it);
+        tscc->m_control->writeRF_CSBK_NACK_RSP(srcId, ReasonCode::TS_DENY_RSN_REG_DENIED, ServiceKind::REG_SVC);
+        return;
+    }
+
+    uint8_t keyData[16U];
+    ::memset(keyData, 0U, 16U);
+    key.getKey(keyData);
+
+    static std::random_device random;
+    std::uniform_int_distribution<uint32_t> distribution(0U, 0xFFFCDFU);
+    it->second.challenge = distribution(random);
+    it->second.expectedResponse = calculateRegistrationAuthResponse(it->second.challenge, keyData);
+    it->second.challengeSent = true;
+    it->second.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+    tscc->m_control->writeRF_CSBK_AHOY(srcId, ServiceKind::REG_SVC, it->second.challenge, false, 0U);
 }
 
 /* Helper to process an In-Call Control message. */

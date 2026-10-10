@@ -400,7 +400,7 @@ void CSBK::copy(const CSBK& data)
     m_proxy = data.m_proxy;
 
     m_response = data.m_response;
-    m_response = data.m_reason;
+    m_reason = data.m_reason;
 
     m_siteOffsetTiming = data.m_siteOffsetTiming;
 

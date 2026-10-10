@@ -192,13 +192,17 @@ namespace dmr
              */
             DECLARE_PROPERTY(uint8_t, dstPort, DstPort);
 
+            /** 
+             * @brief Unified Data Transport opcode (UDTHD/UDTHU).
+             */
+            DECLARE_PROPERTY(uint8_t, UDTO, UDTO);
+
         private:
             edac::BPTC19696 m_bptc;
 
             uint8_t* m_data;
             bool m_SF;
             bool m_PF;
-            uint8_t m_UDTO;
 
             /**
              * @brief Internal helper to copy the class.

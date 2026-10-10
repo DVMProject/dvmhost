@@ -25,6 +25,7 @@
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/dmr/lc/csbk/CSBK_ACK_RSP.h"
+#include "common/dmr/lc/csbk/CSBK_AHOY.h"
 #include "common/dmr/lc/csbk/CSBK_ALOHA.h"
 #include "common/dmr/lc/csbk/CSBK_BROADCAST.h"
 #include "common/dmr/lc/csbk/CSBK_BSDWNACT.h"

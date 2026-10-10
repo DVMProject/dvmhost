@@ -19,6 +19,7 @@
 
 #include "Defines.h"
 #include "common/dmr/SiteData.h"
+#include "common/dmr/data/DataHeader.h"
 #include "common/lookups/RSSIInterpolator.h"
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
@@ -36,6 +37,8 @@
 
 #include <vector>
 #include <mutex>
+#include <chrono>
+#include <unordered_map>
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -366,6 +369,56 @@ namespace dmr
         friend class packet::ControlSignaling;
         packet::ControlSignaling* m_control;
 
+        /**
+         * @brief Represents an authentication transaction.
+         */
+        struct AuthTransaction {
+            /**
+             * @brief Service options for the authentication transaction.
+             */
+            uint8_t serviceOptions;
+            /**
+             * @brief Challenge value for the authentication transaction.
+             */
+            uint32_t challenge;
+            /**
+             * @brief Expected response for the authentication transaction.
+             */
+            uint32_t expectedResponse;
+            /**
+             * @brief Expiration time of the authentication transaction.
+             */
+            std::chrono::steady_clock::time_point expires;
+            /**
+             * @brief Flag indicating whether the challenge has been sent.
+             */
+            bool challengeSent;
+        };
+        std::unordered_map<uint32_t, AuthTransaction> m_authTransactions;
+
+        /**
+         * @brief Represents a Unified Data Transport (UDT) transaction.
+         */
+        struct UDTTransaction {
+            /**
+             * @brief Target ID of the UDT transaction.
+             */
+            uint32_t target;
+            /**
+             * @brief Indicates whether the UDT transaction is for a group.
+             */
+            bool group;
+            /**
+             * @brief Service kind of the UDT transaction.
+             */
+            uint8_t serviceKind;
+            /**
+             * @brief Expiration time of the UDT transaction.
+             */
+            std::chrono::steady_clock::time_point expires;
+        };
+        std::unordered_map<uint32_t, UDTTransaction> m_udtTransactions;
+
         uint32_t m_slotNo;
 
         RingBuffer<uint8_t> m_txImmQueue;
@@ -601,6 +654,45 @@ namespace dmr
          * @brief Stops payload activation retry/deadline timers after traffic begins.
          */
         void confirmTSCCPayloadActive();
+
+        /**
+         * @brief Starts registration authentication using a key requested by the root controller.
+         * @param srcId Source Radio ID.
+         * @param serviceOptions Service options for the registration request.
+         */
+        void beginRegistrationAuth(uint32_t srcId, uint8_t serviceOptions);
+        /**
+         * @brief Validates an authentication response and completes the pending registration.
+         * @param srcId Source Radio ID.
+         * @param response Authentication response received from the radio.
+         * @return True if the response was valid and the registration was completed, false otherwise.
+         */
+        bool processRegistrationAuthResponse(uint32_t srcId, uint32_t response);
+
+        /**
+         * @brief Starts a TSCC-local Unified Data Transport transaction.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination Radio ID.
+         * @param serviceKind Service kind for the UDT transaction.
+         */
+        void beginUDT(uint32_t srcId, uint32_t dstId, uint8_t serviceKind);
+        /**
+         * @brief Validates an inbound UDT upload and converts its header for delivery.
+         * @param header Reference to the DataHeader object representing the UDT header.
+         * @return True if the header was successfully prepared for delivery, false otherwise.
+         */
+        bool prepareUDTHeader(data::DataHeader& header);
+        /**
+         * @brief Completes an upload or waits for the individual recipient acknowledgement.
+         * @param srcId Source Radio ID.
+         */
+        void completeUDT(uint32_t srcId);
+        /**
+         * @brief Mirrors an individual recipient acknowledgement to the originating unit.
+         * @param targetId Target Radio ID.
+         * @return True if the acknowledgement was successfully processed, false otherwise.
+         */
+        bool processUDTAcknowledgement(uint32_t targetId);
 
         /**
          * @brief Helper to set the DMR short LC.

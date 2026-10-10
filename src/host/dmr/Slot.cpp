@@ -592,6 +592,24 @@ void Slot::clock()
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
 
+    const auto now = std::chrono::steady_clock::now();
+
+    // clean up expired authentication transactions
+    for (auto it = m_authTransactions.begin(); it != m_authTransactions.end(); ) {
+        if (it->second.expires <= now)
+            it = m_authTransactions.erase(it);
+        else
+            ++it;
+    }
+
+    // clean up expired UDT transactions
+    for (auto it = m_udtTransactions.begin(); it != m_udtTransactions.end(); ) {
+        if (it->second.expires <= now)
+            it = m_udtTransactions.erase(it);
+        else
+            ++it;
+    }
+
     if (s_network != nullptr) {
         if (s_network->getStatus() == network::NET_STAT_RUNNING) {
             s_siteData.setNetActive(true);
@@ -1794,6 +1812,108 @@ void Slot::confirmTSCCPayloadActive()
     m_tsccPayloadActRetry.stop();
     m_tsccPayloadActTimeout.stop();
     m_tsccPayloadActRetryCount = 0U;
+}
+
+/* Starts registration authentication using a key requested by the root controller. */
+
+void Slot::beginRegistrationAuth(uint32_t srcId, uint8_t serviceOptions)
+{
+    AuthTransaction& transaction = m_authTransactions[srcId];
+    transaction.serviceOptions = serviceOptions;
+    transaction.challengeSent = false;
+    transaction.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+    m_control->writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
+    if (s_network == nullptr || !s_network->writeLLAKeyReq(srcId)) {
+        m_authTransactions.erase(srcId);
+        m_control->writeRF_CSBK_NACK_RSP(srcId, ReasonCode::TS_DENY_RSN_REG_DENIED, ServiceKind::REG_SVC);
+    }
+}
+
+/* Validates an authentication response and completes the pending registration. */
+
+bool Slot::processRegistrationAuthResponse(uint32_t srcId, uint32_t response)
+{
+    auto it = m_authTransactions.find(srcId);
+    if (it == m_authTransactions.end() || !it->second.challengeSent)
+        return false;
+
+    uint32_t difference = (it->second.expectedResponse ^ response) & 0xFFFFFFU;
+    uint8_t serviceOptions = it->second.serviceOptions;
+    m_authTransactions.erase(it);
+
+    if (difference == 0U)
+        m_control->writeRF_CSBK_U_Reg_Rsp(srcId, serviceOptions);
+    else
+        m_control->writeRF_CSBK_NACK_RSP(srcId, ReasonCode::TS_DENY_RSN_REG_DENIED, ServiceKind::REG_SVC);
+    return true;
+}
+
+/* Starts a TSCC-local Unified Data Transport transaction. */
+
+void Slot::beginUDT(uint32_t srcId, uint32_t dstId, uint8_t serviceKind)
+{
+    bool group = serviceKind == ServiceKind::GRP_UDT_DATA_CALL;
+    m_udtTransactions[srcId] = { dstId, group, serviceKind, std::chrono::steady_clock::now() + std::chrono::seconds(30) };
+
+    m_control->writeRF_CSBK_AHOY(srcId, serviceKind, WUID_SDMI, group, 0U);
+}
+
+/* Validates an inbound UDT upload and converts its header for delivery. */
+
+bool Slot::prepareUDTHeader(data::DataHeader& header)
+{
+    // look for the UDT transaction corresponding to the source ID in the header
+    auto it = m_udtTransactions.find(header.getSrcId());
+    if (it == m_udtTransactions.end() || header.getDstId() != WUID_SDMI || header.getUDTO() != 0x1BU)
+        return false;
+
+    header.setDstId(it->second.target);
+    header.setSrcId(WUID_SDMI);
+    header.setGI(it->second.group);
+    header.setA(!it->second.group);
+    header.setUDTO(0x1AU);
+    it->second.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+    return true;
+}
+
+/* Completes an upload or waits for the individual recipient acknowledgement. */
+
+void Slot::completeUDT(uint32_t srcId)
+{
+    // look for the UDT transaction corresponding to the given source ID
+    auto it = m_udtTransactions.find(srcId);
+    if (it == m_udtTransactions.end())
+        return;
+
+    // if the transaction is a group transaction, complete it and send an acknowledgement
+    if (it->second.group) {
+        m_udtTransactions.erase(it);
+
+        m_control->writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, 1U);
+    } else {
+        it->second.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    }
+}
+
+/* Mirrors an individual recipient acknowledgement to the originating unit. */
+
+bool Slot::processUDTAcknowledgement(uint32_t targetId)
+{
+    // look for a non-group UDT transaction matching the target ID
+    for (auto it = m_udtTransactions.begin(); it != m_udtTransactions.end(); ++it) {
+        if (!it->second.group && it->second.target == targetId) {
+            uint32_t caller = it->first;
+            m_udtTransactions.erase(it);
+
+            m_control->writeRF_CSBK_ACK_RSP(caller, ReasonCode::TS_ACK_RSN_MSG, 0U);
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* Helper to set the DMR short LC. */

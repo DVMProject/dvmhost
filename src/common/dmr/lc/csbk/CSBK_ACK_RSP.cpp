@@ -43,8 +43,9 @@ bool CSBK_ACK_RSP::decode(const uint8_t* data)
 
     ulong64_t csbkValue = CSBK::toValue(csbk);
 
-    m_GI = (((csbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;                          // Group/Individual Flag
-    m_reason = (uint8_t)((csbkValue >> 33) & 0xFFU);                                // Reason Code
+    m_response = (uint8_t)((csbkValue >> 57U) & 0x7FU);                             // Response Information
+    m_GI = (m_response & 0x40U) == 0x40U;                                           // Group/Individual Flag
+    m_reason = (uint8_t)((csbkValue >> 49U) & 0xFFU);                               // Reason Code
     m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
@@ -59,15 +60,14 @@ void CSBK_ACK_RSP::encode(uint8_t* data)
 
     ulong64_t csbkValue = 0U;
 
-    if (m_reason == ReasonCode::TS_ACK_RSN_REG) {
-        csbkValue = 0U;
-    } else {
-        csbkValue = (m_GI ? 0x40U : 0x00U) +                                        // Source Type
-            (s_siteData.siteId() & 0x3FU);                                          // Net + Site LSB
-    }
-    csbkValue = (csbkValue << 7) + (m_response & 0x7FU);                            // Response Information
+    uint8_t response = m_response & 0x7FU;
+    if (m_reason != ReasonCode::TS_ACK_RSN_REG && m_GI)
+        response |= 0x40U;
+
+    csbkValue = response;                                                           // Response Information
     csbkValue = (csbkValue << 8) + (m_reason & 0xFFU);                              // Reason Code
-    csbkValue = (csbkValue << 25) + m_dstId;                                        // Target Radio Address
+    csbkValue = (csbkValue << 1);                                                   // Reserved
+    csbkValue = (csbkValue << 24) + (m_dstId & 0xFFFFFFU);                          // Target Radio Address
     csbkValue = (csbkValue << 24) + m_srcId;                                        // Source Radio Address
 
     std::unique_ptr<uint8_t[]> csbk = CSBK::fromValue(csbkValue);

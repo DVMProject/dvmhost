@@ -471,6 +471,7 @@ namespace dmr
                 AHOY = 0x1CU,                           //!< AHOY - Enquiry from TSCC
                 RAND = 0x1FU,                           //!< (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
                 ACK_RSP = 0x20U,                        //!< ACK RSP - Acknowledge Response
+                ACK_RSP_U = 0x21U,                      //!< ACK RSP U - Acknowledge Response from Unit
                 EXT_FNCT = 0x24U,                       //!< (DMRA) EXT FNCT - Extended Function
                 NACK_RSP = 0x26U,                       //!< NACK RSP - Negative Acknowledgement Response
                 BROADCAST = 0x28U,                      //!< BCAST - Announcement PDU

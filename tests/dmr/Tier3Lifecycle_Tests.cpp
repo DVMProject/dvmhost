@@ -11,6 +11,7 @@
 #include "host/Defines.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/lc/csbk/CSBK_ACK_RSP.h"
+#include "common/dmr/lc/csbk/CSBK_AHOY.h"
 #include "common/dmr/lc/csbk/CSBK_MAINT.h"
 #include "common/dmr/lc/csbk/CSBK_P_CLEAR.h"
 #include "common/lookups/ChannelLookup.h"
@@ -38,6 +39,34 @@ TEST_CASE("DMR Tier III acknowledgement preserves 24-bit target addresses", "[dm
     REQUIRE(decoded.decode(burst));
     CHECK(decoded.getDstId() == 0xABCDEFU);
     CHECK(decoded.getSrcId() == WUID_TSI);
+    CHECK(decoded.getReason() == ReasonCode::TS_ACK_RSN_MSG);
+    CHECK(decoded.getResponse() == 0x55U);
+}
+
+TEST_CASE("C_AHOY preserves all ETSI information elements", "[dmr][tier3][ahoy]") {
+    CSBK_AHOY encoded;
+    encoded.setServiceOptionsMirror(0x55U);
+    encoded.setServiceKindFlag(true);
+    encoded.setAmbientListening(true);
+    encoded.setGI(true);
+    encoded.setAppendedBlocks(3U);
+    encoded.setServiceKind(ServiceKind::REG_SVC);
+    encoded.setDstId(0xFEDCBAU);
+    encoded.setSrcId(0xABCDEFU);
+
+    uint8_t frame[DMR_FRAME_LENGTH_BYTES] = { 0U };
+    encoded.encode(frame);
+    CSBK_AHOY decoded;
+    decoded.setDataType(DataType::CSBK);
+    REQUIRE(decoded.decode(frame));
+    REQUIRE(decoded.getServiceOptionsMirror() == 0x55U);
+    REQUIRE(decoded.getServiceKindFlag());
+    REQUIRE(decoded.getAmbientListening());
+    REQUIRE(decoded.getGI());
+    REQUIRE(decoded.getAppendedBlocks() == 3U);
+    REQUIRE(decoded.getServiceKind() == ServiceKind::REG_SVC);
+    REQUIRE(decoded.getDstId() == 0xFEDCBAU);
+    REQUIRE(decoded.getSrcId() == 0xABCDEFU);
 }
 
 TEST_CASE("DMR Tier III maintenance preserves 24-bit addresses", "[dmr][tier3][csbk]")
