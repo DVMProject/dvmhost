@@ -147,7 +147,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-            m_slot->m_tsccPayloadActRetry.stop();
+            m_slot->confirmTSCCPayloadActive();
         }
 
         // validate the source RID
@@ -426,7 +426,7 @@ void Data::processNetwork(const data::NetData& dmrData)
         }
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-            m_slot->m_tsccPayloadActRetry.stop();
+            m_slot->confirmTSCCPayloadActive();
         }
 
         m_netDataBlockCnt = 0U;

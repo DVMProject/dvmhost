@@ -48,10 +48,6 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
         return false;
     }
 
-    if (!m_chLookup->isRFChAvailable()) {
-        return false;
-    }
-
     uint32_t chNo = getAvailableChannelForSlot(slot);
     if (chNo == 0U) {
         return false;
@@ -61,8 +57,16 @@ bool DMRAffiliationLookup::grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t s
         return false;
     }
 
-    if (getAvailableSlotForChannel(chNo) == 0U || chNo == m_tsccChNo) {
-        m_chLookup->allocRFCh(chNo);
+    bool channelAlreadyManaged = chNo == m_tsccChNo;
+    for (auto entry : m_grantChSlotTable) {
+        if (std::get<0>(entry.second) == chNo) {
+            channelAlreadyManaged = true;
+            break;
+        }
+    }
+
+    if (!channelAlreadyManaged && !m_chLookup->allocRFCh(chNo)) {
+        return false;
     }
 
     __lock();
@@ -135,8 +139,18 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         m_grantSrcIdTable.erase(dstId);
         m_grantChSlotTable.erase(dstId);
         m_netGrantedTable.erase(dstId);
+        m_uuGrantedTable.erase(dstId);
 
-        m_chLookup->freeRFCh(chNo);
+        bool channelStillGranted = false;
+        for (auto entry : m_grantChSlotTable) {
+            if (std::get<0>(entry.second) == chNo) {
+                channelStillGranted = true;
+                break;
+            }
+        }
+        if (!channelStillGranted && chNo != m_tsccChNo) {
+            m_chLookup->freeRFCh(chNo);
+        }
 
         if (m_rfGrantChCnt > 0U) {
             m_rfGrantChCnt--;
@@ -146,6 +160,7 @@ bool DMRAffiliationLookup::releaseGrant(uint32_t dstId, bool releaseAll)
         }
 
         m_grantTimers[dstId].stop();
+        m_grantTimers.erase(dstId);
 
         __unlock();
 
@@ -165,29 +180,19 @@ bool DMRAffiliationLookup::isChBusy(uint32_t chNo) const
 
     __spinlock();
 
-    // lookup dynamic channel grant table entry
-    for (auto grantEntry : m_grantChTable) {
-        if (grantEntry.second == chNo) {
-            uint8_t slotCount = 0U;
-            if (chNo == m_tsccChNo) {
-                slotCount++; // one slot is *always* used for TSCC
-            }
+    bool slot1Busy = chNo == m_tsccChNo && m_tsccSlot == 1U;
+    bool slot2Busy = chNo == m_tsccChNo && m_tsccSlot == 2U;
+    for (auto entry : m_grantChSlotTable) {
+        if (std::get<0>(entry.second) != chNo)
+            continue;
 
-            for (auto slotEntry : m_grantChSlotTable) {
-                uint32_t foundChNo = std::get<0>(slotEntry.second);
-                if (foundChNo == chNo)
-                    slotCount++;
-            }
-
-            if (slotCount == 2U) {
-                return true;
-            } else {
-                return false;
-            }
-        }
+        if (std::get<1>(entry.second) == 1U)
+            slot1Busy = true;
+        if (std::get<1>(entry.second) == 2U)
+            slot2Busy = true;
     }
 
-    return false;
+    return slot1Busy && slot2Busy;
 }
 
 /* Helper to get the slot granted for the given destination ID. */
@@ -222,6 +227,10 @@ void DMRAffiliationLookup::setSlotForChannelTSCC(uint32_t chNo, uint8_t slot)
 
     m_tsccChNo = chNo;
     m_tsccSlot = slot;
+
+    // Reserve the physical control channel in the shared allocator. DMR tracks
+    // the opposing payload timeslot separately in m_grantChSlotTable.
+    m_chLookup->allocRFCh(chNo);
 }
 
 /* Helper to determine the an available channel for a slot. */
@@ -234,36 +243,40 @@ uint32_t DMRAffiliationLookup::getAvailableChannelForSlot(uint8_t slot) const
 
     __spinlock();
 
-    uint32_t chNo = 0U;
-    for (auto entry : m_chLookup->rfChDataTable()) {
-        if (entry.second.chNo() == m_tsccChNo && slot == m_tsccSlot) {
-            continue;
-        } else {
-            // lookup dynamic channel slot grant table entry
-            bool chAvailSlot = false;
-            for (auto gntEntry : m_grantChSlotTable) {
-                uint32_t foundChNo = std::get<0>(gntEntry.second);
-                if (foundChNo == entry.second.chNo()) {
-                    uint8_t foundSlot = std::get<1>(gntEntry.second);
-                    if (slot == foundSlot)
-                        continue;
-                    else {
-                        chAvailSlot = true;
-                        break;
-                    }
-                }
-            }
-
-            // if we have no granted channels -- return true
-            if (m_grantChSlotTable.size() == 0U)
-                chAvailSlot = true;
-
-            chNo = entry.second.chNo();
-            if (chAvailSlot)
+    // Prefer a physical channel already managed by DMR so its unused timeslot
+    // can be filled without changing the shared ChannelLookup allocation model.
+    for (auto grant : m_grantChSlotTable) {
+        uint32_t chNo = std::get<0>(grant.second);
+        bool requestedSlotBusy = false;
+        for (auto other : m_grantChSlotTable) {
+            if (std::get<0>(other.second) == chNo && std::get<1>(other.second) == slot) {
+                requestedSlotBusy = true;
                 break;
+            }
         }
+
+        if (!requestedSlotBusy && !(chNo == m_tsccChNo && slot == m_tsccSlot))
+            return chNo;
     }
 
+    // The timeslot opposing the TSCC is also a valid payload resource.
+    if (m_tsccChNo != 0U && slot != m_tsccSlot) {
+        bool requestedSlotBusy = false;
+        for (auto grant : m_grantChSlotTable) {
+            if (std::get<0>(grant.second) == m_tsccChNo && std::get<1>(grant.second) == slot) {
+                requestedSlotBusy = true;
+                break;
+            }
+        }
+        if (!requestedSlotBusy)
+            return m_tsccChNo;
+    }
+
+    // For a new physical channel, preserve ChannelLookup's allocation state so
+    // P25 and NXDN users of that shared class are unaffected.
+    uint32_t chNo = m_chLookup->getFirstRFChannel();
+    if (chNo == m_tsccChNo && slot == m_tsccSlot)
+        return 0U;
     return chNo;
 }
 

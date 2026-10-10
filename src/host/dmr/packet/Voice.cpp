@@ -87,7 +87,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
 
             if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-                m_slot->m_tsccPayloadActRetry.stop();
+                m_slot->confirmTSCCPayloadActive();
             }
 
             // validate source RID
@@ -765,7 +765,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
             return;
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-            m_slot->m_tsccPayloadActRetry.stop();
+            m_slot->confirmTSCCPayloadActive();
         }
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())

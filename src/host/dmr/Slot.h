@@ -443,6 +443,8 @@ namespace dmr
         bool m_tsccPayloadGroup;
         bool m_tsccPayloadVoice;
         Timer m_tsccPayloadActRetry;
+        Timer m_tsccPayloadActTimeout;
+        uint8_t m_tsccPayloadActRetryCount;
         uint8_t m_tsccAdjSSCnt;
 
         bool m_disableGrantSrcIdCheck;
@@ -586,6 +588,10 @@ namespace dmr
          * @brief Clears the flag indicating whether the slot is a TSCC payload slot.
          */
         void clearTSCCActivated();
+        /**
+         * @brief Stops payload activation retry/deadline timers after traffic begins.
+         */
+        void confirmTSCCPayloadActive();
 
         /**
          * @brief Helper to set the DMR short LC.

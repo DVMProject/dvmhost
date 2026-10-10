@@ -34,7 +34,19 @@ bool CSBK_P_CLEAR::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    /* stub */
+    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
+    ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
+
+    bool ret = CSBK::decode(data, csbk);
+    if (!ret)
+        return false;
+
+    ulong64_t csbkValue = CSBK::toValue(csbk);
+
+    m_logicalCh1 = (uint32_t)((csbkValue >> 52) & 0xFFFU);                          // Logical Physical Channel
+    m_GI = ((csbkValue >> 48) & 0x01U) == 0x01U;                                   // Group/Individual Flag
+    m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                            // Target Address
+    m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Trunking Station Identifier
 
     return true;
 }

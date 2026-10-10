@@ -168,6 +168,7 @@ namespace dmr
         const uint32_t  WUID_SUPLI = 0xFFFEC4U;         //!< Supplementary Data Service Working Unit ID
         const uint32_t  WUID_SDMI = 0xFFFEC5U;          //!< UDT Short Data Service Working Unit ID
         const uint32_t  WUID_REGI = 0xFFFEC6U;          //!< Registration Working Unit ID
+        const uint32_t  WUID_TSI = 0xFFFECAU;           //!< Trunking Station Identifier
         const uint32_t  WUID_STUNI = 0xFFFECCU;         //!< MS Stun/Revive Identifier
         const uint32_t  WUID_AUTHI = 0xFFFECDU;         //!< Authentication Working Unit ID
         const uint32_t  WUID_KILLI = 0xFFFECFU;         //!< MS Kill Identifier

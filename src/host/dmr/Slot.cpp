@@ -161,6 +161,8 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_tsccPayloadGroup(false),
     m_tsccPayloadVoice(true),
     m_tsccPayloadActRetry(1000U, 0U, 250U),
+    m_tsccPayloadActTimeout(1000U, 15U),
+    m_tsccPayloadActRetryCount(0U),
     m_tsccAdjSSCnt(0U),
     m_disableGrantSrcIdCheck(false),
     m_lastLateEntry(0U),
@@ -664,6 +666,24 @@ void Slot::clock()
 
     // activate payload channel if requested from the TSCC
     if (s_dmr->m_tsccPayloadActive) {
+        if (m_tsccPayloadActTimeout.isRunning()) {
+            m_tsccPayloadActTimeout.clock(ms);
+            if (m_tsccPayloadActTimeout.hasExpired()) {
+                uint32_t dstId = m_tsccPayloadDstId;
+                LogWarning(LOG_DMR, "DMR Slot %u, payload activation expired after %u retries, dstId = %u",
+                    m_slotNo, m_tsccPayloadActRetryCount, dstId);
+
+                Slot* tscc = s_dmr->getTSCCSlot();
+                if (tscc != nullptr && tscc->m_enableTSCC && tscc->s_affiliations->isGranted(dstId)) {
+                    tscc->s_affiliations->releaseGrant(dstId, false);
+                }
+                else {
+                    notifyCC_ReleaseGrant(dstId);
+                    s_dmr->tsccClearActivatedSlot(m_slotNo);
+                }
+            }
+        }
+
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
                 if (m_tsccPayloadActRetry.isRunning()) {
@@ -671,6 +691,7 @@ void Slot::clock()
 
                     if (m_tsccPayloadActRetry.hasExpired()) {
                         m_control->writeRF_CSBK_Payload_Activate(m_tsccPayloadDstId, m_tsccPayloadSrcId, m_tsccPayloadGroup, m_tsccPayloadVoice, true);
+                        m_tsccPayloadActRetryCount++;
                         m_tsccPayloadActRetry.start(0U, 500U);
                     }
                 }
@@ -999,7 +1020,9 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
     }
 
     if (m_tsccPayloadDstId != 0U && !m_tsccPayloadActRetry.isRunning()) {
+        m_tsccPayloadActRetryCount = 0U;
         m_tsccPayloadActRetry.start();
+        m_tsccPayloadActTimeout.start();
     }
 }
 
@@ -1275,7 +1298,7 @@ void Slot::processFrameLoss(RPT_RF_LOSS_TYPE type)
                 tscc->s_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
             
-            clearTSCCActivated();
+            s_dmr->tsccClearActivatedSlot(m_slotNo);
 
             if (!tscc->m_enableTSCC) {
                 notifyCC_ReleaseGrant(m_rfLC->getDstId());
@@ -1534,7 +1557,7 @@ void Slot::writeEndNet(bool writeEnd)
             tscc->s_affiliations->releaseGrant(m_netLC->getDstId(), false);
         }
 
-        clearTSCCActivated();
+        s_dmr->tsccClearActivatedSlot(m_slotNo);
 
         if (!tscc->m_enableTSCC) {
             notifyCC_ReleaseGrant(m_netLC->getDstId());
@@ -1706,6 +1729,17 @@ void Slot::clearTSCCActivated()
     m_tsccPayloadVoice = true;
 
     m_tsccPayloadActRetry.stop();
+    m_tsccPayloadActTimeout.stop();
+    m_tsccPayloadActRetryCount = 0U;
+}
+
+/* Stops payload activation timers after traffic has arrived. */
+
+void Slot::confirmTSCCPayloadActive()
+{
+    m_tsccPayloadActRetry.stop();
+    m_tsccPayloadActTimeout.stop();
+    m_tsccPayloadActRetryCount = 0U;
 }
 
 /* Helper to set the DMR short LC. */

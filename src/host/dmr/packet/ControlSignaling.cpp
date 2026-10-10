@@ -335,6 +335,32 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                 LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, kind = $%02X, srcId = %u",
                     m_slot->m_slotNo, csbk->toString().c_str(), isp->getMaintKind(), srcId);
             }
+
+            // ETSI TS 102 361-4 6.6.2.3.1.6: an applicable inbound
+            // P_MAINT(DISCON) terminates use of the payload channel and the TS
+            // responds with P_CLEAR.  Other maintenance kinds are reserved.
+            bool applicableSource = srcId == m_slot->m_tsccPayloadSrcId ||
+                (!m_slot->m_tsccPayloadGroup && srcId == m_slot->m_tsccPayloadDstId);
+            if (isp->getMaintKind() == 0U && dstId == WUID_TSI &&
+                m_slot->m_tsccPayloadDstId != 0U && applicableSource) {
+                uint32_t payloadDstId = m_slot->m_tsccPayloadDstId;
+
+                if (m_slot->m_rfState == RS_RF_AUDIO || m_slot->m_rfState == RS_RF_DATA) {
+                    m_slot->processFrameLoss(RF_LOSS_TYPE_IN_CALL_CONTROL);
+                }
+
+                Slot* tscc = m_slot->s_dmr->getTSCCSlot();
+                if (tscc != nullptr && tscc->m_enableTSCC && tscc->s_affiliations->isGranted(payloadDstId)) {
+                    tscc->s_affiliations->releaseGrant(payloadDstId, false);
+                }
+                else if (m_slot->m_tsccPayloadDstId != 0U) {
+                    m_slot->notifyCC_ReleaseGrant(payloadDstId);
+                }
+
+                m_slot->s_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
+
+                handled = true;
+            }
         }
         break;
         case CSBKO::PRECCSBK:
@@ -899,7 +925,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
 
             uint32_t availChNo = tscc->s_affiliations->getAvailableChannelForSlot(slot);
-            if (!tscc->s_affiliations->rfCh()->isRFChAvailable() || availChNo == 0U) {
+            if (availChNo == 0U) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", tscc->m_slotNo, dstId);
@@ -928,6 +954,9 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     chNo = tscc->s_affiliations->getGrantedCh(dstId);
                     slot = tscc->s_affiliations->getGrantedSlot(dstId);
                     //tscc->s_siteData.setChCnt(tscc->s_affiliations->getRFChCnt() + tscc->s_affiliations->getGrantedRFChCnt());
+                }
+                else {
+                    return false;
                 }
             }
         }
@@ -1219,7 +1248,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
             slot = groupVoice.source().tgSlot();
 
             uint32_t availChNo = tscc->s_affiliations->getAvailableChannelForSlot(slot);
-            if (!tscc->s_affiliations->rfCh()->isRFChAvailable() || availChNo == 0U) {
+            if (availChNo == 0U) {
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", tscc->m_slotNo, dstId);
@@ -1249,6 +1278,9 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                     slot = tscc->s_affiliations->getGrantedSlot(dstId);
 
                     //tscc->m_siteData.setChCnt(tscc->m_affiliations->getRFChCnt() + tscc->m_affiliations->getGrantedRFChCnt());
+                }
+                else {
+                    return false;
                 }
             }
         }
@@ -1522,15 +1554,16 @@ void ControlSignaling::writeRF_CSBK_Payload_Clear(uint32_t dstId, uint32_t srcId
 
     csbk->setLastBlock(true);
 
-    csbk->setLogicalCh1(m_slot->s_channelNo);
-    csbk->setSlotNo(m_slot->m_slotNo);
+    // Zero directs the MS back to its last-confirmed TSCC and is valid for
+    // both co-located and distributed payload-channel hosts.
+    csbk->setLogicalCh1(0U);
 
-    csbk->setSrcId(srcId);
+    csbk->setSrcId(WUID_TSI);
     csbk->setDstId(dstId);
 
     if (m_verbose) {
         LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, group = %u, chNo = %u, slot = %u, srcId = %u, dstId = %u",
-            m_slot->m_slotNo, csbk->toString().c_str(), csbk->getGI(), csbk->getLogicalCh1(), csbk->getSlotNo(), srcId, dstId);
+            m_slot->m_slotNo, csbk->toString().c_str(), csbk->getGI(), csbk->getLogicalCh1(), csbk->getSlotNo(), csbk->getSrcId(), dstId);
     }
 
     for (uint8_t i = 0; i < 2U; i++)
