@@ -237,8 +237,8 @@ void DMRAffiliationLookup::setSlotForChannelTSCC(uint32_t chNo, uint8_t slot)
     m_tsccChNo = chNo;
     m_tsccSlot = slot;
 
-    // Reserve the physical control channel in the shared allocator. DMR tracks
-    // the opposing payload timeslot separately in m_grantChSlotTable.
+    // reserve the physical control channel in the shared allocator; DMR tracks
+    // the opposing payload timeslot separately in m_grantChSlotTable
     m_chLookup->allocRFCh(chNo);
 }
 
@@ -252,8 +252,8 @@ uint32_t DMRAffiliationLookup::getAvailableChannelForSlot(uint8_t slot) const
 
     __spinlock();
 
-    // Prefer a physical channel already managed by DMR so its unused timeslot
-    // can be filled without changing the shared ChannelLookup allocation model.
+    // prefer a physical channel already managed by DMR so its unused timeslot
+    // can be filled without changing the shared ChannelLookup allocation model
     for (auto grant : m_grantChSlotTable) {
         uint32_t chNo = std::get<0>(grant.second);
         bool requestedSlotBusy = false;
@@ -268,7 +268,7 @@ uint32_t DMRAffiliationLookup::getAvailableChannelForSlot(uint8_t slot) const
             return chNo;
     }
 
-    // The timeslot opposing the TSCC is also a valid payload resource.
+    // the timeslot opposing the TSCC is also a valid payload resource
     if (m_tsccChNo != 0U && slot != m_tsccSlot) {
         bool requestedSlotBusy = false;
         for (auto grant : m_grantChSlotTable) {
@@ -281,8 +281,8 @@ uint32_t DMRAffiliationLookup::getAvailableChannelForSlot(uint8_t slot) const
             return m_tsccChNo;
     }
 
-    // For a new physical channel, preserve ChannelLookup's allocation state so
-    // P25 and NXDN users of that shared class are unaffected.
+    // for a new physical channel, preserve ChannelLookup's allocation state so
+    // P25 and NXDN users of that shared class are unaffected
     uint32_t chNo = m_chLookup->getFirstRFChannel();
     if (chNo == m_tsccChNo && slot == m_tsccSlot)
         return 0U;
