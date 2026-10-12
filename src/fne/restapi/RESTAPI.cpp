@@ -2443,19 +2443,6 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     traffic["activeCalls"].set<int32_t>(activeCalls);
     health["traffic"].set<json::object>(traffic);
 
-    // construct JSON object representing the status of the spanning tree network
-    json::object spanningTree = json::object();
-    const bool treeAvailable = m_network->m_treeRoot != nullptr;
-    const uint32_t knownNodes = treeAvailable ? network::SpanningTree::countChildren(m_network->m_treeRoot) + 1U : 0U;
-    spanningTree["status"].set<std::string>(treeAvailable ? HEALTH_HEALTHY : HEALTH_UNAVAILABLE);
-    const bool spanningTreeEnabled = m_network->m_enableSpanningTree;
-    const uint32_t rootId = treeAvailable ? m_network->m_treeRoot->id() : 0U;
-    spanningTree["enabled"].set<bool>(spanningTreeEnabled);
-    spanningTree["rootId"].set<uint32_t>(rootId);
-    spanningTree["localRole"].set<std::string>(treeAvailable && m_network->m_treeRoot->id() == m_network->m_peerId ? "root" : "node");
-    spanningTree["knownNodes"].set<uint32_t>(knownNodes);
-    health["spanningTree"].set<json::object>(spanningTree);
-
     // determine the overall health status of the network based on individual components
     std::string overall = HEALTH_HEALTHY;
     if (dataPlaneInitializing) {
@@ -2466,7 +2453,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
         overall = HEALTH_IDLE;
     }
 
-    if (upstreamDegraded || metadataDegraded || !treeAvailable) {
+    if (upstreamDegraded || metadataDegraded) {
         overall = HEALTH_DEGRADED;
     }
 
