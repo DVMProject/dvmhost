@@ -10,6 +10,7 @@
 #include "host/Defines.h"
 #include "common/p25/lc/tdulc/LC_GROUP.h"
 #include "common/p25/lc/tdulc/LC_PRIVATE.h"
+#include "common/p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
 #include "common/p25/P25Defines.h"
 #include "common/edac/Golay24128.h"
 #include "common/edac/RS634717.h"
@@ -131,6 +132,37 @@ TEST_CASE("TDULC", "[p25][tdulc]") {
         LC_PRIVATE privateTdulc;
         privateTdulc.setGroup(false);
         REQUIRE(privateTdulc.getGroup() == false);
+    }
+
+    SECTION("TelInt_Encode_Decode_Layout") {
+        // the single address carries the subscriber unit (dstId), not the gateway source
+        LC_TEL_INT_VCH_USER tdulc1;
+        tdulc1.setPriority(4U);
+        tdulc1.setSrcId(0x000064U);
+        tdulc1.setDstId(0x123456U);
+
+        uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+        ::memset(data, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+        tdulc1.encode(data);
+
+        LC_TEL_INT_VCH_USER tdulc2;
+        REQUIRE(tdulc2.decode(data) == true);
+
+        const uint8_t* raw = tdulc2.getDecodedRaw();
+        REQUIRE(raw != nullptr);
+        REQUIRE(raw[0U] == (0x40U | LCO::TEL_INT_VCH_USER));    // Implicit + LCO
+        REQUIRE(raw[2U] == 0x04U);                              // Service Options
+        REQUIRE(raw[3U] == 0x00U);                              // Reserved
+        REQUIRE(raw[4U] == 0x00U);                              // Call Timer
+        REQUIRE(raw[5U] == 0x00U);
+        REQUIRE(raw[6U] == 0x12U);                              // Source/Target Address
+        REQUIRE(raw[7U] == 0x34U);
+        REQUIRE(raw[8U] == 0x56U);
+
+        REQUIRE(tdulc2.getPriority() == 4U);
+        REQUIRE(tdulc2.getDstId() == 0x123456U);
+        REQUIRE(tdulc2.getSrcId() == 0x123456U);
+        REQUIRE(tdulc2.getGroup() == false);
     }
 
     SECTION("SrcId_Values") {

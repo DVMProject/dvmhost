@@ -131,6 +131,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 return false;
             }
 
+            // a telephone interconnect HDU carries no talkgroup; it belongs to the unit permitted on this channel
+            if (!m_p25->m_authoritative && m_p25->m_permittedTelInt && lc.getDstId() == 0U) {
+                lc.setDstId(m_p25->m_permittedDstId);
+            }
+
             if (m_verbose) {
                 LogInfoEx(LOG_RF, P25_HDU_STR ", HDU_BSDWNACT, dstId = %u, algo = $%02X, kid = $%04X", lc.getDstId(), lc.getAlgId(), lc.getKId());
 

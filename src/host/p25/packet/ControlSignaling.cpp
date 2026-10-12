@@ -2546,6 +2546,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
                     req["dstId"].set<uint32_t>(dstId);
+                    if (telInt) {
+                        req["telInt"].set<bool>(true);
+                    }
 
                     // send blocking RPC request
                     bool requestFailed = !g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {

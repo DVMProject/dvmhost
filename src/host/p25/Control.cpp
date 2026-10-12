@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 #include "Defines.h"
@@ -106,6 +107,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netLastDstId(0U),
     m_netLastSrcId(0U),
     m_permittedDstId(0U),
+    m_permittedTelInt(false),
     m_tailOnIdle(false),
     m_ccRunning(false),
     m_ccPrevRunning(false),
@@ -954,8 +956,9 @@ void Control::clock()
             m_rfLastDstId = 0U;
             m_rfLastSrcId = 0U;
 
-            // reset permitted ID and clear permission state
-            if (!m_authoritative && m_permittedDstId != 0U) {
+            // reset permitted ID and clear permission state (a telephone interconnect permit is held for the
+            // whole call and only cleared by the control channel)
+            if (!m_authoritative && m_permittedDstId != 0U && !m_permittedTelInt) {
                 m_permittedDstId = 0U;
             }
 
@@ -1268,7 +1271,7 @@ void Control::clockSiteData(uint32_t ms)
 
 /* Permits a TGID on a non-authoritative host. */
 
-void Control::permittedTG(uint32_t dstId, bool dataPermit)
+void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt)
 {
     if (m_authoritative) {
         return;
@@ -1278,7 +1281,7 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
         if (dstId == 0U)
             LogInfoEx(LOG_P25, "non-authoritative TG unpermit");
         else
-            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u, telInt = %u", dstId, telInt);
     }
 
     // if this a unpermit ensure we write TDUs
@@ -1293,6 +1296,7 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
     }
 
     m_permittedDstId = dstId;
+    m_permittedTelInt = (dstId != 0U) && telInt;
 
     // is this a data permit?
     if (dataPermit && m_sndcpSupport) {
@@ -2152,9 +2156,14 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
         dataPermit = (bool)req["dataPermit"].get<bool>();
     }
 
+    bool telInt = false;
+    if (req["telInt"].is<bool>()) {
+        telInt = (bool)req["telInt"].get<bool>();
+    }
+
     // LogDebugEx(LOG_P25, "Control::RPC_permittedTG()", "callback, dstId = %u, dataPermit = %u", dstId, dataPermit);
 
-    permittedTG(dstId, dataPermit);
+    permittedTG(dstId, dataPermit, telInt);
 }
 
 /* (RPC Handler) Active TGID list from the authoritative CC host. */
