@@ -358,7 +358,8 @@ namespace network
             /**
              * @brief Helper to determine if telephone interconnect traffic may be repeated to a peer. Traffic from a
              *  site is only repeated to gateway peers, and traffic from a gateway is only repeated to the peer the
-             *  subscriber unit is registered to (or every site, if the registration is unknown).
+             *  subscriber unit is registered to and its voice channel peers (or every site, if the registration is
+             *  unknown).
              * @param srcPeerId Originating Peer ID.
              * @param dstPeerId Destination Peer ID.
              * @param dstConn Instance of the FNEPeerConnection for the destination peer.
