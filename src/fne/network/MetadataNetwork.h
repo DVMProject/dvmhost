@@ -25,6 +25,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <atomic>
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -35,6 +36,7 @@ class FNETestHooks;
 #endif
 
 class HOST_SW_API HostFNE;
+namespace fne_restapi { class HOST_SW_API RESTAPI; }
 
 namespace network
 {
@@ -111,6 +113,8 @@ namespace network
         TrafficNetwork* m_trafficNetwork;
         HostFNE* m_host;
 
+        friend class ::fne_restapi::RESTAPI;
+
         std::string m_address;
         uint16_t m_port;
 
@@ -152,6 +156,18 @@ namespace network
         PacketBufferMap m_peerTreeListPkt;
 
         ThreadPool m_threadPool;
+
+        // passive health telemetry -- these counters are intentionally lock-free so
+        // the REST thread can diagnose a stalled worker without waiting
+        // for a lock held by that worker
+        std::atomic<uint64_t> m_healthDataPlaneEpoch;
+        std::atomic<uint64_t> m_healthLastDataPlaneTick;
+        std::atomic<uint64_t> m_healthPacketsReceived;
+        std::atomic<uint64_t> m_healthLastPacketReceived;
+        std::atomic<uint64_t> m_healthTasksSubmitted;
+        std::atomic<uint64_t> m_healthTasksCompleted;
+        std::atomic<uint64_t> m_healthLastTaskProgress;
+        std::atomic<uint64_t> m_healthTaskEnqueueFailures;
 
         /**
          * @brief Finds a packet buffer entry in the map.

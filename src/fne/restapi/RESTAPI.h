@@ -435,6 +435,11 @@ namespace fne_restapi
         void restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
         /**
+         * @brief REST API endpoint; reports passive FNE health information.
+         */
+        void restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+        /**
          * @brief REST API endpoint; implements put reset total calls request.
          * @param request HTTP request.
          * @param reply HTTP reply.

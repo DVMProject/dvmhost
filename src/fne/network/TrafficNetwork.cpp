@@ -157,6 +157,16 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_jitterMaxWait(40000U),
     m_threadPool(workerCnt, "fne"),
     m_metadataUpdateThreadPool(workerCnt / 2U, "mupdt"),
+    m_healthDataPlaneEpoch(0U),
+    m_healthLastDataPlaneTick(0U),
+    m_healthPacketsReceived(0U),
+    m_healthProtocolPacketsReceived(0U),
+    m_healthLastPacketReceived(0U),
+    m_healthLastProtocolPacketReceived(0U),
+    m_healthTasksSubmitted(0U),
+    m_healthTasksCompleted(0U),
+    m_healthLastTaskProgress(0U),
+    m_healthTaskEnqueueFailures(0U),
     m_metadataUpdateMutex(),
     m_metadataUpdateState(),
     m_disablePacketData(false),
@@ -572,6 +582,10 @@ void TrafficNetwork::setPresharedKey(const uint8_t* presharedKey)
 
 void TrafficNetwork::processNetwork()
 {
+    const uint64_t healthNow = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_healthDataPlaneEpoch.fetch_add(1U, std::memory_order_relaxed);
+    m_healthLastDataPlaneTick.store(healthNow, std::memory_order_relaxed);
+
     if (m_status != NET_STAT_MST_RUNNING) {
         return;
     }
@@ -585,6 +599,13 @@ void TrafficNetwork::processNetwork()
     // read message
     UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
+        m_healthPacketsReceived.fetch_add(1U, std::memory_order_relaxed);
+        m_healthLastPacketReceived.store(healthNow, std::memory_order_relaxed);
+        if (fneHeader.getFunction() == NET_FUNC::PROTOCOL) {
+            m_healthProtocolPacketsReceived.fetch_add(1U, std::memory_order_relaxed);
+            m_healthLastProtocolPacketReceived.store(healthNow, std::memory_order_relaxed);
+        }
+
         if (m_debug)
             Utils::dump(1U, "TrafficNetwork::processNetwork(), Network Message", buffer.get(), length);
 
@@ -607,9 +628,19 @@ void TrafficNetwork::processNetwork()
         ::memcpy(req->buffer, buffer.get(), length);
 
         // enqueue the task
+        const uint64_t pendingBefore = m_healthTasksSubmitted.load(std::memory_order_relaxed) - m_healthTasksCompleted.load(std::memory_order_relaxed);
+        if (pendingBefore == 0U)
+            m_healthLastTaskProgress.store(healthNow, std::memory_order_relaxed);
+
+        m_healthTasksSubmitted.fetch_add(1U, std::memory_order_relaxed);
         if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
+            m_healthTaskEnqueueFailures.fetch_add(1U, std::memory_order_relaxed);
+            m_healthTasksCompleted.fetch_add(1U, std::memory_order_relaxed);
+            m_healthLastTaskProgress.store(healthNow, std::memory_order_relaxed);
+
             LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u, %s:%u", peerId, 
                 udp::Socket::address(address).c_str(), udp::Socket::port(address));
+
             if (req != nullptr) {
                 if (req->buffer != nullptr)
                     delete[] req->buffer;
@@ -1158,6 +1189,13 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
             return;
         }
 
+        // define a lambda function to mark the completion of a health task and update the last task progress timestamp
+        const auto healthTaskComplete = [network]() {
+            network->m_healthTasksCompleted.fetch_add(1U, std::memory_order_relaxed);
+            const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            network->m_healthLastTaskProgress.store(now, std::memory_order_relaxed);
+        };
+
         if (req == nullptr)
             return;
 
@@ -1203,6 +1241,7 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
                     delete[] req->buffer;
                 delete req;
 
+                healthTaskComplete();
                 return;
             }
 
@@ -1230,16 +1269,22 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
             if ((func == NET_FUNC::RPTK && !validRepeaterAuthLength(req->length)) ||
                 (func == NET_FUNC::RPTC && !validRepeaterConfigLength(req->length))) {
                 LogWarning(LOG_MASTER, "PEER %u malformed FNE login packet, func = $%02X, length = %d", peerId, func, req->length);
+
                 if (req->buffer != nullptr)
                     delete[] req->buffer;
                 delete req;
+
+                healthTaskComplete();
                 return;
             }
 
             // bryanb: temporary support to allow announce packets on the traffic port but ultimately
             //  this should be removed and handled like TRANSFER is handled here
             if (func == NET_FUNC::ANNOUNCE) {
+                healthTaskComplete();
+
                 network->m_host->m_mdNetwork->taskNetworkRx(req);
+
                 return; // don't break, return because taskNetworkRx will cleanup req
             }
 
@@ -1254,6 +1299,8 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
         if (req->buffer != nullptr)
             delete[] req->buffer;
         delete req;
+
+        healthTaskComplete();
     }
 }
 

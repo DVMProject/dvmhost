@@ -156,6 +156,7 @@ namespace network
         uint8_t* buffer = nullptr;          //!< Raw data buffer
 
         uint64_t pktRxTime;                 //!< Packet receive time
+        bool healthMetadataTracked = false; //!< Health task originated on metadata port.
     };
 
     // ---------------------------------------------------------------------------
@@ -468,6 +469,20 @@ namespace network
 
         ThreadPool m_threadPool;
         ThreadPool m_metadataUpdateThreadPool;
+
+        // passive health telemetry -- these counters are intentionally lock-free so
+        // the REST thread can diagnose a stalled worker without waiting
+        // for a lock held by that worker
+        std::atomic<uint64_t> m_healthDataPlaneEpoch;
+        std::atomic<uint64_t> m_healthLastDataPlaneTick;
+        std::atomic<uint64_t> m_healthPacketsReceived;
+        std::atomic<uint64_t> m_healthProtocolPacketsReceived;
+        std::atomic<uint64_t> m_healthLastPacketReceived;
+        std::atomic<uint64_t> m_healthLastProtocolPacketReceived;
+        std::atomic<uint64_t> m_healthTasksSubmitted;
+        std::atomic<uint64_t> m_healthTasksCompleted;
+        std::atomic<uint64_t> m_healthLastTaskProgress;
+        std::atomic<uint64_t> m_healthTaskEnqueueFailures;
 
         /**
          * @brief Represents the state of a metadata update for a given peer ID.

@@ -691,6 +691,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_RELOAD_CRYPTO).get(REST_API_BIND(RESTAPI::restAPI_GetReloadCrypto, this));
 
     m_dispatcher.match(FNE_GET_STATS).get(REST_API_BIND(RESTAPI::restAPI_GetStats, this));
+    m_dispatcher.match(FNE_GET_HEALTH).get(REST_API_BIND(RESTAPI::restAPI_GetHealth, this));
     m_dispatcher.match(FNE_GET_RESET_TOTAL_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetTotalCalls, this));
     m_dispatcher.match(FNE_GET_RESET_ACTIVE_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetActiveCalls, this));
     m_dispatcher.match(FNE_GET_RESET_CALL_COLLISIONS).get(REST_API_BIND(RESTAPI::restAPI_GetResetCallCollisions, this));
@@ -2196,6 +2197,300 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
         response["cryptoKeyTotalEntries"].set<uint32_t>(cryptoKeyTotalEntries);
     }
 
+    reply.payload(response);
+}
+
+/* REST API endpoint; reports passive FNE health information. */
+
+void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::object health = json::object();
+    json::array reasonCodes = json::array();
+    json::array reasons = json::array();
+
+    const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto ageMs = [now](uint64_t timestamp) -> uint64_t {
+        return timestamp == 0U || timestamp > now ? 0U : now - timestamp;
+    };
+
+    const uint32_t localFneId = m_network != nullptr ? m_network->m_peerId : 0U;
+    health["fneId"].set<uint32_t>(localFneId);
+    health["observedAtMs"].set<uint64_t>(now);
+
+    json::object process = json::object();
+    process["status"].set<std::string>("healthy");
+    const bool restApiResponsive = true;
+    process["restApiResponsive"].set<bool>(restApiResponsive);
+    health["process"].set<json::object>(process);
+
+    // check if the traffic network is available and healthy
+    if (m_network == nullptr) {
+        health["overall"].set<std::string>("failed");
+        reasonCodes.push_back(json::value("TRAFFIC_NETWORK_UNAVAILABLE"));
+        reasons.push_back(json::value("traffic network is not initialized"));
+        health["reasonCodes"].set<json::array>(reasonCodes);
+        health["reasons"].set<json::array>(reasons);
+        response["health"].set<json::object>(health);
+        reply.payload(response);
+        return;
+    }
+
+    const uint64_t loopStallThreshold = 5000U;
+    const uint64_t trafficEpoch = m_network->m_healthDataPlaneEpoch.load(std::memory_order_relaxed);
+    const uint64_t trafficLastTick = m_network->m_healthLastDataPlaneTick.load(std::memory_order_relaxed);
+    const uint64_t trafficTickAge = ageMs(trafficLastTick);
+    const bool trafficPlaneInitializing = trafficLastTick == 0U;
+    const bool trafficPlaneStalled = !trafficPlaneInitializing && trafficTickAge > loopStallThreshold;
+
+    network::MetadataNetwork* mdNetwork = m_host->m_mdNetwork;
+    const bool metadataUnavailable = mdNetwork == nullptr;
+    const uint64_t metadataEpoch = metadataUnavailable ? 0U : mdNetwork->m_healthDataPlaneEpoch.load(std::memory_order_relaxed);
+    const uint64_t metadataLastTick = metadataUnavailable ? 0U : mdNetwork->m_healthLastDataPlaneTick.load(std::memory_order_relaxed);
+    const uint64_t metadataTickAge = ageMs(metadataLastTick);
+    const bool metadataPlaneInitializing = !metadataUnavailable && metadataLastTick == 0U;
+    const bool metadataPlaneStalled = metadataUnavailable ||
+        (!metadataPlaneInitializing && metadataTickAge > loopStallThreshold);
+    const bool dataPlaneInitializing = trafficPlaneInitializing || metadataPlaneInitializing;
+    const bool dataPlaneStalled = trafficPlaneStalled || metadataPlaneStalled;
+
+    // construct JSON objects representing the status of the traffic, metadata, and overall data planes
+    json::object trafficPlane = json::object();
+    trafficPlane["status"].set<std::string>(trafficPlaneInitializing ? "initializing" : (trafficPlaneStalled ? "failed" : "healthy"));
+    trafficPlane["epoch"].set<uint64_t>(trafficEpoch);
+    trafficPlane["lastTickAgeMs"].set<uint64_t>(trafficTickAge);
+
+    json::object metadataPlane = json::object();
+    metadataPlane["status"].set<std::string>(metadataUnavailable ? "unavailable" : (metadataPlaneInitializing ? "initializing" : (metadataPlaneStalled ? "failed" : "healthy")));
+    metadataPlane["epoch"].set<uint64_t>(metadataEpoch);
+    metadataPlane["lastTickAgeMs"].set<uint64_t>(metadataTickAge);
+
+    json::object dataPlane = json::object();
+    dataPlane["status"].set<std::string>(dataPlaneInitializing ? "initializing" : (dataPlaneStalled ? "failed" : "healthy"));
+    dataPlane["loopStallThresholdMs"].set<uint64_t>(loopStallThreshold);
+    dataPlane["traffic"].set<json::object>(trafficPlane);
+    dataPlane["metadata"].set<json::object>(metadataPlane);
+    health["dataPlane"].set<json::object>(dataPlane);
+
+    const uint64_t submitted = m_network->m_healthTasksSubmitted.load(std::memory_order_relaxed);
+    const uint64_t completed = m_network->m_healthTasksCompleted.load(std::memory_order_relaxed);
+    const uint64_t inFlight = submitted >= completed ? submitted - completed : 0U;
+    const uint64_t lastTaskProgress = m_network->m_healthLastTaskProgress.load(std::memory_order_relaxed);
+    const uint64_t taskProgressAge = inFlight > 0U ? ageMs(lastTaskProgress) : 0U;
+    const uint64_t queueStallThreshold = 5000U;
+    const bool trafficQueueStalled = inFlight > 0U && taskProgressAge > queueStallThreshold;
+
+    json::object inboundQueue = json::object();
+    inboundQueue["submittedTotal"].set<uint64_t>(submitted);
+    inboundQueue["completedTotal"].set<uint64_t>(completed);
+    inboundQueue["inFlight"].set<uint64_t>(inFlight);
+    inboundQueue["lastProgressAgeMs"].set<uint64_t>(taskProgressAge);
+    const uint64_t trafficEnqueueFailures = m_network->m_healthTaskEnqueueFailures.load(std::memory_order_relaxed);
+    const bool trafficQueueProgressing = !trafficQueueStalled;
+    inboundQueue["enqueueFailures"].set<uint64_t>(trafficEnqueueFailures);
+    inboundQueue["progressing"].set<bool>(trafficQueueProgressing);
+
+    const uint64_t metadataSubmitted = metadataUnavailable ? 0U : mdNetwork->m_healthTasksSubmitted.load(std::memory_order_relaxed);
+    const uint64_t metadataCompleted = metadataUnavailable ? 0U : mdNetwork->m_healthTasksCompleted.load(std::memory_order_relaxed);
+    const uint64_t metadataInFlight = metadataSubmitted >= metadataCompleted ? metadataSubmitted - metadataCompleted : 0U;
+    const uint64_t metadataLastTaskProgress = metadataUnavailable ? 0U : mdNetwork->m_healthLastTaskProgress.load(std::memory_order_relaxed);
+    const uint64_t metadataTaskProgressAge = metadataInFlight > 0U ? ageMs(metadataLastTaskProgress) : 0U;
+    const bool metadataQueueStalled = !metadataUnavailable && metadataInFlight > 0U &&
+        metadataTaskProgressAge > queueStallThreshold;
+    const bool queueStalled = trafficQueueStalled || metadataQueueStalled;
+
+    json::object metadataQueue = json::object();
+    metadataQueue["submittedTotal"].set<uint64_t>(metadataSubmitted);
+    metadataQueue["completedTotal"].set<uint64_t>(metadataCompleted);
+    metadataQueue["inFlight"].set<uint64_t>(metadataInFlight);
+    metadataQueue["lastProgressAgeMs"].set<uint64_t>(metadataTaskProgressAge);
+    const uint64_t metadataEnqueueFailures = metadataUnavailable ? 0U : mdNetwork->m_healthTaskEnqueueFailures.load(std::memory_order_relaxed);
+    const bool metadataQueueProgressing = !metadataQueueStalled && !metadataUnavailable;
+    metadataQueue["enqueueFailures"].set<uint64_t>(metadataEnqueueFailures);
+    metadataQueue["progressing"].set<bool>(metadataQueueProgressing);
+
+    json::object queues = json::object();
+    queues["status"].set<std::string>(queueStalled ? "failed" : "healthy");
+    queues["stallThresholdMs"].set<uint64_t>(queueStallThreshold);
+    queues["trafficInboundWorkerQueue"].set<json::object>(inboundQueue);
+    queues["metadataInboundWorkerQueue"].set<json::object>(metadataQueue);
+    health["queues"].set<json::object>(queues);
+
+    // construct JSON array representing the status of upstream peer networks
+    json::array upstreams = json::array();
+    uint32_t configuredUpstreams = 0U;
+    uint32_t connectedUpstreams = 0U;
+    for (const auto& entry : m_host->m_peerNetworks) {
+        network::PeerNetwork* upstream = entry.second;
+        if (upstream == nullptr)
+            continue;
+
+        json::object obj = json::object();
+        const bool enabled = upstream->isEnabled();
+        const bool connected = upstream->getStatus() == NET_STAT_RUNNING;
+        if (enabled)
+            configuredUpstreams++;
+        if (enabled && connected)
+            connectedUpstreams++;
+
+        obj["peerId"].set<uint32_t>(entry.first);
+        const uint32_t remotePeerId = upstream->getRemotePeerId();
+        obj["remotePeerId"].set<uint32_t>(remotePeerId);
+        obj["enabled"].set<bool>(enabled);
+        obj["connected"].set<bool>(connected);
+        upstreams.push_back(json::value(obj));
+    }
+
+    // construct JSON array representing the status of child peer connections
+    json::array children = json::array();
+    uint32_t connectedPeers = 0U;
+    uint32_t connectedChildren = 0U;
+    bool metadataDegraded = false;
+    m_network->m_peers.shared_lock();
+    for (const auto& entry : m_network->m_peers) {
+        network::FNEPeerConnection* peer = entry.second;
+        if (peer == nullptr)
+            continue;
+        if (peer->connected())
+            connectedPeers++;
+        if (peer->peerClass() != PEER_CONN_CLASS_NEIGHBOR)
+            continue;
+
+        if (peer->connected())
+            connectedChildren++;
+        if (peer->missedMetadataUpdates() > 0U)
+            metadataDegraded = true;
+
+        json::object obj = json::object();
+        obj["peerId"].set<uint32_t>(entry.first);
+        obj["identity"].set<std::string>(peer->identity());
+        const bool peerConnected = peer->connected();
+        const uint64_t lastPingAge = ageMs(peer->lastPing());
+        const uint32_t pingsReceived = peer->pingsReceived();
+        const uint32_t missedMetadataUpdates = peer->missedMetadataUpdates();
+        obj["connected"].set<bool>(peerConnected);
+        obj["lastPingAgeMs"].set<uint64_t>(lastPingAge);
+        obj["pingsReceived"].set<uint32_t>(pingsReceived);
+        obj["missedMetadataUpdates"].set<uint32_t>(missedMetadataUpdates);
+        children.push_back(json::value(obj));
+    }
+    m_network->m_peers.shared_unlock();
+
+    // construct JSON object representing the connectivity status of the network
+    const bool partitioned = configuredUpstreams > 0U && connectedUpstreams == 0U;
+    const bool upstreamDegraded = configuredUpstreams > connectedUpstreams && connectedUpstreams > 0U;
+    json::object connectivity = json::object();
+    connectivity["status"].set<std::string>(partitioned ? "partitioned" : ((upstreamDegraded || metadataDegraded) ? "degraded" : "healthy"));
+    connectivity["configuredUpstreams"].set<uint32_t>(configuredUpstreams);
+    connectivity["connectedUpstreams"].set<uint32_t>(connectedUpstreams);
+    connectivity["connectedPeers"].set<uint32_t>(connectedPeers);
+    connectivity["connectedChildren"].set<uint32_t>(connectedChildren);
+    connectivity["upstreams"].set<json::array>(upstreams);
+    connectivity["children"].set<json::array>(children);
+    health["connectivity"].set<json::object>(connectivity);
+
+    // construct JSON object representing the status of network traffic
+    const uint64_t lastPacket = m_network->m_healthLastPacketReceived.load(std::memory_order_relaxed);
+    const uint64_t lastProtocolPacket = m_network->m_healthLastProtocolPacketReceived.load(std::memory_order_relaxed);
+    const uint64_t trafficIdleThreshold = 60000U;
+    const bool trafficSeen = lastProtocolPacket != 0U;
+    const bool trafficIdle = !trafficSeen || ageMs(lastProtocolPacket) > trafficIdleThreshold;
+    json::object traffic = json::object();
+    traffic["status"].set<std::string>(trafficIdle ? "idle" : "healthy");
+    const uint64_t packetsReceived = m_network->m_healthPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t protocolPacketsReceived = m_network->m_healthProtocolPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t lastPacketAge = ageMs(lastPacket);
+    const uint64_t lastProtocolPacketAge = ageMs(lastProtocolPacket);
+    const uint64_t metadataPacketsReceived = metadataUnavailable ? 0U : mdNetwork->m_healthPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t lastMetadataPacketAge = metadataUnavailable ? 0U : ageMs(mdNetwork->m_healthLastPacketReceived.load(std::memory_order_relaxed));
+    const int32_t activeCalls = network::TrafficNetwork::MetricsLogging::getTotalActiveCalls();
+    traffic["packetsReceived"].set<uint64_t>(packetsReceived);
+    traffic["protocolPacketsReceived"].set<uint64_t>(protocolPacketsReceived);
+    traffic["lastPacketAgeMs"].set<uint64_t>(lastPacketAge);
+    traffic["lastProtocolPacketAgeMs"].set<uint64_t>(lastProtocolPacketAge);
+    traffic["metadataPacketsReceived"].set<uint64_t>(metadataPacketsReceived);
+    traffic["lastMetadataPacketAgeMs"].set<uint64_t>(lastMetadataPacketAge);
+    traffic["idleThresholdMs"].set<uint64_t>(trafficIdleThreshold);
+    traffic["activeCalls"].set<int32_t>(activeCalls);
+    health["traffic"].set<json::object>(traffic);
+
+    // construct JSON object representing the status of the spanning tree network
+    json::object spanningTree = json::object();
+    const bool treeAvailable = m_network->m_treeRoot != nullptr;
+    const uint32_t knownNodes = treeAvailable ? network::SpanningTree::countChildren(m_network->m_treeRoot) + 1U : 0U;
+    spanningTree["status"].set<std::string>(treeAvailable ? "healthy" : "unavailable");
+    const bool spanningTreeEnabled = m_network->m_enableSpanningTree;
+    const uint32_t rootId = treeAvailable ? m_network->m_treeRoot->id() : 0U;
+    spanningTree["enabled"].set<bool>(spanningTreeEnabled);
+    spanningTree["rootId"].set<uint32_t>(rootId);
+    spanningTree["localRole"].set<std::string>(treeAvailable && m_network->m_treeRoot->id() == m_network->m_peerId ? "root" : "node");
+    spanningTree["knownNodes"].set<uint32_t>(knownNodes);
+    health["spanningTree"].set<json::object>(spanningTree);
+
+    // determine the overall health status of the network based on individual components
+    std::string overall = "healthy";
+    if (dataPlaneInitializing) {
+        overall = "initializing";
+    }
+
+    if (trafficIdle && overall == "healthy") {
+        overall = "idle";
+    }
+
+    if (upstreamDegraded || metadataDegraded || !treeAvailable) {
+        overall = "degraded";
+    }
+
+    if (partitioned) {
+        overall = "partitioned";
+        reasonCodes.push_back(json::value("ALL_UPSTREAMS_DISCONNECTED"));
+        reasons.push_back(json::value("all configured upstream FNE connections are disconnected"));
+    }
+
+    if (dataPlaneStalled || queueStalled) {
+        overall = "failed";
+    }
+
+    if (trafficPlaneStalled) {
+        reasonCodes.push_back(json::value("TRAFFIC_DATA_PLANE_STALLED"));
+        reasons.push_back(json::value("traffic processing loop is not progressing"));
+    }
+
+    if (metadataPlaneStalled) {
+        reasonCodes.push_back(json::value(metadataUnavailable ? "METADATA_NETWORK_UNAVAILABLE" : "METADATA_DATA_PLANE_STALLED"));
+        reasons.push_back(json::value(metadataUnavailable ? "metadata network is not initialized" : "metadata processing loop is not progressing"));
+    }
+
+    if (trafficQueueStalled) {
+        reasonCodes.push_back(json::value("TRAFFIC_INBOUND_QUEUE_STALLED"));
+        reasons.push_back(json::value("traffic inbound worker queue contains stale work"));
+    }
+
+    if (metadataQueueStalled) {
+        reasonCodes.push_back(json::value("METADATA_INBOUND_QUEUE_STALLED"));
+        reasons.push_back(json::value("metadata inbound worker queue contains stale work"));
+    }
+
+    if (upstreamDegraded) {
+        reasonCodes.push_back(json::value("UPSTREAM_CONNECTIVITY_DEGRADED"));
+        reasons.push_back(json::value("one or more configured upstream FNE connections are disconnected"));
+    }
+
+    if (metadataDegraded) {
+        reasonCodes.push_back(json::value("METADATA_UPDATES_MISSED"));
+        reasons.push_back(json::value("one or more child FNEs have missed metadata updates"));
+    }
+
+    health["overall"].set<std::string>(overall);
+    health["reasonCodes"].set<json::array>(reasonCodes);
+    health["reasons"].set<json::array>(reasons);
+    response["health"].set<json::object>(health);
     reply.payload(response);
 }
 

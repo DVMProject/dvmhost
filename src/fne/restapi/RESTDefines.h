@@ -64,6 +64,7 @@
 #define FNE_GET_RELOAD_CRYPTO           "/reload-crypto"
 
 #define FNE_GET_STATS                   "/stats"
+#define FNE_GET_HEALTH                  "/health"
 #define FNE_GET_RESET_TOTAL_CALLS       "/stat-reset-total-calls"
 #define FNE_GET_RESET_ACTIVE_CALLS      "/stat-reset-active-calls"
 #define FNE_GET_RESET_CALL_COLLISIONS   "/stat-reset-call-collisions"
