@@ -175,6 +175,12 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
         return decode(new OSP_UU_VCH_GRANT_UPD(), data, rawTSBK);
     case TSBKO::IOSP_UU_ANS:
         return decode(new IOSP_UU_ANS(), data, rawTSBK);
+    case TSBKO::IOSP_TELE_INT_DIAL:
+        return decode(new OSP_TELE_INT_VCH_GRANT(), data, rawTSBK);
+    case TSBKO::ISP_TELE_INT_PSTN_REQ:
+        return decode(new ISP_TELE_INT_PSTN_REQ(), data, rawTSBK);
+    case TSBKO::IOSP_TELE_INT_ANS:
+        return decode(new IOSP_TELE_INT_ANS(), data, rawTSBK);
     case TSBKO::ISP_SNDCP_CH_REQ:
         return decode(new ISP_SNDCP_CH_REQ(), data, rawTSBK);
     case TSBKO::ISP_SNDCP_REC_REQ:
