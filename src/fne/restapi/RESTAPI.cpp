@@ -42,6 +42,29 @@ using namespace fne_restapi;
 #define REST_API_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1,  std::placeholders::_2, std::placeholders::_3)
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define HEALTH_INIT                                     "INITIALIZING"
+#define HEALTH_IDLE                                     "IDLE"
+#define HEALTH_DEGRADED                                 "DEGRADED"
+#define HEALTH_FAILED                                   "FAILED"
+#define HEALTH_PARTITIONED                              "PARTITIONED"
+#define HEALTH_HEALTHY                                  "HEALTHY"
+#define HEALTH_FAILED                                   "FAILED"
+#define HEALTH_UNAVAILABLE                              "UNAVAILABLE"
+
+#define HEALTH_REASON_ALL_UPSTREAMS_DISCONNECTED        "ALL_UPSTREAMS_DISCONNECTED"
+#define HEALTH_REASON_TRAFFIC_DATA_PLANE_STALLED        "TRAFFIC_DATA_PLANE_STALLED"
+#define HEALTH_REASON_METADATA_NETWORK_UNAVAILABLE      "METADATA_NETWORK_UNAVAILABLE"
+#define HEALTH_REASON_METADATA_DATA_PLANE_STALLED       "METADATA_DATA_PLANE_STALLED"
+#define HEALTH_REASON_TRAFFIC_INBOUND_QUEUE_STALLED     "TRAFFIC_INBOUND_QUEUE_STALLED"
+#define HEALTH_REASON_METADATA_INBOUND_QUEUE_STALLED    "METADATA_INBOUND_QUEUE_STALLED"
+#define HEALTH_REASON_UPSTREAM_CONNECTIVITY_DEGRADED    "UPSTREAM_CONNECTIVITY_DEGRADED"
+#define HEALTH_REASON_METADATA_UPDATES_MISSED           "METADATA_UPDATES_MISSED"
+#define HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE       "TRAFFIC_NETWORK_UNAVAILABLE"
+
+// ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
 namespace fne_restapi {
@@ -2225,15 +2248,15 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     health["observedAtMs"].set<uint64_t>(now);
 
     json::object process = json::object();
-    process["status"].set<std::string>("healthy");
+    process["status"].set<std::string>(HEALTH_HEALTHY);
     const bool restApiResponsive = true;
     process["restApiResponsive"].set<bool>(restApiResponsive);
     health["process"].set<json::object>(process);
 
     // check if the traffic network is available and healthy
     if (m_network == nullptr) {
-        health["overall"].set<std::string>("failed");
-        reasonCodes.push_back(json::value("TRAFFIC_NETWORK_UNAVAILABLE"));
+        health["overall"].set<std::string>(HEALTH_FAILED);
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE));
         reasons.push_back(json::value("traffic network is not initialized"));
         health["reasonCodes"].set<json::array>(reasonCodes);
         health["reasons"].set<json::array>(reasons);
@@ -2262,17 +2285,17 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
 
     // construct JSON objects representing the status of the traffic, metadata, and overall data planes
     json::object trafficPlane = json::object();
-    trafficPlane["status"].set<std::string>(trafficPlaneInitializing ? "initializing" : (trafficPlaneStalled ? "failed" : "healthy"));
+    trafficPlane["status"].set<std::string>(trafficPlaneInitializing ? HEALTH_INIT : (trafficPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY));
     trafficPlane["epoch"].set<uint64_t>(trafficEpoch);
     trafficPlane["lastTickAgeMs"].set<uint64_t>(trafficTickAge);
 
     json::object metadataPlane = json::object();
-    metadataPlane["status"].set<std::string>(metadataUnavailable ? "unavailable" : (metadataPlaneInitializing ? "initializing" : (metadataPlaneStalled ? "failed" : "healthy")));
+    metadataPlane["status"].set<std::string>(metadataUnavailable ? HEALTH_UNAVAILABLE : (metadataPlaneInitializing ? HEALTH_INIT : (metadataPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY)));
     metadataPlane["epoch"].set<uint64_t>(metadataEpoch);
     metadataPlane["lastTickAgeMs"].set<uint64_t>(metadataTickAge);
 
     json::object dataPlane = json::object();
-    dataPlane["status"].set<std::string>(dataPlaneInitializing ? "initializing" : (dataPlaneStalled ? "failed" : "healthy"));
+    dataPlane["status"].set<std::string>(dataPlaneInitializing ? HEALTH_INIT : (dataPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY));
     dataPlane["loopStallThresholdMs"].set<uint64_t>(loopStallThreshold);
     dataPlane["traffic"].set<json::object>(trafficPlane);
     dataPlane["metadata"].set<json::object>(metadataPlane);
@@ -2316,7 +2339,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     metadataQueue["progressing"].set<bool>(metadataQueueProgressing);
 
     json::object queues = json::object();
-    queues["status"].set<std::string>(queueStalled ? "failed" : "healthy");
+    queues["status"].set<std::string>(queueStalled ? HEALTH_FAILED : HEALTH_HEALTHY);
     queues["stallThresholdMs"].set<uint64_t>(queueStallThreshold);
     queues["trafficInboundWorkerQueue"].set<json::object>(inboundQueue);
     queues["metadataInboundWorkerQueue"].set<json::object>(metadataQueue);
@@ -2386,7 +2409,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     const bool partitioned = configuredUpstreams > 0U && connectedUpstreams == 0U;
     const bool upstreamDegraded = configuredUpstreams > connectedUpstreams && connectedUpstreams > 0U;
     json::object connectivity = json::object();
-    connectivity["status"].set<std::string>(partitioned ? "partitioned" : ((upstreamDegraded || metadataDegraded) ? "degraded" : "healthy"));
+    connectivity["status"].set<std::string>(partitioned ? HEALTH_PARTITIONED : ((upstreamDegraded || metadataDegraded) ? HEALTH_DEGRADED : HEALTH_HEALTHY));
     connectivity["configuredUpstreams"].set<uint32_t>(configuredUpstreams);
     connectivity["connectedUpstreams"].set<uint32_t>(connectedUpstreams);
     connectivity["connectedPeers"].set<uint32_t>(connectedPeers);
@@ -2402,7 +2425,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     const bool trafficSeen = lastProtocolPacket != 0U;
     const bool trafficIdle = !trafficSeen || ageMs(lastProtocolPacket) > trafficIdleThreshold;
     json::object traffic = json::object();
-    traffic["status"].set<std::string>(trafficIdle ? "idle" : "healthy");
+    traffic["status"].set<std::string>(trafficIdle ? HEALTH_IDLE : HEALTH_HEALTHY);
     const uint64_t packetsReceived = m_network->m_healthPacketsReceived.load(std::memory_order_relaxed);
     const uint64_t protocolPacketsReceived = m_network->m_healthProtocolPacketsReceived.load(std::memory_order_relaxed);
     const uint64_t lastPacketAge = ageMs(lastPacket);
@@ -2424,7 +2447,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     json::object spanningTree = json::object();
     const bool treeAvailable = m_network->m_treeRoot != nullptr;
     const uint32_t knownNodes = treeAvailable ? network::SpanningTree::countChildren(m_network->m_treeRoot) + 1U : 0U;
-    spanningTree["status"].set<std::string>(treeAvailable ? "healthy" : "unavailable");
+    spanningTree["status"].set<std::string>(treeAvailable ? HEALTH_HEALTHY : HEALTH_UNAVAILABLE);
     const bool spanningTreeEnabled = m_network->m_enableSpanningTree;
     const uint32_t rootId = treeAvailable ? m_network->m_treeRoot->id() : 0U;
     spanningTree["enabled"].set<bool>(spanningTreeEnabled);
@@ -2434,56 +2457,56 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     health["spanningTree"].set<json::object>(spanningTree);
 
     // determine the overall health status of the network based on individual components
-    std::string overall = "healthy";
+    std::string overall = HEALTH_HEALTHY;
     if (dataPlaneInitializing) {
-        overall = "initializing";
+        overall = HEALTH_INIT;
     }
 
-    if (trafficIdle && overall == "healthy") {
-        overall = "idle";
+    if (trafficIdle && overall == HEALTH_HEALTHY) {
+        overall = HEALTH_IDLE;
     }
 
     if (upstreamDegraded || metadataDegraded || !treeAvailable) {
-        overall = "degraded";
+        overall = HEALTH_DEGRADED;
     }
 
     if (partitioned) {
-        overall = "partitioned";
-        reasonCodes.push_back(json::value("ALL_UPSTREAMS_DISCONNECTED"));
+        overall = HEALTH_PARTITIONED;
+        reasonCodes.push_back(json::value(HEALTH_REASON_ALL_UPSTREAMS_DISCONNECTED));
         reasons.push_back(json::value("all configured upstream FNE connections are disconnected"));
     }
 
     if (dataPlaneStalled || queueStalled) {
-        overall = "failed";
+        overall = HEALTH_FAILED;
     }
 
     if (trafficPlaneStalled) {
-        reasonCodes.push_back(json::value("TRAFFIC_DATA_PLANE_STALLED"));
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_DATA_PLANE_STALLED));
         reasons.push_back(json::value("traffic processing loop is not progressing"));
     }
 
     if (metadataPlaneStalled) {
-        reasonCodes.push_back(json::value(metadataUnavailable ? "METADATA_NETWORK_UNAVAILABLE" : "METADATA_DATA_PLANE_STALLED"));
+        reasonCodes.push_back(json::value(metadataUnavailable ? HEALTH_REASON_METADATA_NETWORK_UNAVAILABLE : HEALTH_REASON_METADATA_DATA_PLANE_STALLED));
         reasons.push_back(json::value(metadataUnavailable ? "metadata network is not initialized" : "metadata processing loop is not progressing"));
     }
 
     if (trafficQueueStalled) {
-        reasonCodes.push_back(json::value("TRAFFIC_INBOUND_QUEUE_STALLED"));
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_INBOUND_QUEUE_STALLED));
         reasons.push_back(json::value("traffic inbound worker queue contains stale work"));
     }
 
     if (metadataQueueStalled) {
-        reasonCodes.push_back(json::value("METADATA_INBOUND_QUEUE_STALLED"));
+        reasonCodes.push_back(json::value(HEALTH_REASON_METADATA_INBOUND_QUEUE_STALLED));
         reasons.push_back(json::value("metadata inbound worker queue contains stale work"));
     }
 
     if (upstreamDegraded) {
-        reasonCodes.push_back(json::value("UPSTREAM_CONNECTIVITY_DEGRADED"));
+        reasonCodes.push_back(json::value(HEALTH_REASON_UPSTREAM_CONNECTIVITY_DEGRADED));
         reasons.push_back(json::value("one or more configured upstream FNE connections are disconnected"));
     }
 
     if (metadataDegraded) {
-        reasonCodes.push_back(json::value("METADATA_UPDATES_MISSED"));
+        reasonCodes.push_back(json::value(HEALTH_REASON_METADATA_UPDATES_MISSED));
         reasons.push_back(json::value("one or more child FNEs have missed metadata updates"));
     }
 
