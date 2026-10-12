@@ -189,6 +189,7 @@ namespace p25
             bool m_noStatusAck;
             bool m_noMessageAck;
             bool m_unitToUnitAvailCheck;
+            bool m_telephoneInterconnect;
 
             uint8_t m_convFallbackPacketDelay;
             bool m_convFallback;

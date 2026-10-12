@@ -343,6 +343,9 @@ protocols:
         noMessageAck: true
         # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
         unitToUnitAvailCheck: false
+        # Flag indicating telephone interconnect requests are forwarded to the network for a telephone
+        #   interconnect gateway peer to service. (If disabled, telephone interconnect requests are denied.)
+        telephoneInterconnect: false
         # Flag indicating explicit source ID support is enabled.
         allowExplicitSourceId: false
         # Flag indicating whether or not the host will disable sending deny responses when operating in conventional.

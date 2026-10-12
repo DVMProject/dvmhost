@@ -310,6 +310,37 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
             }
             break;
+            case TSBKO::ISP_TELE_INT_PSTN_REQ:
+            {
+                // make sure control data is supported
+                IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBKO::ISP_TELE_INT_PSTN_REQ, srcId);
+
+                // validate the source RID
+                VALID_SRCID(tsbk->toString(true), TSBKO::ISP_TELE_INT_PSTN_REQ, srcId);
+
+                if (!m_telephoneInterconnect || m_p25->m_network == nullptr) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, unsupported service, srcId = %u", tsbk->toString(true).c_str(), srcId);
+                    writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::ISP_TELE_INT_PSTN_REQ);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+
+                // verify the source RID is registered
+                VERIFY_SRCID_REG(tsbk->toString(true), TSBKO::ISP_TELE_INT_PSTN_REQ, srcId);
+
+                ISP_TELE_INT_PSTN_REQ* isp = static_cast<ISP_TELE_INT_PSTN_REQ*>(tsbk.get());
+                if (m_verbose) {
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, pstnAddress = %u, srcId = %u",
+                        tsbk->toString(true).c_str(), isp->getPSTNAddress(), srcId);
+                }
+
+                ::ActivityLog("P25", true, "telephone interconnect request from %u to PSTN address %u", srcId, isp->getPSTNAddress());
+
+                // the telephone interconnect gateway places the call and demands the channel grant
+                RF_TO_WRITE_NET(isp);
+                writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_TELE_INT_PSTN_REQ, false, true);
+            }
+            break;
             case TSBKO::IOSP_TELE_INT_ANS:
             {
                 // make sure control data is supported
@@ -318,7 +349,23 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 // validate the source RID
                 VALID_SRCID(tsbk->toString(true), TSBKO::IOSP_TELE_INT_ANS, srcId);
 
-                writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::IOSP_TELE_INT_ANS);
+                if (!m_telephoneInterconnect || m_p25->m_network == nullptr) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, unsupported service, srcId = %u", tsbk->toString(true).c_str(), srcId);
+                    writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::IOSP_TELE_INT_ANS);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+
+                IOSP_TELE_INT_ANS* iosp = static_cast<IOSP_TELE_INT_ANS*>(tsbk.get());
+                if (m_verbose) {
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, response = $%02X, srcId = %u",
+                        tsbk->toString(true).c_str(), iosp->getResponse(), srcId);
+                }
+
+                ::ActivityLog("P25", true, "telephone interconnect answer response from %u", srcId);
+
+                // forward the received frame as-is; re-encoding would produce the OSP (answer request) layout
+                writeNetworkRF(iosp, data + 2U, true);
             }
             break;
             case TSBKO::ISP_SNDCP_CH_REQ:
@@ -474,6 +521,13 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 ::ActivityLog("P25", true, "cancel service request from %u", srcId);
+
+                // the telephone interconnect gateway must release the call
+                uint8_t service = isp->getService();
+                if (m_telephoneInterconnect && (service == TSBKO::IOSP_TELE_INT_DIAL || service == TSBKO::ISP_TELE_INT_PSTN_REQ ||
+                    service == TSBKO::IOSP_TELE_INT_ANS)) {
+                    RF_TO_WRITE_NET(isp);
+                }
 
                 writeRF_TSDU_ACK_FNE(srcId, isp->getService(), false, true);
             }
@@ -870,6 +924,32 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         else {
                             VERBOSE_LOG_TSBK_NET(tsbk->toString(), srcId, dstId);
                         }
+                    }
+                    break;
+                    case TSBKO::IOSP_TELE_INT_DIAL:
+                    case TSBKO::ISP_TELE_INT_PSTN_REQ:
+                        return true; // don't allow this to write to the air
+                    case TSBKO::IOSP_TELE_INT_ANS:
+                    {
+                        if (!m_telephoneInterconnect) {
+                            return true; // don't allow this to write to the air
+                        }
+
+                        // validate the target RID
+                        VALID_DSTID_NET(tsbk->toString(), dstId);
+
+                        // only alert units registered to this site
+                        if (!m_p25->m_affiliations->isUnitReg(dstId)) {
+                            return true; // don't allow this to write to the air
+                        }
+
+                        IOSP_TELE_INT_ANS* iosp = static_cast<IOSP_TELE_INT_ANS*>(tsbk.get());
+                        if (m_verbose) {
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, digits = %s, dstId = %u",
+                                tsbk->toString().c_str(), iosp->getDigits().c_str(), dstId);
+                        }
+
+                        ::ActivityLog("P25", false, "telephone interconnect answer request to %u", dstId);
                     }
                     break;
                     case TSBKO::IOSP_STS_UPDT:
@@ -1295,6 +1375,7 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_noStatusAck(false),
     m_noMessageAck(true),
     m_unitToUnitAvailCheck(true),
+    m_telephoneInterconnect(false),
     m_convFallbackPacketDelay(0U),
     m_convFallback(false),
     m_adjSiteUpdateTimer(1000U),

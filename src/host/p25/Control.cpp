@@ -271,6 +271,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_control->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_control->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
+    m_control->m_telephoneInterconnect = p25Protocol["telephoneInterconnect"].as<bool>(false);
 
     m_sndcpSupport = p25Protocol["sndcpSupport"].as<bool>(false);
 
@@ -531,6 +532,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    No Status ACK: %s", m_control->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");
+        LogInfo("    Telephone Interconnect: %s", m_control->m_telephoneInterconnect ? "yes" : "no");
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
         LogInfo("    Demand Unit Registration for Refused Affiliation: %s", m_demandUnitRegForRefusedAff ? "yes" : "no");
