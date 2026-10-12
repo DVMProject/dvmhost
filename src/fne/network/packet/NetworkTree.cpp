@@ -29,13 +29,29 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
         return;
 
     if (req->fneHeader.getSubFunction() == NET_SUBFUNC::NET_TREE_LIST) { // FNE Network Tree List
-        if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-            FNEPeerConnection* connection = network->m_peers[peerId];
-            if (connection != nullptr) {
-                std::string ip = udp::Socket::address(req->address);
+        if (peerId > 0) {
+            bool peerFound = false;
+            bool peerAuthorized = false;
+            std::string peerIdentity;
 
+            // Snapshot the connection properties while holding the peer map lock. Do not
+            // retain the raw connection pointer: stale-peer cleanup may erase and delete
+            // the connection while this metadata task is processing the STP update.
+            network->m_peers.shared_lock();
+            auto peerIt = network->m_peers.find(peerId);
+            if (peerIt != network->m_peers.end() && peerIt->second != nullptr) {
+                FNEPeerConnection* connection = peerIt->second;
+                std::string ip = udp::Socket::address(req->address);
+                peerFound = true;
+                peerIdentity = connection->identWithQualifier();
+                peerAuthorized = connection->connected() && connection->address() == ip &&
+                    connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
+            }
+            network->m_peers.shared_unlock();
+
+            if (peerFound) {
                 // validate peer (simple validation really)
-                if (connection->connected() && connection->address() == ip && connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
+                if (peerAuthorized) {
                     DECLARE_UINT8_ARRAY(rawPayload, req->length);
                     ::memcpy(rawPayload, req->buffer, req->length);
 
@@ -44,7 +60,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                     PacketBufferEntryPtr pkt = findOrCreatePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, "Network Tree, Tree List", streamId);
                     if (pkt == nullptr) {
                         LogError(LOG_STP, "PEER %u (%s) Network Tree, Tree List, failed to initialize packet buffer", peerId,
-                            connection->identWithQualifier().c_str());
+                            peerIdentity.c_str());
                         return;
                     }
 
@@ -57,7 +73,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
 
                     if (!pktLock.owns_lock()) {
                         LogError(LOG_STP, "PEER %u (%s) Network Tree, Tree List, timeout waiting for packet buffer to unlock", peerId,
-                            connection->identWithQualifier().c_str());
+                            peerIdentity.c_str());
                         // detach the stalled transfer without destroying state that
                         // another worker still owns; its shared_ptr keeps it alive
                         erasePacketBufferEntry(mdNetwork->m_peerTreeListPkt, peerId, pkt);
@@ -73,7 +89,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
 
                     if (pkt->streamId != streamId) {
                         LogError(LOG_STP, "PEER %u (%s) Network Tree, Tree List, stream ID mismatch, expected %u, got %u", peerId,
-                            connection->identWithQualifier().c_str(), pkt->streamId, streamId);
+                            peerIdentity.c_str(), pkt->streamId, streamId);
                         pkt->buffer->clear();
                         pkt->streamId = streamId;
                     }
@@ -88,7 +104,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                         json::value v;
                         std::string err = json::parse(v, payload);
                         if (!err.empty()) {
-                            LogError(LOG_STP, "PEER %u (%s) error parsing network tree list, %s", peerId, connection->identWithQualifier().c_str(), err.c_str());
+                            LogError(LOG_STP, "PEER %u (%s) error parsing network tree list, %s", peerId, peerIdentity.c_str(), err.c_str());
                             pkt->buffer->clear();
                             pkt->buffer.reset();
                             pkt->streamId = 0U;
@@ -101,7 +117,7 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                         else  {
                             // ensure parsed JSON is an array
                             if (!v.is<json::array>()) {
-                                LogError(LOG_STP, "PEER %u (%s) error parsing network tree list, data was not valid", peerId, connection->identWithQualifier().c_str());
+                                LogError(LOG_STP, "PEER %u (%s) error parsing network tree list, data was not valid", peerId, peerIdentity.c_str());
                                 pkt->buffer->clear();
                                 pkt->buffer.reset();
                                 pkt->streamId = 0U;
@@ -113,19 +129,21 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
                             }
                             else {
                                 json::array arr = v.get<json::array>();
-                                LogInfoEx(LOG_STP, "PEER %u (%s) Network Tree, Tree List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
-
-                                std::lock_guard<std::mutex> guard(network->m_treeLock);
+                                LogInfoEx(LOG_STP, "PEER %u (%s) Network Tree, Tree List, updating %u peer entries", peerId, peerIdentity.c_str(), arr.size());
 
                                 std::vector<uint32_t> duplicatePeers;
-                                SpanningTree::deserializeTree(arr, network->m_treeRoot, &duplicatePeers);
+                                {
+                                    std::lock_guard<std::mutex> guard(network->m_treeLock);
+                                    SpanningTree::deserializeTree(arr, network->m_treeRoot, &duplicatePeers);
+                                    network->logSpanningTree();
+                                }
 
-                                network->logSpanningTree(connection);
-
+                                // Network writes acquire the peer map lock, so keep them
+                                // outside m_treeLock to avoid extending the lock chain.
                                 if (duplicatePeers.size() > 0U) {
                                     for (auto dupPeerId : duplicatePeers) {
                                         LogWarning(LOG_STP, "PEER %u (%s) Network Tree, Tree Change, disconnecting duplicate peer connection for PEER %u to prevent network loop",
-                                            peerId, connection->identWithQualifier().c_str(), dupPeerId);
+                                            peerId, peerIdentity.c_str(), dupPeerId);
                                         network->writeTreeDisconnect(peerId, dupPeerId);
                                     }
                                 }
