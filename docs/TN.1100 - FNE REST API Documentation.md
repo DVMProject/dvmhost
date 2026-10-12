@@ -905,7 +905,8 @@ X-DVM-Auth-Token: {token}
       "peerReplica": false,
       "canRequestKeys": false,
       "canIssueInhibit": false,
-      "hasCallPriority": false
+      "hasCallPriority": false,
+      "telephoneInterconnect": false
     }
   ]
 }
@@ -919,6 +920,7 @@ X-DVM-Auth-Token: {token}
 - `canRequestKeys`: Whether peer can request encryption keys
 - `canIssueInhibit`: Whether peer can issue radio inhibit commands
 - `hasCallPriority`: Whether peer has call priority (can preempt other calls)
+- `telephoneInterconnect`: Whether peer is a telephone interconnect gateway
 
 ---
 
@@ -943,7 +945,8 @@ Content-Type: application/json
   "peerReplica": false,
   "canRequestKeys": false,
   "canIssueInhibit": false,
-  "hasCallPriority": false
+  "hasCallPriority": false,
+  "telephoneInterconnect": false
 }
 ```
 
@@ -955,6 +958,7 @@ Content-Type: application/json
 - `canRequestKeys` (optional): Whether peer can request encryption keys (default: false)
 - `canIssueInhibit` (optional): Whether peer can issue radio inhibit commands (default: false)
 - `hasCallPriority` (optional): Whether peer has call priority (default: false)
+- `telephoneInterconnect` (optional): Whether peer is a telephone interconnect gateway (default: false)
 
 **Response (Success):**
 ```json
@@ -991,7 +995,7 @@ or
   "message": "peerReplica was not a valid boolean"
 }
 ```
-or similar validation errors for `canRequestKeys`, `canIssueInhibit`, or `hasCallPriority`
+or similar validation errors for `canRequestKeys`, `canIssueInhibit`, `hasCallPriority`, or `telephoneInterconnect`
 
 **Notes:**
 - Changes are in-memory only until `/peer/commit` is called

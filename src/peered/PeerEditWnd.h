@@ -154,6 +154,7 @@ private:
     FCheckBox m_canReqKeysEnabled{"Request Keys", &m_configGroup};
     FCheckBox m_canInhibitEnabled{"Issue Inhibit", &m_configGroup};
     FCheckBox m_callPriorityEnabled{"Call Priority", &m_configGroup};
+    FCheckBox m_telIntEnabled{"Interconnect", &m_configGroup};
 
     FButtonGroup m_jitterGroup{"Adaptive Jitter Buffer", this};
     FCheckBox m_jitterEnabled{"Enabled", &m_jitterGroup};
@@ -271,7 +272,7 @@ private:
 
         // configuration
         {
-            m_configGroup.setGeometry(FPoint(39, 5), FSize(23, 6));
+            m_configGroup.setGeometry(FPoint(39, 5), FSize(23, 7));
 
             m_peerReplicaEnabled.setGeometry(FPoint(2, 1), FSize(10, 1));
             m_peerReplicaEnabled.setChecked(m_rule.peerReplica());
@@ -295,6 +296,12 @@ private:
             m_callPriorityEnabled.setChecked(m_rule.hasCallPriority());
             m_callPriorityEnabled.addCallback("toggled", [&]() {
                 m_rule.hasCallPriority(m_callPriorityEnabled.isChecked());
+            });
+
+            m_telIntEnabled.setGeometry(FPoint(2, 5), FSize(10, 1));
+            m_telIntEnabled.setChecked(m_rule.telephoneInterconnect());
+            m_telIntEnabled.addCallback("toggled", [&]() {
+                m_rule.telephoneInterconnect(m_telIntEnabled.isChecked());
             });
         }
 
@@ -384,9 +391,10 @@ private:
         bool canRequestKeys = m_rule.canRequestKeys();
         bool canIssueInhibit = m_rule.canIssueInhibit();
         bool hasCallPriority = m_rule.hasCallPriority();
+        bool telephoneInterconnect = m_rule.telephoneInterconnect();
         bool jitterBufferEnabled = m_rule.jitterBufferEnabled();
 
-        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u REPLICA: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u HAS CALL PRIORITY: %u JITTER BUFFER ENABLED: %u", peerAlias.c_str(), peerId, peerReplica, canRequestKeys, canIssueInhibit, hasCallPriority, jitterBufferEnabled);
+        ::LogInfoEx(LOG_HOST, "Peer ALIAS: %s PEERID: %u REPLICA: %u CAN REQUEST KEYS: %u CAN ISSUE INHIBIT: %u HAS CALL PRIORITY: %u TELEPHONE INTERCONNECT: %u JITTER BUFFER ENABLED: %u", peerAlias.c_str(), peerId, peerReplica, canRequestKeys, canIssueInhibit, hasCallPriority, telephoneInterconnect, jitterBufferEnabled);
     }
 
     /*
@@ -457,6 +465,7 @@ private:
                     entry.canRequestKeys(m_rule.canRequestKeys());
                     entry.canIssueInhibit(m_rule.canIssueInhibit());
                     entry.hasCallPriority(m_rule.hasCallPriority());
+                    entry.telephoneInterconnect(m_rule.telephoneInterconnect());
 
                     entry.jitterBufferEnabled(m_rule.jitterBufferEnabled());
                     entry.jitterBufferMaxSize(m_rule.jitterBufferMaxSize());
@@ -498,6 +507,7 @@ private:
                 entry.canRequestKeys(m_rule.canRequestKeys());
                 entry.canIssueInhibit(m_rule.canIssueInhibit());
                 entry.hasCallPriority(m_rule.hasCallPriority());
+                entry.telephoneInterconnect(m_rule.telephoneInterconnect());
 
                 entry.jitterBufferEnabled(m_rule.jitterBufferEnabled());
                 entry.jitterBufferMaxSize(m_rule.jitterBufferMaxSize());

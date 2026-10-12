@@ -258,6 +258,11 @@ bool PeerListLookup::load()
             if (parsed.size() >= 10)
                 jitterBufferMaxWait = (uint32_t)::atoi(parsed[9].c_str());
 
+            // parse telephone interconnect flag
+            bool telephoneInterconnect = false;
+            if (parsed.size() >= 11)
+                telephoneInterconnect = ::atoi(parsed[10].c_str()) == 1;
+
             // parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
@@ -269,6 +274,7 @@ bool PeerListLookup::load()
             entry.canRequestKeys(canRequestKeys);
             entry.canIssueInhibit(canIssueInhibit);
             entry.hasCallPriority(hasCallPriority);
+            entry.telephoneInterconnect(telephoneInterconnect);
             entry.jitterBufferEnabled(jitterBufferEnabled);
             entry.jitterBufferMaxSize(jitterBufferMaxSize);
             entry.jitterBufferMaxWait(jitterBufferMaxWait);
@@ -277,14 +283,15 @@ bool PeerListLookup::load()
 
             // log depending on what was loaded
             if (m_verbose) {
-                LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s", id,
+                LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s%s", id,
                     (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                     (!password.empty() ? "using unique peer password" : "using master password"),
                     (peerReplica) ? ", Replication Enabled" : "",
                     (canRequestKeys) ? ", Can Request Keys" : "",
                     (canIssueInhibit) ? ", Can Issue Inhibit" : "",
                     (hasCallPriority) ? ", Has Call Priority" : "",
-                    (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "");
+                    (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "",
+                    (telephoneInterconnect) ? ", Telephone Interconnect" : "");
             }
         }
     }
@@ -397,7 +404,15 @@ bool PeerListLookup::save(bool quiet)
 
         // add jitter buffer max wait time
         uint32_t jitterBufferMaxWait = entry.second.jitterBufferMaxWait();
-        line += std::to_string(jitterBufferMaxWait);
+        line += std::to_string(jitterBufferMaxWait) + ",";
+
+        // add telephone interconnect flag
+        bool telephoneInterconnect = entry.second.telephoneInterconnect();
+        if (telephoneInterconnect) {
+            line += "1";
+        } else {
+            line += "0";
+        }
 
         line += "\n";
         file << line;

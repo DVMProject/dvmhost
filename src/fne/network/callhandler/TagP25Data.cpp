@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 #include "fne/Defines.h"
@@ -601,6 +602,16 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         else if (!fromUpstream)
                             LogInfoEx(LOG_MASTER, PRV_CALL_START_LOG);
                     }
+                    else if (isTelIntTraffic(control, duid, nullptr)) {
+                        if (!m_network->m_globalAff->isGranted(dstId))
+                            m_network->m_globalAff->grantCh(dstId, srcId, ssrc, fne_lookups::GRANT_TIMER_TIMEOUT, false);
+
+                        #define TEL_INT_CALL_START_LOG "P25, Telephone Interconnect Call Start, peer = %u, ssrc = %u, sysId = $%03X, netId = $%05X, srcId = %u, dstId = %u, streamId = %u, fromUpstream = %u", peerId, ssrc, sysId, netId, srcId, dstId, streamId, fromUpstream
+                        if (m_network->m_logUpstreamCallStartEnd && fromUpstream)
+                            LogInfoEx(LOG_PEER, TEL_INT_CALL_START_LOG);
+                        else if (!fromUpstream)
+                            LogInfoEx(LOG_MASTER, TEL_INT_CALL_START_LOG);
+                    }
                     else {
                         if (!m_network->m_globalAff->isGranted(dstId))
                             m_network->m_globalAff->grantCh(dstId, srcId, ssrc, fne_lookups::GRANT_TIMER_TIMEOUT, true);
@@ -650,6 +661,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
         bool noConnectedPeerRepeat = false;
         bool privateCallInProgress = false;
+        bool telInt = isTelIntTraffic(control, duid, tsbk.get());
 
         // is this a private call in-progress?
         if (m_network->m_restrictPVCallToRegOnly) {
@@ -718,6 +730,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     FNEPeerConnection* conn = peer.second;
                     if (ssrc == peer.first) {
                         // skip the peer if it is the source peer
+                        continue;
+                    }
+
+                    // telephone interconnect traffic only flows between gateway peers and the peer the unit is registered to
+                    if (telInt && !isTelIntPeerPermitted(ssrc, peer.first, conn, dstId)) {
                         continue;
                     }
 
@@ -1456,6 +1473,70 @@ bool TagP25Data::processTSDUToNeighbor(uint8_t* buffer, uint32_t srcPeerId, uint
     return true;
 }
 
+/* Helper to determine if the P25 traffic is telephone interconnect traffic. */
+
+bool TagP25Data::isTelIntTraffic(lc::LC& control, DUID::E duid, const lc::TSBK* tsbk)
+{
+    if (duid == DUID::TSDU) {
+        if (tsbk == nullptr)
+            return false;
+
+        // Motorola SUs may send interconnect TSBKs with their MFId (see TSBKFactory)
+        if (tsbk->getMFId() != MFG_STANDARD && tsbk->getMFId() != MFG_MOT)
+            return false;
+
+        switch (tsbk->getLCO()) {
+            case TSBKO::IOSP_TELE_INT_DIAL:
+            case TSBKO::ISP_TELE_INT_PSTN_REQ:
+            case TSBKO::IOSP_TELE_INT_ANS:
+                return true;
+            case TSBKO::ISP_CAN_SRV_REQ:
+                return tsbk->getService() == TSBKO::IOSP_TELE_INT_DIAL || tsbk->getService() == TSBKO::ISP_TELE_INT_PSTN_REQ ||
+                    tsbk->getService() == TSBKO::IOSP_TELE_INT_ANS;
+            default:
+                return false;
+        }
+    }
+
+    // a TSDU network header carries the TSBK opcode, the LCO is only meaningful for voice and terminators
+    if (duid == DUID::PDU)
+        return false;
+
+    return control.getLCO() == LCO::TEL_INT_VCH_USER && control.isStandardMFId();
+}
+
+/* Helper to determine if the peer is a telephone interconnect gateway. */
+
+bool TagP25Data::isTelIntGateway(uint32_t peerId)
+{
+    lookups::PeerId pid = m_network->m_peerListLookup->find(peerId);
+    return !pid.peerDefault() && pid.telephoneInterconnect();
+}
+
+/* Helper to determine if telephone interconnect traffic may be repeated to a peer. */
+
+bool TagP25Data::isTelIntPeerPermitted(uint32_t srcPeerId, uint32_t dstPeerId, FNEPeerConnection* dstConn, uint32_t dstId)
+{
+    // replica, SysView and neighbor FNE peers apply their own routing
+    if (dstConn != nullptr) {
+        if (dstConn->isReplica() || dstConn->peerClass() == PEER_CONN_CLASS_SYSVIEW || dstConn->peerClass() == PEER_CONN_CLASS_NEIGHBOR)
+            return true;
+    }
+
+    bool dstIsGateway = isTelIntGateway(dstPeerId);
+
+    // traffic from a site is only repeated to gateway peers
+    if (!isTelIntGateway(srcPeerId))
+        return dstIsGateway;
+
+    // traffic from a gateway is only repeated to the site the unit is registered to
+    if (dstIsGateway)
+        return false;
+
+    uint32_t regPeerId = m_network->findPeerUnitReg(dstId);
+    return regPeerId == 0U || regPeerId == dstPeerId;
+}
+
 /* Helper to determine if the peer is permitted for traffic. */
 
 bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid, uint32_t streamId, bool fromUpstream)
@@ -1477,6 +1558,11 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         }
 
         return false;
+    }
+
+    // telephone interconnect calls are individual calls routed by isTelIntPeerPermitted()
+    if (duid != DUID::TSDU && isTelIntTraffic(control, duid, nullptr)) {
+        return true;
     }
 
     FNEPeerConnection* connection = nullptr; // bryanb: this is a possible null ref concurrency issue
@@ -1669,6 +1755,11 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     // always validate a terminator if the source is valid
     if (m_network->m_filterTerminators) {
         if ((duid == DUID::TDU || duid == DUID::TDULC) && control.getDstId() != 0U) {
+            // is this a telephone interconnect call?
+            if (isTelIntTraffic(control, duid, nullptr)) {
+                return true;
+            }
+
             // is this a private call?
             auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
                 if (x.second.dstId == control.getDstId()) {
@@ -1737,8 +1828,9 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
         }
     }
 
-    // is this a private call?
-    if ((control.getLCO() == LCO::PRIVATE) || privateCallInProgress) {
+    // is this a private or telephone interconnect call?
+    bool telIntCall = (duid != DUID::TSDU) && isTelIntTraffic(control, duid, nullptr);
+    if ((control.getLCO() == LCO::PRIVATE) || telIntCall || privateCallInProgress) {
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
         if (!rid.radioDefault()) {

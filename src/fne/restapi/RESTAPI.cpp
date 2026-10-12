@@ -1051,6 +1051,7 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
                 bool canRequestKeys = entry.second.canRequestKeys();
                 bool canIssueInhibit = entry.second.canIssueInhibit();
                 bool hasCallPriority = entry.second.hasCallPriority();
+                bool telephoneInterconnect = entry.second.telephoneInterconnect();
                 peerObj["peerId"].set<uint32_t>(peerId);
                 peerObj["peerAlias"].set<std::string>(peerAlias);
                 peerObj["peerPassword"].set<bool>(peerPassword);
@@ -1058,6 +1059,7 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
                 peerObj["canRequestKeys"].set<bool>(canRequestKeys);
                 peerObj["canIssueInhibit"].set<bool>(canIssueInhibit);
                 peerObj["hasCallPriority"].set<bool>(hasCallPriority);
+                peerObj["telephoneInterconnect"].set<bool>(telephoneInterconnect);
                 peers.push_back(json::value(peerObj));
             }
         }
@@ -1162,6 +1164,18 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
         hasCallPriority = req["hasCallPriority"].get<bool>();
     }
 
+    // Get telephoneInterconnect
+    bool telephoneInterconnect = false;
+    if (req.find("telephoneInterconnect") != req.end()) {
+        // Validate
+        if (!req["telephoneInterconnect"].is<bool>()) {
+            errorPayload(reply, "telephoneInterconnect was not a valid boolean");
+            return;
+        }
+        // Get
+        telephoneInterconnect = req["telephoneInterconnect"].get<bool>();
+    }
+
     PeerId entry = PeerId(peerId, peerAlias, peerPassword, false);
 
     // Set additional values
@@ -1169,6 +1183,7 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
     entry.canRequestKeys(canRequestKeys);
     entry.canIssueInhibit(canIssueInhibit);
     entry.hasCallPriority(hasCallPriority);
+    entry.telephoneInterconnect(telephoneInterconnect);
 
     LogInfoEx(LOG_REST, "request to add peer ACL, peerId = %u", peerId);
 
