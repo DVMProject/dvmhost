@@ -528,6 +528,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 if (m_telephoneInterconnect && (service == TSBKO::IOSP_TELE_INT_DIAL || service == TSBKO::ISP_TELE_INT_PSTN_REQ ||
                     service == TSBKO::IOSP_TELE_INT_ANS)) {
                     RF_TO_WRITE_NET(isp);
+
+                    if (m_telIntGrants.find(srcId) != m_telIntGrants.end()) {
+                        m_p25->m_affiliations->releaseGrant(srcId, false);
+                    }
                 }
 
                 writeRF_TSDU_ACK_FNE(srcId, isp->getService(), false, true);
@@ -1377,6 +1381,7 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_noMessageAck(true),
     m_unitToUnitAvailCheck(true),
     m_telephoneInterconnect(false),
+    m_telIntGrants(),
     m_convFallbackPacketDelay(0U),
     m_convFallback(false),
     m_adjSiteUpdateTimer(1000U),
@@ -2229,7 +2234,8 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
 
 /* Helper to write a grant packet. */
 
-bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
+bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo,
+    bool telInt)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
@@ -2527,6 +2533,13 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
+            // there is no explicit channel form of the telephone interconnect grant
+            if (telInt && voiceChData.isExplicitCh()) {
+                ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, OSP_TELE_INT_VCH_GRANT (Telephone Interconnect Voice Channel Grant), explicit channels are not supported, chNo = %u-%u", voiceChData.chId(), chNo);
+                m_p25->m_affiliations->releaseGrant(dstId, false);
+                return false;
+            }
+
             // callback RPC to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
@@ -2568,6 +2581,36 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 else {
                     ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
                 }
+            }
+
+            if (telInt) {
+                ::ActivityLog("P25", !net, "telephone interconnect grant to %u", dstId);
+
+                std::unique_ptr<OSP_TELE_INT_VCH_GRANT> osp = std::make_unique<OSP_TELE_INT_VCH_GRANT>();
+                osp->setMFId(MFG_STANDARD); // under MFG_MOT this opcode is not a telephone interconnect grant
+                osp->setSrcId(dstId);
+                osp->setGrpVchId(voiceChData.chId());
+                osp->setGrpVchNo(chNo);
+                osp->setEmergency(emergency);
+                osp->setEncrypted(encryption);
+                osp->setPriority(priority);
+
+                if (m_verbose) {
+                    LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, callTimer = %u, dstId = %u",
+                        osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getCallTimer(), dstId);
+                }
+
+                // the grant is held for the whole call (message trunking) instead of per transmission
+                m_telIntGrants.insert(dstId);
+
+                // transmit telephone interconnect grant
+                writeRF_TSDU_SBF_Imm(osp.get(), net);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(osp.get(), net);
+                }
+
+                return true;
             }
 
             if (!net) {

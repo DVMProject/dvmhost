@@ -435,6 +435,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
+        m_control->m_telIntGrants.erase(dstId);
+
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
             ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
@@ -1668,9 +1670,23 @@ void Control::processNetwork()
                     return;
                 }
 
-                // validate the target ID, if the target is a talkgroup
-                if (!acl::AccessControl::validateTGId(dstId)) {
-                    return;
+                // a telephone interconnect grant demand targets the subscriber unit in dstId
+                bool telInt = (lco == LCO::TEL_INT_VCH_USER) && control.isStandardMFId();
+                if (telInt) {
+                    if (!m_control->m_telephoneInterconnect) {
+                        return;
+                    }
+
+                    // validate the target RID
+                    if (!acl::AccessControl::validateSrcId(dstId)) {
+                        return;
+                    }
+                }
+                else {
+                    // validate the target ID, if the target is a talkgroup
+                    if (!acl::AccessControl::validateTGId(dstId)) {
+                        return;
+                    }
                 }
 
                 if (grantEncrypt)
@@ -1681,28 +1697,48 @@ void Control::processNetwork()
                     (control.getPriority() & 0x07U);                                    // Priority
 
                 if (m_verbose) {
-                    LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, encrypted = %u", srcId, dstId, unitToUnit, grantEncrypt);
+                    LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, telInt = %u, encrypted = %u", srcId, dstId, unitToUnit, telInt, grantEncrypt);
                 }
 
                 // are we denying the grant?
                 if (grantDenial) {
-                    m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (!unitToUnit) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH);
+                    if (telInt) {
+                        // the telephone interconnect gateway could not complete the call for the unit
+                        m_control->writeRF_TSDU_Deny(dstId, WUID_FNE, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_TELE_INT_DIAL);
+                    }
+                    else {
+                        m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (!unitToUnit) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH);
+                    }
                     return;
                 }
 
                 if (!m_affiliations->isGranted(dstId)) {
                     // perform grant response logic
-                    if (m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit, true)) {
+                    if (m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit && !telInt, true, false, 0U, telInt)) {
                         m_netLastSrcId = srcId;
                         m_netLastDstId = dstId;
                     }
+                }
+                else if (telInt) {
+                    // repeated telephone interconnect grant demands keep the call's grant alive
+                    m_affiliations->touchGrant(dstId);
                 }
 
                 return;
             }
 
+            // telephone interconnect grants are held for the whole call and only released by the TDULC that ends it
+            if (m_enableControl && m_dedicatedControl && m_control->m_telIntGrants.find(dstId) != m_control->m_telIntGrants.end()) {
+                if (duid == DUID::TDULC) {
+                    if (m_verbose) {
+                        LogInfoEx(LOG_NET, P25_TDULC_STR ", telephone interconnect call end, srcId = %u, dstId = %u", srcId, dstId);
+                    }
+
+                    m_affiliations->releaseGrant(dstId, false);
+                }
+            }
             // if we're a control channel and this is a TDU trying to terminate a call release the channel
-            if (duid == DUID::TDU && m_enableControl && m_dedicatedControl && m_explicitTDUGrantRelease) {
+            else if (duid == DUID::TDU && m_enableControl && m_dedicatedControl && m_explicitTDUGrantRelease) {
                 if (srcId == 0U && dstId == 0U) {
                     LogError(LOG_NET, "P25, invalid call, srcId = %u, dstId = %u", srcId, dstId);
                     return;
