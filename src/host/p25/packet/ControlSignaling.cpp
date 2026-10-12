@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2022 Jason-UWU
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 #include "Defines.h"
