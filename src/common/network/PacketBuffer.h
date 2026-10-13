@@ -30,6 +30,9 @@
 #define FRAG_BLOCK_SIZE 534
 #define FRAG_SIZE (FRAG_HDR_SIZE + FRAG_BLOCK_SIZE)
 
+#define EXTENDED_FRAG_HDR_SIZE 12
+#define EXTENDED_FRAG_BLOCK_SIZE (FRAG_SIZE - EXTENDED_FRAG_HDR_SIZE)
+
 namespace network
 {
     // ---------------------------------------------------------------------------
@@ -40,8 +43,8 @@ namespace network
      * @brief Represents a fragmented packet buffer.
      * @ingroup network_core
      * \code{.unparsed}
-     *  Below is the representation of the fragment layout for a packet buffer message. The ultimate
-     *  buffer is variable length up to a maximum of 534 bytes for a single fragment.
+     *  Below is the representation of the 256 fragment layout for a packet buffer message.
+     *  The payload is 534 bytes and size metadata is present only in block zero.
      * 
      *  Byte 0               1               2               3
      *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
@@ -51,6 +54,23 @@ namespace network
      *      | Compressed Length                                             |
      *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      *      | Block Number  | Total Blocks  | Payload ..................... |
+     *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     *
+     *  Extended PacketBuffer, fragments retain the same 544-byte total size, repeat the size
+     *  metadata in every block so that out-of-order blocks are self-identifying, and use 16-bit
+     *  block fields. The payload is consequently 532 bytes. "Last Block" is the zero-based ID of
+     *  the final block, permitting up to 65,535 blocks (IDs 0 through 65,534).
+     *
+     *  Byte 0               1               2               3
+     *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+     *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     *      | Uncompressed Length                                           |
+     *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     *      | Compressed Length                                             |
+     *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     *      | Block Number                  | Last Block                    |
+     *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     *      | Payload ..................................................... |
      *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * \endcode
      */
@@ -113,14 +133,22 @@ namespace network
             /**
              * @brief Block ID of the fragment.
              */
-            uint8_t blockId;
+            uint16_t blockId;
+            /**
+             * @brief Total number of blocks in the packet.
+             */
+            uint16_t blockCount;
+            /**
+             * @brief Flag indicating that this is an extended (V2) fragment.
+             */
+            bool extended;
 
             /**
              * @brief Fragment data.
              */
             uint8_t* data;
         };
-        concurrent::unordered_map<uint8_t, Fragment*> fragments;
+        concurrent::unordered_map<uint16_t, Fragment*> fragments;
 
     private:
         bool m_compression;

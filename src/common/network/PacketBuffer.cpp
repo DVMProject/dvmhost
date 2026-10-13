@@ -23,7 +23,11 @@ using namespace compress;
 // ---------------------------------------------------------------------------
 
 #define MAX_FRAGMENT_SIZE 8192 * 1024 // 8MB max
+
 #define MAX_BLOCK_CNT 256U
+#define MAX_EX_BLOCK_CNT 65535U
+
+#define MAX_256_COMPRESSED_SIZE (MAX_BLOCK_CNT * FRAG_BLOCK_SIZE)
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -58,13 +62,58 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
         *outLength = 0;
     }
 
-    uint8_t curBlock = data[8U];
-    uint8_t blockCnt = data[9U];
+    uint32_t size = GET_UINT32(data, 0U);
+    uint32_t compressedSize = GET_UINT32(data, 4U);
+    bool extended = compressedSize > MAX_256_COMPRESSED_SIZE;
 
-    if (curBlock > blockCnt) {
+    uint16_t curBlock = data[8U];
+    uint16_t lastBlock = data[9U];
+
+    if (extended) {
+        curBlock = GET_UINT16(data, 8U);
+        lastBlock = GET_UINT16(data, 10U);
+    }
+
+    uint32_t blockCnt = (uint32_t)lastBlock + 1U;
+    uint32_t headerSize = extended ? EXTENDED_FRAG_HDR_SIZE : FRAG_HDR_SIZE;
+    uint32_t blockSize = extended ? EXTENDED_FRAG_BLOCK_SIZE : FRAG_BLOCK_SIZE;
+
+    if ((uint32_t)curBlock >= blockCnt || blockCnt > (extended ? MAX_EX_BLOCK_CNT : MAX_BLOCK_CNT)) {
         LogError(LOG_NET, "%s, invalid fragment block %u of %u", m_name, curBlock, blockCnt);
         clear();
         return false;
+    }
+
+    // validate fragment size and block count for extended fragments
+    if (extended) {
+        if (size == 0U || size > MAX_FRAGMENT_SIZE || compressedSize > MAX_FRAGMENT_SIZE) {
+            LogError(LOG_NET, "%s, invalid extended fragment size metadata", m_name);
+            clear();
+            return false;
+        }
+
+        uint32_t expectedBlocks = (compressedSize + blockSize - 1U) / blockSize;
+        if (expectedBlocks != blockCnt) {
+            LogError(LOG_NET, "%s, extended fragment block count mismatch, expected %u, got %u", m_name,
+                expectedBlocks, blockCnt);
+            clear();
+            return false;
+        }
+    } else if (curBlock != 0U && (size != 0U || compressedSize != 0U)) {
+        LogError(LOG_NET, "%s, invalid legacy fragment metadata in block %u", m_name, curBlock);
+        clear();
+        return false;
+    }
+
+    // do not permit fragments from the two wire formats to be mixed in one assembly
+    if (!fragments.empty()) {
+        auto existing = fragments.begin();
+        if (existing->second == nullptr || existing->second->extended != extended || existing->second->blockCount != blockCnt ||
+            (extended && (existing->second->size != size || existing->second->compressedSize != compressedSize))) {
+            LogError(LOG_NET, "%s, inconsistent packet fragment metadata", m_name);
+            clear();
+            return false;
+        }
     }
 
     Fragment* frag = new Fragment();
@@ -72,35 +121,34 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
     frag->size = 0U;
     frag->blockSize = 0U;
     frag->blockId = 0U;
+    frag->blockCount = 0U;
+    frag->extended = extended;
     frag->data = nullptr;
 
     // if this is the first block store sizes and initialize temp buffer
     if (curBlock == 0U) {
-        uint32_t size = GET_UINT32(data, 0U);
-        uint32_t compressedSize = GET_UINT32(data, 4U);
-
         // make sure we can't exceed max fragment size -- prevent potential DOS attack by sending
         // enormous fragment sizes
         if (size == 0U || compressedSize == 0U || size > MAX_FRAGMENT_SIZE || compressedSize > MAX_FRAGMENT_SIZE ||
-            compressedSize > (MAX_BLOCK_CNT * FRAG_BLOCK_SIZE)) {
+            (!extended && compressedSize > MAX_256_COMPRESSED_SIZE)) {
             LogError(LOG_NET, "%s, fragment size exceeds maximum. BUGBUG.", m_name);
             delete frag;
             clear();
             return false;
         }
 
-        uint32_t expectedBlocks = (compressedSize + FRAG_BLOCK_SIZE - 1U) / FRAG_BLOCK_SIZE;
-        if (expectedBlocks != (uint32_t)blockCnt + 1U) {
+        uint32_t expectedBlocks = (compressedSize + blockSize - 1U) / blockSize;
+        if (expectedBlocks != blockCnt) {
             LogError(LOG_NET, "%s, fragment block count mismatch, expected %u, got %u", m_name,
-                expectedBlocks, (uint32_t)blockCnt + 1U);
+                expectedBlocks, blockCnt);
             delete frag;
             clear();
             return false;
         }
 
-        // Nonzero blocks may arrive before block zero. Reject the transfer if
+        // non-zero blocks may arrive before block zero; reject the transfer if
         // accepting block zero would leave more fragments than its metadata
-        // declares, rather than retaining an assembly that can never finish.
+        // declares, rather than retaining an assembly that can never finish
         if (fragments.size() >= expectedBlocks) {
             LogError(LOG_NET, "%s, fragment count exceeds block zero metadata, expected %u, already buffered %u",
                 m_name, expectedBlocks, fragments.size());
@@ -111,15 +159,19 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
 
         frag->size = size;
         frag->compressedSize = compressedSize;
+    } else if (extended) {
+        frag->size = size;
+        frag->compressedSize = compressedSize;
     }
 
     // scope is intentional
     {
         frag->blockId = curBlock;
-        frag->data = new uint8_t[FRAG_BLOCK_SIZE + 1U];
+        frag->blockCount = (uint16_t)blockCnt;
+        frag->blockSize = blockSize;
+        frag->data = new uint8_t[blockSize + 1U];
 
-        ::memcpy(frag->data, data + FRAG_HDR_SIZE, FRAG_BLOCK_SIZE);
-        // Utils::dump(1U, "PacketBuffer::decode(), Block Payload", frag->data, FRAG_BLOCK_SIZE);
+        ::memcpy(frag->data, data + headerSize, blockSize);
 
         if (fragments.find(curBlock) != fragments.end()) {
             LogWarning(LOG_NET, "%s, duplicate fragment block %u ignored", m_name, curBlock);
@@ -131,10 +183,11 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
         fragments.insert(curBlock, frag);
     }
 
-    LogInfoEx(LOG_NET, "%s, Inbound Packet Fragment, block %u of %u, rxFragments = %u", m_name, curBlock, blockCnt, fragments.size());
+    LogInfoEx(LOG_NET, "%s, Inbound Packet Fragment%s, block %u of %u, rxFragments = %u", m_name,
+        extended ? " Extended" : "", curBlock, blockCnt - 1U, fragments.size());
 
     // do we have all the blocks?
-    if (fragments.size() == blockCnt + 1U) {
+    if (fragments.size() == blockCnt) {
         fragments.lock(false);
         auto firstIt = fragments.find(0U);
         if (firstIt == fragments.end() || firstIt->second == nullptr) {
@@ -170,8 +223,8 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
             return false;
         }
 
-        uint32_t expectedBlocks = (compressedLen + FRAG_BLOCK_SIZE - 1U) / FRAG_BLOCK_SIZE;
-        if (fragments.size() != expectedBlocks || expectedBlocks != (uint32_t)blockCnt + 1U) {
+        uint32_t expectedBlocks = (compressedLen + blockSize - 1U) / blockSize;
+        if (fragments.size() != expectedBlocks || expectedBlocks != blockCnt) {
             LogError(LOG_NET, "%s, Packet Fragment, inconsistent block count, expected %u, got %u", m_name,
                 expectedBlocks, fragments.size());
             fragments.unlock();
@@ -179,15 +232,15 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
             return false;
         }
 
-        // Reassembly buffer must be compressed length, not uncompressed length.
+        // reassembly buffer must be compressed length, not uncompressed length
         DECLARE_UINT8_ARRAY(buffer, compressedLen + 1U);
         ::memset(buffer, 0x00U, compressedLen + 1U);
 
         if (fragments.size() == 1U) {
-            uint32_t copyLen = (compressedLen > FRAG_BLOCK_SIZE) ? FRAG_BLOCK_SIZE : compressedLen;
+            uint32_t copyLen = (compressedLen > blockSize) ? blockSize : compressedLen;
             ::memcpy(buffer, firstFrag->data, copyLen);
         } else {
-            for (uint16_t i = 0U; i <= blockCnt; i++) {
+            for (uint32_t i = 0U; i < blockCnt; i++) {
                 auto it = fragments.find(i);
                 if (it == fragments.end() || it->second == nullptr || it->second->data == nullptr) {
                     LogError(LOG_NET, "%s, Packet Fragment, error missing block %u, packet dropped", m_name, i);
@@ -196,11 +249,11 @@ bool PacketBuffer::decode(const uint8_t* data, uint8_t** message, uint32_t* outL
                     return false;
                 }
 
-                uint32_t offs = i * FRAG_BLOCK_SIZE;
+                uint32_t offs = i * blockSize;
                 if (offs >= compressedLen)
                     break;
 
-                uint32_t copyLen = std::min<uint32_t>(FRAG_BLOCK_SIZE, compressedLen - offs);
+                uint32_t copyLen = std::min<uint32_t>(blockSize, compressedLen - offs);
 
                 ::memcpy(buffer + offs, it->second->data, copyLen);
             }
@@ -289,9 +342,18 @@ bool PacketBuffer::encode(uint8_t* data, uint32_t length)
     }
 
     // create packet fragments
-    uint32_t blockCnt = (compressedLen + FRAG_BLOCK_SIZE - 1U) / FRAG_BLOCK_SIZE;
-    if (blockCnt == 0U || blockCnt > MAX_BLOCK_CNT) {
-        LogError(LOG_NET, "%s, Outbound Packet Fragment, too many packet fragments, %u (max %u)", m_name, blockCnt, MAX_BLOCK_CNT);
+    if (length > MAX_FRAGMENT_SIZE || compressedLen == 0U || compressedLen > MAX_FRAGMENT_SIZE) {
+        LogError(LOG_NET, "%s, Outbound Packet Fragment, packet size exceeds maximum", m_name);
+        return false;
+    }
+
+    bool extended = compressedLen > MAX_256_COMPRESSED_SIZE;
+    uint32_t headerSize = extended ? EXTENDED_FRAG_HDR_SIZE : FRAG_HDR_SIZE;
+    uint32_t blockSize = extended ? EXTENDED_FRAG_BLOCK_SIZE : FRAG_BLOCK_SIZE;
+    uint32_t maxBlockCnt = extended ? MAX_EX_BLOCK_CNT : MAX_BLOCK_CNT;
+    uint32_t blockCnt = (compressedLen + blockSize - 1U) / blockSize;
+    if (blockCnt == 0U || blockCnt > maxBlockCnt) {
+        LogError(LOG_NET, "%s, Outbound Packet Fragment, too many packet fragments, %u (max %u)", m_name, blockCnt, maxBlockCnt);
         return false;
     }
 
@@ -304,32 +366,41 @@ bool PacketBuffer::encode(uint8_t* data, uint32_t length)
         frag->compressedSize = 0U;
         frag->size = 0U;
         frag->blockSize = 0U;
-        frag->blockId = (uint8_t)i;
+        frag->blockId = (uint16_t)i;
+        frag->blockCount = (uint16_t)blockCnt;
+        frag->extended = extended;
         frag->data = nullptr;
 
         frag->data = new uint8_t[bufSize];
         ::memset(frag->data, 0x00U, bufSize);
 
-        if (i == 0U) {
+        if (i == 0U || extended) {
             SET_UINT32(length, frag->data, 0U);
             frag->size = length;
             SET_UINT32(compressedLen, frag->data, 4U);
             frag->compressedSize = compressedLen;
         }
 
-        frag->data[8U] = (uint8_t)i;
-        frag->data[9U] = (uint8_t)(blockCnt - 1U);
+        if (extended) {
+            SET_UINT16((uint16_t)i, frag->data, 8U);
+            SET_UINT16((uint16_t)(blockCnt - 1U), frag->data, 10U);
+        } else {
+            frag->data[8U] = (uint8_t)i;
+            frag->data[9U] = (uint8_t)(blockCnt - 1U);
+        }
 
-        uint32_t blockSize = FRAG_BLOCK_SIZE;
-        if (offs + FRAG_BLOCK_SIZE > compressedLen)
-            blockSize = FRAG_BLOCK_SIZE - ((offs + FRAG_BLOCK_SIZE) - compressedLen);
+        uint32_t copySize = blockSize;
+        if (offs + blockSize > compressedLen)
+            copySize = blockSize - ((offs + blockSize) - compressedLen);
 
-        ::memcpy(frag->data + FRAG_HDR_SIZE, buffer.get() + offs, blockSize);
+        frag->blockSize = copySize;
+        ::memcpy(frag->data + headerSize, buffer.get() + offs, copySize);
 
-        offs += FRAG_BLOCK_SIZE;
+        offs += blockSize;
 
-        fragments.insert((uint8_t)i, frag);
-        LogInfoEx(LOG_NET, "%s, Outbound Packet Fragment, block %u of %u, txFragments = %u", m_name, i, blockCnt - 1U, fragments.size());
+        fragments.insert((uint16_t)i, frag);
+        LogInfoEx(LOG_NET, "%s, Outbound Packet Fragment%s, block %u of %u, txFragments = %u", m_name,
+            extended ? " Extended" : "", i, blockCnt - 1U, fragments.size());
     }
 
     return true;
