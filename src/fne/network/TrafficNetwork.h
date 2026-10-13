@@ -373,6 +373,7 @@ namespace network
         uint32_t m_parrotOverrideSrcId;
 
         bool m_kmfServicesEnabled;
+        uint32_t m_kmfRsi;
         bool m_kmfAllowRID0;
         bool m_kmfEncKeyRequest;
         uint8_t* m_kmfPresharedKey;

@@ -251,6 +251,9 @@ namespace p25
         /** @brief All-call Working Unit ID */
         const uint32_t  WUID_ALL = 0xFFFFFFU;
 
+        /** @brief Default KMF RSI */
+        const uint32_t KMF_DEFAULT_RSI = 9999999U;
+
         /** @brief All-call Talkgroup ID */
         const uint32_t  TGID_ALL = 0xFFFFU;
 

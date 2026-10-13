@@ -89,6 +89,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_parrotOnlyOriginating(false),
     m_parrotOverrideSrcId(0U),
     m_kmfServicesEnabled(false),
+    m_kmfRsi(P25DEF::KMF_DEFAULT_RSI),
     m_kmfAllowRID0(false),
     m_kmfEncKeyRequest(false),
     m_kmfPresharedKey(nullptr),
@@ -334,6 +335,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
 
 #if defined(ENABLE_SSL)
     m_kmfServicesEnabled = conf["kmfServicesEnabled"].as<bool>(false);
+    m_kmfRsi = conf["kmfRsi"].as<uint32_t>(P25DEF::KMF_DEFAULT_RSI);
     uint16_t kmfOtarPort = conf["kmfOtarPort"].as<uint16_t>(64414U);
     if (m_kmfServicesEnabled) {
         if (!m_p25OTARService->open(m_address, kmfOtarPort)) {
@@ -538,6 +540,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    Parrot Repeat Source ID Override: %u", m_parrotOverrideSrcId);
         }
         LogInfo("    P25 OTAR KMF Services Enabled: %s", m_kmfServicesEnabled ? "yes" : "no");
+        LogInfo("    P25 OTAR KMF RSI: %u", m_kmfRsi);
         LogInfo("    P25 OTAR KMF Listening Address: %s", m_address.c_str());
         LogInfo("    P25 OTAR KMF Listening Port: %u", kmfOtarPort);
         LogInfo("    P25 KMF Allow RID 0 Requests: %s", m_kmfAllowRID0 ? "yes" : "no");

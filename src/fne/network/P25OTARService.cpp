@@ -855,7 +855,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
             opaque.decode(buffer.get());
 
             // check if the opaque frame meets the criteria for generating a negative acknowledgment
-            if (opaque.getDstLLId() == WUID_FNE && opaque.getSrcLLId() != 0U && (llId == 0U || opaque.getSrcLLId() == llId) &&
+            if (opaque.getDstLLId() == m_network->m_kmfRsi && opaque.getSrcLLId() != 0U && (llId == 0U || opaque.getSrcLLId() == llId) &&
                 opaque.getResponseKind() == KMM_ResponseKind::IMMEDIATE && opaque.getMACType() == KMM_MAC::ENH_MAC && opaque.getMACAlgId() == ALGO_AES_256 &&
                 (opaque.getMACFormat() == KMM_MAC_FORMAT_CBC || opaque.getMACFormat() == KMM_MAC_FORMAT_CMAC)) {
                 EKCKeyItem key = resolveTEK(opaque.getMACKId(), opaque.getMACAlgId(), opaque.getSrcLLId());
@@ -884,7 +884,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 
     // AACA-D 7.4: validate addressing, MN/MAC coupling, authentication and
     // anti-replay state before executing message-specific behavior
-    if (frame->getDstLLId() != WUID_FNE || frame->getSrcLLId() == 0U ||
+    if (frame->getDstLLId() != m_network->m_kmfRsi || frame->getSrcLLId() == 0U ||
         (llId != 0U && frame->getSrcLLId() != llId)) {
         LogWarning(LOG_P25, P25_KMM_STR ", invalid source/destination RSI, llid = %u, srcLlId = %u, dstLlId = %u", llId, frame->getSrcLLId(), frame->getDstLLId());
         return nullptr;
@@ -1265,12 +1265,12 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         case KMM_MessageType::REG_CMD:
         {
             KMMRegistrationCommand* kmm = static_cast<KMMRegistrationCommand*>(frame.get());
-            if (kmm->getKMFRSI() != WUID_FNE || !m_network->m_kmfServicesEnabled)
+            if (kmm->getKMFRSI() != m_network->m_kmfRsi || !m_network->m_kmfServicesEnabled)
                 return write_KMM_NoService(llId, kmm->getSrcLLId(), payloadSize, auth);
 
             m_dliRegistered[kmm->getSrcLLId()] = true;
             KMMRegistrationResponse response;
-            response.setSrcLLId(WUID_FNE);
+            response.setSrcLLId(m_network->m_kmfRsi);
             response.setDstLLId(kmm->getSrcLLId());
             response.setResponseKind(KMM_ResponseKind::NONE);
             response.setStatus(KMM_Status::CMD_PERFORMED);
@@ -1621,7 +1621,7 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
     }
 
     outKmm.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
-    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
 
     outKmm.setMACType(KMM_MAC::ENH_MAC);
@@ -1790,7 +1790,7 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
         // safely copyable, and every RK3 is an independent authenticated KMM
         KMMRekeyCommand batch;
         batch.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
-        batch.setSrcLLId(WUID_FNE);
+        batch.setSrcLLId(m_network->m_kmfRsi);
         batch.setDstLLId(kmmRSI);
         batch.setMACType(KMM_MAC::ENH_MAC);
         batch.setMACFormat(auth.authenticated ? auth.format : KMM_MAC_FORMAT_CBC);
@@ -1951,7 +1951,7 @@ UInt8Array P25OTARService::write_KMM_WarmStart_Command(uint32_t llId, uint32_t k
     warmKey.setKey(wrapped.get(), P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
 
     KMMWarmStartCommand command;
-    command.setSrcLLId(WUID_FNE);
+    command.setSrcLLId(m_network->m_kmfRsi);
     command.setDstLLId(kmmRSI);
     command.setResponseKind(KMM_ResponseKind::IMMEDIATE);
     command.setHasMessageNumber(true);
@@ -2039,7 +2039,7 @@ UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t 
     const uint16_t mn = reserveOutboundMessageNumbers(llId);
 
     KMMChangeover outKmm;
-    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
     outKmm.setSupersededKeysetId(supersededKeysetId);
     outKmm.setActiveKeysetId(activeKeysetId);
@@ -2074,7 +2074,7 @@ UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t 
 UInt8Array P25OTARService::write_KMM_Reg_Command(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize)
 {
     KMMRegistrationCommand outKmm = KMMRegistrationCommand();
-    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
 
     if (m_verbose) {
@@ -2097,7 +2097,7 @@ UInt8Array P25OTARService::write_KMM_Dereg_Response(uint32_t llId, uint32_t kmmR
     const KMMAuthContext& auth)
 {
     KMMDeregistrationResponse outKmm = KMMDeregistrationResponse();
-    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
     outKmm.setStatus(KMM_Status::CMD_PERFORMED);
 
@@ -2115,7 +2115,7 @@ UInt8Array P25OTARService::write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, u
     const KMMAuthContext& auth)
 {
     KMMNoService outKmm = KMMNoService();
-    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
 
     if (m_verbose) {
@@ -2135,7 +2135,7 @@ UInt8Array P25OTARService::write_KMM_NegativeAck(uint32_t kmmRSI, uint8_t messag
         return nullptr;
 
     KMMNegativeAck outKmm;
-    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
     outKmm.setNakMessageId(messageId);
     outKmm.setMessageNumber(messageNumber);
@@ -2189,7 +2189,7 @@ UInt8Array P25OTARService::encode_KMM_Response(KMMFrame& frame, uint32_t* payloa
 UInt8Array P25OTARService::write_KMM_Zeroize(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize)
 {
     KMMZeroize outKmm = KMMZeroize();
-    outKmm.setSrcLLId(WUID_FNE);
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
 
     if (m_verbose) {
