@@ -2258,10 +2258,12 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
         health["overall"].set<std::string>(HEALTH_FAILED);
         reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE));
         reasons.push_back(json::value("traffic network is not initialized"));
+
         health["reasonCodes"].set<json::array>(reasonCodes);
         health["reasons"].set<json::array>(reasons);
         response["health"].set<json::object>(health);
         reply.payload(response);
+
         return;
     }
 
@@ -2278,8 +2280,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     const uint64_t metadataLastTick = metadataUnavailable ? 0U : mdNetwork->m_healthLastDataPlaneTick.load(std::memory_order_relaxed);
     const uint64_t metadataTickAge = ageMs(metadataLastTick);
     const bool metadataPlaneInitializing = !metadataUnavailable && metadataLastTick == 0U;
-    const bool metadataPlaneStalled = metadataUnavailable ||
-        (!metadataPlaneInitializing && metadataTickAge > loopStallThreshold);
+    const bool metadataPlaneStalled = metadataUnavailable || (!metadataPlaneInitializing && metadataTickAge > loopStallThreshold);
     const bool dataPlaneInitializing = trafficPlaneInitializing || metadataPlaneInitializing;
     const bool dataPlaneStalled = trafficPlaneStalled || metadataPlaneStalled;
 
@@ -2309,6 +2310,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     const uint64_t queueStallThreshold = 5000U;
     const bool trafficQueueStalled = inFlight > 0U && taskProgressAge > queueStallThreshold;
 
+    // construct JSON object representing the status of the traffic inbound worker queue
     json::object inboundQueue = json::object();
     inboundQueue["submittedTotal"].set<uint64_t>(submitted);
     inboundQueue["completedTotal"].set<uint64_t>(completed);
@@ -2324,10 +2326,10 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     const uint64_t metadataInFlight = metadataSubmitted >= metadataCompleted ? metadataSubmitted - metadataCompleted : 0U;
     const uint64_t metadataLastTaskProgress = metadataUnavailable ? 0U : mdNetwork->m_healthLastTaskProgress.load(std::memory_order_relaxed);
     const uint64_t metadataTaskProgressAge = metadataInFlight > 0U ? ageMs(metadataLastTaskProgress) : 0U;
-    const bool metadataQueueStalled = !metadataUnavailable && metadataInFlight > 0U &&
-        metadataTaskProgressAge > queueStallThreshold;
+    const bool metadataQueueStalled = !metadataUnavailable && metadataInFlight > 0U && metadataTaskProgressAge > queueStallThreshold;
     const bool queueStalled = trafficQueueStalled || metadataQueueStalled;
 
+    // construct JSON object representing the status of the metadata inbound worker queue
     json::object metadataQueue = json::object();
     metadataQueue["submittedTotal"].set<uint64_t>(metadataSubmitted);
     metadataQueue["completedTotal"].set<uint64_t>(metadataCompleted);
@@ -2338,6 +2340,7 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     metadataQueue["enqueueFailures"].set<uint64_t>(metadataEnqueueFailures);
     metadataQueue["progressing"].set<bool>(metadataQueueProgressing);
 
+    // construct JSON object representing the status of all inbound worker queues
     json::object queues = json::object();
     queues["status"].set<std::string>(queueStalled ? HEALTH_FAILED : HEALTH_HEALTHY);
     queues["stallThresholdMs"].set<uint64_t>(queueStallThreshold);
