@@ -21,6 +21,7 @@
 #include "common/p25/kmm/KeysetItem.h"
 
 #include "common/p25/kmm/KMMFrame.h"
+#include "common/p25/kmm/KMMChangeRSI.h"
 #include "common/p25/kmm/KMMChangeover.h"
 #include "common/p25/kmm/KMMDeregistrationCommand.h"
 #include "common/p25/kmm/KMMDeregistrationResponse.h"

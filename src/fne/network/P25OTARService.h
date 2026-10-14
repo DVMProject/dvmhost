@@ -163,7 +163,11 @@ namespace network
             /**
              * @brief Waiting for the rekey acknowledgment from the master.
              */
-            WAIT_REKEY_ACK
+            WAIT_REKEY_ACK,
+            /**
+             * @brief Waiting for the Change-RSI response used to resynchronize MNs.
+             */
+            WAIT_CHANGE_RSI_RSP
         };
 
         /**
@@ -183,6 +187,9 @@ namespace network
             std::array<uint8_t, P25DEF::MAX_ENC_KEY_LENGTH_BYTES> temporaryTEK{}; //!< Temporary TEK used in the warm start transaction.
             std::vector<uint16_t> permittedFinalKIds;       //!< Permitted final key IDs for the warm start transaction.
             std::vector<uint16_t> pendingRekeyMNs;          //!< Pending rekey message numbers for the warm start transaction.
+            uint16_t changeRsiCommandMN = 0U;               //!< Header MN used by the Change-RSI command.
+            uint16_t resynchronizedMN = 0U;                 //!< New initial inbound/outbound MN carried by Change-RSI.
+            uint16_t changeRsiMACKId = 0U;                  //!< TEK used to authenticate the Change-RSI transaction.
         };
 
         network::udp::Socket* m_socket;
@@ -336,6 +343,13 @@ namespace network
             uint8_t supersededKeysetId, uint8_t activeKeysetId, uint32_t* payloadSize);
 
         /**
+         * @brief Builds an authenticated same-RSI Change-RSI command for MN resynchronization.
+         */
+        UInt8Array write_KMM_ChangeRSI_Command(uint32_t llId, uint32_t kmmRSI,
+            uint16_t currentSUMN, uint16_t initialMN, uint32_t* payloadSize,
+            const KMMAuthContext& auth);
+
+        /**
          * @brief Helper used to return a Registration-Command KMM to the calling SU.
          * @param llId Logical Link Address.
          * @param kmmRSI KMM Radio Set Identifier.
@@ -398,12 +412,10 @@ namespace network
         UInt8Array write_KMM_Zeroize(uint32_t llId, uint32_t kmmRSI, uint32_t* payloadSize);
 
         /**
-         * @brief Helper used to log a KMM response.
-         * @param llId Logical Link Address.
-         * @param kmmString 
+         * @brief Helper used to convert a KMM response to a human-readable string.
          * @param status Status.
          */
-        void logResponseStatus(uint32_t llId, std::string kmmString, uint8_t status);
+        std::string statusToString(uint8_t status);
     };
 } // namespace network
 

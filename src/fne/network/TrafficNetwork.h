@@ -384,6 +384,7 @@ namespace network
         bool m_kmfEncKeyRequest;
         uint8_t* m_kmfPresharedKey;
         bool m_kmfWarmStart;
+        bool m_kmfChangeoverAfterRekey;
         bool m_kmfDebug;
 
         lookups::RadioIdLookup* m_ridLookup;

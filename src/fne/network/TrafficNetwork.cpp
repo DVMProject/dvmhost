@@ -95,6 +95,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_kmfEncKeyRequest(false),
     m_kmfPresharedKey(nullptr),
     m_kmfWarmStart(true),
+    m_kmfChangeoverAfterRekey(true),
     m_kmfDebug(kmfDebug),
     m_ridLookup(nullptr),
     m_ridAliasLookup(nullptr),
@@ -362,6 +363,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_kmfAllowRID0 = kmfConf["allowRID0"].as<bool>(false);
     m_kmfForgeSrcLLId = kmfConf["forgeSrcLLId"].as<bool>(false);
     m_kmfWarmStart = kmfConf["warmStart"].as<bool>(true);
+    m_kmfChangeoverAfterRekey = kmfConf["changeoverAfterRekey"].as<bool>(true);
 
     // scope is intentional
     {
@@ -549,6 +551,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogWarning(LOG_P25, "We are configured to forge the source LLID on KMM packets, this is a security risk and shouldn't be used outside of testing environments.");
         }
         LogInfo("    OTAR KMF Warm Start Requests Allowed: %s", m_kmfWarmStart ? "yes" : "no");
+        LogInfo("    OTAR KMF Changeover After Rekey: %s", m_kmfChangeoverAfterRekey ? "yes" : "no");
         LogInfo("    OTAR KMF Peer Request Encrypted: %s", m_kmfEncKeyRequest ? "yes" : "no");
         if (!m_encryptedTrafficConn && !m_kmfEncKeyRequest) {
             LogWarning(LOG_MASTER, "Peers can make key requests, but the encrypted traffic connection is not enabled and KMF requests are not encrypted! Key requests will be sent in the clear.");

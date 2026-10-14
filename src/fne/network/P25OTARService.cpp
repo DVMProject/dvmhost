@@ -93,6 +93,8 @@ static void eraseBytes(uint8_t* data, size_t length)
 bool isSupportedKMM(uint8_t messageId)
 {
     switch (messageId) {
+    case KMM_MessageType::CHANGE_RSI_CMD:
+    case KMM_MessageType::CHANGE_RSI_RSP:
     case KMM_MessageType::CHANGEOVER_CMD:
     case KMM_MessageType::CHANGEOVER_RSP:
     case KMM_MessageType::HELLO:
@@ -403,7 +405,8 @@ void P25OTARService::clock(uint32_t ms)
     const uint64_t now = monotonicMilliseconds();
     std::vector<WarmStartTransaction> timedOutWarmStarts;
 
-    if (m_network->m_kmfWarmStart) {
+    // scope is intentional
+    {
         // scope is intentional
         {
             std::lock_guard<std::mutex> lock(m_warmStartMutex);
@@ -988,12 +991,11 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         if (!frame->verifyMAC(tek, buffer.get(), len)) {
             if (frame->getMessageId() == KMM_MessageType::NAK) {
                 KMMNegativeAck* nack = static_cast<KMMNegativeAck*>(frame.get());
-                LogWarning(LOG_P25, P25_KMM_STR ", received unauthenticated KMM NACK, RSI = %u, rejectedMessageId = $%02X, rejectedMN = %u, status = $%02X, headerMN = %u, macKId = $%04X, macFormat = $%02X",
-                    frame->getSrcLLId(), nack->getNakMessageId(), nack->getMessageNumber(),
-                    nack->getStatus(), nack->KMMFrame::getMessageNumber(), frame->getMACKId(),
-                    frame->getMACFormat());
-                logResponseStatus(llId, nack->toString(), nack->getStatus());
+                LogWarning(LOG_P25, P25_KMM_STR ", received unauthenticated KMM NACK, RSI = %u, rejectedMessageId = $%02X, rejectedMN = %u, status = $%02X (%s), headerMN = %u, macKId = $%04X, macFormat = $%02X",
+                    frame->getSrcLLId(), nack->getNakMessageId(), nack->getMessageNumber(), nack->getStatus(), statusToString(nack->getStatus()).c_str(),
+                    nack->KMMFrame::getMessageNumber(), frame->getMACKId(), frame->getMACFormat());
             }
+
             LogWarning(LOG_P25, P25_KMM_STR ", invalid MAC, RSI = %u", frame->getSrcLLId());
             return makeNack(KMM_Status::INVALID_MAC);
         }
@@ -1052,16 +1054,21 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
             KMMHello* kmm = static_cast<KMMHello*>(frame.get());
             uint8_t respKind = kmm->getResponseKind();
             if (m_verbose) {
-                LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, flag = $%02X, auth = %u", kmm->toString().c_str(),
-                    llId, kmm->getFlag(), auth.authenticated);
+                std::string flagStr;
                 switch (kmm->getFlag()) {
                 case KMM_HelloFlag::REKEY_REQUEST_UKEK:
-                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, rekey requested with UKEK, llId = %u", kmm->toString().c_str(), llId);
+                    flagStr = "rekey requested with UKEK";
                     break;
                 case KMM_HelloFlag::REKEY_REQUEST_NO_UKEK:
-                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, rekey requested with no UKEK, llId = %u", kmm->toString().c_str(), llId);
+                    flagStr = "rekey requested with no UKEK";
+                    break;
+                default:
+                    flagStr = "unknown flag";
                     break;
                 }
+
+                LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, flag = $%02X (%s), auth = %u, MN = %u", kmm->toString().c_str(),
+                    llId, kmm->getFlag(), flagStr.c_str(), auth.authenticated, kmm->getMessageNumber());
             }
 
             // ignore Response Kind 2 command requests initiated from a SU
@@ -1129,24 +1136,90 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         case KMM_MessageType::NAK:
         {
             KMMNegativeAck* kmm = static_cast<KMMNegativeAck*>(frame.get());
-            LogWarning(LOG_P25, P25_KMM_STR ", authenticated %s, llId = %u, rejectedMessageId = $%02X, rejectedMN = %u, status = $%02X, headerMN = %u",
-                kmm->toString().c_str(), llId, kmm->getNakMessageId(),
-                kmm->getMessageNumber(), kmm->getStatus(), kmm->KMMFrame::getMessageNumber());
-            logResponseStatus(llId, kmm->toString(), kmm->getStatus());
+            LogWarning(LOG_P25, P25_KMM_STR ", authenticated %s, llId = %u, rejectedMessageId = $%02X, rejectedMN = %u, status = $%02X (%s), headerMN = %u",
+                kmm->toString().c_str(), llId, kmm->getNakMessageId(), kmm->getMessageNumber(), kmm->getStatus(), statusToString(kmm->getStatus()).c_str(),
+                kmm->KMMFrame::getMessageNumber());
+
+            // AACA-D 8.2.1: an authenticated Invalid Message Number NAK for
+            // an outstanding Rekey starts a same-RSI Change-RSI procedure.
+            // The NAK header supplies the current authenticated SU MN; the
+            // body identifies the exact rejected outbound transaction.
+            if (auth.authenticated && kmm->getStatus() == KMM_Status::INVALID_MSG_NUMBER &&
+                kmm->getNakMessageId() == KMM_MessageType::REKEY_CMD &&
+                kmm->getHasMessageNumber()) {
+                bool correlated = false;
+                {
+                    std::lock_guard<std::mutex> lock(m_warmStartMutex);
+                    auto it = m_warmStartTransactions.find(kmm->getSrcLLId());
+                    correlated = it != m_warmStartTransactions.end() &&
+                        it->second.state == WarmStartState::WAIT_REKEY_ACK &&
+                        std::find(it->second.pendingRekeyMNs.begin(), it->second.pendingRekeyMNs.end(), kmm->getMessageNumber()) != it->second.pendingRekeyMNs.end();
+                }
+
+                // if the NAK is correlated with an outstanding Rekey transaction, initiate a Change-RSI procedure
+                if (correlated) {
+                    const uint16_t currentSUMN = kmm->KMMFrame::getMessageNumber();
+                    const uint16_t initialMN = (uint16_t)(currentSUMN + 1U);
+                    return write_KMM_ChangeRSI_Command(llId, kmm->getSrcLLId(), currentSUMN, initialMN, payloadSize, auth);
+                }
+
+                LogWarning(LOG_P25, P25_KMM_STR ", ignoring uncorrelated Invalid-MN NAK, RSI = %u, rejectedMN = %u", kmm->getSrcLLId(), kmm->getMessageNumber());
+            }
+        }
+        break;
+
+        case KMM_MessageType::CHANGE_RSI_RSP:
+        {
+            KMMChangeRSI* kmm = static_cast<KMMChangeRSI*>(frame.get());
+            bool resynchronized = false;
+            uint16_t initialMN = 0U;
+
+            // scope is intentional
+            {
+                std::lock_guard<std::mutex> lock(m_warmStartMutex);
+                auto it = m_warmStartTransactions.find(kmm->getSrcLLId());
+                if (it != m_warmStartTransactions.end() && it->second.state == WarmStartState::WAIT_CHANGE_RSI_RSP &&
+                    kmm->getOldRSI() == kmm->getSrcLLId() && kmm->getNewRSI() == kmm->getSrcLLId() &&
+                    kmm->getStatus() == KMM_Status::CMD_PERFORMED && auth.authenticated &&
+                    auth.keyId == it->second.changeRsiMACKId && kmm->KMMFrame::getMessageNumber() == it->second.resynchronizedMN) {
+                    initialMN = it->second.resynchronizedMN;
+                    resynchronized = true;
+                }
+            }
+
+            if (!resynchronized) {
+                LogWarning(LOG_P25, P25_KMM_STR ", unsolicited or failed Change-RSI resynchronization response, RSI = %u", kmm->getSrcLLId());
+                return nullptr;
+            }
+
+            // Change-RSI establishes the body MN as the initial value for both
+            // directions. The response just consumed that value inbound; the
+            // next KMF-originated command therefore starts at initial + 1.
+            {
+                std::lock_guard<std::mutex> lock(m_outboundMessageNumberMutex);
+                m_rsiMessageNumber[kmm->getSrcLLId()] = (uint16_t)(initialMN + 1U);
+            }
+            m_rsiInboundMessageNumber[kmm->getSrcLLId()] = kmm->KMMFrame::getMessageNumber();
+
+            LogInfoEx(LOG_P25, P25_KMM_STR ", Change-RSI MN resynchronization completed, RSI = %u, initialMN = %u", kmm->getSrcLLId(), initialMN);
+
+            return write_KMM_Rekey_Command(llId, kmm->getSrcLLId(),
+                KMM_HelloFlag::REKEY_REQUEST_UKEK, payloadSize, auth,
+                additionalResponses, false);
         }
         break;
 
         case KMM_MessageType::REKEY_ACK:
         {
             KMMRekeyAck* kmm = static_cast<KMMRekeyAck*>(frame.get());
+            bool rekeyComplete = false;
             LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, ackMessageId = $%02X, numOfStatus = %u", kmm->toString().c_str(),
                 llId, kmm->getAckMessageId(), kmm->getNumberOfKeyStatus());
 
             if (kmm->getNumberOfKeyStatus() > 0U) {
                 for (auto entry : kmm->getKeyStatus()) {
-                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, algId = $%02X, kId = $%04X, status = $%02X", kmm->toString().c_str(),
-                        llId, entry.algId(), entry.kId(), entry.status());
-                    logResponseStatus(llId, kmm->toString(), entry.status());
+                    LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, algId = $%02X, kId = $%04X, status = $%02X (%s)", kmm->toString().c_str(),
+                        llId, entry.algId(), entry.kId(), entry.status(), statusToString(entry.status()).c_str());
                 }
             }
 
@@ -1229,11 +1302,20 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 
                         // if there are no more pending rekey message numbers, clean up the warm start transaction
                         if (it->second.pendingRekeyMNs.empty()) {
+                            rekeyComplete = true;
                             eraseBytes(it->second.temporaryTEK.data(), it->second.temporaryTEK.size());
                             m_warmStartTransactions.erase(it);
                         }
                     }
                 }
+            }
+
+            // if the rekey process is complete, issue a changeover command
+            if (rekeyComplete && m_network->m_kmfChangeoverAfterRekey) {
+                // bryanb: should these be hardcoded? as this causes whatever SU on a DVM system to swap to keyset 1
+                static constexpr uint8_t SUPERSEDED_KEYSET_ID = 1U;
+                static constexpr uint8_t ACTIVE_KEYSET_ID = 1U;
+                return write_KMM_Changeover_Command(llId, kmm->getSrcLLId(), SUPERSEDED_KEYSET_ID, ACTIVE_KEYSET_ID, payloadSize);
             }
         }
         break;
@@ -1286,18 +1368,16 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         case KMM_MessageType::REG_RSP:
         {
             KMMRegistrationResponse* kmm = static_cast<KMMRegistrationResponse*>(frame.get());
-            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, status = $%02X", kmm->toString().c_str(),
-                llId, kmm->getStatus());
-            logResponseStatus(llId, kmm->toString(), kmm->getStatus());
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, status = $%02X (%s)", kmm->toString().c_str(),
+                llId, kmm->getStatus(), statusToString(kmm->getStatus()).c_str());
         }
         break;
 
         case KMM_MessageType::UNABLE_TO_DECRYPT:
         {
             KMMUnableToDecrypt* kmm = static_cast<KMMUnableToDecrypt*>(frame.get());
-            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, status = $%02X", kmm->toString().c_str(),
-                llId, kmm->getStatus());
-            logResponseStatus(llId, kmm->toString(), kmm->getStatus());
+            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, status = $%02X (%s)", kmm->toString().c_str(),
+                llId, kmm->getStatus(), statusToString(kmm->getStatus()).c_str());
         }
         break;
 
@@ -1831,6 +1911,7 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
         if (batchIndex == 0U) {
             if (payloadSize != nullptr)
                 *payloadSize = frameLength;
+
             firstFrame = std::make_unique<uint8_t[]>(frameLength);
             ::memcpy(firstFrame.get(), encoded.data(), frameLength);
         }
@@ -1839,12 +1920,30 @@ UInt8Array P25OTARService::write_KMM_Rekey_Command(uint32_t llId, uint32_t kmmRS
         }
     }
 
-    // if using the Warm Start TEK, update the corresponding warm start transaction with the pending rekey message numbers and deadline
-    if (useWarmStartTEK) {
+    // track every Rekey transaction so changeover is issued only after all of its
+    // batches are acknowledged; warm start reuses its existing transaction
+    // direct Rekey creates the transaction here
+    {
         std::lock_guard<std::mutex> lock(m_warmStartMutex);
 
-        // look up the warm start transaction for the given RSI
+        // look up the Warm Start transaction, or replace any stale direct-rekey
+        // transaction with the newly emitted command sequence.
         auto it = m_warmStartTransactions.find(kmmRSI);
+        if (!useWarmStartTEK) {
+            if (it != m_warmStartTransactions.end())
+                eraseBytes(it->second.temporaryTEK.data(), it->second.temporaryTEK.size());
+
+            WarmStartTransaction transaction;
+            transaction.state = WarmStartState::WAIT_REKEY_ACK;
+            transaction.llId = llId;
+            transaction.rsi = kmmRSI;
+            for (const p25::kmm::KeyItem& deliveredKey : keys)
+                transaction.permittedFinalKIds.push_back(deliveredKey.kId());
+
+            m_warmStartTransactions[kmmRSI] = std::move(transaction);
+            it = m_warmStartTransactions.find(kmmRSI);
+        }
+
         if (it != m_warmStartTransactions.end()) {
             it->second.pendingRekeyMNs.clear();
 
@@ -1956,30 +2055,32 @@ UInt8Array P25OTARService::write_KMM_WarmStart_Command(uint32_t llId, uint32_t k
     warmKey.kId(transaction.temporaryKId);
     warmKey.setKey(wrapped.get(), P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
 
-    KMMWarmStartCommand command;
-    command.setSrcLLId(m_network->m_kmfRsi);
-    command.setDstLLId(kmmRSI);
-    command.setResponseKind(KMM_ResponseKind::IMMEDIATE);
-    command.setHasMessageNumber(true);
-    command.setMessageNumber(transaction.warmStartMN);
-    command.setMACType(KMM_MAC::ENH_MAC);
-    command.setMACAlgId(ALGO_AES_256);
+    // build the Warm-Start command with the wrapped TEK and associated metadata
+    KMMWarmStartCommand outKmm;
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
+    outKmm.setDstLLId(kmmRSI);
+    outKmm.setResponseKind(KMM_ResponseKind::IMMEDIATE);
+    outKmm.setHasMessageNumber(true);
+    outKmm.setMessageNumber(transaction.warmStartMN);
+    outKmm.setMACType(KMM_MAC::ENH_MAC);
+    outKmm.setMACAlgId(ALGO_AES_256);
     // AACA-D defines the Warm-Start MAC trailer KID as undefined. Correlation is
     // performed from the RSI transaction; do not expose a meaningful lookup ID.
-    command.setMACKId(0U);
-    command.setMACFormat(KMM_MAC_FORMAT_CBC);
-    command.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
-    command.setKEKAlgId(ukek.algId());
-    command.setKEKKId((uint16_t)ukek.kId());
-    command.setKeyLength(P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
-    command.setTEKAlgId(ALGO_AES_256);
-    command.setKey(warmKey);
+    outKmm.setMACKId(0U);
+    outKmm.setMACFormat(KMM_MAC_FORMAT_CBC);
+    outKmm.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+    outKmm.setKEKAlgId(ukek.algId());
+    outKmm.setKEKKId((uint16_t)ukek.kId());
+    outKmm.setKeyLength(P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
+    outKmm.setTEKAlgId(ALGO_AES_256);
+    outKmm.setKey(warmKey);
 
-    const uint32_t length = command.fullLength();
+    // encode the Warm-Start command and generate its MAC
+    const uint32_t length = outKmm.fullLength();
     UInt8Array encoded = std::make_unique<uint8_t[]>(length);
     ::memset(encoded.get(), 0x00U, length);
-    command.encode(encoded.get());
-    command.generateMAC(transaction.temporaryTEK.data(), encoded.get());
+    outKmm.encode(encoded.get());
+    outKmm.generateMAC(transaction.temporaryTEK.data(), encoded.get());
 
     // scope is intentional
     {
@@ -1998,7 +2099,79 @@ UInt8Array P25OTARService::write_KMM_WarmStart_Command(uint32_t llId, uint32_t k
     if (payloadSize != nullptr)
         *payloadSize = length;
 
-    LogInfoEx(LOG_P25, P25_KMM_STR ", Warm-Start Command issued, llId = %u, RSI = %u, temporaryKId = $%04X", llId, kmmRSI, warmKey.kId());
+    if (m_verbose) {
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u, temporaryKId = $%04X",
+            outKmm.toString().c_str(), llId, kmmRSI, warmKey.kId());
+    }
+
+    return encoded;
+}
+
+/* Builds a same-RSI Change-RSI Command used to resynchronize message numbers. */
+
+UInt8Array P25OTARService::write_KMM_ChangeRSI_Command(uint32_t llId, uint32_t kmmRSI,
+    uint16_t currentSUMN, uint16_t initialMN, uint32_t* payloadSize,
+    const KMMAuthContext& auth)
+{
+    if (payloadSize != nullptr)
+        *payloadSize = 0U;
+    if (!auth.authenticated || auth.algorithmId != ALGO_AES_256 || auth.keyId == 0U)
+        return nullptr;
+
+    // resolve the TEK to be used for generating the MAC of the Change-RSI command
+    EKCKeyItem macTekItem = resolveTEK(auth.keyId, auth.algorithmId, kmmRSI);
+    if (macTekItem.isInvalid()) {
+        LogError(LOG_P25, P25_KMM_STR ", cannot build Change-RSI Command; authenticated TEK unavailable, RSI = %u", kmmRSI);
+        return nullptr;
+    }
+
+    // build the Change-RSI command structure
+    KMMChangeRSI outKmm;
+    outKmm.setSrcLLId(m_network->m_kmfRsi);
+    outKmm.setDstLLId(kmmRSI);
+    outKmm.setOldRSI(kmmRSI);
+    outKmm.setNewRSI(kmmRSI);
+    outKmm.setInitialMessageNumber(initialMN);
+    outKmm.setHasMessageNumber(true);
+    outKmm.setMessageNumber(currentSUMN);
+    outKmm.setMACType(KMM_MAC::ENH_MAC);
+    outKmm.setMACAlgId(auth.algorithmId);
+    outKmm.setMACKId(auth.keyId);
+    outKmm.setMACFormat(auth.format);
+
+    // encode the Change-RSI command and prepare it for MAC generation
+    const uint32_t frameLength = outKmm.fullLength();
+    UInt8Array encoded = std::make_unique<uint8_t[]>(frameLength);
+    ::memset(encoded.get(), 0x00U, frameLength);
+    outKmm.encode(encoded.get());
+
+    uint8_t macTek[P25DEF::MAX_ENC_KEY_LENGTH_BYTES] = { 0U };
+    macTekItem.getKey(macTek);
+    outKmm.generateMAC(macTek, encoded.get());
+    eraseBytes(macTek, sizeof(macTek));
+
+    // scope is intentional
+    {
+        std::lock_guard<std::mutex> lock(m_warmStartMutex);
+        auto it = m_warmStartTransactions.find(kmmRSI);
+        if (it == m_warmStartTransactions.end())
+            return nullptr;
+
+        it->second.state = WarmStartState::WAIT_CHANGE_RSI_RSP;
+        it->second.changeRsiCommandMN = currentSUMN;
+        it->second.resynchronizedMN = initialMN;
+        it->second.changeRsiMACKId = auth.keyId;
+        it->second.deadline = monotonicMilliseconds() + WARM_START_TIMEOUT_MS;
+    }
+
+    if (payloadSize != nullptr)
+        *payloadSize = frameLength;
+
+    if (m_verbose) {
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u, currentSUMN = %u, initialMN = %u",
+            outKmm.toString().c_str(), llId, kmmRSI, currentSUMN, initialMN);
+    }
+
     return encoded;
 }
 
@@ -2010,6 +2183,7 @@ UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t 
     if (payloadSize != nullptr)
         *payloadSize = 0U;
 
+    // look up the RID entry for the given RSI and verify its eligibility for a Changeover command
     lookups::RadioId ridEntry = m_network->m_ridLookup->find(kmmRSI);
     if (ridEntry.radioDefault() || !ridEntry.radioEnabled() || !ridEntry.canRekey()) {
         LogWarning(LOG_P25, P25_KMM_STR ", cannot build Changeover Command; RID %u has no eligible key policy", kmmRSI);
@@ -2044,6 +2218,7 @@ UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t 
 
     const uint16_t mn = reserveOutboundMessageNumbers(llId);
 
+    // build the KMM Changeover command using the determined MAC TEK and message number
     KMMChangeover outKmm;
     outKmm.setSrcLLId(m_network->m_kmfRsi);
     outKmm.setDstLLId(kmmRSI);
@@ -2056,6 +2231,7 @@ UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t 
     outKmm.setMACKId((uint16_t)macTekItem.kId());
     outKmm.setMACFormat(KMM_MAC_FORMAT_CBC);
 
+    // encode the Changeover command and generate its MAC
     const uint32_t frameLength = outKmm.fullLength();
     UInt8Array encoded = std::make_unique<uint8_t[]>(frameLength);
     ::memset(encoded.get(), 0x00U, frameLength);
@@ -2067,6 +2243,7 @@ UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t 
 
     if (payloadSize != nullptr)
         *payloadSize = frameLength;
+
     if (m_verbose) {
         LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u, supersededKeysetId = $%02X, activeKeysetId = $%02X",
             outKmm.toString().c_str(), llId, kmmRSI, supersededKeysetId, activeKeysetId);
@@ -2084,14 +2261,14 @@ UInt8Array P25OTARService::write_KMM_Reg_Command(uint32_t llId, uint32_t kmmRSI,
     outKmm.setDstLLId(kmmRSI);
 
     if (m_verbose) {
-        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
-            outKmm.getSrcLLId(), outKmm.getDstLLId());
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(), outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
     const uint32_t frameLength = outKmm.fullLength();
     if (payloadSize != nullptr)
         *payloadSize = frameLength;
 
+    // encode the Registration-Command KMM and prepare it for transmission
     UInt8Array kmmFrame = std::make_unique<uint8_t[]>(frameLength);
     outKmm.encode(kmmFrame.get());
     return kmmFrame;
@@ -2108,8 +2285,7 @@ UInt8Array P25OTARService::write_KMM_Dereg_Response(uint32_t llId, uint32_t kmmR
     outKmm.setStatus(KMM_Status::CMD_PERFORMED);
 
     if (m_verbose) {
-        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
-            outKmm.getSrcLLId(), outKmm.getDstLLId());
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(), outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
     return encode_KMM_Response(outKmm, payloadSize, auth);
@@ -2125,8 +2301,7 @@ UInt8Array P25OTARService::write_KMM_NoService(uint32_t llId, uint32_t kmmRSI, u
     outKmm.setDstLLId(kmmRSI);
 
     if (m_verbose) {
-        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(),
-            outKmm.getSrcLLId(), outKmm.getDstLLId());
+        LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, RSI = %u", outKmm.toString().c_str(), outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
     return encode_KMM_Response(outKmm, payloadSize, auth);
@@ -2147,8 +2322,8 @@ UInt8Array P25OTARService::write_KMM_NegativeAck(uint32_t kmmRSI, uint8_t messag
     outKmm.setMessageNumber(messageNumber);
     outKmm.setStatus(status);
 
-    LogWarning(LOG_P25, P25_KMM_STR ", sending NACK, RSI = %u, messageId = $%02X, MN = %u, status = $%02X",
-        kmmRSI, messageId, messageNumber, status);
+    LogWarning(LOG_P25, P25_KMM_STR ", %s, RSI = %u, messageId = $%02X, MN = %u, status = $%02X",
+         outKmm.toString().c_str(), kmmRSI, messageId, messageNumber, status);
 
     return encode_KMM_Response(outKmm, payloadSize, auth);
 }
@@ -2177,6 +2352,7 @@ UInt8Array P25OTARService::encode_KMM_Response(KMMFrame& frame, uint32_t* payloa
         }
     }
 
+    // encode the KMM response and generate its MAC if authenticated
     const uint32_t frameLength = frame.fullLength();
     if (payloadSize != nullptr)
         *payloadSize = frameLength;
@@ -2203,6 +2379,7 @@ UInt8Array P25OTARService::write_KMM_Zeroize(uint32_t llId, uint32_t kmmRSI, uin
             outKmm.getSrcLLId(), outKmm.getDstLLId());
     }
 
+    // encode the Zeroize KMM and prepare it for transmission
     const uint32_t frameLength = outKmm.fullLength();
     if (payloadSize != nullptr)
         *payloadSize = frameLength;
@@ -2212,60 +2389,44 @@ UInt8Array P25OTARService::write_KMM_Zeroize(uint32_t llId, uint32_t kmmRSI, uin
     return kmmFrame;
 }
 
-/* Helper used to log a KMM response. */
+/* Helper used to convert a KMM response to a human-readable string. */
 
-void P25OTARService::logResponseStatus(uint32_t llId, std::string kmmString, uint8_t status)
+std::string P25OTARService::statusToString(uint8_t status)
 {
     switch (status) {
     case KMM_Status::CMD_PERFORMED:
-        if (m_verbose) {
-            LogInfoEx(LOG_P25, P25_KMM_STR ", %s, command performed, llId = %u", kmmString.c_str(), llId);
-        }
-        break;
+        return std::string("CMD_PERFORMED (Command Performed)");
     case KMM_Status::CMD_NOT_PERFORMED:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, command not performed, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("CMD_NOT_PERFORMED (Command Not Performed)");
 
     case KMM_Status::ITEM_NOT_EXIST:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, item does not exist, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("ITEM_NOT_EXIST (Item Does Not Exist)");
     case KMM_Status::INVALID_MSG_ID:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid message ID, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("INVALID_MSG_ID (Invalid Message ID)");
     case KMM_Status::INVALID_MAC:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid auth code, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("INVALID_MAC (Invalid MAC)");
 
     case KMM_Status::OUT_OF_MEMORY:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, out of memory, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("OUT_OF_MEMORY (Out of Memory)");
     case KMM_Status::FAILED_TO_DECRYPT:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, failed to decrypt message, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("FAILED_TO_DECRYPT (Failed to Decrypt)");
 
     case KMM_Status::INVALID_MSG_NUMBER:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid message number, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("INVALID_MSG_NUMBER (Invalid Message Number)");
     case KMM_Status::INVALID_KID:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid key ID, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("INVALID_KID (Invalid Key ID)");
     case KMM_Status::INVALID_ALGID:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid algorithm ID, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("INVALID_ALGID (Invalid Algorithm ID)");
     case KMM_Status::INVALID_MFID:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, invalid manufacturer ID, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("INVALID_MFID (Invalid Manufacturer ID)");
 
     case KMM_Status::MI_ALL_ZERO:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, message indicator was all zeros, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("MI_ALL_ZERO (Message Indicator All Zero)");
     case KMM_Status::KEY_FAIL:
-        LogWarning(LOG_P25, P25_KMM_STR ", %s, key identified by algo/key is erased, llId = %u", kmmString.c_str(), llId);
-        break;
+        return std::string("KEY_FAIL (Key Failure)");
 
     case KMM_Status::UNKNOWN:
     default:
-        LogWarning(LOG_P25, P25_KMM_STR ", llId = %u, status = $%02X; unknown status", llId, status);
-        break;
+        return std::string("UNKNOWN (Unknown Status)");
     }
 }

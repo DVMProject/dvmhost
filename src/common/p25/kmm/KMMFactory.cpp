@@ -40,6 +40,9 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data)
     uint8_t messageId = data[0U];                                                   // Message ID
 
     switch (messageId) {
+    case KMM_MessageType::CHANGE_RSI_CMD:
+    case KMM_MessageType::CHANGE_RSI_RSP:
+        return decode(new KMMChangeRSI(), data);
     case KMM_MessageType::CHANGEOVER_CMD:
     case KMM_MessageType::CHANGEOVER_RSP:
         return decode(new KMMChangeover(), data);
@@ -137,6 +140,14 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data, uint32_t len)
 
     const uint32_t available = bodyEnd - body;
     switch (data[0U]) {
+    case KMM_MessageType::CHANGE_RSI_CMD:
+        if (available != 9U || data[body] != 1U)
+            return nullptr;
+        break;
+    case KMM_MessageType::CHANGE_RSI_RSP:
+        if (available != 8U || data[body] != 1U)
+            return nullptr;
+        break;
     case KMM_MessageType::CHANGEOVER_CMD:
     case KMM_MessageType::CHANGEOVER_RSP:
         if (available < 1U || data[body] == 0U ||
@@ -165,26 +176,26 @@ std::unique_ptr<KMMFrame> KMMFactory::create(const uint8_t* data, uint32_t len)
         break;
     case KMM_MessageType::WARM_START_CMD:
         {
-            if (available < 11U || mnCode != 2U || macType != KMM_MAC::ENH_MAC ||
-                ((data[3U] >> 6U) & 0x03U) != KMM_ResponseKind::IMMEDIATE)
+            if (available < 11U || mnCode != 2U || macType != KMM_MAC::ENH_MAC || ((data[3U] >> 6U) & 0x03U) != KMM_ResponseKind::IMMEDIATE)
                 return nullptr;
+
             const uint8_t decryptFormat = data[body];
             if (decryptFormat != KMM_DECRYPT_INSTRUCT_NONE && decryptFormat != KMM_DECRYPT_INSTRUCT_MI)
                 return nullptr;
+
             const uint32_t miLength = decryptFormat == KMM_DECRYPT_INSTRUCT_MI ? MI_LENGTH_BYTES : 0U;
             if (available < 11U + miLength)
                 return nullptr;
+
             const uint32_t keyLengthOffset = body + 4U + miLength;
             const uint8_t keyLength = data[keyLengthOffset];
             const uint32_t keyFormatOffset = keyLengthOffset + 2U;
-            const uint16_t sln = (uint16_t)(((uint16_t)data[keyFormatOffset + 1U] << 8U) |
-                data[keyFormatOffset + 2U]);
-            const uint16_t temporaryKId = (uint16_t)(((uint16_t)data[keyFormatOffset + 3U] << 8U) |
-                data[keyFormatOffset + 4U]);
+            const uint16_t sln = (uint16_t)(((uint16_t)data[keyFormatOffset + 1U] << 8U) | data[keyFormatOffset + 2U]);
+            const uint16_t temporaryKId = (uint16_t)(((uint16_t)data[keyFormatOffset + 3U] << 8U) | data[keyFormatOffset + 4U]);
+
             if (data[body + 1U] != ALGO_AES_256 || keyLength != P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES ||
                 data[keyLengthOffset + 1U] != ALGO_AES_256 || temporaryKId == 0U ||
-                available != 11U + miLength + keyLength ||
-                (data[keyFormatOffset] & 0xE0U) != KMM_KEY_FORMAT_TEK ||
+                available != 11U + miLength + keyLength || (data[keyFormatOffset] & 0xE0U) != KMM_KEY_FORMAT_TEK ||
                 (data[keyFormatOffset] & 0x1FU) != 0U || sln != 0U)
                 return nullptr;
         }

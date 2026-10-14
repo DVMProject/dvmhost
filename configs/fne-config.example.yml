@@ -241,6 +241,8 @@ master:
 
         # Flag indicating whether or not P25 OTAR KMF services will allow a warm start rekey request.
         warmStart: true
+        # Flag indicating whether or not a keyset changeover should occur automatically after a rekey.
+        changeoverAfterRekey: true
 
         # Flag indicating whether or not verbose debug logging for P25 OTAR KMF services is enabled.
         debug: false
