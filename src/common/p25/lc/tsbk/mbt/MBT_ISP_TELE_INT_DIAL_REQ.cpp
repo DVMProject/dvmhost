@@ -21,6 +21,12 @@ using namespace p25::lc::tsbk;
 #include <cassert>
 #include <cstring>
 
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
+
+/* Initializes a new instance of the MBT_ISP_TELE_INT_DIAL_REQ class. */
+
 MBT_ISP_TELE_INT_DIAL_REQ::MBT_ISP_TELE_INT_DIAL_REQ() : AMBT(),
     m_digitCount(0U),
     m_duplex(false),
@@ -30,18 +36,22 @@ MBT_ISP_TELE_INT_DIAL_REQ::MBT_ISP_TELE_INT_DIAL_REQ() : AMBT(),
     ::memset(m_digits, 0x0FU, MAX_DIGITS);
 }
 
+/* Decode a standard multi-block trunking signalling block. */
+
 bool MBT_ISP_TELE_INT_DIAL_REQ::decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
 
-    if (dataHeader.getFormat() != PDUFormatType::UNCONFIRMED ||
-        dataHeader.getSAP() != PDUSAP::TRUNK_CTRL || dataHeader.getOutbound()) {
+    if (dataHeader.getFormat() != PDUFormatType::UNCONFIRMED || dataHeader.getSAP() != PDUSAP::TRUNK_CTRL || dataHeader.getOutbound()) {
         LogError(LOG_P25, "MBT_ISP_TELE_INT_DIAL_REQ::decodeMBT(), invalid PDU header");
         return false;
     }
 
-    DECLARE_UINT8_ARRAY(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
-    if (!AMBT::decode(dataHeader, blocks, pduUserData))
+    DECLARE_UINT8_ARRAY(pduUserData,
+        P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
+
+    bool ret = AMBT::decode(dataHeader, blocks, pduUserData);
+    if (!ret)
         return false;
 
     if (m_lco != TSBKO::IOSP_TELE_INT_DIAL) {
@@ -69,12 +79,13 @@ bool MBT_ISP_TELE_INT_DIAL_REQ::decodeMBT(const data::DataHeader& dataHeader, co
     ::memset(m_digits, 0x0FU, MAX_DIGITS);
     for (uint8_t i = 0U; i < m_digitCount; i++) {
         const uint32_t octet = 3U + (i / 2U);
-        m_digits[i] = ((i & 1U) == 0U) ?
-            ((pduUserData[octet] >> 4) & 0x0FU) : (pduUserData[octet] & 0x0FU);
+        m_digits[i] = ((i & 1U) == 0U) ? ((pduUserData[octet] >> 4) & 0x0FU) : (pduUserData[octet] & 0x0FU);
     }
 
     return true;
 }
+
+/* Encode a standard multi-block trunking signalling block. */
 
 void MBT_ISP_TELE_INT_DIAL_REQ::encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
@@ -123,10 +134,14 @@ void MBT_ISP_TELE_INT_DIAL_REQ::encodeMBT(data::DataHeader& dataHeader, uint8_t*
     edac::CRC::addCRC32(pduUserData, length);
 }
 
+/* Returns a string that represents the current MBT. */
+
 std::string MBT_ISP_TELE_INT_DIAL_REQ::toString(bool isp)
 {
     return std::string("TSBKO, ISP_TELE_INT_DIAL_REQ (Telephone Interconnect Request - Explicit Dialing)");
 }
+
+/* Copies the encoded four-bit dial digit values to the supplied buffer. */
 
 uint8_t MBT_ISP_TELE_INT_DIAL_REQ::getDialDigits(uint8_t* digits) const
 {
@@ -135,6 +150,8 @@ uint8_t MBT_ISP_TELE_INT_DIAL_REQ::getDialDigits(uint8_t* digits) const
     ::memcpy(digits, m_digits, m_digitCount);
     return m_digitCount;
 }
+
+/* Sets encoded four-bit dial digit values. */
 
 bool MBT_ISP_TELE_INT_DIAL_REQ::setDialDigits(const uint8_t* digits, uint8_t count)
 {
