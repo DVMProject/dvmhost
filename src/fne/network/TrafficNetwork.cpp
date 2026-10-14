@@ -348,7 +348,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_kmfServicesEnabled = kmfConf["enable"].as<bool>(false);
     m_kmfRsi = kmfConf["rsi"].as<uint32_t>(P25DEF::KMF_DEFAULT_RSI);
     uint16_t kmfOtarPort = kmfConf["otarPort"].as<uint16_t>(64414U);
-    if (m_kmfServicesEnabled) {
+    if (m_kmfServicesEnabled && kmfOtarPort > 0U) {
         if (!m_p25OTARService->open(m_address, kmfOtarPort)) {
             m_kmfServicesEnabled = false;
             LogError(LOG_MASTER, "FNE OTAR KMF services failed to start, OTAR service disabled.");
@@ -535,6 +535,9 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogInfo("Key Management Facility Parameters");
         LogInfo("    OTAR KMF Services Enabled: %s", m_kmfServicesEnabled ? "yes" : "no");
         LogInfo("    OTAR KMF RSI: %u", m_kmfRsi);
+        if (kmfOtarPort == 0U) {
+            LogWarning(LOG_P25, "OTAR KMF Listening Port is set to 0, KMF UDP DLI services will not be available.");
+        }
         LogInfo("    OTAR KMF Listening Address: %s", m_address.c_str());
         LogInfo("    OTAR KMF Listening Port: %u", kmfOtarPort);
         LogInfo("    OTAR KMF Allow RID 0 Requests: %s", m_kmfAllowRID0 ? "yes" : "no");

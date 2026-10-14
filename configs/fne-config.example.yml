@@ -217,6 +217,7 @@ master:
         # Flag indicating whether or not P25 OTAR KMF services are enabled.
         enable: false
         # Port number to listen on for P25 OTAR KMF services.
+        # (Set to 0 to disable OTAR KMF UDP DLI services.)
         otarPort: 64414
         # P25 OTAR KMF RSI
         rsi: 9999999
