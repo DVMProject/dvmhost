@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -26,7 +26,8 @@ using namespace p25::lc;
 
 /* Initializes a new instance of the AMBT class. */
 
-AMBT::AMBT() : TSBK()
+AMBT::AMBT() : TSBK(),
+    m_isAMBT(true)
 {
     /* stub */
 }
@@ -51,6 +52,14 @@ void AMBT::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
     LogError(LOG_P25, "AMBT::encode(), bad call, not implemented");
 }
 
+/* Determines whether a PDU header identifies an MBT packet. */
+
+bool AMBT::isMBT(const data::DataHeader& dataHeader)
+{
+    return dataHeader.getSAP() == PDUSAP::TRUNK_CTRL &&
+        (dataHeader.getFormat() == PDUFormatType::AMBT || dataHeader.getFormat() == PDUFormatType::UNCONFIRMED);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -62,14 +71,21 @@ ulong64_t AMBT::toValue(const data::DataHeader& dataHeader, const uint8_t* pduUs
     ulong64_t tsbkValue = 0U;
 
     // combine bytes into ulong64_t (8 byte) value
-    tsbkValue = dataHeader.getAMBTField8();
-    tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
-    tsbkValue = (tsbkValue << 8) + pduUserData[0U];
-    tsbkValue = (tsbkValue << 8) + pduUserData[1U];
-    tsbkValue = (tsbkValue << 8) + pduUserData[2U];
-    tsbkValue = (tsbkValue << 8) + pduUserData[3U];
-    tsbkValue = (tsbkValue << 8) + pduUserData[4U];
-    tsbkValue = (tsbkValue << 8) + pduUserData[5U];
+    if (dataHeader.getFormat() == PDUFormatType::UNCONFIRMED) {
+        // Standard MBT: data block octet 0 is the opcode and octets 1.. are message data
+        for (uint32_t i = 1U; i <= 8U; i++)
+            tsbkValue = (tsbkValue << 8) + pduUserData[i];
+    } else {
+        // Alternate MBT: data block octets are combined with header fields to form the 64-bit value
+        tsbkValue = dataHeader.getAMBTField8();
+        tsbkValue = (tsbkValue << 8) + dataHeader.getAMBTField9();
+        tsbkValue = (tsbkValue << 8) + pduUserData[0U];
+        tsbkValue = (tsbkValue << 8) + pduUserData[1U];
+        tsbkValue = (tsbkValue << 8) + pduUserData[2U];
+        tsbkValue = (tsbkValue << 8) + pduUserData[3U];
+        tsbkValue = (tsbkValue << 8) + pduUserData[4U];
+        tsbkValue = (tsbkValue << 8) + pduUserData[5U];
+    }
 
     return tsbkValue;
 }
@@ -81,8 +97,8 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     assert(blocks != nullptr);
     assert(pduUserData != nullptr);
 
-    if (dataHeader.getFormat() != PDUFormatType::AMBT) {
-        LogError(LOG_P25, "AMBT::decode(), PDU is not a AMBT PDU");
+    if (!isMBT(dataHeader)) {
+        LogError(LOG_P25, "AMBT::decode(), PDU is not a standard or alternate MBT PDU");
         return false;
     }
 
@@ -91,7 +107,21 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
         return false;
     }
 
-    m_lco = dataHeader.getAMBTOpcode();                                             // LCO
+    // determine if the MBT is standard or alternate based on the PDU format
+    if (dataHeader.getFormat() == PDUFormatType::UNCONFIRMED) {
+        uint8_t firstBlock[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+        if (blocks[0U].getData(firstBlock) != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
+            LogError(LOG_P25, "AMBT::decode(), failed to read first PDU data block");
+            return false;
+        }
+
+        m_isAMBT = false;
+        m_lco = firstBlock[0U] & 0x3FU;                                             // LCO
+    } else {
+        m_isAMBT = true;
+        m_lco = dataHeader.getAMBTOpcode();                                         // LCO
+    }
+
     m_lastBlock = true;                                                             // Last Block Marker
     m_mfId = dataHeader.getMFId();                                                  // Mfg Id.
 
@@ -114,7 +144,11 @@ bool AMBT::decode(const data::DataHeader& dataHeader, const data::DataBlock* blo
     }
 
     if (s_verbose) {
-        LogDebugEx(LOG_P25, "AMBT::decode()", "mfId = $%02X, lco = $%02X, ambt8 = $%02X, ambt9 = $%02X", m_mfId, m_lco, dataHeader.getAMBTField8(), dataHeader.getAMBTField9());
+        if (m_isAMBT) {
+            LogDebugEx(LOG_P25, "AMBT::decode()", "mfId = $%02X, ambt = %u, lco = $%02X, ambt8 = $%02X, ambt9 = $%02X", m_mfId, m_isAMBT, m_lco, dataHeader.getAMBTField8(), dataHeader.getAMBTField9());
+        } else {
+            LogDebugEx(LOG_P25, "AMBT::decode()", "mfId = $%02X, ambt = %u, lco = $%02X", m_mfId, m_isAMBT, m_lco);
+        }
         Utils::dump(2U, "P25, AMBT::decode(), pduUserData", pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow());
     }
 
@@ -127,7 +161,8 @@ void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
 {
     assert(pduUserData != nullptr);
 
-    dataHeader.setFormat(PDUFormatType::AMBT);
+    const bool standardMBT = dataHeader.getFormat() == PDUFormatType::UNCONFIRMED;
+    dataHeader.setFormat(standardMBT ? PDUFormatType::UNCONFIRMED : PDUFormatType::AMBT);
     dataHeader.setMFId(m_mfId);                                                     // Mfg Id.
     dataHeader.setAckNeeded(false);
     dataHeader.setOutbound(true);
@@ -139,7 +174,40 @@ void AMBT::encode(data::DataHeader& dataHeader, uint8_t* pduUserData)
         dataHeader.setBlocksToFollow(1U);
     }
 
-    dataHeader.setAMBTOpcode(m_lco);                                                // LCO
+    // determine if we are encoding a standard or alternate MBT based on the PDU format
+    if (standardMBT) {
+        uint32_t oldLength = P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow();
+        uint32_t bytesToMove = oldLength - 7U; // retain four octets for the packet CRC
+
+        // standard MBT moves the opcode and the two message octets from the header
+        // into the data stream. Grow by a block if those three octets would displace
+        // non-padding message data
+        if (pduUserData[oldLength - 7U] != 0U || pduUserData[oldLength - 6U] != 0U ||
+            pduUserData[oldLength - 5U] != 0U) {
+            // AABB limits an MBT packet to four blocks total: one header plus
+            // at most three data blocks
+            if (dataHeader.getBlocksToFollow() >= 3U) {
+                LogError(LOG_P25, "AMBT::encode(), standard MBT payload exceeds three data blocks");
+                return;
+            }
+
+            dataHeader.setBlocksToFollow(dataHeader.getBlocksToFollow() + 1U);
+            bytesToMove = oldLength - 4U;
+        }
+
+        const uint32_t newLength = P25_PDU_UNCONFIRMED_LENGTH_BYTES * dataHeader.getBlocksToFollow();
+        ::memmove(pduUserData + 3U, pduUserData, bytesToMove);
+        ::memset(pduUserData + 3U + bytesToMove, 0x00U, newLength - 3U - bytesToMove);
+
+        pduUserData[0U] = m_lco & 0x3FU;                                            // LCO
+        pduUserData[1U] = dataHeader.getAMBTField8();                               // Message octet 0
+        pduUserData[2U] = dataHeader.getAMBTField9();                               // Message octet 1
+
+        dataHeader.setPadLength(0U);
+        dataHeader.setHeaderOffset(0U);
+    } else {
+        dataHeader.setAMBTOpcode(m_lco);                                            // LCO
+    }
 
     // generate packet CRC-32 and set data blocks
     if (dataHeader.getBlocksToFollow() > 1U) {
