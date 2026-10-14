@@ -87,6 +87,30 @@ master:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
+    # Flag indicating whether or not DMR traffic will be passed.
+    allowDMRTraffic: true
+    # Flag indicating whether or not P25 traffic will be passed.
+    allowP25Traffic: true
+    # Flag indicating whether or not P25 Phase 2 traffic will be passed.
+    allowP25P2Traffic: false
+    # Flag indicating whether or not NXDN traffic will be passed.
+    allowNXDNTraffic: true
+    # Flag indicating whether or not analog traffic will be passed.
+    allowAnalogTraffic: false
+
+    # Maximum number of concurrent packet processing workers.
+    workers: 16
+
+    # Flag indicating whether or not master endpoint networking is encrypted.
+    encrypted: false
+    # AES-256 32-byte Preshared Key
+    #   (This field *must* be 32 hex bytes in length or 64 characters
+    #    0 - 9, A - F.)
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+    # Flag indicating whether or not peer pinging will be reported.
+    reportPeerPing: true
+
     #
     # High Availability
     #
@@ -109,7 +133,7 @@ master:
     #
     jitterBuffer:
         # Flag indicating whether the adaptive jitter buffer is enabled by default for all peers.
-        enabled: false
+        enable: false
         # Default maximum buffer size in frames (range: 2-8 frames).
         #   Larger values provide more reordering capability but add latency.
         #   Recommended: 4 frames for most networks, 6-8 for high-jitter links (satellite, cellular).
@@ -125,9 +149,6 @@ master:
     # Flag indicating whether or not calls start/end events from a upstream peer will be logged.
     logUpstreamCallStartEnd: true
 
-    # Maximum number of concurrent packet processing workers.
-    workers: 16
-
     # Maximum permitted connections (hard maximum is 250 peers).
     connectionLimit: 100
 
@@ -142,45 +163,6 @@ master:
     #    spanning tree updates.)
     spanningTreeFastReconnect: true
 
-    # Console patch status registry configuration.
-    patchStatus:
-        # Flag indicating whether or not console patch status publishing is enabled.
-        enabled: true
-        # Default TTL, in seconds, for console patch status updates that do not specify one.
-        defaultTtlSeconds: 15
-        # Minimum accepted TTL, in seconds, for console patch status updates.
-        minTtlSeconds: 5
-        # Maximum accepted TTL, in seconds, for console patch status updates.
-        maxTtlSeconds: 300
-
-    # Flag indicating whether or not peer pinging will be reported.
-    reportPeerPing: true
-
-    # Flag indicating whether or not master endpoint networking is encrypted.
-    encrypted: false
-    # AES-256 32-byte Preshared Key
-    #   (This field *must* be 32 hex bytes in length or 64 characters
-    #    0 - 9, A - F.)
-    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
-
-    # Flag indicating whether or not DMR traffic will be passed.
-    allowDMRTraffic: true
-    # Flag indicating whether or not P25 traffic will be passed.
-    allowP25Traffic: true
-    # Flag indicating whether or not P25 Phase 2 traffic will be passed.
-    allowP25P2Traffic: false
-    # Flag indicating whether or not NXDN traffic will be passed.
-    allowNXDNTraffic: true
-    # Flag indicating whether or not analog traffic will be passed.
-    allowAnalogTraffic: false
-
-    # Flag indicating whether packet data will be passed.
-    disablePacketData: false
-    # Flag indicating whether verbose dumping of data packets is enabled.
-    dumpPacketData: false
-    # Flag indicating whether verbose logging of data packet operations is enabled.
-    verbosePacketData: false
-
     # Delay from when a call on a parrot TG ends to when the playback starts (in milliseconds).
     parrotDelay: 2000
     # Flag indicating whether or not a parrot TG call will generate a grant demand.
@@ -190,25 +172,77 @@ master:
     # Source ID to override parrot TG calls with (0 for no override).
     parrotOverrideSrcId: 0
 
-    # Flag indicating whether or not P25 OTAR KMF services are enabled.
-    kmfServicesEnabled: false
-    # Port number to listen on for P25 OTAR KMF services.
-    kmfOtarPort: 64414
-    # P25 OTAR KMF RSI
-    kmfRsi: 9999999
-    # Flag indicating whether or not P25 OTAR KMF services will allow RID 0 (broadcast) key requests.
-    #   NOTE: This is used for peer key requests (NOT OTAR REQUESTS).
-    kmfAllowRID0: false
-    # Flag indicating whether or not P25 OTAR KMF services will encrypt peer-based key requests.
-    kmfEncKeyRequest: false
-    # AES-256 32-byte Preshared Key for peer-based key requests
-    #   (This field *must* be 32 hex bytes in length or 64 characters
-    #    0 - 9, A - F.)
-    kmfPresharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
-    # Flag indicating whether or not P25 OTAR KMF services will allow a warm start rekey request.
-    kmfWarmStart: true
-    # Flag indicating whether or not verbose debug logging for P25 OTAR KMF services is enabled.
-    kmfDebug: false
+    #
+    # Console patch status registry configuration
+    #
+    patchStatus:
+        # Flag indicating whether or not console patch status publishing is enabled.
+        enable: true
+        # Default TTL, in seconds, for console patch status updates that do not specify one.
+        defaultTtlSeconds: 15
+        # Minimum accepted TTL, in seconds, for console patch status updates.
+        minTtlSeconds: 5
+        # Maximum accepted TTL, in seconds, for console patch status updates.
+        maxTtlSeconds: 300
+
+    #
+    # Packet data configuration
+    #
+    packetData:
+        # Flag P25 packet data to every peer using the broadcast behavior
+        # instead of routing it to the subscriber's learned location.
+        # (This should be set to true if conventional and trunked data registration is not being used.)
+        broadcast: false
+
+        #
+        # Dynamic IP Allocation
+        #
+        ipPool:
+            # Starting IP address for dynamic IP allocation pool
+            startAddress: 192.168.1.10
+            # Ending IP address for dynamic IP allocation pool
+            endAddress: 192.168.1.200
+
+        # Flag indicating whether packet data will be passed.
+        disablePacketData: false
+        # Flag indicating whether verbose dumping of data packets is enabled.
+        dumpPacketData: false
+        # Flag indicating whether verbose logging of data packet operations is enabled.
+        verbosePacketData: false
+
+    #
+    # Key Management Facility (KMF) configuration
+    #
+    kmf:
+        # Flag indicating whether or not P25 OTAR KMF services are enabled.
+        enable: false
+        # Port number to listen on for P25 OTAR KMF services.
+        otarPort: 64414
+        # P25 OTAR KMF RSI
+        rsi: 9999999
+
+        # Flag indicating whether or not P25 OTAR KMF services will allow RID 0 (broadcast) key requests.
+        #   NOTE: This is used for peer key requests (NOT OTAR REQUESTS).
+        allowRID0: false
+        # Flag indicating whether or not the source LLID should be forged to the PDU LLID if it is set
+        #   to the default value of 1.
+        # (This is bad practice and should only be used for testing in controlled environments. This is indicative of 
+        #   the KMF parameters not being programmed into the subscriber correctly (like for example the codeplug 
+        #   carrying a Individual OTAR Radio ID of 1).)
+        forgeSrcLLId: false
+
+        # Flag indicating whether or not P25 OTAR KMF services will encrypt peer-based key requests.
+        encKeyRequest: false
+        # AES-256 32-byte Preshared Key for peer-based key requests
+        #   (This field *must* be 32 hex bytes in length or 64 characters
+        #    0 - 9, A - F.)
+        presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+        # Flag indicating whether or not P25 OTAR KMF services will allow a warm start rekey request.
+        warmStart: true
+
+        # Flag indicating whether or not verbose debug logging for P25 OTAR KMF services is enabled.
+        debug: false
 
     # Amount of time in seconds for a call collision to last before switching over the source of a call.
     callCollisionTimeout: 5
@@ -490,12 +524,3 @@ vtun:
         # Example:
         # args: "limit=1024 flows=1024 target=5ms interval=100ms ecn=1"
         args: ""
-
-    #
-    # P25 SNDCP Dynamic IP Allocation
-    #
-    sndcp:
-        # Starting IP address for dynamic IP allocation pool
-        startAddress: 192.168.1.10
-        # Ending IP address for dynamic IP allocation pool
-        endAddress: 192.168.1.200

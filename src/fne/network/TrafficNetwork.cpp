@@ -91,9 +91,11 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_kmfServicesEnabled(false),
     m_kmfRsi(P25DEF::KMF_DEFAULT_RSI),
     m_kmfAllowRID0(false),
+    m_kmfForgeSrcLLId(false),
     m_kmfEncKeyRequest(false),
     m_kmfPresharedKey(nullptr),
     m_kmfWarmStart(true),
+    m_kmfDebug(kmfDebug),
     m_ridLookup(nullptr),
     m_ridAliasLookup(nullptr),
     m_tidLookup(nullptr),
@@ -170,13 +172,14 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_healthTaskEnqueueFailures(0U),
     m_metadataUpdateMutex(),
     m_metadataUpdateState(),
+    m_packetDataBroadcast(false),
+    m_sndcpStartAddr(__IP_FROM_STR("10.10.1.10")),
+    m_sndcpEndAddr(__IP_FROM_STR("10.10.1.254")),
     m_disablePacketData(false),
     m_dumpPacketData(false),
     m_verbosePacketData(false),
     m_vtunQueueMaxFrames(128U),
     m_vtunQueueMaxBytes(262144U),
-    m_sndcpStartAddr(__IP_FROM_STR("10.10.1.10")),
-    m_sndcpEndAddr(__IP_FROM_STR("10.10.1.254")),
     m_logDenials(false),
     m_logUpstreamCallStartEnd(true),
     m_reportPeerPing(reportPeerPing),
@@ -254,72 +257,27 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         m_softConnLimit = MAX_HARD_CONN_CAP;
     }
 
-    m_enableSpanningTree = conf["enableSpanningTree"].as<bool>(true);
-
-    if (!m_enableSpanningTree) {
-        LogWarning(LOG_MASTER, "WARNING: Disabling the peer spanning tree is not recommended! This can cause network loops and other issues in a multi-peer FNE network.");
-    }
-
-    m_logSpanningTreeChanges = conf["logSpanningTreeChanges"].as<bool>(false);
-    m_spanningTreeFastReconnect = conf["spanningTreeFastReconnect"].as<bool>(true);
-
-    yaml::Node patchStatusConf = conf["patchStatus"];
-    m_patchStatusEnabled = patchStatusConf["enabled"].as<bool>(true);
-    uint32_t patchStatusDefaultTtl = patchStatusConf["defaultTtlSeconds"].as<uint32_t>(PatchStatusRegistry::DEFAULT_TTL_SECONDS);
-    uint32_t patchStatusMinTtl = patchStatusConf["minTtlSeconds"].as<uint32_t>(PatchStatusRegistry::MIN_TTL_SECONDS);
-    uint32_t patchStatusMaxTtl = patchStatusConf["maxTtlSeconds"].as<uint32_t>(PatchStatusRegistry::MAX_TTL_SECONDS);
-    m_patchStatusRegistry.configure(patchStatusDefaultTtl, patchStatusMinTtl, patchStatusMaxTtl);
-
     // always force disable ADJ_STS_BCAST to neighbor FNE peers if the all option
     // is enabled
     if (m_disallowAdjStsBcast) {
         m_disallowExtAdjStsBcast = true;
     }
 
-    yaml::Node metricsConf = conf["metrics"];
-    m_enableMetrics = metricsConf["enable"].as<bool>(false);
-    m_metricsLogRawData = metricsConf["logRawData"].as<bool>(false);
+    // High Availability (HA) configuration
+    yaml::Node& haParams = conf["ha"];
+    m_advertisedHAAddress = haParams["advertisedWANAddress"].as<std::string>();
+    m_advertisedHAPort = (uint16_t)haParams["advertisedWANPort"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
+    m_haEnabled = haParams["enable"].as<bool>(false);
 
-    yaml::Node influxConf = metricsConf["influx"];
-    m_enableInfluxDB = influxConf["enable"].as<bool>(false);
-    m_influxServerAddress = influxConf["serverAddress"].as<std::string>("127.0.0.1");
-    m_influxServerPort = influxConf["serverPort"].as<uint16_t>(8086U);
-    m_influxServerToken = influxConf["serverToken"].as<std::string>();
-    m_influxOrg = influxConf["org"].as<std::string>("dvm");
-    m_influxBucket = influxConf["bucket"].as<std::string>("dvm");
-    if (m_enableInfluxDB) {
-        m_influxServer = influxdb::ServerInfo(m_influxServerAddress, m_influxServerPort, m_influxOrg, m_influxServerToken, m_influxBucket);
-    }
-
-    yaml::Node sqliteConf = metricsConf["sqlite"];
-    m_enableSQLite = sqliteConf["enable"].as<bool>(false);
-    m_sqliteDBFile = sqliteConf["file"].as<std::string>("metrics.db");
-    m_sqlitePruneAfterDays = sqliteConf["pruneAfterDays"].as<uint32_t>(30U);
-    m_sqlitePruneIntervalMinutes = sqliteConf["pruneIntervalMinutes"].as<uint32_t>(60U);
-
-    if (m_sqlitePruneAfterDays == 0U) {
-        m_sqlitePruneIntervalMinutes = 0U;
-    } else if (m_sqlitePruneIntervalMinutes > 0U && m_sqlitePruneIntervalMinutes < 5U) {
-        LogWarning(LOG_MASTER, "SQLite prune interval is too low (%u minutes), clamping to 5 minutes.", m_sqlitePruneIntervalMinutes);
-        m_sqlitePruneIntervalMinutes = 5U;
-    }
-
-    TrafficNetwork::MetricsLogging::initialize(this);
-
-    if (m_enableInfluxDB && m_enableSQLite) {
-        LogWarning(LOG_MASTER, "Both InfluxDB and SQLite metrics logging are enabled. This could cause performance penalties, are you sure?");
-    }
-
-    m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
-    m_parrotOverrideSrcId = conf["parrotOverrideSrcId"].as<uint32_t>(0U);
-    if (m_parrotOverrideSrcId > 0U && m_parrotOverrideSrcId > 16777200U) {
-        LogWarning(LOG_MASTER, "Parrot Override Source ID %u is out of valid range (1 - 16777200), disabling override.", m_parrotOverrideSrcId);
-        m_parrotOverrideSrcId = 0U;
+    if (m_haEnabled) {
+        uint32_t ipAddr = __IP_FROM_STR(m_advertisedHAAddress);
+        HAParameters params = HAParameters(m_peerId, ipAddr, m_advertisedHAPort);
+        m_peerReplicaHAParams.push_back(params);
     }
 
     // jitter buffer configuration
     yaml::Node jitterConf = conf["jitterBuffer"];
-    m_jitterBufferEnabled = jitterConf["enabled"].as<bool>(false);
+    m_jitterBufferEnabled = jitterConf["enable"].as<bool>(false);
     m_jitterMaxSize = (uint16_t)jitterConf["defaultMaxSize"].as<uint32_t>(DEFAULT_JITTER_MAX_SIZE);
     m_jitterMaxWait = jitterConf["defaultMaxWait"].as<uint32_t>(DEFAULT_JITTER_MAX_WAIT);
 
@@ -333,10 +291,63 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
     if (m_jitterMaxWait > MAX_JITTER_MAX_WAIT)
         m_jitterMaxWait = MAX_JITTER_MAX_WAIT;
 
+    // Spanning tree configuration
+    m_enableSpanningTree = conf["enableSpanningTree"].as<bool>(true);
+
+    if (!m_enableSpanningTree) {
+        LogWarning(LOG_MASTER, "WARNING: Disabling the peer spanning tree is not recommended! This can cause network loops and other issues in a multi-peer FNE network.");
+    }
+
+    m_logSpanningTreeChanges = conf["logSpanningTreeChanges"].as<bool>(false);
+    m_spanningTreeFastReconnect = conf["spanningTreeFastReconnect"].as<bool>(true);
+
+    m_parrotOnlyOriginating = conf["parrotOnlyToOrginiatingPeer"].as<bool>(false);
+    m_parrotOverrideSrcId = conf["parrotOverrideSrcId"].as<uint32_t>(0U);
+    if (m_parrotOverrideSrcId > 0U && m_parrotOverrideSrcId > 16777200U) {
+        LogWarning(LOG_MASTER, "Parrot Override Source ID %u is out of valid range (1 - 16777200), disabling override.", m_parrotOverrideSrcId);
+        m_parrotOverrideSrcId = 0U;
+    }
+
+    // Console patch status registry configuration
+    yaml::Node patchStatusConf = conf["patchStatus"];
+    m_patchStatusEnabled = patchStatusConf["enable"].as<bool>(true);
+    uint32_t patchStatusDefaultTtl = patchStatusConf["defaultTtlSeconds"].as<uint32_t>(PatchStatusRegistry::DEFAULT_TTL_SECONDS);
+    uint32_t patchStatusMinTtl = patchStatusConf["minTtlSeconds"].as<uint32_t>(PatchStatusRegistry::MIN_TTL_SECONDS);
+    uint32_t patchStatusMaxTtl = patchStatusConf["maxTtlSeconds"].as<uint32_t>(PatchStatusRegistry::MAX_TTL_SECONDS);
+    m_patchStatusRegistry.configure(patchStatusDefaultTtl, patchStatusMinTtl, patchStatusMaxTtl);
+
+    // Packet data configuration
+    yaml::Node packetDataConf = conf["packetData"];
+    m_packetDataBroadcast = packetDataConf["broadcast"].as<bool>(false);
+
+    m_sndcpStartAddr = __IP_FROM_STR("10.10.1.10");
+    m_sndcpEndAddr = __IP_FROM_STR("10.10.1.254");
+
+    yaml::Node& ipPool = packetDataConf["ipPool"];
+    if (ipPool.size() > 0U) {
+        std::string startAddrStr = ipPool["startAddress"].as<std::string>("10.10.1.10");
+        std::string endAddrStr = ipPool["endAddress"].as<std::string>("10.10.1.254");
+        m_sndcpStartAddr = __IP_FROM_STR(startAddrStr);
+        m_sndcpEndAddr = __IP_FROM_STR(endAddrStr);
+
+        if (m_sndcpStartAddr == 0U || m_sndcpEndAddr == 0U || m_sndcpStartAddr > m_sndcpEndAddr) {
+            LogWarning(LOG_MASTER, "Invalid IP pool address range (%s - %s), using defaults",
+                startAddrStr.c_str(), endAddrStr.c_str());
+            m_sndcpStartAddr = __IP_FROM_STR("10.10.1.10");
+            m_sndcpEndAddr = __IP_FROM_STR("10.10.1.254");
+        }
+    }
+
+    m_disablePacketData = packetDataConf["disablePacketData"].as<bool>(false);
+    m_dumpPacketData = packetDataConf["dumpPacketData"].as<bool>(false);
+    m_verbosePacketData = packetDataConf["verbosePacketData"].as<bool>(false);
+
+    // KMF (Key Management Facility) configuration
+    yaml::Node kmfConf = conf["kmf"];
 #if defined(ENABLE_SSL)
-    m_kmfServicesEnabled = conf["kmfServicesEnabled"].as<bool>(false);
-    m_kmfRsi = conf["kmfRsi"].as<uint32_t>(P25DEF::KMF_DEFAULT_RSI);
-    uint16_t kmfOtarPort = conf["kmfOtarPort"].as<uint16_t>(64414U);
+    m_kmfServicesEnabled = kmfConf["enable"].as<bool>(false);
+    m_kmfRsi = kmfConf["rsi"].as<uint32_t>(P25DEF::KMF_DEFAULT_RSI);
+    uint16_t kmfOtarPort = kmfConf["otarPort"].as<uint16_t>(64414U);
     if (m_kmfServicesEnabled) {
         if (!m_p25OTARService->open(m_address, kmfOtarPort)) {
             m_kmfServicesEnabled = false;
@@ -348,13 +359,14 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_kmfServicesEnabled = false;
     LogWarning(LOG_MASTER, "FNE is compiled without OpenSSL support, KMF services are unavailable.");
 #endif // ENABLE_SSL
-    m_kmfAllowRID0 = conf["kmfAllowRID0"].as<bool>(false);
-    m_kmfWarmStart = conf["kmfWarmStart"].as<bool>(true);
+    m_kmfAllowRID0 = kmfConf["allowRID0"].as<bool>(false);
+    m_kmfForgeSrcLLId = kmfConf["forgeSrcLLId"].as<bool>(false);
+    m_kmfWarmStart = kmfConf["warmStart"].as<bool>(true);
 
     // scope is intentional
     {
-        bool encrypted = conf["kmfEncKeyRequest"].as<bool>(false);
-        std::string key = conf["kmfPresharedKey"].as<std::string>();
+        bool encrypted = kmfConf["encKeyRequest"].as<bool>(false);
+        std::string key = kmfConf["presharedKey"].as<std::string>();
         if (!key.empty()) {
             if (key.size() == 32) {
                 // bryanb: shhhhhhh....dirty nasty hacks
@@ -394,49 +406,6 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_restrictPVCallToRegOnly = conf["restrictPrivateCallToRegOnly"].as<bool>(false);
     m_filterTerminators = conf["filterTerminators"].as<bool>(true);
 
-    m_disablePacketData = conf["disablePacketData"].as<bool>(false);
-    m_dumpPacketData = conf["dumpPacketData"].as<bool>(false);
-    m_verbosePacketData = conf["verbosePacketData"].as<bool>(false);
-
-    // SNDCP IP allocation configuration
-    m_sndcpStartAddr = __IP_FROM_STR("10.10.1.10");
-    m_sndcpEndAddr = __IP_FROM_STR("10.10.1.254");
-    m_vtunQueueMaxFrames = 128U;
-    m_vtunQueueMaxBytes = 262144U;
-    yaml::Node& vtun = conf["vtun"];
-    if (vtun.size() > 0U) {
-        yaml::Node& queue = vtun["queue"];
-        if (queue.size() > 0U) {
-            m_vtunQueueMaxFrames = queue["maxFrames"].as<uint32_t>(128U);
-            m_vtunQueueMaxBytes = queue["maxBytes"].as<uint32_t>(262144U);
-
-            if (m_vtunQueueMaxFrames == 0U) {
-                LogWarning(LOG_MASTER, "VTUN queue maxFrames is 0, clamping to 1");
-                m_vtunQueueMaxFrames = 1U;
-            }
-
-            if (m_vtunQueueMaxBytes == 0U) {
-                LogWarning(LOG_MASTER, "VTUN queue maxBytes is 0, clamping to 512");
-                m_vtunQueueMaxBytes = 512U;
-            }
-        }
-
-        yaml::Node& sndcp = vtun["sndcp"];
-        if (sndcp.size() > 0U) {
-            std::string startAddrStr = sndcp["startAddress"].as<std::string>("10.10.1.10");
-            std::string endAddrStr = sndcp["endAddress"].as<std::string>("10.10.1.254");
-            m_sndcpStartAddr = __IP_FROM_STR(startAddrStr);
-            m_sndcpEndAddr = __IP_FROM_STR(endAddrStr);
-
-            if (m_sndcpStartAddr > m_sndcpEndAddr) {
-                LogWarning(LOG_MASTER, "SNDCP start address (%s) is greater than end address (%s), using defaults", 
-                    startAddrStr.c_str(), endAddrStr.c_str());
-                m_sndcpStartAddr = __IP_FROM_STR("10.10.1.10");
-                m_sndcpEndAddr = __IP_FROM_STR("10.10.1.254");
-            }
-        }
-    }
-
     m_logDenials = conf["logDenials"].as<bool>(false);
     m_logUpstreamCallStartEnd = conf["logUpstreamCallStartEnd"].as<bool>(true);
 
@@ -456,57 +425,136 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         }
     }
 
-    yaml::Node& haParams = conf["ha"];
-    m_advertisedHAAddress = haParams["advertisedWANAddress"].as<std::string>();
-    m_advertisedHAPort = (uint16_t)haParams["advertisedWANPort"].as<uint32_t>(TRAFFIC_DEFAULT_PORT);
-    m_haEnabled = haParams["enable"].as<bool>(false);
+    // Metrics configuration
+    yaml::Node metricsConf = conf["metrics"];
+    m_enableMetrics = metricsConf["enable"].as<bool>(false);
+    m_metricsLogRawData = metricsConf["logRawData"].as<bool>(false);
 
-    if (m_haEnabled) {
-        uint32_t ipAddr = __IP_FROM_STR(m_advertisedHAAddress);
-        HAParameters params = HAParameters(m_peerId, ipAddr, m_advertisedHAPort);
-        m_peerReplicaHAParams.push_back(params);
+    yaml::Node influxConf = metricsConf["influx"];
+    m_enableInfluxDB = influxConf["enable"].as<bool>(false);
+    m_influxServerAddress = influxConf["serverAddress"].as<std::string>("127.0.0.1");
+    m_influxServerPort = influxConf["serverPort"].as<uint16_t>(8086U);
+    m_influxServerToken = influxConf["serverToken"].as<std::string>();
+    m_influxOrg = influxConf["org"].as<std::string>("dvm");
+    m_influxBucket = influxConf["bucket"].as<std::string>("dvm");
+    if (m_enableInfluxDB) {
+        m_influxServer = influxdb::ServerInfo(m_influxServerAddress, m_influxServerPort, m_influxOrg, m_influxServerToken, m_influxBucket);
+    }
+
+    yaml::Node sqliteConf = metricsConf["sqlite"];
+    m_enableSQLite = sqliteConf["enable"].as<bool>(false);
+    m_sqliteDBFile = sqliteConf["file"].as<std::string>("metrics.db");
+    m_sqlitePruneAfterDays = sqliteConf["pruneAfterDays"].as<uint32_t>(30U);
+    m_sqlitePruneIntervalMinutes = sqliteConf["pruneIntervalMinutes"].as<uint32_t>(60U);
+
+    if (m_sqlitePruneAfterDays == 0U) {
+        m_sqlitePruneIntervalMinutes = 0U;
+    } else if (m_sqlitePruneIntervalMinutes > 0U && m_sqlitePruneIntervalMinutes < 5U) {
+        LogWarning(LOG_MASTER, "SQLite prune interval is too low (%u minutes), clamping to 5 minutes.", m_sqlitePruneIntervalMinutes);
+        m_sqlitePruneIntervalMinutes = 5U;
+    }
+
+    TrafficNetwork::MetricsLogging::initialize(this);
+
+    if (m_enableInfluxDB && m_enableSQLite) {
+        LogWarning(LOG_MASTER, "Both InfluxDB and SQLite metrics logging are enabled. This could cause performance penalties, are you sure?");
     }
 
     if (printOptions) {
-        LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
-        LogInfo("    Enable Peer Spanning Tree: %s", m_enableSpanningTree ? "yes" : "no");
-        LogInfo("    Log Spanning Tree Changes: %s", m_logSpanningTreeChanges ? "yes" : "no");
-        LogInfo("    Spanning Tree Allow Fast Reconnect: %s", m_spanningTreeFastReconnect ? "yes" : "no");
-        LogInfo("    Console Patch Status Enabled: %s", m_patchStatusEnabled ? "yes" : "no");
-        if (m_patchStatusEnabled) {
-            LogInfo("    Console Patch Status Default TTL: %us", m_patchStatusRegistry.defaultTtlSeconds());
-            LogInfo("    Console Patch Status Minimum TTL: %us", m_patchStatusRegistry.minTtlSeconds());
-            LogInfo("    Console Patch Status Maximum TTL: %us", m_patchStatusRegistry.maxTtlSeconds());
-        }
-        LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
-        if (m_disallowAdjStsBcast) {
-            LogWarning(LOG_MASTER, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
-        }
-        LogInfo("    Disable Packet Data: %s", m_disablePacketData ? "yes" : "no");
-        LogInfo("    Dump Packet Data: %s", m_dumpPacketData ? "yes" : "no");
-        LogInfo("    VTUN Queue Max Frames: %u", m_vtunQueueMaxFrames);
-        LogInfo("    VTUN Queue Max Bytes: %u", m_vtunQueueMaxBytes);
-        LogInfo("    Disable P25 ADJ_STS_BCAST to neighbor peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
-        LogInfo("    Disable P25 Radio Monitor to any peers: %s", m_disallowRadioMonitor ? "yes" : "no");
-        LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
-        LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
-        LogInfo("    Enable RID In-Call Control: %s", m_enableRIDInCallCtrl ? "yes" : "no");
-        LogInfo("    Disallow In-Call Control Requests: %s", m_disallowInCallCtrl ? "yes" : "no");
-        LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
         LogInfo("    Log Traffic Denials: %s", m_logDenials ? "yes" : "no");
         LogInfo("    Log Upstream Call Start/End Events: %s", m_logUpstreamCallStartEnd ? "yes" : "no");
-        LogInfo("    Mask Outbound Traffic Peer ID: %s", m_maskOutboundPeerID ? "yes" : "no");
-        if (m_maskOutboundPeerIDForNonPL) {
-            LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");
-        }
+        LogInfo("    Maximum Permitted Connections: %u", m_softConnLimit);
+
         LogInfo("    Call Collision Timeout: %us", m_callCollisionTimeout);
         if (m_callCollisionTimeout == 0U) {
             LogWarning(LOG_MASTER, "Call Collisions are disabled because the call collision timeout is set to 0 seconds. This is not recommended, and can cause undesired behavior.");
         }
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Restrict private call to registered units: %s", m_restrictPVCallToRegOnly ? "yes" : "no");
+        LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
+        if (m_disallowAdjStsBcast) {
+            LogWarning(LOG_MASTER, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
+        }
+        LogInfo("    Disable P25 ADJ_STS_BCAST to neighbor peers: %s", m_disallowExtAdjStsBcast ? "yes" : "no");
+        LogInfo("    Disable P25 Radio Monitor to any peers: %s", m_disallowRadioMonitor ? "yes" : "no");
+        LogInfo("    Allow conventional sites to override affiliation and receive all traffic: %s", m_allowConvSiteAffOverride ? "yes" : "no");
+        LogInfo("    Disallow In-Call Control Feedback: %s", m_disallowInCallCtrl ? "yes" : "no");
+        LogInfo("    Enable RID In-Call Control: %s", m_enableRIDInCallCtrl ? "yes" : "no");
+        LogInfo("    Reject Unknown RIDs: %s", m_rejectUnknownRID ? "yes" : "no");
+        LogInfo("    Disable P25 TDULC call termination broadcasts to any peers: %s", m_disallowCallTerm ? "yes" : "no");
+        LogInfo("    Mask Outbound Traffic Peer ID: %s", m_maskOutboundPeerID ? "yes" : "no");
+        if (m_maskOutboundPeerIDForNonPL) {
+            LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");
+        }
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
         LogInfo("    Disallow Unit-to-Unit: %s", m_disallowU2U ? "yes" : "no");
+
+        LogInfo("High Availability Parameters");
+        LogInfo("    High Availability Enabled: %s", m_haEnabled ? "yes" : "no");
+        if (m_haEnabled) {
+            LogInfo("    Advertised HA WAN IP: %s", m_advertisedHAAddress.c_str());
+            LogInfo("    Advertised HA WAN Port: %u", m_advertisedHAPort);
+        }
+
+        LogInfo("Adaptive Jitter Buffer Parameters");
+        LogInfo("    Global Jitter Buffer Enabled: %s", m_jitterBufferEnabled ? "yes" : "no");
+        if (m_jitterBufferEnabled) {
+            LogInfo("    Global Jitter Buffer Default Max Size: %u frames", m_jitterMaxSize);
+            LogInfo("    Global Jitter Buffer Default Max Wait: %u microseconds", m_jitterMaxWait);
+        }
+
+        LogInfo("Spanning Tree Parameters");
+        LogInfo("    Enable Peer Spanning Tree: %s", m_enableSpanningTree ? "yes" : "no");
+        LogInfo("    Log Spanning Tree Changes: %s", m_logSpanningTreeChanges ? "yes" : "no");
+        LogInfo("    Spanning Tree Allow Fast Reconnect: %s", m_spanningTreeFastReconnect ? "yes" : "no");
+
+        LogInfo("Parrot Service Parameters");
+        LogInfo("    Parrot Repeat Delay: %u ms", m_parrotDelay);
+        LogInfo("    Parrot Grant Demand: %s", m_parrotGrantDemand ? "yes" : "no");
+        LogInfo("    Parrot Repeat to Only Originating Peer: %s", m_parrotOnlyOriginating ? "yes" : "no");
+        if (m_parrotOverrideSrcId != 0U) {
+            LogInfo("    Parrot Repeat Source ID Override: %u", m_parrotOverrideSrcId);
+        }
+
+        LogInfo("Console Patch Status Parameters");
+        LogInfo("    Console Patch Status Enabled: %s", m_patchStatusEnabled ? "yes" : "no");
+        if (m_patchStatusEnabled) {
+            LogInfo("    Console Patch Status Default TTL: %us", m_patchStatusRegistry.defaultTtlSeconds());
+            LogInfo("    Console Patch Status Minimum TTL: %us", m_patchStatusRegistry.minTtlSeconds());
+            LogInfo("    Console Patch Status Maximum TTL: %us", m_patchStatusRegistry.maxTtlSeconds());
+        }
+
+        LogInfo("Packet Data Parameters");
+        LogInfo("    Packet Data Broadcast: %s", m_packetDataBroadcast ? "yes" : "no");
+        LogInfo("    IP Pool Size: %u", m_sndcpEndAddr - m_sndcpStartAddr + 1U);
+        LogInfo("    Disable Packet Data: %s", m_disablePacketData ? "yes" : "no");
+        LogInfo("    Dump Packet Data: %s", m_dumpPacketData ? "yes" : "no");
+        LogInfo("    VTUN Queue Max Frames: %u", m_vtunQueueMaxFrames);
+        LogInfo("    VTUN Queue Max Bytes: %u", m_vtunQueueMaxBytes);
+
+        LogInfo("Key Management Facility Parameters");
+        LogInfo("    OTAR KMF Services Enabled: %s", m_kmfServicesEnabled ? "yes" : "no");
+        LogInfo("    OTAR KMF RSI: %u", m_kmfRsi);
+        LogInfo("    OTAR KMF Listening Address: %s", m_address.c_str());
+        LogInfo("    OTAR KMF Listening Port: %u", kmfOtarPort);
+        LogInfo("    OTAR KMF Allow RID 0 Requests: %s", m_kmfAllowRID0 ? "yes" : "no");
+        if (m_kmfAllowRID0) {
+            LogWarning(LOG_P25, "We are configured to allow RID 0 peer key requests, this is a security risk and shouldn't be used outside of testing environments.");
+        }
+        LogInfo("    OTAR KMF Forge Source LLID: %s", m_kmfForgeSrcLLId ? "yes" : "no");
+        if (m_kmfForgeSrcLLId) {
+            LogWarning(LOG_P25, "We are configured to forge the source LLID on KMM packets, this is a security risk and shouldn't be used outside of testing environments.");
+        }
+        LogInfo("    OTAR KMF Warm Start Requests Allowed: %s", m_kmfWarmStart ? "yes" : "no");
+        LogInfo("    OTAR KMF Peer Request Encrypted: %s", m_kmfEncKeyRequest ? "yes" : "no");
+        if (!m_encryptedTrafficConn && !m_kmfEncKeyRequest) {
+            LogWarning(LOG_MASTER, "Peers can make key requests, but the encrypted traffic connection is not enabled and KMF requests are not encrypted! Key requests will be sent in the clear.");
+        }
+        if (m_kmfDebug) {
+            LogInfo("    OTAR KMF Services Debug: yes");
+        }
+
+        LogInfo("Metrics Reporting Parameters");
         LogInfo("    Metrics Reporting Enabled: %s", m_enableMetrics ? "yes" : "no");
         LogInfo("    Metrics Log Raw TSBK/CSBK/RCCH: %s", m_metricsLogRawData ? "yes" : "no");
         LogInfo("    InfluxDB Reporting Enabled: %s", m_enableInfluxDB ? "yes" : "no");
@@ -530,29 +578,28 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
                 LogWarning(LOG_MASTER, "SQLite Metrics pruning is disabled. This can result in extremely large database files depending on system traffic.");
             }
         }
-        LogInfo("    Global Jitter Buffer Enabled: %s", m_jitterBufferEnabled ? "yes" : "no");
-        if (m_jitterBufferEnabled) {
-            LogInfo("    Global Jitter Buffer Default Max Size: %u frames", m_jitterMaxSize);
-            LogInfo("    Global Jitter Buffer Default Max Wait: %u microseconds", m_jitterMaxWait);
+    }
+}
+
+/* Helper to set packet-data configuration options. */
+
+void TrafficNetwork::setPacketDataOptions(yaml::Node& conf)
+{
+    m_vtunQueueMaxFrames = 128U;
+    m_vtunQueueMaxBytes = 262144U;
+
+    yaml::Node& queue = conf["queue"];
+    if (queue.size() > 0U) {
+        m_vtunQueueMaxFrames = queue["maxFrames"].as<uint32_t>(128U);
+        m_vtunQueueMaxBytes = queue["maxBytes"].as<uint32_t>(262144U);
+
+        if (m_vtunQueueMaxFrames == 0U) {
+            LogWarning(LOG_MASTER, "VTUN queue maxFrames is 0, clamping to 1");
+            m_vtunQueueMaxFrames = 1U;
         }
-        LogInfo("    Parrot Repeat to Only Originating Peer: %s", m_parrotOnlyOriginating ? "yes" : "no");
-        if (m_parrotOverrideSrcId != 0U) {
-            LogInfo("    Parrot Repeat Source ID Override: %u", m_parrotOverrideSrcId);
-        }
-        LogInfo("    P25 OTAR KMF Services Enabled: %s", m_kmfServicesEnabled ? "yes" : "no");
-        LogInfo("    P25 OTAR KMF RSI: %u", m_kmfRsi);
-        LogInfo("    P25 OTAR KMF Listening Address: %s", m_address.c_str());
-        LogInfo("    P25 OTAR KMF Listening Port: %u", kmfOtarPort);
-        LogInfo("    P25 KMF Allow RID 0 Requests: %s", m_kmfAllowRID0 ? "yes" : "no");
-        LogInfo("    P25 KMF Warm Start Requests Allowed: %s", m_kmfWarmStart ? "yes" : "no");
-        LogInfo("    P25 KMF Peer Request Encrypted: %s", m_kmfEncKeyRequest ? "yes" : "no");
-        if (!m_encryptedTrafficConn && !m_kmfEncKeyRequest) {
-            LogWarning(LOG_MASTER, "Peers can make key requests, but the encrypted traffic connection is not enabled and KMF requests are not encrypted! Key requests will be sent in the clear.");
-        }
-        LogInfo("    High Availability Enabled: %s", m_haEnabled ? "yes" : "no");
-        if (m_haEnabled) {
-            LogInfo("    Advertised HA WAN IP: %s", m_advertisedHAAddress.c_str());
-            LogInfo("    Advertised HA WAN Port: %u", m_advertisedHAPort);
+        if (m_vtunQueueMaxBytes == 0U) {
+            LogWarning(LOG_MASTER, "VTUN queue maxBytes is 0, clamping to 512");
+            m_vtunQueueMaxBytes = 512U;
         }
     }
 }

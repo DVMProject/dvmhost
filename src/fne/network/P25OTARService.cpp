@@ -882,11 +882,17 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
         return nullptr;
     }
 
+    // if configured to forge the source LLID, forge it, if it is set to the default value of 1
+    if (m_network->m_kmfForgeSrcLLId && frame->getSrcLLId() == 1U) {
+        frame->setSrcLLId(llId);
+    }
+
     // AACA-D 7.4: validate addressing, MN/MAC coupling, authentication and
     // anti-replay state before executing message-specific behavior
     if (frame->getDstLLId() != m_network->m_kmfRsi || frame->getSrcLLId() == 0U ||
         (llId != 0U && frame->getSrcLLId() != llId)) {
-        LogWarning(LOG_P25, P25_KMM_STR ", invalid source/destination RSI, llid = %u, srcLlId = %u, dstLlId = %u", llId, frame->getSrcLLId(), frame->getDstLLId());
+        LogWarning(LOG_P25, P25_KMM_STR ", invalid source/destination RSI, llId = %u, srcLlId = %u, dstLlId = %u, kmfRSI = %u", llId, frame->getSrcLLId(), frame->getDstLLId(),
+            m_network->m_kmfRsi);
         return nullptr;
     }
 

@@ -210,6 +210,11 @@ namespace network
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
         void setOptions(yaml::Node& conf, bool printOptions);
+        /**
+         * @brief Sets packet-data options from the top-level VTUN configuration.
+         * @param conf VTUN configuration node.
+         */
+        void setPacketDataOptions(yaml::Node& conf);
 
         /**
          * @brief Gets the current status of the network.
@@ -375,9 +380,11 @@ namespace network
         bool m_kmfServicesEnabled;
         uint32_t m_kmfRsi;
         bool m_kmfAllowRID0;
+        bool m_kmfForgeSrcLLId;
         bool m_kmfEncKeyRequest;
         uint8_t* m_kmfPresharedKey;
         bool m_kmfWarmStart;
+        bool m_kmfDebug;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::RadioAliasLookup* m_ridAliasLookup;
@@ -502,15 +509,15 @@ namespace network
         std::mutex m_metadataUpdateMutex;
         std::unordered_map<uint32_t, MetadataUpdateState> m_metadataUpdateState;
 
+        bool m_packetDataBroadcast;
+        uint32_t m_sndcpStartAddr;
+        uint32_t m_sndcpEndAddr;
         bool m_disablePacketData;
         bool m_dumpPacketData;
         bool m_verbosePacketData;
 
         uint32_t m_vtunQueueMaxFrames;
         uint32_t m_vtunQueueMaxBytes;
-
-        uint32_t m_sndcpStartAddr;
-        uint32_t m_sndcpEndAddr;
 
         bool m_logDenials;
         bool m_logUpstreamCallStartEnd;
