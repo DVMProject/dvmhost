@@ -1,0 +1,122 @@
+---
+# dvmhost project-owned C and C++ style.
+#
+# This is intentionally conservative. The repository contains hand-formatted
+# protocol code plus third-party, generated, and platform SDK sources. Do not
+# run clang-format recursively over those trees; see AGENTS.md.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++14
+
+UseTab: Never
+TabWidth: 4
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 4
+AccessModifierOffset: -4
+IndentAccessModifiers: false
+NamespaceIndentation: All
+IndentCaseLabels: false
+IndentCaseBlocks: false
+IndentGotoLabels: false
+IndentPPDirectives: None
+
+# Preserve the project's mixed brace convention: namespaces and function
+# definitions use Allman braces; records and control statements use attached
+# braces; case-local scopes put the brace on the following line.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+
+SpaceBeforeParens: ControlStatements
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeCpp11BracedList: true
+SpaceAfterTemplateKeyword: false
+SpaceAfterCStyleCast: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpacesInAngles: Never
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+DerivePointerAlignment: false
+
+AlignAfterOpenBracket: DontAlign
+AlignOperands: DontAlign
+AlignEscapedNewlines: Right
+AlignTrailingComments: true
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Empty
+
+BinPackArguments: true
+BinPackParameters: true
+ExperimentalAutoDetectBinPacking: false
+BreakConstructorInitializers: AfterColon
+PackConstructorInitializers: BinPack
+AlwaysBreakAfterReturnType: None
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakTemplateDeclarations: MultiLine
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+
+# Existing files intentionally contain long log strings, protocol expressions,
+# and manually selected wrapping. A zero limit prevents clang-format from
+# reflowing them merely to satisfy an arbitrary width.
+ColumnLimit: 0
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: true
+ReflowComments: false
+CommentPragmas: '^ IWYU pragma:'
+
+# Include and using order carries local grouping meaning in this repository.
+SortIncludes: false
+IncludeBlocks: Preserve
+SortUsingDeclarations: false
+FixNamespaceComments: false
+
+# Catch2 and project assertion/logging macros should remain statement-like. This
+# reduces clang-format's tendency to treat their following braces as functions.
+StatementMacros:
+  - TEST_CASE
+  - TEST_CASE_METHOD
+  - SCENARIO
+  - SECTION
+  - REQUIRE
+  - REQUIRE_FALSE
+  - CHECK
+  - CHECK_FALSE
+
+Cpp11BracedListStyle: false
+CompactNamespaces: false
+DeriveLineEnding: true
+UseCRLF: false
+DisableFormat: false
+...
