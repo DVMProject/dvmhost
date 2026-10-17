@@ -1220,6 +1220,11 @@ bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId)
             LogWarning(LOG_RF, "Traffic collision detect, preempting existing network traffic to new RF traffic, rfDstId = %u, netDstId = %u", dstId,
                 m_nxdn->m_netLastDstId);
             resetNet();
+            m_nxdn->m_netState = RS_NET_IDLE;
+            m_nxdn->m_netTimeoutTimer.stop();
+            m_nxdn->m_netTimeout = false;
+            m_nxdn->m_netTGHang.stop();
+            m_nxdn->m_networkWatchdog.stop();
             if (m_nxdn->m_network != nullptr)
                 m_nxdn->m_network->resetNXDN();
         }

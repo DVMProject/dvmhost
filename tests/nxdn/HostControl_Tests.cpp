@@ -882,7 +882,7 @@ TEST_CASE("NXDN clearRFReject returns rejected RF state to listening", "[nxdn][h
 TEST_CASE("NXDN rejects mismatched network traffic while RF hang is active", "[nxdn][host][control][rf]")
 {
     NXDNHostHarness harness;
-    HostTestHooks::nxdnSetRFCall(*harness.m_control, 3001U, 4001U);
+    HostTestHooks::nxdnSetRFHang(*harness.m_control, 3001U, 4001U);
 
     nxdn::lc::RTCH control;
     control.setMessageType(nxdn::defines::MessageType::RTCH_VCALL);
@@ -892,6 +892,36 @@ TEST_CASE("NXDN rejects mismatched network traffic while RF hang is active", "[n
     control.setTransmissionMode(nxdn::defines::TransmissionMode::MODE_4800);
 
     REQUIRE_FALSE(HostTestHooks::nxdnStartNetCall(*harness.m_control, control));
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
+}
+
+TEST_CASE("NXDN admits matching network traffic during RF hang", "[nxdn][host][control][rf-steering]")
+{
+    NXDNHostHarness harness;
+    HostTestHooks::nxdnSetRFHang(*harness.m_control, 3001U, 4001U);
+
+    nxdn::lc::RTCH control;
+    control.setMessageType(nxdn::defines::MessageType::RTCH_VCALL);
+    control.setSrcId(1001U);
+    control.setDstId(4001U);
+    control.setGroup(true);
+    control.setTransmissionMode(nxdn::defines::TransmissionMode::MODE_4800);
+
+    REQUIRE(HostTestHooks::nxdnStartNetCall(*harness.m_control, control));
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE_FALSE(HostTestHooks::nxdnRFTGHang(*harness.m_control).isRunning());
+}
+
+TEST_CASE("NXDN RF traffic preempts only a different active network talkgroup", "[nxdn][host][control][rf-steering]")
+{
+    NXDNHostHarness harness;
+
+    harness.startNetworkVoiceCall(1001U, 2001U);
+    REQUIRE_FALSE(HostTestHooks::nxdnStartRFCall(*harness.m_control, 1002U, 2001U));
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+
+    REQUIRE(HostTestHooks::nxdnStartRFCall(*harness.m_control, 1002U, 2002U));
+    REQUIRE(HostTestHooks::nxdnRFState(*harness.m_control) == RS_RF_AUDIO);
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
 }
 

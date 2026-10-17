@@ -281,6 +281,10 @@ protocols:
             enableTimeDateAnn: false
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
+            # Flag indicating whether successful RF group grants may steer the conventional channel talkgroup.
+            #   This applies only when control is enabled and is not dedicated. Active RF grants remain exclusive;
+            #   a different-TG RF grant may preempt a network-originated grant or residual RF talkgroup hang.
+            allowRFGrantTGSteering: false
             # Flag indicating whether or not the adjacent site broadcasts are disabled.
             disableAdjSiteBroadcast: false
             # Flag indicating a dedicated CC while process call TDUs and explicitly release grants when a call TDU occurs.

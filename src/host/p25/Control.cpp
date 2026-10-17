@@ -77,6 +77,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_voiceOnControl(false),
     m_controlOnly(false),
     m_ackTSBKRequests(true),
+    m_allowRFGrantTGSteering(false),
     m_disableNetworkGrant(false),
     m_disableNetworkHDU(false),
     m_allowExplicitSourceId(false),
@@ -306,6 +307,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
+    m_allowRFGrantTGSteering = control["allowRFGrantTGSteering"].as<bool>(false);
+    if (m_allowRFGrantTGSteering && (!m_enableControl || m_dedicatedControl)) {
+        LogWarning(LOG_P25, "RF grant talkgroup steering requires non-dedicated control; disabling it.");
+        m_allowRFGrantTGSteering = false;
+    }
     m_control->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     if (m_isModemDFSI)
         m_control->m_ctrlTSDUMBF = false; // force single block TSDUs for DFSI mode
@@ -514,6 +520,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         }
         if (!m_control->m_ctrlTSDUMBF) {
             LogInfo("    Disable Multi-Block TSDUs: yes");
+        }
+        if (m_allowRFGrantTGSteering) {
+            LogInfo("    RF Grant Talkgroup Steering: yes");
         }
         LogInfo("    Time/Date Announcement TSBK: %s", m_control->m_ctrlTimeDateAnn ? "yes" : "no");
 

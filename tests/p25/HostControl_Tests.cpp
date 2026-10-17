@@ -476,6 +476,121 @@ TEST_CASE("P25 active talkgroup updates preserve the working TGID", "[p25][activ
     REQUIRE(dstIdB == 0U);
 }
 
+TEST_CASE("P25 enhanced conventional RF grants steer without replacing RF ownership", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+    REQUIRE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+}
+
+TEST_CASE("P25 enhanced conventional RF grant preempts a different network grant", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, 1001U, 2001U, true));
+    HostTestHooks::p25SetNetState(*harness.m_control, RS_NET_AUDIO, 1001U, 2001U);
+
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2002U);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+}
+
+TEST_CASE("P25 RF grant steering overrides hang only on non-dedicated control", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, 2001U));
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2002U);
+
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, 2002U));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, true);
+    harness.m_control->grantTG(1003U, 2003U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2003U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2002U);
+}
+
+TEST_CASE("P25 disabled RF grant steering preserves conventional hang ownership", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, 2001U));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, false, false);
+
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+    REQUIRE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 enhanced conventional RF grant cannot replace matching network ownership", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, 1001U, 2001U, true));
+
+    harness.m_control->grantTG(1002U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 0U);
+}
+
+TEST_CASE("P25 enhanced conventional RF grant permits only the owning source to retry", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+
+    harness.m_control->grantTG(1002U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+}
+
 TEST_CASE("P25 host preserves encrypted network call parameters", "[p25][host][control][crypto]")
 {
     P25HostHarness harness;

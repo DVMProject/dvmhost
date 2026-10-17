@@ -95,6 +95,13 @@ public:
      */
     static void dmrSetRFCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId);
     /**
+     * @brief Forces a DMR slot into residual RF talkgroup hang state for tests.
+     * @param slot DMR slot instance.
+     * @param srcId Source ID to retain as the last RF source.
+     * @param dstId Destination ID to retain as the last RF destination.
+     */
+    static void dmrSetRFHang(dmr::Slot& slot, uint32_t srcId, uint32_t dstId);
+    /**
      * @brief Returns a DMR slot to RF listening state after a synthetic RF call.
      * @param slot DMR slot instance.
      */
@@ -202,6 +209,42 @@ public:
      * @return Timer& Reference to the RF loss watchdog timer.
      */
     static Timer& p25RFLossWatchdog(p25::Control& control);
+    /**
+     * @brief Configures P25 RF grant talkgroup steering for a test.
+     * @param control P25 control instance.
+     * @param enabled Flag indicating whether RF grant steering is enabled.
+     * @param dedicated Flag indicating whether the control channel is dedicated.
+     */
+    static void p25ConfigureRFGrantSteering(p25::Control& control, bool enabled, bool dedicated);
+    /**
+     * @brief Tests whether the P25 affiliation table contains a grant.
+     * @param control P25 control instance.
+     * @param dstId Destination ID to test.
+     * @returns bool True if the destination is granted; otherwise, false.
+     */
+    static bool p25IsGranted(const p25::Control& control, uint32_t dstId);
+    /**
+     * @brief Seeds a P25 grant for a steering-policy test.
+     * @param control P25 control instance.
+     * @param srcId Source radio ID.
+     * @param dstId Destination ID.
+     * @param netGranted Flag indicating whether the grant originated from the network.
+     * @returns bool True if the grant was created; otherwise, false.
+     */
+    static bool p25SeedGrant(p25::Control& control, uint32_t srcId, uint32_t dstId, bool netGranted);
+    /**
+     * @brief Releases a P25 grant for a steering-policy test.
+     * @param control P25 control instance.
+     * @param dstId Destination ID to release.
+     * @returns bool True if the grant was released; otherwise, false.
+     */
+    static bool p25ReleaseGrant(p25::Control& control, uint32_t dstId);
+    /**
+     * @brief Gets the last P25 RF destination ID.
+     * @param control P25 control instance.
+     * @returns uint32_t Last RF destination ID.
+     */
+    static uint32_t p25RFLastDstId(const p25::Control& control);
     /**
      * @brief Forces P25 control network state and last IDs for targeted recovery-path tests.
      * @param control P25 control instance.
@@ -466,6 +509,13 @@ public:
      * @param dstId Destination ID to apply to control state.
      */
     static void nxdnSetRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId);
+    /**
+     * @brief Forces NXDN control into residual RF talkgroup hang state for tests.
+     * @param control NXDN control instance.
+     * @param srcId Source ID to retain as the last RF source.
+     * @param dstId Destination ID to retain as the last RF destination.
+     */
+    static void nxdnSetRFHang(nxdn::Control& control, uint32_t srcId, uint32_t dstId);
     /**
      * @brief Returns NXDN control to RF listening state after a synthetic RF call.
      * @param control NXDN control instance.

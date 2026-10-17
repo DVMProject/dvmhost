@@ -759,11 +759,37 @@ TEST_CASE("DMR clearRFReject only clears the targeted slot", "[dmr][host][contro
 TEST_CASE("DMR slot rejects mismatched network traffic while RF hang is active", "[dmr][host][control][rf]")
 {
     DMRHostHarness harness;
-    HostTestHooks::dmrSetRFCall(*HostTestHooks::dmrSlot1(*harness.m_control), 3001U, 4001U);
+    HostTestHooks::dmrSetRFHang(*HostTestHooks::dmrSlot1(*harness.m_control), 3001U, 4001U);
 
     HostTestHooks::dmrStartNetVoiceCall(*HostTestHooks::dmrSlot1(*harness.m_control), 1001U, 2001U);
 
     REQUIRE(HostTestHooks::dmrNetState(*HostTestHooks::dmrSlot1(*harness.m_control)) == RS_NET_IDLE);
+}
+
+TEST_CASE("DMR slot admits matching network traffic during RF hang", "[dmr][host][control][rf-steering]")
+{
+    DMRHostHarness harness;
+    dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+    HostTestHooks::dmrSetRFHang(*slot, 3001U, 4001U);
+
+    HostTestHooks::dmrStartNetVoiceCall(*slot, 1001U, 4001U);
+
+    REQUIRE(HostTestHooks::dmrNetState(*slot) == RS_NET_AUDIO);
+    REQUIRE_FALSE(HostTestHooks::dmrRFTGHang(*slot).isRunning());
+}
+
+TEST_CASE("DMR RF traffic preempts only a different active network talkgroup", "[dmr][host][control][rf-steering]")
+{
+    DMRHostHarness harness;
+    dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+
+    HostTestHooks::dmrStartNetVoiceCall(*slot, 1001U, 2001U);
+    REQUIRE_FALSE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1002U, 2001U));
+    REQUIRE(HostTestHooks::dmrNetState(*slot) == RS_NET_AUDIO);
+
+    REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1002U, 2002U));
+    REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_AUDIO);
+    REQUIRE(HostTestHooks::dmrNetState(*slot) == RS_NET_IDLE);
 }
 
 TEST_CASE("DMR processFrame accepts a synthetic RF voice call on the targeted slot", "[dmr][host][control][rf]")
