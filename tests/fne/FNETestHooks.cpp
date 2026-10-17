@@ -547,6 +547,37 @@ void FNETestHooks::clearPeers(TrafficNetwork& network)
 }
 
 /**
+ * @brief Replaces a replicated active peer list for testing.
+ * @param network The TrafficNetwork instance.
+ * @param peerId The replica peer ID.
+ * @param peers The active peer list to store.
+ */
+void FNETestHooks::updateReplicatedPeers(TrafficNetwork& network, uint32_t peerId, const json::array& peers)
+{
+    network.updateReplicatedPeers(peerId, peers);
+}
+
+/**
+ * @brief Gets a snapshot of the replicated active peer lists.
+ * @param network The TrafficNetwork instance.
+ * @return Map of replica peer IDs to active peer lists.
+ */
+std::unordered_map<uint32_t, json::array> FNETestHooks::replicatedPeersSnapshot(const TrafficNetwork& network)
+{
+    return network.replicatedPeersSnapshot();
+}
+
+/**
+ * @brief Removes a replicated active peer list for testing.
+ * @param network The TrafficNetwork instance.
+ * @param peerId The replica peer ID.
+ */
+void FNETestHooks::eraseReplicatedPeers(TrafficNetwork& network, uint32_t peerId)
+{
+    network.eraseReplicatedPeers(peerId);
+}
+
+/**
  * @brief Creates a NetPacketRequest for the specified network, metadata, function, subFunction, peerId, and packet.
  * @param network The TrafficNetwork instance.
  * @param metadata The MetadataNetwork instance (can be nullptr).

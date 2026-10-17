@@ -943,8 +943,9 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
         m_network->m_peers.shared_unlock();
 
         // report any peers from replica peers
-        if (m_network->m_peerReplicaPeers.size() > 0) {
-            for (auto entry : m_network->m_peerReplicaPeers) {
+        std::unordered_map<uint32_t, json::array> replicatedPeers = m_network->replicatedPeersSnapshot();
+        if (!replicatedPeers.empty()) {
+            for (const auto& entry : replicatedPeers) {
                 json::array peerObjs = entry.second;
                 if (entry.second.size() > 0) {
                     for (auto linkEntry : entry.second) {

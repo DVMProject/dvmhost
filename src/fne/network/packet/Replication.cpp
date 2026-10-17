@@ -46,18 +46,12 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                         return;
                     }
 
-                    std::unique_lock<std::mutex> pktLock(pkt->mutex, std::defer_lock);
-                    uint32_t timeout = 0U;
-                    while (!pktLock.try_lock() && timeout < TIMEOUT_MAX_REPL) {
-                        timeout++;
-                        Thread::sleep(1U);
-                    }
-
+                    std::unique_lock<std::mutex> pktLock(pkt->mutex, std::try_to_lock);
                     if (!pktLock.owns_lock()) {
-                        LogError(LOG_STP, "PEER %u (%s) Peer Replication, Active Peer List, timeout waiting for packet buffer to unlock", peerId,
+                        LogWarning(LOG_REPL, "PEER %u (%s) Peer Replication, Active Peer List, dropping contended packet fragment", peerId,
                             connection->identWithQualifier().c_str());
-                        // detach the stalled transfer without destroying state that
-                        // another worker still owns; its shared_ptr keeps it alive
+                        // detach the contended transfer so later fragments cannot
+                        // accumulate behind it. The current owner retains the entry
                         erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                         return;
                     }
@@ -80,6 +74,13 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                     uint8_t* decompressed = nullptr;
 
                     if (pkt->buffer->decode(rawPayload, &decompressed, &decompressedLen)) {
+                        pkt->buffer->clear();
+                        pkt->buffer.reset();
+                        pkt->streamId = 0U;
+                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
+                        pktLock.unlock();
+
+                        std::unique_ptr<uint8_t[]> decompressedPayload(decompressed);
                         std::string payload(decompressed + 8U, decompressed + decompressedLen);
 
                         // parse JSON body
@@ -87,42 +88,20 @@ void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, Metada
                         std::string err = json::parse(v, payload);
                         if (!err.empty()) {
                             LogError(LOG_REPL, "PEER %u (%s) error parsing active peer list, %s", peerId, connection->identWithQualifier().c_str(), err.c_str());
-                            pkt->buffer->clear();
-                            pkt->buffer.reset();
-                            pkt->streamId = 0U;
-                            if (decompressed != nullptr) {
-                                delete[] decompressed;
-                            }
-                            erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                             return;
                         }
                         else  {
                             // ensure parsed JSON is an array
                             if (!v.is<json::array>()) {
                                 LogError(LOG_REPL, "PEER %u (%s) error parsing active peer list, data was not valid", peerId, connection->identWithQualifier().c_str());
-                                pkt->buffer->clear();
-                                pkt->buffer.reset();
-                                pkt->streamId = 0U;
-                                if (decompressed != nullptr) {
-                                    delete[] decompressed;
-                                }
-                                erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                                 return;
                             }
                             else {
                                 json::array arr = v.get<json::array>();
                                 LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, Active Peer List, updating %u peer entries", peerId, connection->identWithQualifier().c_str(), arr.size());
-                                network->m_peerReplicaPeers[peerId] = arr;
+                                network->updateReplicatedPeers(peerId, arr);
                             }
                         }
-
-                        pkt->buffer->clear();
-                        pkt->buffer.reset();
-                        pkt->streamId = 0U;
-                        if (decompressed != nullptr) {
-                            delete[] decompressed;
-                        }
-                        erasePacketBufferEntry(mdNetwork->m_peerReplicaActPkt, peerId, pkt);
                     }
                 }
                 else {

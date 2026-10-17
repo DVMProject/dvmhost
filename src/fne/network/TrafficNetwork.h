@@ -399,7 +399,8 @@ namespace network
 
         typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
         concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-        concurrent::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
+        std::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
+        mutable std::mutex m_peerReplicaPeersMutex;
         typedef std::pair<const uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
         concurrent::unordered_map<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> m_peerAffiliations;
         mutable std::mutex m_peerAffiliationsMutex;
@@ -526,6 +527,23 @@ namespace network
         bool m_verbose;
 
         static std::array<std::mutex, PEER_STATE_LOCK_STRIPES> s_peerStateLocks;
+
+        /**
+         * @brief Replaces the active peer list received from a replica peer.
+         * @param peerId Peer ID that supplied the active peer list.
+         * @param peers Active peer list reported by the replica peer.
+         */
+        void updateReplicatedPeers(uint32_t peerId, const json::array& peers);
+        /**
+         * @brief Removes the active peer list associated with a replica peer.
+         * @param peerId Peer ID whose replicated active peer list should be removed.
+         */
+        void eraseReplicatedPeers(uint32_t peerId);
+        /**
+         * @brief Creates a stable snapshot of all replicated active peer lists.
+         * @return Map of replica peer IDs to their reported active peer lists.
+         */
+        std::unordered_map<uint32_t, json::array> replicatedPeersSnapshot() const;
 
         /**
          * @brief Gets the mutex for a specific peer ID.

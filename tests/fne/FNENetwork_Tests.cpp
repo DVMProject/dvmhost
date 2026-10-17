@@ -62,6 +62,25 @@ TEST_CASE("FNE test hooks expose peer connection state", "[fne][hooks]")
     REQUIRE(FNETestHooks::peerState(harness.traffic, 1001U) == network::NET_STAT_WAITING_AUTHORISATION);
 }
 
+TEST_CASE("FNE replicated peer snapshots are stable copies", "[fne][replication]")
+{
+    FNEHarness harness;
+    json::array peers;
+    json::object peer;
+    uint32_t replicatedPeerId = 2001U;
+    peer["peerId"].set<uint32_t>(replicatedPeerId);
+    peers.push_back(json::value(peer));
+
+    FNETestHooks::updateReplicatedPeers(harness.traffic, 1001U, peers);
+    std::unordered_map<uint32_t, json::array> snapshot = FNETestHooks::replicatedPeersSnapshot(harness.traffic);
+    REQUIRE(snapshot.size() == 1U);
+    REQUIRE(snapshot.at(1001U).size() == 1U);
+
+    FNETestHooks::eraseReplicatedPeers(harness.traffic, 1001U);
+    REQUIRE(FNETestHooks::replicatedPeersSnapshot(harness.traffic).empty());
+    REQUIRE(snapshot.at(1001U).size() == 1U);
+}
+
 TEST_CASE("FNE traffic dispatcher rejects truncated pre-authentication packets", "[fne][hooks][security]")
 {
     FNEHarness harness;

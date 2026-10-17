@@ -106,6 +106,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_status(NET_STAT_INVALID),
     m_peers(),
     m_peerReplicaPeers(),
+    m_peerReplicaPeersMutex(),
     m_peerAffiliations(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
@@ -1099,6 +1100,30 @@ void TrafficNetwork::close()
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
+/* Replaces the active peer list received from a replica peer. */
+
+void TrafficNetwork::updateReplicatedPeers(uint32_t peerId, const json::array& peers)
+{
+    std::lock_guard<std::mutex> lock(m_peerReplicaPeersMutex);
+    m_peerReplicaPeers[peerId] = peers;
+}
+
+/* Removes the active peer list associated with a replica peer. */
+
+void TrafficNetwork::eraseReplicatedPeers(uint32_t peerId)
+{
+    std::lock_guard<std::mutex> lock(m_peerReplicaPeersMutex);
+    m_peerReplicaPeers.erase(peerId);
+}
+
+/* Creates a stable snapshot of all replicated active peer lists. */
+
+std::unordered_map<uint32_t, json::array> TrafficNetwork::replicatedPeersSnapshot() const
+{
+    std::lock_guard<std::mutex> lock(m_peerReplicaPeersMutex);
+    return m_peerReplicaPeers;
+}
+
 /* Entry point to parrot handler thread. */
 
 void* TrafficNetwork::threadParrotHandler(void* arg)
@@ -1552,12 +1577,7 @@ void TrafficNetwork::erasePeer(uint32_t peerId)
     }
 
     // erase any peer replication entries for this peer
-    {
-        auto it = std::find_if(m_peerReplicaPeers.begin(), m_peerReplicaPeers.end(), [&](auto& x) { return x.first == peerId; });
-        if (it != m_peerReplicaPeers.end()) {
-            m_peerReplicaPeers.erase(peerId);
-        }
-    }
+    eraseReplicatedPeers(peerId);
 
     // erase any console patch status records for this peer
     if (m_patchStatusEnabled && m_patchStatusRegistry.removePeer(peerId)) {

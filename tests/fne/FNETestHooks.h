@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,25 @@ public:
      * @param network The TrafficNetwork instance.
      */
     static void clearPeers(network::TrafficNetwork& network);
+    /**
+     * @brief Replaces a replicated active peer list for testing.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The replica peer ID.
+     * @param peers The active peer list to store.
+     */
+    static void updateReplicatedPeers(network::TrafficNetwork& network, uint32_t peerId, const json::array& peers);
+    /**
+     * @brief Gets a snapshot of the replicated active peer lists.
+     * @param network The TrafficNetwork instance.
+     * @return Map of replica peer IDs to active peer lists.
+     */
+    static std::unordered_map<uint32_t, json::array> replicatedPeersSnapshot(const network::TrafficNetwork& network);
+    /**
+     * @brief Removes a replicated active peer list for testing.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The replica peer ID.
+     */
+    static void eraseReplicatedPeers(network::TrafficNetwork& network, uint32_t peerId);
 
     /**
      * @brief Dispatches a traffic packet to the specified peer in the TrafficNetwork.
