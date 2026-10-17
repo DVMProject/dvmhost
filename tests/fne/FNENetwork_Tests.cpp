@@ -12,8 +12,10 @@
 
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
+#include "common/lookups/AffiliationLookup.h"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -51,6 +53,38 @@ public:
     network::TrafficNetwork traffic;
     network::MetadataNetwork metadata;
 };
+
+TEST_CASE("Affiliation snapshots replace prior state", "[fne][affiliations]")
+{
+    lookups::AffiliationLookup affiliations("test-affiliations", nullptr, false);
+    affiliations.groupAff(1001U, 3100U);
+    affiliations.groupAff(1002U, 3200U);
+
+    std::unordered_map<uint32_t, uint32_t> replacement = {
+        { 1002U, 3300U },
+        { 1003U, 3400U }
+    };
+    affiliations.replaceGroupAffiliations(replacement);
+
+    REQUIRE(affiliations.grpAffTable() == replacement);
+
+    affiliations.replaceGroupAffiliations({});
+    REQUIRE(affiliations.grpAffTable().empty());
+}
+
+TEST_CASE("Unit registration snapshots replace prior state", "[fne][registrations]")
+{
+    lookups::AffiliationLookup registrations("test-registrations", nullptr, false);
+    registrations.unitReg(1001U);
+    registrations.unitReg(1002U);
+
+    registrations.replaceUnitRegistrations({ 1002U, 1003U, 1003U });
+
+    REQUIRE(registrations.unitRegTable() == std::vector<uint32_t>{ 1002U, 1003U });
+
+    registrations.replaceUnitRegistrations({});
+    REQUIRE(registrations.unitRegTable().empty());
+}
 
 TEST_CASE("FNE test hooks expose peer connection state", "[fne][hooks]")
 {

@@ -34,6 +34,7 @@ AffiliationLookup::~AffiliationLookup() = default;
 void AffiliationLookup::unitReg(uint32_t srcId, uint32_t ssrc)
 {
     if (isUnitReg(srcId)) {
+        m_unitRegPeerTable[srcId] = ssrc;
         return;
     }
 
@@ -90,6 +91,19 @@ uint32_t AffiliationLookup::getSSRCByUnitReg(uint32_t srcId)
     m_unitRegPeerTable.unlock();
 
     return 0U;
+}
+
+/* Atomically replaces unit registrations and their originating peers. */
+
+void AffiliationLookup::replaceUnitRegistrations(const std::unordered_map<uint32_t, uint32_t>& registrations)
+{
+    std::vector<uint32_t> sourceIds;
+    sourceIds.reserve(registrations.size());
+    for (const auto& registration : registrations)
+        sourceIds.push_back(registration.first);
+
+    ::lookups::AffiliationLookup::replaceUnitRegistrations(sourceIds);
+    m_unitRegPeerTable = registrations;
 }
 
 /* Helper to release unit registrations. */

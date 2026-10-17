@@ -104,6 +104,13 @@ namespace lookups
          */
         virtual bool isUnitReg(uint32_t srcId) const;
         /**
+         * @brief Atomically replaces the unit registration table with a peer snapshot.
+         * @param[in] registrations Complete source ID registration snapshot.
+         * @note Timers for unchanged registrations are preserved; new registrations
+         *  receive new timers.
+         */
+        virtual void replaceUnitRegistrations(const std::vector<uint32_t>& registrations);
+        /**
          * @brief Helper to release unit registrations.
          */
         virtual void clearUnitReg();
@@ -145,6 +152,13 @@ namespace lookups
          * @returns bool True, if the source ID is affiliated to the talkgroup ID, otherwise false.
          */
         virtual bool isGroupAff(uint32_t srcId, uint32_t dstId) const;
+        /**
+         * @brief Atomically replaces the group affiliation table with a peer snapshot.
+         * @param[in] affiliations Complete source-to-talkgroup affiliation snapshot.
+         * @note Timers for unchanged affiliations are preserved; new and changed
+         *  affiliations receive new timers.
+         */
+        virtual void replaceGroupAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations);
         /**
          * @brief Helper to release group affiliations.
          * @param dstId Talkgroup ID.

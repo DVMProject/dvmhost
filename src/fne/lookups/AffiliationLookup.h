@@ -76,6 +76,11 @@ namespace fne_lookups
          */
         uint32_t getSSRCByUnitReg(uint32_t srcId);
         /**
+         * @brief Atomically replaces unit registrations and their originating peers.
+         * @param[in] registrations Map of source IDs to originating peer IDs.
+         */
+        void replaceUnitRegistrations(const std::unordered_map<uint32_t, uint32_t>& registrations);
+        /**
          * @brief Helper to release unit registrations.
          */
         void clearUnitReg() override;

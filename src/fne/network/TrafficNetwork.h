@@ -404,9 +404,10 @@ namespace network
         mutable std::shared_timed_mutex m_peersMutex;
         std::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
         mutable std::mutex m_peerReplicaPeersMutex;
-        typedef std::pair<const uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
+        typedef std::pair<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
         concurrent::unordered_map<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> m_peerAffiliations;
         mutable std::mutex m_peerAffiliationsMutex;
+        mutable std::mutex m_affiliationUpdateMutex;
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
@@ -783,6 +784,73 @@ namespace network
          * @returns std::vector<PeerAffiliationMapPair> Snapshot of peer affiliation entries.
          */
         std::vector<PeerAffiliationMapPair> peerAffiliationsSnapshot() const;
+        /**
+         * @brief Adds or updates one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param dstId Talkgroup ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint32_t dstId);
+        /**
+         * @brief Removes one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerAffiliation(uint32_t peerId, uint32_t srcId);
+        /**
+         * @brief Replaces one peer's affiliations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param affiliations Complete source-to-talkgroup affiliation snapshot.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerAffiliations(uint32_t peerId, const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Rebuilds the aggregate downstream affiliation snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::unordered_map<uint32_t, uint32_t> Aggregate affiliation snapshot.
+         */
+        std::unordered_map<uint32_t, uint32_t> buildAggregatedAffiliations();
+        /**
+         * @brief Publishes an aggregate downstream affiliation snapshot upstream.
+         * @param affiliations Complete aggregate source-to-talkgroup affiliation snapshot.
+         */
+        void publishAggregatedAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Adds one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param ssrc Originating peer ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc);
+        /**
+         * @brief Removes one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerUnitRegistration(uint32_t peerId, uint32_t srcId);
+        /**
+         * @brief Replaces one peer's unit registrations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param registrations Complete source ID registration snapshot.
+         * @param ssrc Originating peer ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerUnitRegistrations(uint32_t peerId, const std::vector<uint32_t>& registrations, uint32_t ssrc);
+        /**
+         * @brief Rebuilds the aggregate downstream unit registration snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::vector<uint32_t> Aggregate unit registration snapshot.
+         */
+        std::vector<uint32_t> buildAggregatedUnitRegistrations();
+        /**
+         * @brief Publishes an aggregate downstream unit registration snapshot upstream.
+         * @param registrations Complete aggregate source ID registration snapshot.
+         */
+        void publishAggregatedUnitRegistrations(const std::vector<uint32_t>& registrations);
         /**
          * @brief Helper to disconnect a downstream peer.
          * @param peerId Peer ID.
