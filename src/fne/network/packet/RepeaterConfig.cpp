@@ -29,10 +29,10 @@ void TrafficNetwork::PacketHandler::repeaterConfig(TrafficNetwork* network, NetP
         return;
     }
 
-    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+    if (peerId > 0) {
         std::lock_guard<std::mutex> peerGuard(TrafficNetwork::getPeerStateLock(peerId));
 
-        FNEPeerConnection* connection = network->m_peers[peerId];
+        TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
         if (connection != nullptr) {
             connection->lastPing(now);
 
@@ -71,7 +71,7 @@ void TrafficNetwork::PacketHandler::repeaterConfig(TrafficNetwork* network, NetP
                             }
                         }
 
-                        network->m_peers[peerId] = connection;
+                        network->storePeer(peerId, connection);
 
                         // attach extra notification data to the RPTC ACK to notify the peer of 
                         // the use of the alternate diagnostic port
@@ -221,7 +221,7 @@ void TrafficNetwork::PacketHandler::repeaterConfig(TrafficNetwork* network, NetP
                                             LogWarning(LOG_STP, "PEER %u (%s) why has this server's announced identity changed? *big hmmmm*", peerId, connection->identWithQualifier().c_str());
                                         }
                                         SpanningTree::moveParent(tree, network->m_treeRoot);
-                                        network->logSpanningTree(connection);
+                                        network->logSpanningTree(connection.get());
                                     } else {
                                         LogWarning(LOG_STP, "PEER %u (%s) RPTC NAK, server already connected via PEER %u, duplicate connection denied, peerId = %u, masterId = %u, treePeerId = %u, treeMasterId = %u, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                                             peerId, masterPeerId, tree->id(), tree->masterId(), tree->id(), connection->connectionState());
@@ -233,7 +233,7 @@ void TrafficNetwork::PacketHandler::repeaterConfig(TrafficNetwork* network, NetP
                                 } else {
                                     SpanningTree* node = new SpanningTree(peerId, masterPeerId, network->m_treeRoot);
                                     node->identity(identity);
-                                    network->logSpanningTree(connection);
+                                    network->logSpanningTree(connection.get());
                                 }
 
                                 network->m_treeLock.unlock();

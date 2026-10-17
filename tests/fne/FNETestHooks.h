@@ -59,6 +59,20 @@ public:
      */
     static network::NET_CONN_STATUS peerState(const network::TrafficNetwork& network, uint32_t peerId);
     /**
+     * @brief Retains a shared reference to the specified peer connection.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to retain.
+     * @return Shared peer connection, or nullptr if the peer does not exist.
+     */
+    static std::shared_ptr<network::FNEPeerConnection> retainPeer(
+        const network::TrafficNetwork& network, uint32_t peerId);
+    /**
+     * @brief Removes a peer from the specified TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to remove.
+     */
+    static void removePeer(network::TrafficNetwork& network, uint32_t peerId);
+    /**
      * @brief Clears all peers from the TrafficNetwork.
      * @param network The TrafficNetwork instance.
      */

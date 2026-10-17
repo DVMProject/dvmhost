@@ -343,17 +343,15 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
 
                             // determine if the peer trying to transmit has call priority
                             if (m_network->m_callCollisionTimeout > 0U) {
-                                m_network->m_peers.shared_lock();
-                                for (auto peer : m_network->m_peers) {
+                                for (const auto& peer : m_network->peersSnapshot()) {
                                     if (peerId == peer.first) {
-                                        FNEPeerConnection* conn = peer.second;
+                                        TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                         if (conn != nullptr) {
                                             hasCallPriority = conn->hasCallPriority();
                                             break;
                                         }
                                     }
                                 }
-                                m_network->m_peers.shared_unlock();
                             }
 
                             // perform standard call collision if the call collision timeout is set *and*
@@ -538,11 +536,11 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                 } else {
                     // if this is a private call, check if the destination peer is one directly connected to us, if not
                     // flag the call so it only repeats to upstream neighbor peers
-                    if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+                    if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
                         noConnectedPeerRepeat = true;
-                        for (auto peer : m_network->m_peers) {
+                        for (const auto& peer : m_network->peersSnapshot()) {
                             if (peerId != peer.first) {
-                                FNEPeerConnection* conn = peer.second;
+                                TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                 if (conn != nullptr) {
                                     if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                                         continue;
@@ -565,16 +563,15 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
         */
 
         // repeat traffic to nodes peered to us as master
-        if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+        if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 if (peer.second == nullptr)
                     continue;
                 if (peerId != peer.first) {
-                    FNEPeerConnection* conn = peer.second;
+                    TrafficNetwork::PeerConnectionPtr conn = peer.second;
                     if (ssrc == peer.first) {
                         // skip the peer if it is the source peer
                         continue;
@@ -631,7 +628,6 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                 }
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         // if this is a private call, and we have already repeated to the connected peer that registered
@@ -742,8 +738,7 @@ void TagP25P2Data::playbackParrot()
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 // every MAX_QUEUED_PEER_MSGS peers flush the queue
                 if (i % MAX_QUEUED_PEER_MSGS == 0U) {
                     m_network->m_frameQueue->flushQueue(&queue);
@@ -758,7 +753,6 @@ void TagP25P2Data::playbackParrot()
                 i++;
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         delete[] pkt.buffer;
@@ -828,12 +822,7 @@ bool TagP25P2Data::isPeerPermitted(uint32_t peerId, uint32_t dstId, uint8_t slot
     if (unitToUnit)
         return !m_network->m_disallowU2U && !m_network->checkU2UDroppedPeer(peerId);
 
-    FNEPeerConnection* connection = nullptr; // bryanb: this is a possible null ref concurrency issue
-                                             //     it is possible if the timing is just right to get a valid 
-                                             //     connection back initially, and then for it to be deleted
-    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-        connection = m_network->m_peers[peerId];
-    }
+    TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
 
     if (connection != nullptr) {
         // is this peer a replica peer?

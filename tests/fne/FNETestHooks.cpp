@@ -66,11 +66,11 @@ HostFNE::~HostFNE() = default;
 FNEPeerConnection& FNETestHooks::addPeer(TrafficNetwork& network, uint32_t peerId,
     NET_CONN_STATUS state, bool connected)
 {
-    FNEPeerConnection* connection = new FNEPeerConnection();
+    TrafficNetwork::PeerConnectionPtr connection = std::make_shared<FNEPeerConnection>();
     connection->m_id = peerId;
     connection->m_connectionState = state;
     connection->m_connected = connected;
-    network.m_peers[peerId] = connection;
+    network.storePeer(peerId, connection);
     return *connection;
 }
 
@@ -508,7 +508,7 @@ void FNETestHooks::addCryptoUKEK(TrafficNetwork& network, const EKCKeyItem& key)
  */
 bool FNETestHooks::hasPeer(const TrafficNetwork& network, uint32_t peerId)
 {
-    return network.m_peers.find(peerId) != network.m_peers.end();
+    return network.findPeer(peerId) != nullptr;
 }
 
 /**
@@ -518,7 +518,7 @@ bool FNETestHooks::hasPeer(const TrafficNetwork& network, uint32_t peerId)
  */
 size_t FNETestHooks::peerCount(const TrafficNetwork& network)
 {
-    return network.m_peers.size();
+    return network.peerCount();
 }
 
 /**
@@ -529,10 +529,32 @@ size_t FNETestHooks::peerCount(const TrafficNetwork& network)
  */
 NET_CONN_STATUS FNETestHooks::peerState(const TrafficNetwork& network, uint32_t peerId)
 {
-    auto it = network.m_peers.find(peerId);
-    if (it == network.m_peers.end() || it->second == nullptr)
+    TrafficNetwork::PeerConnectionPtr peer = network.findPeer(peerId);
+    if (peer == nullptr)
         throw std::out_of_range("peer does not exist");
-    return it->second->connectionState();
+    return peer->connectionState();
+}
+
+/**
+ * @brief Retains a shared reference to the specified peer connection.
+ * @param network The TrafficNetwork instance.
+ * @param peerId The ID of the peer to retain.
+ * @return Shared peer connection, or nullptr if the peer does not exist.
+ */
+std::shared_ptr<FNEPeerConnection> FNETestHooks::retainPeer(
+    const TrafficNetwork& network, uint32_t peerId)
+{
+    return network.findPeer(peerId);
+}
+
+/**
+ * @brief Removes a peer from the specified TrafficNetwork.
+ * @param network The TrafficNetwork instance.
+ * @param peerId The ID of the peer to remove.
+ */
+void FNETestHooks::removePeer(TrafficNetwork& network, uint32_t peerId)
+{
+    network.removePeer(peerId);
 }
 
 /**
@@ -541,9 +563,8 @@ NET_CONN_STATUS FNETestHooks::peerState(const TrafficNetwork& network, uint32_t 
  */
 void FNETestHooks::clearPeers(TrafficNetwork& network)
 {
-    for (auto peer : network.m_peers)
-        delete peer.second;
-    network.m_peers.clear();
+    for (const auto& peer : network.peersSnapshot())
+        network.removePeer(peer.first);
 }
 
 /**

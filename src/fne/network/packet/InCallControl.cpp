@@ -26,19 +26,17 @@ void TrafficNetwork::PacketHandler::inCallControl(TrafficNetwork* network, NetPa
     if (network->m_disallowInCallCtrl)
         return;
 
-    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-        FNEPeerConnection* connection = network->m_peers[peerId];
-        if (connection != nullptr) {
-            std::string ip = udp::Socket::address(req->address);
+    TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+    if (peerId > 0 && connection != nullptr) {
+        std::string ip = udp::Socket::address(req->address);
 
-            // validate peer (simple validation really)
-            if (connection->connected() && connection->address() == ip) {
-                NET_ICC::ENUM command = (NET_ICC::ENUM)req->buffer[10U];
-                uint32_t dstId = GET_UINT24(req->buffer, 11U);
-                uint8_t slot = req->buffer[14U];
+        // validate peer (simple validation really)
+        if (connection->connected() && connection->address() == ip) {
+            NET_ICC::ENUM command = (NET_ICC::ENUM)req->buffer[10U];
+            uint32_t dstId = GET_UINT24(req->buffer, 11U);
+            uint8_t slot = req->buffer[14U];
 
-                network->processInCallCtrl(command, req->fneHeader.getSubFunction(), dstId, slot, peerId, ssrc, streamId);
-            }
+            network->processInCallCtrl(command, req->fneHeader.getSubFunction(), dstId, slot, peerId, ssrc, streamId);
         }
     }
 }

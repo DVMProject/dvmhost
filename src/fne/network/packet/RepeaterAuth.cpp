@@ -30,10 +30,10 @@ void TrafficNetwork::PacketHandler::repeaterAuth(TrafficNetwork* network, NetPac
         return;
     }
 
-    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+    if (peerId > 0) {
         std::lock_guard<std::mutex> peerGuard(TrafficNetwork::getPeerStateLock(peerId));
 
-        FNEPeerConnection* connection = network->m_peers[peerId];
+        TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
         if (connection != nullptr) {
             connection->lastPing(now);
 
@@ -99,7 +99,7 @@ void TrafficNetwork::PacketHandler::repeaterAuth(TrafficNetwork* network, NetPac
                         connection->connectionState(NET_STAT_WAITING_CONFIG);
                         network->writePeerACK(peerId, streamId);
                         LogInfoEx(LOG_MASTER, "PEER %u RPTK ACK, completed the login exchange", peerId);
-                        network->m_peers[peerId] = connection;
+                        network->storePeer(peerId, connection);
                     }
                     else {
                         LogWarning(LOG_MASTER, "PEER %u RPTK NAK, failed the login exchange", peerId);

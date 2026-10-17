@@ -62,6 +62,23 @@ TEST_CASE("FNE test hooks expose peer connection state", "[fne][hooks]")
     REQUIRE(FNETestHooks::peerState(harness.traffic, 1001U) == network::NET_STAT_WAITING_AUTHORISATION);
 }
 
+TEST_CASE("FNE peer references remain valid after registry removal", "[fne][hooks][concurrency]")
+{
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, 1001U, network::NET_STAT_RUNNING, true);
+
+    std::shared_ptr<network::FNEPeerConnection> retained =
+        FNETestHooks::retainPeer(harness.traffic, 1001U);
+    REQUIRE(retained != nullptr);
+
+    FNETestHooks::removePeer(harness.traffic, 1001U);
+
+    REQUIRE_FALSE(FNETestHooks::hasPeer(harness.traffic, 1001U));
+    REQUIRE(FNETestHooks::peerCount(harness.traffic) == 0U);
+    REQUIRE(retained->id() == 1001U);
+    REQUIRE(retained->connectionState() == network::NET_STAT_RUNNING);
+}
+
 TEST_CASE("FNE replicated peer snapshots are stable copies", "[fne][replication]")
 {
     FNEHarness harness;

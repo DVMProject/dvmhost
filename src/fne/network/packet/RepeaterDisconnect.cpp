@@ -23,10 +23,10 @@ using namespace network;
 
 void TrafficNetwork::PacketHandler::repeaterDisconnect(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
-    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+    if (peerId > 0) {
         std::lock_guard<std::mutex> peerGuard(TrafficNetwork::getPeerStateLock(peerId));
 
-        FNEPeerConnection* connection = network->m_peers[peerId];
+        TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
         if (connection != nullptr) {
             std::string ip = udp::Socket::address(req->address);
 

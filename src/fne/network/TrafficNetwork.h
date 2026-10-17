@@ -56,6 +56,7 @@
 #include <unordered_map>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <atomic>
 #include <array>
 
@@ -397,8 +398,10 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
-        concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+        using PeerConnectionPtr = std::shared_ptr<network::FNEPeerConnection>;
+        using PeerMapPair = std::pair<uint32_t, PeerConnectionPtr>;
+        std::unordered_map<uint32_t, PeerConnectionPtr> m_peers;
+        mutable std::shared_timed_mutex m_peersMutex;
         std::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
         mutable std::mutex m_peerReplicaPeersMutex;
         typedef std::pair<const uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
@@ -529,6 +532,42 @@ namespace network
         static std::array<std::mutex, PEER_STATE_LOCK_STRIPES> s_peerStateLocks;
 
         /**
+         * @brief Gets the mutex for a specific peer ID.
+         * @param peerId The ID of the peer.
+         * @return A reference to the mutex associated with the peer ID.
+         */
+        static std::mutex& getPeerStateLock(uint32_t peerId) { return s_peerStateLocks[peerId % PEER_STATE_LOCK_STRIPES]; }
+
+        /**
+         * @brief Finds a peer while retaining its lifetime for the caller.
+         * @param peerId Peer ID to find.
+         * @return Shared peer connection, or nullptr when the peer is absent.
+         */
+        PeerConnectionPtr findPeer(uint32_t peerId) const;
+        /**
+         * @brief Gets the current number of registered peers.
+         * @return Number of registered peers.
+         */
+        size_t peerCount() const;
+        /**
+         * @brief Creates a stable snapshot of the registered peers.
+         * @return Peer IDs and shared peer connections.
+         */
+        std::vector<PeerMapPair> peersSnapshot() const;
+        /**
+         * @brief Adds or replaces a peer connection.
+         * @param peerId Peer ID to store.
+         * @param connection Shared peer connection.
+         */
+        void storePeer(uint32_t peerId, const PeerConnectionPtr& connection);
+        /**
+         * @brief Removes a peer connection from the registry.
+         * @param peerId Peer ID to remove.
+         * @return Removed shared peer connection, or nullptr when absent.
+         */
+        PeerConnectionPtr removePeer(uint32_t peerId);
+
+        /**
          * @brief Replaces the active peer list received from a replica peer.
          * @param peerId Peer ID that supplied the active peer list.
          * @param peers Active peer list reported by the replica peer.
@@ -544,13 +583,6 @@ namespace network
          * @return Map of replica peer IDs to their reported active peer lists.
          */
         std::unordered_map<uint32_t, json::array> replicatedPeersSnapshot() const;
-
-        /**
-         * @brief Gets the mutex for a specific peer ID.
-         * @param peerId The ID of the peer.
-         * @return A reference to the mutex associated with the peer ID.
-         */
-        static std::mutex& getPeerStateLock(uint32_t peerId) { return s_peerStateLocks[peerId % PEER_STATE_LOCK_STRIPES]; }
 
         /**
          * @brief Entry point to parrot handler thread.
@@ -756,12 +788,11 @@ namespace network
          * @param peerId Peer ID.
          * @param connection Instance of the FNEPeerConnection class.
          */
-        void disconnectPeer(uint32_t peerId, FNEPeerConnection* connection);
+        void disconnectPeer(uint32_t peerId, const PeerConnectionPtr& connection);
         /**
          * @brief Helper to erase the peer from the peers list.
-         * @note This does not delete or otherwise free the FNEConnection instance!
+         * @note The connection remains alive while any worker retains a shared reference.
          * @param peerId Peer ID.
-         * @returns bool True, if peer was deleted, otherwise false.
          */
         void erasePeer(uint32_t peerId);
         /**
@@ -791,7 +822,7 @@ namespace network
          * @param streamId Stream ID for the login sequence.
          * @param connection Instance of the FNEPeerConnection class.
          */
-        void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection);
+        void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, const PeerConnectionPtr& connection);
 
         /**
          * @brief Helper to process an In-Call Control message.

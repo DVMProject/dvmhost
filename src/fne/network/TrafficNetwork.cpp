@@ -105,6 +105,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_cryptoLookup(nullptr),
     m_status(NET_STAT_INVALID),
     m_peers(),
+    m_peersMutex(),
     m_peerReplicaPeers(),
     m_peerReplicaPeersMutex(),
     m_peerAffiliations(),
@@ -720,17 +721,13 @@ void TrafficNetwork::processNetworkTreeDisconnect(uint32_t peerId, uint32_t offe
         return;
     }
 
-    if (offendingPeerId > 0 && (m_peers.find(offendingPeerId) != m_peers.end())) {
-        FNEPeerConnection* connection = m_peers[offendingPeerId];
-        if (connection != nullptr) {
-            LogWarning(LOG_STP, "PEER %u (%s) NAK, server already connected via upstream master, duplicate connection dropped, connectionState = %u", offendingPeerId, connection->identWithQualifier().c_str(),
-                connection->connectionState());
-            writePeerNAK(offendingPeerId, createStreamId(), TAG_REPEATER_CONFIG, NET_CONN_NAK_FNE_DUPLICATE_CONN);
-            disconnectPeer(offendingPeerId, connection);
-            logSpanningTree();
-        } else {
-            LogError(LOG_STP, "Network Tree Disconnect, upstream master requested disconnect for PEER %u, but connection is null", offendingPeerId);
-        }
+    PeerConnectionPtr connection = findPeer(offendingPeerId);
+    if (offendingPeerId > 0 && connection != nullptr) {
+        LogWarning(LOG_STP, "PEER %u (%s) NAK, server already connected via upstream master, duplicate connection dropped, connectionState = %u", offendingPeerId, connection->identWithQualifier().c_str(),
+            connection->connectionState());
+        writePeerNAK(offendingPeerId, createStreamId(), TAG_REPEATER_CONFIG, NET_CONN_NAK_FNE_DUPLICATE_CONN);
+        disconnectPeer(offendingPeerId, connection);
+        logSpanningTree();
     } else {
         // is this perhaps a peer connection of ours?
         if (m_host->m_peerNetworks.size() > 0) {
@@ -780,8 +777,8 @@ void TrafficNetwork::processReplicatedPatchStatus(uint32_t peerId, json::object 
     // currently connected directly to this FNE -- that peer ID's true owner is local,
     // and updates to it must only come through the authenticated console ingress path
     {
-        auto it = m_peers.find(incomingPeerId);
-        if (it != m_peers.end() && it->second != nullptr && it->second->connected() && it->second->peerClass() == PEER_CONN_CLASS_CONSOLE) {
+        PeerConnectionPtr connection = findPeer(incomingPeerId);
+        if (connection != nullptr && connection->connected() && connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
             LogWarning(LOG_MASTER, "PEER %u attempted to replicate a patch status update for locally-connected console %u, rejecting", peerId, incomingPeerId);
             return;
         }
@@ -824,9 +821,8 @@ void TrafficNetwork::clock(uint32_t ms)
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     // check jitter buffer timeouts for all peers
-    m_peers.shared_lock();
-    for (auto& peer : m_peers) {
-        FNEPeerConnection* connection = peer.second;
+    for (const auto& peer : peersSnapshot()) {
+        PeerConnectionPtr connection = peer.second;
         if (connection != nullptr && connection->jitterBufferEnabled()) {
             connection->checkJitterTimeouts();
         }
@@ -835,7 +831,6 @@ void TrafficNetwork::clock(uint32_t ms)
             peerMetadataUpdate(peer.first);
         }
     }
-    m_peers.shared_unlock();
 
     // reset force flag
     if (m_forceListUpdate) {
@@ -846,10 +841,9 @@ void TrafficNetwork::clock(uint32_t ms)
     if (m_maintainenceTimer.isRunning() && m_maintainenceTimer.hasExpired()) {
         // check to see if any peers have been quiet (no ping) longer than allowed
         std::vector<uint32_t> peersToRemove = std::vector<uint32_t>();
-        m_peers.shared_lock();
-        for (auto& peer : m_peers) {
+        for (const auto& peer : peersSnapshot()) {
             uint32_t id = peer.first;
-            FNEPeerConnection* connection = peer.second;
+            PeerConnectionPtr connection = peer.second;
             if (connection != nullptr) {
                 uint64_t dt = 0U;
                 if (connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR || connection->isReplica())
@@ -869,11 +863,10 @@ void TrafficNetwork::clock(uint32_t ms)
                 }
             }
         }
-        m_peers.shared_unlock();
 
         // remove any peers
         for (uint32_t peerId : peersToRemove) {
-            FNEPeerConnection* connection = m_peers[peerId];
+            PeerConnectionPtr connection = findPeer(peerId);
             disconnectPeer(peerId, connection);
         }
 
@@ -903,20 +896,18 @@ void TrafficNetwork::clock(uint32_t ms)
                             });
                         }
 
-                        if (m_peers.size() > 0) {
+                        if (peerCount() > 0U) {
                             json::array peers = json::array();
-                            m_peers.shared_lock();
-                            for (auto entry : m_peers) {
+                            for (const auto& entry : peersSnapshot()) {
                                 uint32_t peerId = entry.first;
-                                network::FNEPeerConnection* connection = entry.second;
+                                PeerConnectionPtr connection = entry.second;
                                 if (connection != nullptr) {
-                                    json::object peerObj = fneConnObject(peerId, connection);
+                                    json::object peerObj = fneConnObject(peerId, connection.get());
                                     uint32_t peerNetPeerId = peer.second->getPeerId();
                                     peerObj["parentPeerId"].set<uint32_t>(peerNetPeerId);
                                     peers.push_back(json::value(peerObj));
                                 }
                             }
-                            m_peers.shared_unlock();
 
                             peer.second->writePeerLinkPeers(&peers);
                         }
@@ -940,10 +931,9 @@ void TrafficNetwork::clock(uint32_t ms)
     m_updateLookupTimer.clock(ms);
     if (m_updateLookupTimer.isRunning() && m_updateLookupTimer.hasExpired()) {
         // send network metadata updates to peers
-        m_peers.shared_lock();
-        for (auto& peer : m_peers) {
+        for (const auto& peer : peersSnapshot()) {
             uint32_t id = peer.first;
-            FNEPeerConnection* connection = peer.second;
+            PeerConnectionPtr connection = peer.second;
             if (connection != nullptr) {
                 // if this connection is a peer replica *always* send the update -- no stream checking
                 if (connection->connected() && connection->isReplica()) {
@@ -969,7 +959,6 @@ void TrafficNetwork::clock(uint32_t ms)
                 }
             }
         }
-        m_peers.shared_unlock();
 
         m_updateLookupTimer.start();
     }
@@ -1062,7 +1051,7 @@ void TrafficNetwork::close()
         ::memset(buffer, 0x00U, 1U);
 
         uint32_t streamId = createStreamId();
-        for (auto& peer : m_peers) {
+        for (const auto& peer : peersSnapshot()) {
             writePeer(peer.first, m_peerId, { NET_FUNC::MST_DISC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, 
                 streamId);
         }
@@ -1096,9 +1085,141 @@ void TrafficNetwork::close()
     m_status = NET_STAT_INVALID;
 }
 
+/* Helper to create a JSON representation of a FNE peer connection. */
+
+json::object TrafficNetwork::fneConnObject(uint32_t peerId, FNEPeerConnection *conn)
+{
+    json::object peerObj = json::object();
+    peerObj["peerId"].set<uint32_t>(peerId);
+
+    std::string address = conn->address();
+    peerObj["address"].set<std::string>(address);
+    uint16_t port = conn->port();
+    peerObj["port"].set<uint16_t>(port);
+    bool connected = conn->connected();
+    peerObj["connected"].set<bool>(connected);
+    uint32_t connectionState = (uint32_t)conn->connectionState();
+    peerObj["connectionState"].set<uint32_t>(connectionState);
+    uint32_t pingsReceived = conn->pingsReceived();
+    peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
+    uint64_t lastPing = conn->lastPing();
+    peerObj["lastPing"].set<uint64_t>(lastPing);
+    uint32_t ccPeerId = conn->ccPeerId();
+    peerObj["controlChannel"].set<uint32_t>(ccPeerId);
+
+    json::object peerConfig = conn->config();
+    if (peerConfig["rcon"].is<json::object>())
+        peerConfig.erase("rcon");
+    peerObj["config"].set<json::object>(peerConfig);
+
+    json::array voiceChannels = json::array();
+    auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto& x) { return x.first == peerId; });
+    if (it != m_ccPeerMap.end()) {
+        std::vector<uint32_t> vcPeers = m_ccPeerMap[peerId];
+        for (uint32_t vcEntry : vcPeers) {
+            voiceChannels.push_back(json::value((double)vcEntry));
+        }
+    }
+    peerObj["voiceChannels"].set<json::array>(voiceChannels);
+
+    return peerObj;
+}
+
+/* Helper to reset a peer connection. */
+
+bool TrafficNetwork::resetPeer(uint32_t peerId)
+{
+    if (peerId > 0) {
+        PeerConnectionPtr connection = findPeer(peerId);
+        if (connection != nullptr) {
+            sockaddr_storage addr = connection->socketStorage();
+            uint32_t addrLen = connection->sockStorageLen();
+
+            LogInfoEx(LOG_MASTER, "PEER %u (%s) resetting peer connection", peerId, connection->identWithQualifier().c_str());
+
+            writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_RESET, addr, addrLen);
+            erasePeer(peerId);
+
+            return true;
+        }
+    }
+
+    LogWarning(LOG_MASTER, "PEER %u reset failed; peer not found", peerId);
+    return false;
+}
+
+/* Helper to set the master is upstream peer replica flag. */
+
+void TrafficNetwork::setPeerReplica(bool replica)
+{
+    if (!m_isReplica && replica) {
+        LogInfoEx(LOG_MASTER, "Set as upstream peer replica, receiving ACL updates from upstream master");
+    }
+
+    m_isReplica = replica;
+
+    // be very noisy about being a peer replica and having multiple upstream peers
+    if (m_isReplica) {
+        if (m_host->m_peerNetworks.size() > 1) {
+            LogWarning(LOG_MASTER, "We are a upstream peer replica, and have multiple upstream peers? This is a bad idea. Peer Replica FNEs should have a single upstream peer connection.");
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/* Finds a peer while retaining its lifetime for the caller. */
+
+TrafficNetwork::PeerConnectionPtr TrafficNetwork::findPeer(uint32_t peerId) const
+{
+    std::shared_lock<std::shared_timed_mutex> lock(m_peersMutex);
+    auto it = m_peers.find(peerId);
+    return it != m_peers.end() ? it->second : nullptr;
+}
+
+/* Gets the current number of registered peers. */
+
+size_t TrafficNetwork::peerCount() const
+{
+    std::shared_lock<std::shared_timed_mutex> lock(m_peersMutex);
+    return m_peers.size();
+}
+
+/* Creates a stable snapshot of the registered peers. */
+
+std::vector<TrafficNetwork::PeerMapPair> TrafficNetwork::peersSnapshot() const
+{
+    std::vector<PeerMapPair> peers;
+    std::shared_lock<std::shared_timed_mutex> lock(m_peersMutex);
+    peers.reserve(m_peers.size());
+    for (const auto& peer : m_peers)
+        peers.push_back(peer);
+    return peers;
+}
+
+/* Adds or replaces a peer connection. */
+
+void TrafficNetwork::storePeer(uint32_t peerId, const PeerConnectionPtr& connection)
+{
+    std::unique_lock<std::shared_timed_mutex> lock(m_peersMutex);
+    m_peers[peerId] = connection;
+}
+
+/* Removes a peer connection from the registry. */
+
+TrafficNetwork::PeerConnectionPtr TrafficNetwork::removePeer(uint32_t peerId)
+{
+    std::unique_lock<std::shared_timed_mutex> lock(m_peersMutex);
+    auto it = m_peers.find(peerId);
+    if (it == m_peers.end())
+        return nullptr;
+
+    PeerConnectionPtr connection = it->second;
+    m_peers.erase(it);
+    return connection;
+}
 
 /* Replaces the active peer list received from a replica peer. */
 
@@ -1294,8 +1415,8 @@ void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
             }
 
             // update current peer packet sequence and stream ID
-            if (peerId > 0U && (network->m_peers.find(peerId) != network->m_peers.end()) && streamId != 0U) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
+            if (peerId > 0U && streamId != 0U) {
+                PeerConnectionPtr connection = network->findPeer(peerId);
                 uint16_t pktSeq = req->rtpHeader.getSequence();
 
                 if (connection != nullptr) {
@@ -1451,8 +1572,8 @@ void TrafficNetwork::applyJitterBufferConfig(uint32_t peerId, FNEPeerConnection*
 
 void TrafficNetwork::eraseStreamPktSeq(uint32_t peerId, uint32_t streamId)
 {
-    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-        FNEPeerConnection* connection = m_peers[peerId];
+    if (peerId > 0) {
+        PeerConnectionPtr connection = findPeer(peerId);
         if (connection != nullptr) {
             connection->erasePktSeq(streamId);
         }
@@ -1534,7 +1655,7 @@ std::vector<TrafficNetwork::PeerAffiliationMapPair> TrafficNetwork::peerAffiliat
 
 /* Helper to disconnect a downstream peer. */
 
-void TrafficNetwork::disconnectPeer(uint32_t peerId, FNEPeerConnection* connection)
+void TrafficNetwork::disconnectPeer(uint32_t peerId, const PeerConnectionPtr& connection)
 {
     if (peerId == 0U)
         return;
@@ -1544,29 +1665,17 @@ void TrafficNetwork::disconnectPeer(uint32_t peerId, FNEPeerConnection* connecti
     connection->connected(false);
     connection->connectionState(NET_STAT_INVALID);
 
-    connection->lock();
     erasePeer(peerId);
-    connection->unlock();
-    if (connection != nullptr) {
-        delete connection;
-    }
 }
 
 /* Helper to erase the peer from the peers list. */
 
 void TrafficNetwork::erasePeer(uint32_t peerId)
 {
+    PeerConnectionPtr removedPeer = removePeer(peerId);
     bool neighborFNE = false;
-    {
-        auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-        if (it != m_peers.end()) {
-            FNEPeerConnection* conn = it->second;
-            if (conn != nullptr) {
-                neighborFNE = conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
-            }
-            m_peers.erase(peerId);
-        }
-    }
+    if (removedPeer != nullptr)
+        neighborFNE = removedPeer->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
 
     // erase any CC maps for this peer
     {
@@ -1630,15 +1739,7 @@ void TrafficNetwork::erasePeer(uint32_t peerId)
 
 bool TrafficNetwork::isPeerLocal(uint32_t peerId)
 {
-    m_peers.shared_lock();
-    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-    if (it != m_peers.end()) {
-        m_peers.shared_unlock();
-        return true;
-    }
-    m_peers.shared_unlock();
-
-    return false;
+    return findPeer(peerId) != nullptr;
 }
 
 /* Helper to find the unit registration for the given source ID. */
@@ -1658,111 +1759,17 @@ uint32_t TrafficNetwork::findPeerUnitReg(uint32_t srcId)
     return 0U;
 }
 
-/* Helper to create a JSON representation of a FNE peer connection. */
-
-json::object TrafficNetwork::fneConnObject(uint32_t peerId, FNEPeerConnection *conn)
-{
-    json::object peerObj = json::object();
-    peerObj["peerId"].set<uint32_t>(peerId);
-
-    std::string address = conn->address();
-    peerObj["address"].set<std::string>(address);
-    uint16_t port = conn->port();
-    peerObj["port"].set<uint16_t>(port);
-    bool connected = conn->connected();
-    peerObj["connected"].set<bool>(connected);
-    uint32_t connectionState = (uint32_t)conn->connectionState();
-    peerObj["connectionState"].set<uint32_t>(connectionState);
-    uint32_t pingsReceived = conn->pingsReceived();
-    peerObj["pingsReceived"].set<uint32_t>(pingsReceived);
-    uint64_t lastPing = conn->lastPing();
-    peerObj["lastPing"].set<uint64_t>(lastPing);
-    uint32_t ccPeerId = conn->ccPeerId();
-    peerObj["controlChannel"].set<uint32_t>(ccPeerId);
-
-    json::object peerConfig = conn->config();
-    if (peerConfig["rcon"].is<json::object>())
-        peerConfig.erase("rcon");
-    peerObj["config"].set<json::object>(peerConfig);
-
-    json::array voiceChannels = json::array();
-    auto it = std::find_if(m_ccPeerMap.begin(), m_ccPeerMap.end(), [&](auto& x) { return x.first == peerId; });
-    if (it != m_ccPeerMap.end()) {
-        std::vector<uint32_t> vcPeers = m_ccPeerMap[peerId];
-        for (uint32_t vcEntry : vcPeers) {
-            voiceChannels.push_back(json::value((double)vcEntry));
-        }
-    }
-    peerObj["voiceChannels"].set<json::array>(voiceChannels);
-
-    return peerObj;
-}
-
-/* Helper to reset a peer connection. */
-
-bool TrafficNetwork::resetPeer(uint32_t peerId)
-{
-    if (peerId > 0 && (m_peers.find(peerId) != m_peers.end())) {
-        FNEPeerConnection* connection = m_peers[peerId];
-        if (connection != nullptr) {
-            sockaddr_storage addr = connection->socketStorage();
-            uint32_t addrLen = connection->sockStorageLen();
-
-            LogInfoEx(LOG_MASTER, "PEER %u (%s) resetting peer connection", peerId, connection->identWithQualifier().c_str());
-
-            writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_PEER_RESET, addr, addrLen);
-            connection->lock();
-            erasePeer(peerId);
-            connection->unlock();
-            delete connection;
-
-            return true;
-        }
-    }
-
-    LogWarning(LOG_MASTER, "PEER %u reset failed; peer not found", peerId);
-    return false;
-}
-
-/* Helper to set the master is upstream peer replica flag. */
-
-void TrafficNetwork::setPeerReplica(bool replica)
-{
-    if (!m_isReplica && replica) {
-        LogInfoEx(LOG_MASTER, "Set as upstream peer replica, receiving ACL updates from upstream master");
-    }
-
-    m_isReplica = replica;
-
-    // be very noisy about being a peer replica and having multiple upstream peers
-    if (m_isReplica) {
-        if (m_host->m_peerNetworks.size() > 1) {
-            LogWarning(LOG_MASTER, "We are a upstream peer replica, and have multiple upstream peers? This is a bad idea. Peer Replica FNEs should have a single upstream peer connection.");
-        }
-    }
-}
-
 /* Helper to resolve the peer ID to its identity string. */
 
 std::string TrafficNetwork::resolvePeerIdentity(uint32_t peerId)
 {
-    m_peers.shared_lock();
-    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-    if (it != m_peers.end()) {
-        if (it->second != nullptr) {
-            FNEPeerConnection* peer = it->second;
-            m_peers.shared_unlock();
-            return peer->identWithQualifier();
-        }
-    }
-    m_peers.shared_unlock();
-
-    return std::string();
+    PeerConnectionPtr peer = findPeer(peerId);
+    return peer != nullptr ? peer->identWithQualifier() : std::string();
 }
 
 /* Helper to complete setting up a repeater login request. */
 
-void TrafficNetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection)
+void TrafficNetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, const PeerConnectionPtr& connection)
 {
     std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
     connection->salt(dist(m_random));
@@ -1770,7 +1777,7 @@ void TrafficNetwork::setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEP
     LogInfoEx(LOG_MASTER, "PEER %u started login from, %s:%u", peerId, connection->address().c_str(), connection->port());
 
     connection->connectionState(NET_STAT_WAITING_AUTHORISATION);
-    m_peers[peerId] = connection;
+    storePeer(peerId, connection);
 
     // transmit salt to peer
     uint8_t salt[4U];
@@ -1808,8 +1815,8 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
             const bool callTakeover = (command == network::NET_ICC::REJECT_TRAFFIC);
 
             // is this a local peer?
-            if (ssrc > 0 && (m_peers.find(ssrc) != m_peers.end())) {
-                FNEPeerConnection* connection = m_peers[ssrc];
+            if (ssrc > 0) {
+                PeerConnectionPtr connection = findPeer(ssrc);
                 if (connection != nullptr) {
                     // validate peer (simple validation really)
                     if (connection->connected()) {
@@ -1852,13 +1859,13 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                 // to avoid lock re-entry via writePeerICC() -> writePeerQueue().
                 std::vector<uint32_t> neighborPeers;
                 bool localRequestPeer = false;
-                m_peers.shared_lock();
-                localRequestPeer = (m_peers.find(peerId) != m_peers.end());
-                for (auto& peer : m_peers) {
+                std::vector<PeerMapPair> peers = peersSnapshot();
+                localRequestPeer = std::any_of(peers.begin(), peers.end(), [&](const PeerMapPair& peer) { return peer.first == peerId; });
+                for (const auto& peer : peers) {
                     if (peer.second == nullptr)
                         continue;
                     if (peerId != peer.first) {
-                        FNEPeerConnection* conn = peer.second;
+                        PeerConnectionPtr conn = peer.second;
                         if (peerId == ssrc) {
                             // skip the peer if it is the source peer
                             continue;
@@ -1869,7 +1876,6 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
                         }
                     }
                 }
-                m_peers.shared_unlock();
 
                 // send ICC request to any peers connected to us that are neighbor FNEs
                 for (auto& neighborPeerId : neighborPeers) {
@@ -2012,7 +2018,7 @@ void TrafficNetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
                 }
 
                 // check if the peer connection is still valid and connected
-                FNEPeerConnection* connection = network->m_peers[req->peerId];
+                PeerConnectionPtr connection = network->findPeer(req->peerId);
                 if (connection != nullptr) {
                     if (!connection->connected()) {
                         // peer connection is not connected, skip the metadata update
@@ -2037,10 +2043,9 @@ void TrafficNetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
 
             std::string peerIdentity = network->resolvePeerIdentity(req->peerId);
 
-            FNEPeerConnection* connection = network->m_peers[req->peerId];
+            PeerConnectionPtr connection = network->findPeer(req->peerId);
             if (connection != nullptr) {
                 if (connection->connected()) {
-                    connection->lock();
                     uint32_t streamId = network->createStreamId();
 
                     // if the connection is a downstream neighbor FNE peer, and peer is participating in peer link,
@@ -2065,8 +2070,6 @@ void TrafficNetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
 
                         network->writeHAParameters(req->peerId, streamId, false);
                     }
-
-                    connection->unlock();
                 }
             }
         }
@@ -2088,14 +2091,8 @@ bool TrafficNetwork::writePatchStatusToPeer(uint32_t peerId, json::object obj)
     if (!m_patchStatusEnabled)
         return false;
 
-    bool ret = false;
-    m_peers.shared_lock();
-    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-    if (it != m_peers.end() && it->second != nullptr)
-        ret = writePatchStatusPayload(it->second, obj);
-    m_peers.shared_unlock();
-
-    return ret;
+    PeerConnectionPtr connection = findPeer(peerId);
+    return connection != nullptr && writePatchStatusPayload(connection.get(), obj);
 }
 
 /* Helper to broadcast patch status state to connected console peers. */
@@ -2105,13 +2102,7 @@ void TrafficNetwork::writePatchStatusToConsoles(json::object obj, uint32_t excep
     if (!m_patchStatusEnabled)
         return;
 
-    m_peers.shared_lock();
-    if (m_peers.size() == 0U) {
-        m_peers.shared_unlock();
-        return;
-    }
-
-    for (auto peer : m_peers) {
+    for (const auto& peer : peersSnapshot()) {
         if (peer.first == exceptPeerId)
             continue;
         if (peer.second == nullptr)
@@ -2119,9 +2110,8 @@ void TrafficNetwork::writePatchStatusToConsoles(json::object obj, uint32_t excep
         if (!peer.second->connected() || peer.second->peerClass() != PEER_CONN_CLASS_CONSOLE)
             continue;
 
-        writePatchStatusPayload(peer.second, obj);
+        writePatchStatusPayload(peer.second.get(), obj);
     }
-    m_peers.shared_unlock();
 }
 
 /* Helper to replicate patch status state to neighboring FNE peers. */
@@ -2142,8 +2132,7 @@ void TrafficNetwork::replicatePatchStatus(json::object obj, uint32_t exceptPeerI
         }
     }
 
-    m_peers.shared_lock();
-    for (auto peer : m_peers) {
+    for (const auto& peer : peersSnapshot()) {
         if (peer.first == exceptPeerId)
             continue;
         if (peer.second == nullptr)
@@ -2151,9 +2140,8 @@ void TrafficNetwork::replicatePatchStatus(json::object obj, uint32_t exceptPeerI
         if (!peer.second->connected() || peer.second->peerClass() != PEER_CONN_CLASS_NEIGHBOR || !peer.second->isReplica())
             continue;
 
-        writePatchStatusReplicationPayload(peer.second, obj);
+        writePatchStatusReplicationPayload(peer.second.get(), obj);
     }
-    m_peers.shared_unlock();
 }
 
 /* Helper to serialize and queue a patch status transfer payload. */
@@ -2247,7 +2235,7 @@ void TrafficNetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool
 
     // sending REPL style RID list to replica neighbor FNE peers
     if (sendReplica) {
-        FNEPeerConnection* connection = m_peers[peerId];
+        PeerConnectionPtr connection = findPeer(peerId);
         if (connection != nullptr) {
             // save out radio ID table to disk
             std::string tempFile;
@@ -2323,7 +2311,7 @@ void TrafficNetwork::writeWhitelistRIDs(uint32_t peerId, uint32_t streamId, bool
     }
 
     // send a chunk of RIDs to the peer
-    FNEPeerConnection* connection = m_peers[peerId];
+    PeerConnectionPtr connection = findPeer(peerId);
     if (connection != nullptr) {
         uint32_t chunkCnt = (ridWhitelist.size() / MAX_RID_LIST_CHUNK) + 1U;
         for (uint32_t i = 0U; i < chunkCnt; i++) {
@@ -2393,7 +2381,7 @@ void TrafficNetwork::writeBlacklistRIDs(uint32_t peerId, uint32_t streamId)
     }
 
     // send a chunk of RIDs to the peer
-    FNEPeerConnection* connection = m_peers[peerId];
+    PeerConnectionPtr connection = findPeer(peerId);
     if (connection != nullptr) {
         uint32_t chunkCnt = (ridBlacklist.size() / MAX_RID_LIST_CHUNK) + 1U;
         for (uint32_t i = 0U; i < chunkCnt; i++) {
@@ -2453,7 +2441,7 @@ void TrafficNetwork::writeTGIDs(uint32_t peerId, uint32_t streamId, bool sendRep
 
     // sending REPL style TGID list to replica neighbor FNE peers
     if (sendReplica) {
-        FNEPeerConnection* connection = m_peers[peerId];
+        PeerConnectionPtr connection = findPeer(peerId);
         if (connection != nullptr) {
             std::string tempFile;
             if (m_isReplica) {
@@ -2659,7 +2647,7 @@ void TrafficNetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 void TrafficNetwork::writeRadioAliasList(uint32_t peerId, uint32_t streamId)
 {
     // sending REPL style RID alias list to replica neighbor FNE peers
-    FNEPeerConnection* connection = m_peers[peerId];
+    PeerConnectionPtr connection = findPeer(peerId);
     if (connection != nullptr) {
         std::string tempFile;
         if (m_isReplica) {
@@ -2725,7 +2713,7 @@ void TrafficNetwork::writeRadioAliasList(uint32_t peerId, uint32_t streamId)
 void TrafficNetwork::writePeerList(uint32_t peerId, uint32_t streamId)
 {
     // sending REPL style PID list to replica neighbor FNE peers
-    FNEPeerConnection* connection = m_peers[peerId];
+    PeerConnectionPtr connection = findPeer(peerId);
     if (connection != nullptr) {
         std::string tempFile;
         if (m_isReplica) {
@@ -2816,7 +2804,7 @@ void TrafficNetwork::writeHAParameters(uint32_t peerId, uint32_t streamId, bool 
 
     // sending REPL style HA parameters list to replica neighbor FNE peers
     if (sendReplica) {
-        FNEPeerConnection* connection = m_peers[peerId];
+        PeerConnectionPtr connection = findPeer(peerId);
         if (connection != nullptr) {
             LogInfoEx(LOG_REPL, "PEER %u (%s) Peer Replication, HA parameters, streamId = %u", peerId, connection->identWithQualifier().c_str(), streamId);
             writePeer(peerId, m_peerId, { NET_FUNC::REPL, NET_SUBFUNC::REPL_HA_PARAMS}, 
@@ -2926,48 +2914,41 @@ bool TrafficNetwork::writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, 
         LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a streamId of 0?", peerId);
     }
 
-    m_peers.shared_lock();
-    auto it = std::find_if(m_peers.begin(), m_peers.end(), [&](PeerMapPair x) { return x.first == peerId; });
-    if (it != m_peers.end()) {
-        FNEPeerConnection* connection = m_peers.at(peerId);
-        if (connection != nullptr) {
-            sockaddr_storage addr = connection->socketStorage();
-            uint32_t addrLen = connection->sockStorageLen();
+    PeerConnectionPtr connection = findPeer(peerId);
+    if (connection != nullptr) {
+        sockaddr_storage addr = connection->socketStorage();
+        uint32_t addrLen = connection->sockStorageLen();
 
-            if (incPktSeq && pktSeq != RTP_END_OF_CALL_SEQ) {
-                pktSeq = connection->incPktSeq(streamId);
-            }
+        if (incPktSeq && pktSeq != RTP_END_OF_CALL_SEQ) {
+            pktSeq = connection->incPktSeq(streamId);
+        }
 #if DEBUG_RTP_MUX
-            if (m_debug)
-                LogDebugEx(LOG_NET, "TrafficNetwork::writePeerQueue()", "PEER %u, streamId = %u, pktSeq = %u", peerId, streamId, pktSeq);
+        if (m_debug)
+            LogDebugEx(LOG_NET, "TrafficNetwork::writePeerQueue()", "PEER %u, streamId = %u, pktSeq = %u", peerId, streamId, pktSeq);
 #endif
-            if (m_maskOutboundPeerID)
-                ssrc = m_peerId; // mask the source SSRC to our own peer ID
-            else {
-                if ((connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR && !connection->isReplica()) && m_maskOutboundPeerIDForNonPL) {
-                    // if the peer is a downstream FNE neighbor peer, and not a replica peer, we need to send the packet
-                    // to the neighbor FNE peer with our peer ID as the source instead of the originating peer
-                    // because we have routed it
-                    ssrc = m_peerId;
-                }
-
-                if (ssrc == 0U) {
-                    LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a ssrc of 0?, pktSeq = %u, streamId = %u", peerId, pktSeq, streamId);
-                    ssrc = m_peerId; // fallback to our own peer ID
-                }
+        if (m_maskOutboundPeerID)
+            ssrc = m_peerId; // mask the source SSRC to our own peer ID
+        else {
+            if ((connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR && !connection->isReplica()) && m_maskOutboundPeerIDForNonPL) {
+                // if the peer is a downstream FNE neighbor peer, and not a replica peer, we need to send the packet
+                // to the neighbor FNE peer with our peer ID as the source instead of the originating peer
+                // because we have routed it
+                ssrc = m_peerId;
             }
 
-            if (buffers == nullptr) {
-                m_peers.shared_unlock();
-                return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
-            } else {
-                m_peers.shared_unlock();
-                m_frameQueue->enqueueMessage(buffers, data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
-                return true;
+            if (ssrc == 0U) {
+                LogError(LOG_NET, "BUGBUG: PEER %u, trying to send data with a ssrc of 0?, pktSeq = %u, streamId = %u", peerId, pktSeq, streamId);
+                ssrc = m_peerId; // fallback to our own peer ID
             }
         }
+
+        if (buffers == nullptr) {
+            return m_frameQueue->write(data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
+        } else {
+            m_frameQueue->enqueueMessage(buffers, data, length, streamId, peerId, ssrc, opcode, pktSeq, addr, addrLen);
+            return true;
+        }
     }
-    m_peers.shared_unlock();
 
     return false;
 }

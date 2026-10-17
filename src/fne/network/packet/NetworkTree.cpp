@@ -37,17 +37,14 @@ void MetadataNetwork::PacketHandler::networkTree(TrafficNetwork* network, Metada
             // Snapshot the connection properties while holding the peer map lock. Do not
             // retain the raw connection pointer: stale-peer cleanup may erase and delete
             // the connection while this metadata task is processing the STP update.
-            network->m_peers.shared_lock();
-            auto peerIt = network->m_peers.find(peerId);
-            if (peerIt != network->m_peers.end() && peerIt->second != nullptr) {
-                FNEPeerConnection* connection = peerIt->second;
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (connection != nullptr) {
                 std::string ip = udp::Socket::address(req->address);
                 peerFound = true;
                 peerIdentity = connection->identWithQualifier();
                 peerAuthorized = connection->connected() && connection->address() == ip &&
                     connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
             }
-            network->m_peers.shared_unlock();
 
             if (peerFound) {
                 // validate peer (simple validation really)

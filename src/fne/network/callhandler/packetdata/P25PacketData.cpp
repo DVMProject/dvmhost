@@ -928,7 +928,7 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
     bool groupDelivery = dstId == WUID_ALL || m_network->m_packetDataBroadcast;
     if (groupDelivery) {
         std::vector<uint32_t> availablePeers;
-        for (const auto& peer : m_network->m_peers)
+        for (const auto& peer : m_network->peersSnapshot())
             availablePeers.push_back(peer.first);
 
         for (const auto& peer : m_network->m_host->m_peerNetworks) {
@@ -959,8 +959,8 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
     */
 
     // repeat traffic to the connected peers
-    if (m_network->m_peers.size() > 0U) {
-        for (auto peer : m_network->m_peers) {
+    if (m_network->peerCount() > 0U) {
+        for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first && selectedPeer(peer.first)) {
                 write_PDU_User(peer.first, peerId, nullptr, status->assembler.dataHeader, status->assembler.getExtendedAddress(),
                     status->assembler.getAuxiliaryES(), status->pduUserData);
@@ -1010,7 +1010,7 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
     std::vector<DataRoute> routes;
     if (dstId == WUID_ALL || m_network->m_packetDataBroadcast) {
         std::vector<uint32_t> availablePeers;
-        for (const auto& peer : m_network->m_peers)
+        for (const auto& peer : m_network->peersSnapshot())
             availablePeers.push_back(peer.first);
 
         routes = m_locationRegistry.resolveGroup(availablePeers);
@@ -1038,8 +1038,8 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
     // dispatch the user frame to each resolved RF route
     bool dispatched = false;
     for (const DataRoute& route : routes) {
-        auto localPeer = m_network->m_peers.find(route.peerId);
-        if (localPeer != m_network->m_peers.end()) {
+        TrafficNetwork::PeerConnectionPtr localPeer = m_network->findPeer(route.peerId);
+        if (localPeer != nullptr) {
             dispatched = write_PDU_User(route.peerId, m_network->m_peerId, nullptr, dataHeader,
                 extendedAddress, auxiliaryES, pduUserData) || dispatched;
         }

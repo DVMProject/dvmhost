@@ -468,17 +468,15 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                                 // determine if the peer trying to transmit has call priority
                                 if (m_network->m_callCollisionTimeout > 0U) {
-                                    m_network->m_peers.shared_lock();
-                                    for (auto peer : m_network->m_peers) {
+                                    for (const auto& peer : m_network->peersSnapshot()) {
                                         if (peerId == peer.first) {
-                                            FNEPeerConnection* conn = peer.second;
+                                            TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                             if (conn != nullptr) {
                                                 hasCallPriority = conn->hasCallPriority();
                                                 break;
                                             }
                                         }
                                     }
-                                    m_network->m_peers.shared_unlock();
                                 }
 
                                 // perform standard call collision if the call collision timeout is set *and*
@@ -679,11 +677,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 } else {
                     // if this is a private call, check if the destination peer is one directly connected to us, if not
                     // flag the call so it only repeats to neighbor FNE peers
-                    if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+                    if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
                         noConnectedPeerRepeat = true;
-                        for (auto peer : m_network->m_peers) {
+                        for (const auto& peer : m_network->peersSnapshot()) {
                             if (peerId != peer.first) {
-                                FNEPeerConnection* conn = peer.second;
+                                TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                 if (conn != nullptr) {
                                     if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                                         continue;
@@ -706,16 +704,15 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         */
 
         // repeat traffic to nodes connected to us as peers
-        if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+        if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 if (peer.second == nullptr)
                     continue;
                 if (peerId != peer.first) {
-                    FNEPeerConnection* conn = peer.second;
+                    TrafficNetwork::PeerConnectionPtr conn = peer.second;
                     if (ssrc == peer.first) {
                         // skip the peer if it is the source peer
                         continue;
@@ -777,7 +774,6 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         // if this is a private call, and we have already repeated to the connected peer that registered
@@ -877,15 +873,13 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
     } 
 
     // repeat traffic to the connected peers
-    m_network->m_peers.shared_lock();
-    if (m_network->m_peers.size() > 0U) {
-        for (auto peer : m_network->m_peers) {
+    if (m_network->peerCount() > 0U) {
+        for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first) {
                 write_TSDU_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
             }
         }
     }
-    m_network->m_peers.shared_unlock();
 
     if (!m_network->m_globalAff->isGranted(dstId)) {
         if (m_network->m_globalAff->grantCh(dstId, srcId, peerId, fne_lookups::GRANT_TIMER_TIMEOUT, !unitToUnit)) {
@@ -963,19 +957,16 @@ void TagP25Data::playbackParrot()
 
                         // check if this peer is a VC peer (ccPeerId non-zero), and if so
                         // redirect the grant demand to its CC peer
-                        m_network->m_peers.shared_lock();
-                        auto it = m_network->m_peers.find(pkt.peerId);
-                        if (it != m_network->m_peers.end() && it->second->ccPeerId() > 0) {
-                            targetPeerId = it->second->ccPeerId();
-                        }
-                        m_network->m_peers.shared_unlock();
+                        TrafficNetwork::PeerConnectionPtr connection = m_network->findPeer(pkt.peerId);
+                        if (connection != nullptr && connection->ccPeerId() > 0U)
+                            targetPeerId = connection->ccPeerId();
 
                         LogInfoEx(LOG_P25, "Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", pkt.peerId, srcId, dstId);
                         m_network->writePeer(targetPeerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength,
                             RTP_END_OF_CALL_SEQ, m_network->createStreamId());
                     } else {
                         // repeat traffic to the connected peers
-                        for (auto peer : m_network->m_peers) {
+                        for (const auto& peer : m_network->peersSnapshot()) {
                             LogInfoEx(LOG_P25, "Parrot Grant Demand, peer = %u, srcId = %u, dstId = %u", peer.first, srcId, dstId);
                             m_network->writePeer(peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, message.get(), messageLength, 
                                 RTP_END_OF_CALL_SEQ, m_network->createStreamId());
@@ -996,12 +987,9 @@ void TagP25Data::playbackParrot()
 
             // check if this peer is a VC peer (ccPeerId non-zero), and if so
             // determine its CC peer ID
-            m_network->m_peers.shared_lock();
-            auto it = m_network->m_peers.find(pkt.peerId);
-            if (it != m_network->m_peers.end() && it->second->ccPeerId() > 0) {
-                ccPeerId = it->second->ccPeerId();
-            }
-            m_network->m_peers.shared_unlock();
+            TrafficNetwork::PeerConnectionPtr connection = m_network->findPeer(pkt.peerId);
+            if (connection != nullptr && connection->ccPeerId() > 0U)
+                ccPeerId = connection->ccPeerId();
 
             // if we have a CC peer ID repeat the parrot traffic to all its connected VC peers
             if (ccPeerId > 0U && m_network->m_ccPeerMap.find(ccPeerId) != m_network->m_ccPeerMap.end()) {
@@ -1039,8 +1027,7 @@ void TagP25Data::playbackParrot()
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 // every MAX_QUEUED_PEER_MSGS peers flush the queue
                 if (i % MAX_QUEUED_PEER_MSGS == 0U) {
                     m_network->m_frameQueue->flushQueue(&queue);
@@ -1055,7 +1042,6 @@ void TagP25Data::playbackParrot()
                 i++;
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         delete[] pkt.buffer;
@@ -1287,8 +1273,8 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                                 return false;
                             } else {
                                 // if the peer is mapped, we can repeat the ADJ_STS_BCAST to other peers
-                                if (m_network->m_peers.size() > 0U) {
-                                    for (auto peer : m_network->m_peers) {
+                                if (m_network->peerCount() > 0U) {
+                                    for (const auto& peer : m_network->peersSnapshot()) {
                                         if (peerId != peer.first) {
                                             write_TSDU(peer.first, osp);
                                         }
@@ -1359,10 +1345,7 @@ bool TagP25Data::processTSDUTo(uint8_t* buffer, uint32_t peerId, uint8_t duid)
             //uint32_t srcId = tsbk->getSrcId();
             uint32_t dstId = tsbk->getDstId();
 
-            FNEPeerConnection* connection = nullptr;
-            if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-                connection = m_network->m_peers[peerId];
-            }
+            TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
 
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
@@ -1479,12 +1462,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         return false;
     }
 
-    FNEPeerConnection* connection = nullptr; // bryanb: this is a possible null ref concurrency issue
-                                             //     it is possible if the timing is just right to get a valid 
-                                             //     connection back initially, and then for it to be deleted
-    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-        connection = m_network->m_peers[peerId];
-    }
+    TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
 
     if (connection != nullptr) {
         // is this peer a replica peer?
@@ -2102,12 +2080,11 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
             RTP_END_OF_CALL_SEQ, streamId);
     } else {
         // repeat traffic to the connected peers
-        if (m_network->m_peers.size() > 0U) {
+        if (m_network->peerCount() > 0U) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 // every MAX_QUEUED_PEER_MSGS peers flush the queue
                 if (i % MAX_QUEUED_PEER_MSGS == 0U) {
                     m_network->m_frameQueue->flushQueue(&queue);
@@ -2123,7 +2100,6 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
                 i++;
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         // repeat traffic to neighbor FNE peers

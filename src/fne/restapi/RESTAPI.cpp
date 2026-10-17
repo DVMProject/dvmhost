@@ -922,17 +922,16 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
 
     json::array peers = json::array();
     if (m_network != nullptr) {
-        m_network->m_peers.shared_lock();
-        if (m_network->m_peers.size() > 0) {
-            for (auto entry : m_network->m_peers) {
+        if (m_network->peerCount() > 0U) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     if (m_debug) {
                         LogDebug(LOG_REST, "preparing PEER %u (%s) for REST API query", peerId, peer->address().c_str());
                     }
 
-                    json::object peerObj = m_network->fneConnObject(peerId, peer);
+                    json::object peerObj = m_network->fneConnObject(peerId, peer.get());
                     peers.push_back(json::value(peerObj));
                 }
             }
@@ -940,7 +939,6 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
         else {
             LogError(LOG_REST, "peer query failed, no peers connected to this FNE");
         }
-        m_network->m_peers.shared_unlock();
 
         // report any peers from replica peers
         std::unordered_map<uint32_t, json::array> replicatedPeers = m_network->replicatedPeersSnapshot();
@@ -978,9 +976,7 @@ void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& repl
 
     json::array peers = json::array();
     if (m_network != nullptr) {
-        m_network->m_peers.shared_lock();
-        uint32_t count = m_network->m_peers.size();
-        m_network->m_peers.shared_unlock();
+        uint32_t count = static_cast<uint32_t>(m_network->peerCount());
         response["peerCount"].set<uint32_t>(count);
     }
 
@@ -2039,11 +2035,10 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
     if (m_network != nullptr) {
         // peer statistics (right now this is just a list of connected peers)
         json::array peerStats = json::array();
-        m_network->m_peers.shared_lock();
-        if (m_network->m_peers.size() > 0) {
-            for (auto entry : m_network->m_peers) {
+        if (m_network->peerCount() > 0U) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     json::object peerObj = json::object();
                     peerObj["peerId"].set<uint32_t>(peerId);
@@ -2091,7 +2086,6 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
                 }
             }
         }
-        m_network->m_peers.shared_unlock();
         response["peerStats"].set<json::array>(peerStats);
 
         // table load statistics
@@ -2379,9 +2373,8 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     uint32_t connectedPeers = 0U;
     uint32_t connectedChildren = 0U;
     bool metadataDegraded = false;
-    m_network->m_peers.shared_lock();
-    for (const auto& entry : m_network->m_peers) {
-        network::FNEPeerConnection* peer = entry.second;
+    for (const auto& entry : m_network->peersSnapshot()) {
+        TrafficNetwork::PeerConnectionPtr peer = entry.second;
         if (peer == nullptr)
             continue;
         if (peer->connected())
@@ -2407,7 +2400,6 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
         obj["missedMetadataUpdates"].set<uint32_t>(missedMetadataUpdates);
         children.push_back(json::value(obj));
     }
-    m_network->m_peers.shared_unlock();
 
     // construct JSON object representing the connectivity status of the network
     const bool partitioned = configuredUpstreams > 0U && connectedUpstreams == 0U;
@@ -2626,19 +2618,16 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
     json::array affs = json::array();
     if (m_network != nullptr) {
         uint32_t totalAffiliations = 0U;
-        m_network->m_peers.shared_lock();
-        if (m_network->m_peers.size() > 0) {
+        if (m_network->peerCount() > 0U) {
             std::vector<uint32_t> peerIds = std::vector<uint32_t>();
 
-            m_network->m_peers.shared_lock();
-            for (auto entry : m_network->m_peers) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     peerIds.push_back(peerId);
                 }
             }
-            m_network->m_peers.shared_unlock();
 
             for (uint32_t peerId : peerIds) {
                 std::shared_ptr<fne_lookups::AffiliationLookup> affLookup = m_network->getPeerAffiliations(peerId);
@@ -2667,7 +2656,6 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
                 }
             }
         }
-        m_network->m_peers.shared_unlock();
 
         response["totalAffiliations"].set<uint32_t>(totalAffiliations);
     }

@@ -640,7 +640,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
     bool groupDelivery = status->header.getGI() || dstId == DMRDEF::WUID_ALL;
     if (groupDelivery) {
         std::vector<uint32_t> availablePeers;
-        for (const auto& peer : m_network->m_peers)
+        for (const auto& peer : m_network->peersSnapshot())
             availablePeers.push_back(peer.first);
         for (const auto& peer : m_network->m_host->m_peerNetworks) {
             if (peer.second->isEnabled())
@@ -669,8 +669,8 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
     */
 
     // repeat traffic to the connected peers
-    if (m_network->m_peers.size() > 0U) {
-        for (auto peer : m_network->m_peers) {
+    if (m_network->peerCount() > 0U) {
+        for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first && selectedPeer(peer.first)) {
                 // is this peer ignored?
                 if (!m_tag->isPeerPermitted(peer.first, dmrData, streamId)) {
@@ -728,7 +728,7 @@ void DMRPacketData::dispatchUserFrameToFNE(dmr::data::DataHeader& dataHeader, ui
     std::vector<DataRoute> routes;
     if (dataHeader.getGI() || dstId == DMRDEF::WUID_ALL) {
         std::vector<uint32_t> availablePeers;
-        for (const auto& peer : m_network->m_peers)
+        for (const auto& peer : m_network->peersSnapshot())
             availablePeers.push_back(peer.first);
         routes = m_locationRegistry.resolveGroup(availablePeers);
     }
@@ -789,8 +789,8 @@ void DMRPacketData::dispatchUserFrameToFNE(dmr::data::DataHeader& dataHeader, ui
                 continue;
             ::memcpy(message.get() + 20U, data, len);
 
-            auto localPeer = m_network->m_peers.find(route.peerId);
-            if (localPeer != m_network->m_peers.end()) {
+            TrafficNetwork::PeerConnectionPtr localPeer = m_network->findPeer(route.peerId);
+            if (localPeer != nullptr) {
                 m_network->writePeer(route.peerId, m_network->m_peerId,
                     { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR },
                     message.get(), messageLength, pktSeq, streamId);
