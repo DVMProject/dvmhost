@@ -1902,7 +1902,7 @@ void Voice::writeNet_LDU1()
         LogInfoEx(LOG_NET, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
         // conventional registration or DVRS support?
-        if (((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) && !m_p25->m_disableNetworkGrant) {
+        if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
             uint8_t serviceOptions = (m_netLC.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority

@@ -2185,25 +2185,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
-    // are network channel grants disabled?
-    if (m_p25->m_disableNetworkGrant) {
-        // don't process RF grant if the network isn't in a idle state and the RF destination is the network destination
-        if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
-            LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic collision, dstId = %u", dstId);
-            writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
-
-            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
-            m_p25->m_rfState = RS_RF_REJECTED;
-            return false;
-        }
-
-        // ensure network watchdog is stopped
-        if (m_p25->m_networkWatchdog.isRunning()) {
-            m_p25->m_networkWatchdog.stop();
-        }
-    }
-
     // are we skipping checking?
     if (!skip) {
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
@@ -2283,7 +2264,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
                 if (tid.config().affiliated()) {
                     if (!m_p25->m_affiliations->hasGroupAff(dstId)) {
-                        LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
+                        if (!m_p25->m_hideRemoteGrantLog) {
+                            LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
+                        }
                         return false;
                     }
                 }

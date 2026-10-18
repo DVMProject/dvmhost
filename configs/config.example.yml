@@ -247,7 +247,7 @@ protocols:
         verbose: true
         # Flag indicating whether or not debug logging is enabled.
         debug: false
-    
+
     #
     # Project 25
     #
@@ -299,10 +299,8 @@ protocols:
         controlOnly: false
         # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
         disableNetworkHDU: false
-        # Flag indicating whether or not network calls will generate a channel grant.
-        #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup
-        #    steering is required.)
-        disableNetworkGrant: false
+        # Flag indicating whether or not to hide remote grant demand logging.
+        hideRemoteGrantLog: true
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
         # Flag indicating whether or not a P25 TDU (call terminator) will occur to the network immmediately after a 
