@@ -494,7 +494,6 @@ namespace dmr
         bool m_enableTSCC;
         bool m_dedicatedTSCC;
         bool m_ignoreAffiliationCheck;
-        bool m_disableNetworkGrant;
         bool m_convNetGrantDemand;
         bool m_legacyGroupReg;
 

@@ -198,10 +198,6 @@ protocols:
             # authentication key is requested from the upstream FNE through the existing LLA key path.
             requireAuthForReg: false
         
-        # Flag indicating whether or not network calls will generate a channel grant.
-        #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup
-        #    steering is required.)
-        disableNetworkGrant: false
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
         # Flag indicating the host should send a network grant demand for conventional traffic.
