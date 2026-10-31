@@ -108,7 +108,7 @@ TEST_CASE("TSBK Telephone Interconnect", "[p25][tsbk]") {
         isp.encode(raw, true, true);
 
         REQUIRE((raw[0U] & 0x3FU) == TSBKO::ISP_TELE_INT_PSTN_REQ);
-        REQUIRE(raw[2U] == 0x80U);                  // Service Options
+        REQUIRE(raw[2U] == 0x84U);                  // Service Options
         REQUIRE(raw[3U] == 0x00U);                  // Reserved
         REQUIRE(raw[4U] == 0x00U);
         REQUIRE(raw[5U] == 0x00U);
@@ -123,6 +123,7 @@ TEST_CASE("TSBK Telephone Interconnect", "[p25][tsbk]") {
         ISP_TELE_INT_PSTN_REQ* decoded = dynamic_cast<ISP_TELE_INT_PSTN_REQ*>(tsbk.get());
         REQUIRE(decoded != nullptr);
         REQUIRE(decoded->getEmergency() == true);
+        REQUIRE(decoded->getPriority() == 4U);
         REQUIRE(decoded->getPSTNAddress() == 0x07U);
         REQUIRE(decoded->getSrcId() == 0x00ABCDU);
     }

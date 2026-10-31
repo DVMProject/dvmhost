@@ -2601,7 +2601,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     json::object req = json::object();
                     req["dstId"].set<uint32_t>(dstId);
                     if (telInt) {
-                        req["telInt"].set<bool>(true);
+                        req["telInt"].set<bool>(telInt);
                     }
 
                     // send blocking RPC request

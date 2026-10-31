@@ -44,9 +44,9 @@ bool LC_TEL_INT_VCH_USER::decode(const uint8_t* data)
     ulong64_t rsValue = TDULC::toValue(rs);
 
     m_group = false;
-    m_emergency = (rs[2U] & 0x80U) == 0x80U;                                        // Emergency Flag
-    m_encrypted = (rs[2U] & 0x40U) == 0x40U;                                        // Encryption Flag
-    m_priority = (rs[2U] & 0x07U);                                                  // Priority
+    m_emergency = (rs[1U] & 0x80U) == 0x80U;                                        // Emergency Flag
+    m_encrypted = (rs[1U] & 0x40U) == 0x40U;                                        // Encryption Flag
+    m_priority = (rs[1U] & 0x07U);                                                  // Priority
     m_callTimer = (uint32_t)((rsValue >> 24) & 0xFFFFU);                            // Call Timer
     // the single address is the subscriber unit in the call, which also identifies the call
     m_dstId = (uint32_t)(rsValue & 0xFFFFFFU);                                      // Source/Target Address

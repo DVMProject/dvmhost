@@ -328,8 +328,8 @@ namespace p25
              * @param telInt Flag indicating this grant is for a telephone interconnect call to the unit in dstId.
              * @returns True, if granted, otherwise false.
              */
-            bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U,
-                bool telInt = false);
+            bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, 
+                bool skip = false, uint32_t chNo = 0U, bool telInt = false);
             /**
              * @brief Helper to write a grant update packet.
              */
