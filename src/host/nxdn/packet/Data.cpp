@@ -221,6 +221,9 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
         resetNet();
     }
 
+    if (m_nxdn->m_netState == RS_NET_DATA)
+        m_nxdn->m_networkWatchdog.start();
+
     channel::UDCH udch;
     bool validUDCH = udch.decode(data + 2U);
     if (m_nxdn->m_netState == RS_NET_IDLE && !validUDCH)
@@ -368,6 +371,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
             m_nxdn->m_voice->m_netFrames);
 
         m_nxdn->writeEndNet();
+        m_nxdn->m_networkWatchdog.stop();
     }
 
     return true;
@@ -401,8 +405,13 @@ void Data::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_network == nullptr)
         return;
 
-    if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
+    if (m_nxdn->m_rfTimeoutTimer.isRunning() && m_nxdn->m_rfTimeoutTimer.hasExpired())
         return;
 
-    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
+    if (len != NXDN_FRAME_LENGTH_BYTES + 2U) {
+        LogError(LOG_NET, "Data::writeNetwork(), invalid modem NXDN frame length, len = %u", len);
+        return;
+    }
+
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data + 2U, NXDN_FRAME_LENGTH_BYTES);
 }

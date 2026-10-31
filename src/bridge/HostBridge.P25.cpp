@@ -12,6 +12,7 @@
 #include "Defines.h"
 #include "common/analog/AnalogDefines.h"
 #include "common/analog/AnalogAudio.h"
+#include "common/analog/data/NetData.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/dfsi/DFSIDefines.h"
@@ -268,52 +269,15 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
         }
 
         int count = 0;
-        switch (duid)
-        {
+        switch (duid) {
         case DUID::LDU1:
-            if ((data[0U] == DFSIFrameType::LDU1_VOICE1) && (data[22U] == DFSIFrameType::LDU1_VOICE2) &&
-                (data[36U] == DFSIFrameType::LDU1_VOICE3) && (data[53U] == DFSIFrameType::LDU1_VOICE4) &&
-                (data[70U] == DFSIFrameType::LDU1_VOICE5) && (data[87U] == DFSIFrameType::LDU1_VOICE6) &&
-                (data[104U] == DFSIFrameType::LDU1_VOICE7) && (data[121U] == DFSIFrameType::LDU1_VOICE8) &&
-                (data[138U] == DFSIFrameType::LDU1_VOICE9)) {
-
+            {
                 dfsi::LC dfsiLC = dfsi::LC(control, lsd);
 
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE1);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 10U);
-                count += DFSI_LDU1_VOICE1_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE2);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 26U);
-                count += DFSI_LDU1_VOICE2_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE3);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 55U);
-                count += DFSI_LDU1_VOICE3_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE4);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 80U);
-                count += DFSI_LDU1_VOICE4_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE5);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 105U);
-                count += DFSI_LDU1_VOICE5_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE6);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 130U);
-                count += DFSI_LDU1_VOICE6_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE7);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 155U);
-                count += DFSI_LDU1_VOICE7_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE8);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 180U);
-                count += DFSI_LDU1_VOICE8_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU1_VOICE9);
-                dfsiLC.decodeLDU1(data.get() + count, m_netLDU1 + 204U);
-                count += DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES;
+                uint8_t missing = BaseNetwork::reconstructLDUVectors(data.get(), frameLength, &dfsiLC, DUID::LDU1, m_netLDU1);
+                if (missing > 0U) {
+                    LogWarning(LOG_NET, P25_LDU1_STR ", missing %u LDU1 voice frames, srcId = %u, dstId = %u", missing, srcId, dstId);
+                }
 
                 LogInfoEx(LOG_NET, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
 
@@ -322,49 +286,13 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             }
             break;
         case DUID::LDU2:
-            if ((data[0U] == DFSIFrameType::LDU2_VOICE10) && (data[22U] == DFSIFrameType::LDU2_VOICE11) &&
-                (data[36U] == DFSIFrameType::LDU2_VOICE12) && (data[53U] == DFSIFrameType::LDU2_VOICE13) &&
-                (data[70U] == DFSIFrameType::LDU2_VOICE14) && (data[87U] == DFSIFrameType::LDU2_VOICE15) &&
-                (data[104U] == DFSIFrameType::LDU2_VOICE16) && (data[121U] == DFSIFrameType::LDU2_VOICE17) &&
-                (data[138U] == DFSIFrameType::LDU2_VOICE18)) {
-
+            {
                 dfsi::LC dfsiLC = dfsi::LC(control, lsd);
 
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE10);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 10U);
-                count += DFSI_LDU2_VOICE10_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE11);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 26U);
-                count += DFSI_LDU2_VOICE11_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE12);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 55U);
-                count += DFSI_LDU2_VOICE12_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE13);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 80U);
-                count += DFSI_LDU2_VOICE13_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE14);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 105U);
-                count += DFSI_LDU2_VOICE14_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE15);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 130U);
-                count += DFSI_LDU2_VOICE15_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE16);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 155U);
-                count += DFSI_LDU2_VOICE16_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE17);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 180U);
-                count += DFSI_LDU2_VOICE17_FRAME_LENGTH_BYTES;
-
-                dfsiLC.setFrameType(DFSIFrameType::LDU2_VOICE18);
-                dfsiLC.decodeLDU2(data.get() + count, m_netLDU2 + 204U);
-                count += DFSI_LDU2_VOICE18_FRAME_LENGTH_BYTES;
+                uint8_t missing = BaseNetwork::reconstructLDUVectors(data.get(), frameLength, &dfsiLC, DUID::LDU2, m_netLDU2);
+                if (missing > 0U) {
+                    LogWarning(LOG_NET, P25_LDU2_STR ", missing %u LDU2 voice frames, srcId = %u, dstId = %u", missing, srcId, dstId);
+                }
 
                 LogInfoEx(LOG_NET, P25_LDU2_STR " audio, algo = $%02X, kid = $%04X", dfsiLC.control()->getAlgId(), dfsiLC.control()->getKId());
 
@@ -529,6 +457,8 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     using namespace p25;
     using namespace p25::defines;
     using namespace p25::data;
+
+    bool callStart = false;
 
     if (m_p25N > 17)
         m_p25N = 0;
@@ -695,6 +625,11 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     if (m_p25N == 8U) {
         LogInfoEx(LOG_HOST, P25_LDU1_STR " audio, srcId = %u, dstId = %u", srcId, dstId);
         m_network->writeP25LDU1(lc, lsd, m_netLDU1, FrameType::HDU_VALID, controlByte);
+
+        if (m_txStreamId <= 1U) {
+            callStart = true;
+        }
+
         m_txStreamId = m_network->getP25StreamId();
     }
 
@@ -710,4 +645,39 @@ void HostBridge::encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     // if N is >17 reset sequence
     if (m_p25N > 17)
         m_p25N = 0;
+
+    // is this traffic being duplicated to a raw analog TG?
+    if (m_duplicateToAnalog) {
+        analog::data::NetData analogData;
+        analogData.setSeqNo(m_analogN);
+        analogData.setSrcId(srcId);
+        analogData.setDstId(dstId);
+        analogData.setControl(0U);
+        analogData.setFrameType(AudioFrameType::VOICE);
+        if (callStart) {
+            analogData.setFrameType(AudioFrameType::VOICE_START);
+
+            if (m_grantDemand) {
+                analogData.setControl(0x80U); // analog remote grant demand flag
+            }
+        }
+
+        int pcmIdx = 0;
+        uint8_t outPcm[AUDIO_SAMPLES_LENGTH * 2U];
+        for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+            outPcm[smpIdx] = AnalogAudio::encodeMuLaw(samples[smpIdx]);
+        }
+
+        if (m_trace)
+            Utils::dump(1U, "HostBridge()::encodeP25AudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+
+        analogData.setAudio(outPcm);
+
+        if (analogData.getFrameType() == AudioFrameType::VOICE) {
+            LogInfoEx(LOG_HOST, ANO_VOICE ", audio, srcId = %u, dstId = %u, seqNo = %u", srcId, dstId, analogData.getSeqNo());
+        }
+
+        m_network->writeAnalog(analogData);
+        m_analogN++;
+    }
 }

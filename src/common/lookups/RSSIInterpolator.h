@@ -33,7 +33,7 @@ namespace lookups
      * @brief RSSI interpolated lookup for RSSI values returned from the modem.
      * @ingroup lookups
      */
-    class HOST_SW_API RSSIInterpolator {
+    class DVM_COMMON_API RSSIInterpolator {
     public:
         /**
          * @brief Initializes a new instance of the RSSIInterpolator class.

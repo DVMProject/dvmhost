@@ -35,7 +35,7 @@ namespace p25
              *  RAD MON CMD - Radio Monitor Command (OSP)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API IOSP_RAD_MON : public TSBK {
+            class DVM_COMMON_API IOSP_RAD_MON : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the IOSP_RAD_MON class.

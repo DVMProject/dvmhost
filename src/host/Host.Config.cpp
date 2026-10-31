@@ -170,6 +170,10 @@ bool Host::readParams()
             return false;
         }
 
+        if (entry.baseFrequency() > 762000000U && entry.baseFrequency() < 804000000U) {
+            ::fatal("I would bet real money, that you aren't licensed for this -- error 70");
+        }
+
         m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
         if (m_channelNo == 0U) { // clamp to 1
             m_channelNo = 1U;
@@ -188,6 +192,14 @@ bool Host::readParams()
 
         m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
         m_rxFrequency = (uint32_t)(m_txFrequency + (int32_t)calcTxOffset);
+
+        if (m_txFrequency >= 762000000U && m_txFrequency <= 775000000U) {
+            ::fatal("error 70");
+        }
+
+        if (m_rxFrequency >= 797000000U && m_rxFrequency <= 805000000U) {
+            ::fatal("error 70");
+        }
 
         if (calcTxOffset < 0.0f && m_rxFrequency < entry.baseFrequency()) {
             ::LogWarning(LOG_HOST, "Channel Id %u Channel No $%04X has an invalid frequency. Rx Frequency (%u) is less then the base frequency (%u), this may result in incorrect trunking behavior.", m_channelId, m_channelNo,
@@ -292,13 +304,13 @@ bool Host::readParams()
 
                 VoiceChData data = VoiceChData(chId, chNo, rxChId, rxChNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
                 m_channelLookup->setRFChData(chNo, data);
-                m_channelLookup->addRFCh(chNo);
+                m_channelLookup->initializeRFCh(chNo);
             } else {
                 ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X (%u-%u) RPC Address %s:%u", chId, chNo, chId, chNo, rpcApiAddress.c_str(), rpcApiPort);
 
                 VoiceChData data = VoiceChData(chId, chNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
                 m_channelLookup->setRFChData(chNo, data);
-                m_channelLookup->addRFCh(chNo);
+                m_channelLookup->initializeRFCh(chNo);
             }
         }
 
@@ -895,6 +907,44 @@ bool Host::createNetwork()
         }
     }
 
+    bool kmfEncrypted = false;
+    uint8_t kmfPresharedKey[AES_WRAPPED_PCKT_KEY_LEN];
+    ::memset(kmfPresharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+
+    // scope is intentional
+    {
+        std::string key = networkConf["kmfPresharedKey"].as<std::string>();
+        if (!key.empty()) {
+            if (key.size() == 32) {
+                // bryanb: shhhhhhh....dirty nasty hacks
+                key = key.append(key); // since the key is 32 characters (16 hex pairs), double it on itself for 64 characters (32 hex pairs)
+                LogWarning(LOG_HOST, "Half-length KMF preshared encryption key detected, doubling key on itself.");
+            }
+
+            if (key.size() == 64) {
+                if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+                    const char* keyPtr = key.c_str();
+
+                    for (uint8_t i = 0; i < AES_WRAPPED_PCKT_KEY_LEN; i++) {
+                        char t[4] = {keyPtr[0], keyPtr[1], 0};
+                        kmfPresharedKey[i] = (uint8_t)::strtoul(t, NULL, 16);
+                        keyPtr += 2 * sizeof(char);
+                    }
+
+                    kmfEncrypted = true;
+                }
+                else {
+                    LogWarning(LOG_HOST, "Invalid characters in the KMF preshared encryption key. Encryption disabled.");
+                    kmfEncrypted = false;
+                }
+            }
+            else {
+                LogWarning(LOG_HOST, "Invalid KMF preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
+                kmfEncrypted = false;
+            }
+        }
+    }
+
     if (id > 999999999U) {
         ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
         return false;
@@ -947,6 +997,7 @@ bool Host::createNetwork()
         LogInfo("    Save Network Lookups: %s", saveLookup ? "yes" : "no");
 
         LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
+        LogInfo("    KMF Encrypted: %s", kmfEncrypted ? "yes" : "no");
 
         if (packetDump) {
             LogInfo("    Packet Dump: yes");
@@ -994,6 +1045,10 @@ bool Host::createNetwork()
             m_network->setPresharedKey(presharedKey);
         }
 
+        if (kmfEncrypted) {
+            m_network->setKMFPresharedKey(kmfPresharedKey);
+        }
+
         m_network->enable(true);
         bool ret = m_network->open();
         if (!ret) {
@@ -1010,7 +1065,7 @@ bool Host::createNetwork()
     if (restApiEnable) {
         m_restAddress = restApiAddress;
         m_restPort = restApiPort;
-        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
+        m_RESTAPI = new host_restapi::RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
         m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
         bool ret = m_RESTAPI->open();
         if (!ret) {

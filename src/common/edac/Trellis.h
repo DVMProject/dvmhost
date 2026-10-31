@@ -29,7 +29,7 @@ namespace edac
      * @brief Implements 1/2 rate and 3/4 rate Trellis for DMR/P25.
      * @ingroup edac
      */
-    class HOST_SW_API Trellis {
+    class DVM_COMMON_API Trellis {
     public:
         /**
          * @brief Initializes a new instance of the Trellis class.

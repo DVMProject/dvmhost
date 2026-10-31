@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -43,11 +43,34 @@ bool MBT_IOSP_EXT_FNCT::decodeMBT(const data::DataHeader& dataHeader, const data
 
     ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
+    // HACK: to get around the fact that Harris is encoding the P25C extended function in a non-standard way
+    if (dataHeader.getMFId() == MFG_HARRIS) {
+        // convert harris extended function to standard extended function
+        uint16_t harrisExtendedFunction = (uint16_t)((tsbkValue >> 48) & 0xFFFFU);
+        switch (harrisExtendedFunction) {
+        case ExtendedFunctions::HARRIS_UNINHIBIT:
+            m_extendedFunction = ExtendedFunctions::UNINHIBIT;
+            break;
+        case ExtendedFunctions::HARRIS_INHIBIT:
+            m_extendedFunction = ExtendedFunctions::INHIBIT;
+            break;
+        default:
+            m_extendedFunction = harrisExtendedFunction;
+            break;
+        }
+
+        m_srcId = (uint32_t)((tsbkValue >> 8) & 0xFFFFFFU);                         // Argument
+        m_dstId = dataHeader.getLLId();                                             // Target Radio Address
+
+        return true;
+    }
+
     m_netId = (uint32_t)((tsbkValue >> 44) & 0xFFFFFU);                             // Network ID
     m_sysId = (uint32_t)((tsbkValue >> 32) & 0xFFFU);                               // System ID
-    m_extendedFunction = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) +                 // Extended Function
+    m_extendedFunction = (uint32_t)((tsbkValue >> 16) & 0xFFFFU);                   // Extended Function
+    m_srcId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) +                            // Argument
         pduUserData[6U];
-    m_srcId = dataHeader.getLLId();                                                 // Source Radio Address
+    m_dstId  = dataHeader.getLLId();                                                // Target Radio Address
 
     return true;
 }

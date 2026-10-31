@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements a mechanism to generate raw CSBK data from bytes.
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_RAW : public CSBK {
+            class DVM_COMMON_API CSBK_RAW : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_RAW class.

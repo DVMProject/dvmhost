@@ -32,7 +32,7 @@ namespace dmr
          * @brief Represents network DMR data.
          * @ingroup dmr
          */
-        class HOST_SW_API NetData {
+        class DVM_COMMON_API NetData {
         public:
             /**
              * @brief Initializes a new instance of the NetData class.

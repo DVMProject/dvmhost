@@ -95,6 +95,15 @@ namespace restapi
             }
 
             /**
+             * @brief Gets the TCP port on which the server is listening.
+             * @returns Bound TCP port, including an OS-assigned port when constructed with port 0.
+             */
+            uint16_t localPort() const
+            {
+                return m_acceptor.local_endpoint().port();
+            }
+
+            /**
              * @brief Run the servers ASIO IO service loop.
              */
             void run()

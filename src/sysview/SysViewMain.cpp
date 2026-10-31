@@ -20,7 +20,11 @@
 #include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/nxdn/NXDNDefines.h"
+#include "common/nxdn/channel/LICH.h"
+#include "common/nxdn/lc/RCCH.h"
+#include "common/nxdn/lc/rcch/RCCHFactory.h"
 #include "common/nxdn/lc/RTCH.h"
+#include "common/nxdn/NXDNUtils.h"
 #include "common/yaml/Yaml.h"
 #include "common/Log.h"
 #include "common/StopWatch.h"
@@ -85,10 +89,10 @@ class RxStatus {
 public:
     ::system_clock::hrc::hrc_t callStartTime;
     ::system_clock::hrc::hrc_t lastPacket;
-    uint32_t srcId;
-    uint32_t dstId;
-    uint8_t slotNo;
-    uint32_t streamId;
+    uint32_t srcId = 0U;
+    uint32_t dstId = 0U;
+    uint8_t slotNo = 0U;
+    uint32_t streamId = 0U;
 };
 typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
 std::unordered_map<uint32_t, RxStatus> g_dmrStatus;
@@ -180,6 +184,41 @@ std::string resolveTGID(uint32_t id)
     return std::string("UNK");
 }
 
+/* Helper to emit a call start or end event. */
+
+void emitCallStartEndEvent(uint32_t srcId, uint32_t dstId, uint8_t slotNo, uint32_t streamId, const std::string& mode,
+    bool callEnd = false, uint64_t duration = 0U)
+{
+    if (g_netDataEvent == nullptr)
+        return;
+
+    json::object event;
+    std::string type = "call_start";
+    if (callEnd) {
+        type = "call_end";
+    }
+    event["type"].set<std::string>(type);
+
+    event["mode"].set<std::string>(mode);
+
+    event["slot"].set<uint8_t>(slotNo);
+
+    std::string resolvedSrc = resolveRID(srcId);
+    std::string resolvedDst = resolveTGID(dstId);
+    event["srcId"].set<uint32_t>(srcId);
+    event["srcStr"].set<std::string>(resolvedSrc);
+    event["dstId"].set<uint32_t>(dstId);
+    event["dstStr"].set<std::string>(resolvedDst);
+
+    event["streamId"].set<uint32_t>(streamId);
+
+    if (callEnd) {
+        event["duration"].set<uint64_t>(duration);
+    }
+
+    g_netDataEvent(event);
+}
+
 /* Initializes peer network connectivity. */
 
 bool createPeerNetwork()
@@ -263,7 +302,7 @@ bool createPeerNetwork()
     return true;
 }
 
-/* */
+/* Gets the current network instance. */
 
 network::PeerNetwork* getNetwork()
 {
@@ -310,6 +349,28 @@ void* threadNetworkPump(void* arg)
             if (g_network != nullptr) {
                 g_network->clock(ms);
 
+                // clock peer status timers and remove expired entries from the peer status map
+                g_network->lockPeerStatus();
+                std::vector<uint32_t> expiredPeerIds;
+                for (auto it = g_network->peerStatusTimers.begin(); it != g_network->peerStatusTimers.end();) {
+                    it->second.clock(ms);
+                    if (it->second.isRunning() && it->second.hasExpired()) {
+                        uint32_t peerId = it->first;
+                        it->second.stop();
+                        expiredPeerIds.push_back(peerId);
+                    }
+                    else {
+                        ++it;
+                    }
+                }
+
+                // remove expired entries from the peer status map
+                for (uint32_t peerId : expiredPeerIds) {
+                    g_network->peerStatus.erase(peerId);
+                    g_network->peerStatusTimers.erase(peerId);
+                }
+                g_network->unlockPeerStatus();
+
                 hrc::hrc_t pktTime = hrc::now();
 
                 uint32_t length = 0U;
@@ -326,6 +387,8 @@ void* threadNetworkPump(void* arg)
                     DMRDEF::FLCO::E flco = (dmrBuffer[15U] & 0x40U) == 0x40U ? DMRDEF::FLCO::PRIVATE : DMRDEF::FLCO::GROUP;
 
                     uint32_t slotNo = (dmrBuffer[15U] & 0x80U) == 0x80U ? 2U : 1U;
+
+                    uint32_t streamId = g_network->getRxDMRStreamId(slotNo);
 
                     DMRDEF::DataType::E dataType = (DMRDEF::DataType::E)(dmrBuffer[15U] & 0x0FU);
 
@@ -356,6 +419,8 @@ void* threadNetworkPump(void* arg)
                         dmrData.setN(n);
                     }
 
+                    uint8_t controlByte = dmrData.getControl();
+
                     // is this the end of the call stream?
                     if (dataSync && (dataType == DMRDEF::DataType::TERMINATOR_WITH_LC)) {
                         if (srcId == 0U && dstId == 0U) {
@@ -380,6 +445,7 @@ void* threadNetworkPump(void* arg)
 
                             LogInfoEx(LOG_NET, "DMR, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
+                            emitCallStartEndEvent(srcId, dstId, slotNo, status.streamId, "dmr", true, duration / 1000);
                         }
                     }
 
@@ -398,10 +464,12 @@ void* threadNetworkPump(void* arg)
                             status.srcId = srcId;
                             status.dstId = dstId;
                             status.slotNo = slotNo;
+                            status.streamId = streamId;
                             g_dmrStatus[dstId] = status; // this *could* be an issue if a dstId appears on both slots somehow...
 
                             LogInfoEx(LOG_NET, "DMR, Call Start, srcId = %u (%s), dstId = %u (%s)", 
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                            emitCallStartEndEvent(srcId, dstId, slotNo, status.streamId, "dmr");
                         }
                     }
 
@@ -422,6 +490,15 @@ void* threadNetworkPump(void* arg)
                             netEvent["opcode"].set<uint8_t>(csbko);
                             std::string desc = csbk->toString();
                             netEvent["desc"].set<std::string>(desc);
+
+                            // report raw CSBK bytes in hex format
+                            uint8_t* csbkRaw = csbk.get()->getDecodedRaw();
+                            std::stringstream ss;
+                            ss << std::hex << std::setfill('0');
+                            for (uint8_t i = 0; i < DMRDEF::DMR_CSBK_LENGTH_BYTES; i++) {
+                                ss << std::setw(2) << (int)csbkRaw[i];
+                            }
+                            netEvent["data"].set<std::string>(ss.str());
 
                             switch (csbk->getCSBKO()) {
                             case DMRDEF::CSBKO::BROADCAST:
@@ -473,6 +550,8 @@ void* threadNetworkPump(void* arg)
                 if (netReadRet) {
                     using namespace p25;
 
+                    uint32_t streamId = g_network->getRxP25StreamId();
+
                     uint8_t duid = p25Buffer[22U];
                     uint8_t MFId = p25Buffer[15U];
 
@@ -505,6 +584,8 @@ void* threadNetworkPump(void* arg)
                     uint32_t sysId = (p25Buffer[11U] << 8) | (p25Buffer[12U] << 0);
                     uint32_t netId = GET_UINT24(p25Buffer, 16U);
 
+                    uint8_t controlByte = p25Buffer[14U];
+
                     // log call status
                     if (duid != P25DEF::DUID::TSDU && duid != P25DEF::DUID::PDU) {
                         // is this the end of the call stream?
@@ -522,6 +603,7 @@ void* threadNetworkPump(void* arg)
 
                                 LogInfoEx(LOG_NET, "P25, Call End, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X, duration = %u",
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId, duration / 1000);
+                                emitCallStartEndEvent(srcId, dstId, 0U, status.streamId, "p25", true, duration / 1000);
                             }
                         }
 
@@ -539,10 +621,12 @@ void* threadNetworkPump(void* arg)
                                 status.callStartTime = pktTime;
                                 status.srcId = srcId;
                                 status.dstId = dstId;
+                                status.streamId = streamId;
                                 g_p25Status[dstId] = status;
 
                                 LogInfoEx(LOG_NET, "P25, Call Start, srcId = %u (%s), dstId = %u (%s), sysId = $%03X, netId = $%05X", 
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), sysId, netId);
+                                emitCallStartEndEvent(srcId, dstId, 0U, status.streamId, "p25");
                             }
                         }
                     }
@@ -553,6 +637,106 @@ void* threadNetworkPump(void* arg)
                         if (duid == P25DEF::DUID::TDU) {
                             LogInfoEx(LOG_NET, P25_TDU_STR ", srcId = %u (%s), dstId = %u (%s)", 
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+
+                            // if this is a grant demand TDU, generate a GRP_VCH TSDU event to indicate that the call
+                            // is trying to start
+                            if (((controlByte & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND) &&
+                                g_netDataEvent != nullptr) {
+                                bool unitToUnit = (controlByte & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
+
+                                json::object netEvent = json::object();
+                                std::string type = "tsbk";
+                                netEvent["type"].set<std::string>(type);
+
+                                if (!unitToUnit) {
+                                    std::unique_ptr<lc::tsbk::IOSP_GRP_VCH> tsbk = std::make_unique<lc::tsbk::IOSP_GRP_VCH>();
+
+                                    uint8_t lco = tsbk->getLCO();
+                                    netEvent["opcode"].set<uint8_t>(lco);
+                                    std::string desc = tsbk->toString();
+                                    desc.append(" Demand");
+                                    netEvent["desc"].set<std::string>(desc);
+
+                                    tsbk->setSrcId(srcId);
+                                    tsbk->setDstId(dstId);
+                                    tsbk->setGrpVchId(0U);
+                                    tsbk->setGrpVchNo(0U);
+                                    tsbk->setPriority(4U);
+
+                                    bool emerg = tsbk->getEmergency();
+                                    netEvent["emerg"].set<bool>(emerg);
+                                    bool encry = tsbk->getEncrypted();
+                                    netEvent["encry"].set<bool>(encry);
+                                    uint8_t prio = tsbk->getPriority();
+                                    netEvent["prio"].set<uint8_t>(prio);
+                                    uint32_t chId = tsbk->getGrpVchId();
+                                    netEvent["chId"].set<uint32_t>(chId);
+                                    uint32_t chNo = tsbk->getGrpVchNo();
+                                    netEvent["chNo"].set<uint32_t>(chNo);
+
+                                    std::string resolvedSrc = resolveRID(srcId);
+                                    std::string resolvedDst = resolveTGID(dstId);
+                                    netEvent["srcId"].set<uint32_t>(srcId);
+                                    netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                    netEvent["dstId"].set<uint32_t>(dstId);
+                                    netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                    // report raw TSBK bytes in hex format
+                                    DECLARE_UINT8_ARRAY(tsbkRaw, P25DEF::P25_TSBK_LENGTH_BYTES);
+                                    tsbk->encode(tsbkRaw, true, true);
+                                    std::stringstream ss;
+                                    ss << std::hex << std::setfill('0');
+                                    for (uint8_t i = 0; i < P25DEF::P25_TSBK_LENGTH_BYTES; i++) {
+                                        ss << std::setw(2) << (int)tsbkRaw[i];
+                                    }
+                                    netEvent["data"].set<std::string>(ss.str());
+                                }
+                                else {
+                                    std::unique_ptr<lc::tsbk::IOSP_UU_VCH> tsbk = std::make_unique<lc::tsbk::IOSP_UU_VCH>();
+
+                                    uint8_t lco = tsbk->getLCO();
+                                    netEvent["opcode"].set<uint8_t>(lco);
+                                    std::string desc = tsbk->toString();
+                                    desc.append(" Demand");
+                                    netEvent["desc"].set<std::string>(desc);
+
+                                    tsbk->setSrcId(srcId);
+                                    tsbk->setDstId(dstId);
+                                    tsbk->setGrpVchId(0U);
+                                    tsbk->setGrpVchNo(0U);
+                                    tsbk->setPriority(4U);
+
+                                    bool emerg = tsbk->getEmergency();
+                                    netEvent["emerg"].set<bool>(emerg);
+                                    bool encry = tsbk->getEncrypted();
+                                    netEvent["encry"].set<bool>(encry);
+                                    uint8_t prio = tsbk->getPriority();
+                                    netEvent["prio"].set<uint8_t>(prio);
+                                    uint32_t chId = tsbk->getGrpVchId();
+                                    netEvent["chId"].set<uint32_t>(chId);
+                                    uint32_t chNo = tsbk->getGrpVchNo();
+                                    netEvent["chNo"].set<uint32_t>(chNo);
+
+                                    std::string resolvedSrc = resolveRID(srcId);
+                                    std::string resolvedDst = resolveTGID(dstId);
+                                    netEvent["srcId"].set<uint32_t>(srcId);
+                                    netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                    netEvent["dstId"].set<uint32_t>(dstId);
+                                    netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                    // report raw TSBK bytes in hex format
+                                    DECLARE_UINT8_ARRAY(tsbkRaw, P25DEF::P25_TSBK_LENGTH_BYTES);
+                                    tsbk->encode(tsbkRaw, true, true);
+                                    std::stringstream ss;
+                                    ss << std::hex << std::setfill('0');
+                                    for (uint8_t i = 0; i < P25DEF::P25_TSBK_LENGTH_BYTES; i++) {
+                                        ss << std::setw(2) << (int)tsbkRaw[i];
+                                    }
+                                    netEvent["data"].set<std::string>(ss.str());
+                                }
+
+                                g_netDataEvent(netEvent);
+                            }
                         }
                         else {
                             std::unique_ptr<lc::TDULC> tdulc = lc::tdulc::TDULCFactory::createTDULC(data.get());
@@ -580,6 +764,15 @@ void* threadNetworkPump(void* arg)
                             netEvent["opcode"].set<uint8_t>(lco);
                             std::string desc = tsbk->toString();
                             netEvent["desc"].set<std::string>(desc);
+
+                            // report raw TSBK bytes in hex format
+                            uint8_t* tsbkRaw = tsbk.get()->getDecodedRaw();
+                            std::stringstream ss;
+                            ss << std::hex << std::setfill('0');
+                            for (uint8_t i = 0; i < P25DEF::P25_TSBK_LENGTH_BYTES; i++) {
+                                ss << std::setw(2) << (int)tsbkRaw[i];
+                            }
+                            netEvent["data"].set<std::string>(ss.str());
 
                             switch (tsbk->getLCO()) {
                                 case P25DEF::TSBKO::IOSP_GRP_VCH:
@@ -927,6 +1120,8 @@ void* threadNetworkPump(void* arg)
                 if (netReadRet) {
                     using namespace nxdn;
 
+                    uint32_t streamId = g_network->getRxNXDNStreamId();
+
                     uint8_t messageType = nxdnBuffer[4U];
 
                     uint32_t srcId = GET_UINT24(nxdnBuffer, 5U);
@@ -940,6 +1135,24 @@ void* threadNetworkPump(void* arg)
 
                     bool group = (nxdnBuffer[15U] & 0x40U) == 0x40U ? false : true;
                     lc.setGroup(group);
+
+                    // process raw NXDN data bytes
+                    UInt8Array frame;
+                    uint8_t frameLength = nxdnBuffer[23U];
+                    if (frameLength <= 24) {
+                        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+                        ::memset(frame.get(), 0x00U, frameLength);
+                    }
+                    else {
+                        frame = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+                        ::memset(frame.get(), 0x00U, frameLength);
+                        ::memcpy(frame.get(), nxdnBuffer.get() + 24U, frameLength);
+                    }
+
+                    NXDNUtils::scrambler(frame.get() + 2U);
+
+                    channel::LICH lich;
+                    bool valid = lich.decode(frame.get() + 2U);
 
                     // specifically only check the following logic for end of call, voice or data frames
                     if ((messageType == NXDDEF::MessageType::RTCH_TX_REL || messageType == NXDDEF::MessageType::RTCH_TX_REL_EX) ||
@@ -960,6 +1173,7 @@ void* threadNetworkPump(void* arg)
 
                                 LogInfoEx(LOG_NET, "NXDN, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
+                                emitCallStartEndEvent(srcId, dstId, 0U, status.streamId, "nxdn", true, duration / 1000);
                             }
                         }
 
@@ -977,10 +1191,53 @@ void* threadNetworkPump(void* arg)
                                 status.callStartTime = pktTime;
                                 status.srcId = srcId;
                                 status.dstId = dstId;
+                                status.streamId = streamId;
                                 g_nxdnStatus[dstId] = status;
 
                                 LogInfoEx(LOG_NET, "NXDN, Call Start, srcId = %u (%s), dstId = %u (%s)", 
                                     srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                                emitCallStartEndEvent(srcId, dstId, 0U, status.streamId, "nxdn");
+                            }
+                        }
+                    }
+
+                    std::unique_ptr<lc::RCCH> rcch;
+                    if (valid) {
+                        NXDDEF::RFChannelType::E rfct = lich.getRFCT();
+                        NXDDEF::FuncChannelType::E fct = lich.getFCT();
+                        NXDDEF::ChOption::E option = lich.getOption();
+
+                        if (rfct == NXDDEF::RFChannelType::RCCH) {
+                            rcch = lc::rcch::RCCHFactory::createRCCH(frame.get(), frameLength);
+
+                            json::object netEvent = json::object();
+                            std::string type = "rcch";
+                            netEvent["type"].set<std::string>(type);
+
+                            uint8_t lco = rcch->getMessageType();
+                            netEvent["opcode"].set<uint8_t>(lco);
+                            std::string desc = rcch->toString();
+                            netEvent["desc"].set<std::string>(desc);
+
+                            // report raw RCCH bytes in hex format
+                            uint8_t* rcchRaw = rcch.get()->getDecodedRaw();
+                            std::stringstream ss;
+                            ss << std::hex << std::setfill('0');
+                            for (uint8_t i = 0; i < NXDDEF::NXDN_RCCH_LC_LENGTH_BYTES; i++) {
+                                ss << std::setw(2) << (int)rcchRaw[i];
+                            }
+                            netEvent["data"].set<std::string>(ss.str());
+
+                            // generate a net event for this
+                            if (g_netDataEvent != nullptr) {
+                                std::string resolvedSrc = resolveRID(srcId);
+                                std::string resolvedDst = resolveTGID(dstId);
+                                netEvent["srcId"].set<uint32_t>(srcId);
+                                netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                netEvent["dstId"].set<uint32_t>(dstId);
+                                netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                g_netDataEvent(netEvent);
                             }
                         }
                     }
@@ -992,6 +1249,8 @@ void* threadNetworkPump(void* arg)
                 UInt8Array analogBuffer = g_network->readAnalog(netReadRet, length);
                 if (netReadRet) {
                     using namespace analog;
+
+                    uint32_t streamId = g_network->getRxAnalogStreamId();
 
                     uint32_t srcId = GET_UINT24(analogBuffer, 5U);
                     uint32_t dstId = GET_UINT24(analogBuffer, 8U);
@@ -1013,6 +1272,7 @@ void* threadNetworkPump(void* arg)
 
                             LogInfoEx(LOG_NET, "Analog, Call End, srcId = %u (%s), dstId = %u (%s), duration = %u",
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str(), duration / 1000);
+                            emitCallStartEndEvent(srcId, dstId, 0U, status.streamId, "analog", true, duration / 1000);
                         }
                     }
 
@@ -1030,10 +1290,12 @@ void* threadNetworkPump(void* arg)
                             status.callStartTime = pktTime;
                             status.srcId = srcId;
                             status.dstId = dstId;
+                            status.streamId = streamId;
                             g_analogStatus[dstId] = status;
 
                             LogInfoEx(LOG_NET, "Analog, Call Start, srcId = %u (%s), dstId = %u (%s)", 
                                 srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
+                            emitCallStartEndEvent(srcId, dstId, 0U, status.streamId, "analog");
                         }
                     }
 
@@ -1051,6 +1313,13 @@ void* threadNetworkPump(void* arg)
     }
 
     return nullptr;
+}
+
+/* Starts the network pump worker thread. */
+
+bool startNetworkPumpThread()
+{
+    return Thread::runAsThread(nullptr, threadNetworkPump);
 }
 
 /* Helper to pring usage the command line arguments. (And optionally an error.) */
@@ -1209,9 +1478,19 @@ int main(int argc, char** argv)
         ::fatal("cannot read the configuration file - %s (%s)", g_iniFile.c_str(), e.message());
     }
 
-    /** Network Thread */
-    if (!Thread::runAsThread(nullptr, threadNetworkPump))
-        return EXIT_FAILURE;
+    bool wsDaemonMode = false;
+#if !defined(NO_WEBSOCKETS)
+    if (g_webSocketMode) {
+        bool daemon = g_conf["daemon"].as<bool>(false);
+        wsDaemonMode = daemon && !g_foreground;
+    }
+#endif // !defined(NO_WEBSOCKETS)
+
+    // In websocket daemon mode HostWS forks, so the child must start the network pump.
+    if (!wsDaemonMode) {
+        if (!startNetworkPumpThread())
+            return EXIT_FAILURE;
+    }
 
     finalcut::FApplication::setColorTheme<dvmColorTheme>();
 

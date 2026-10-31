@@ -29,7 +29,7 @@ namespace edac
      * @brief Implements various Cyclic Redundancy Check routines.
      * @ingroup edac
      */
-    class HOST_SW_API CRC {
+    class DVM_COMMON_API CRC {
     public:
         /**
          * @brief Check 5-bit CRC.
@@ -52,9 +52,10 @@ namespace edac
          * 
          * @param[in] in Input byte array.
          * @param length Length of byte array.
+         * @param fuzzy If true, a fuzzy CRC check is performed, which allows for a three bit error in the CRC.
          * @returns bool True, if CRC is valid, otherwise false.
          */
-        static bool checkCCITT162(const uint8_t* in, uint32_t length);
+        static bool checkCCITT162(const uint8_t* in, uint32_t length, bool fuzzy = false);
         /**
          * @brief Encode 16-bit CRC CCITT-162.
          * 

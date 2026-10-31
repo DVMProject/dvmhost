@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements RFSS STS BCAST - RFSS Status Broadcast
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_RFSS_STS_BCAST : public TSBK {
+            class DVM_COMMON_API OSP_RFSS_STS_BCAST : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_RFSS_STS_BCAST class.

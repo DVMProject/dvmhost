@@ -28,7 +28,7 @@ namespace edac
      * @brief Implements Reed-Solomon (12,9) forward error correction.
      * @ingroup edac
      */
-    class HOST_SW_API RS129 {
+    class DVM_COMMON_API RS129 {
     public:
         /**
          * @brief Check RS (12,9) FEC.
@@ -51,7 +51,10 @@ namespace edac
 
     private:
         /**
-         * @brief 
+         * @brief Helper to multiply two numbers in GF(2^8) using the log and exponent tables.
+         * @param a First number.
+         * @param b Second number.
+         * @returns uint8_t Product of a and b.
          */
         static uint8_t gmult(uint8_t a, uint8_t b);
     };

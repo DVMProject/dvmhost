@@ -25,6 +25,7 @@ using namespace network;
 using namespace restapi;
 using namespace restapi::http;
 using namespace modem;
+using namespace host_restapi;
 
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +45,7 @@ using namespace modem;
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+namespace host_restapi {
 
 /**
  * @brief Helper to format string.
@@ -129,6 +131,8 @@ bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::obje
     obj = v.get<json::object>();
     return true;
 }
+
+} // namespace host_restapi
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -407,9 +411,9 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         return;
     }
 
-    if (auth.size() > 64) {
+    if (auth.size() != 64) {
         invalidateHostToken(host);
-        errorPayload(reply, "auth cannot be longer than 64 characters");
+        errorPayload(reply, "auth must be 64 characters");
         return;
     }
 
@@ -442,6 +446,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         invalidateHostToken(host);
         errorPayload(reply, "invalid password");
         LogError(LOG_REST, "failed authentication attempt from host %s", host.c_str());
+        delete[] passwordHash;
         return;
     }
 

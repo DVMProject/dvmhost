@@ -62,7 +62,7 @@ uint8_t* RC4::keystream(uint32_t len, const uint8_t key[], uint32_t keyLen)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Swaps two values in the permutation array. */
 
 void RC4::swap(uint8_t* a, uint8_t i1, uint8_t i2)
 {
@@ -71,7 +71,7 @@ void RC4::swap(uint8_t* a, uint8_t i1, uint8_t i2)
     a[i2] = temp;
 }
 
-/* */
+/* Initializes the permutation array with the given key. */
 
 void RC4::init(const uint8_t key[], uint8_t keyLen, uint8_t* permutation)
 {
@@ -93,7 +93,7 @@ void RC4::init(const uint8_t key[], uint8_t keyLen, uint8_t* permutation)
     }
 }
 
-/* */
+/* Transforms the input buffer using the given permutation array. */
 
 void RC4::transform(const uint8_t* input, uint32_t length, uint8_t* permutation, uint8_t* output, bool ksOnly)
 {

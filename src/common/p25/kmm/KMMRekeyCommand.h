@@ -37,7 +37,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_BODY_REKEY_CMD_LENGTH = 4U;
+         const uint32_t KMM_BODY_REKEY_CMD_LENGTH = 5U; // DI block + keyset count
 
          /** @} */
  
@@ -45,7 +45,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMRekeyCommand : public KMMFrame {
+        /**
+         * @brief Represents a KMM rekey command.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMRekeyCommand : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMRekeyCommand class.

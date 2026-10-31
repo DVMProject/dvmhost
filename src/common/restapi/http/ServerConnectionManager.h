@@ -77,10 +77,10 @@ namespace restapi
              */
             void stopAll()
             {
+                std::lock_guard<std::mutex> guard(m_lock);
                 for (auto c : m_connections)
                     c->stop();
 
-                std::lock_guard<std::mutex> guard(m_lock);
                 m_connections.clear();
             }
 

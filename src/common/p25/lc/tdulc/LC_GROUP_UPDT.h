@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements GRP VCH UPDT - Group Voice Channel Update
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_GROUP_UPDT : public TDULC {
+            class DVM_COMMON_API LC_GROUP_UPDT : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_GROUP_UPDT class.

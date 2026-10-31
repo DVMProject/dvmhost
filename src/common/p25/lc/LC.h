@@ -37,8 +37,8 @@ namespace p25
         //  Class Prototypes
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API TSBK;
-        class HOST_SW_API TDULC;
+        class TSBK;
+        class TDULC;
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
@@ -48,7 +48,7 @@ namespace p25
          * @brief Represents link control data for HDU, LDU1 and 2 packets.
          * @ingroup p25_lc
          */
-        class HOST_SW_API LC {
+        class DVM_COMMON_API LC {
         public:
             /**
              * @brief Initializes a copy instance of the LC class.
@@ -111,7 +111,7 @@ namespace p25
              */
             void encodeLDU2(uint8_t* data);
 
-            /** Project 25 Phase II (TIA-102.BBAD-D Section 2) */
+            /** Project 25 Phase II (TIA-102.BBAD-A Section 2) */
 
             /**
              * @brief Decode a IEMI VCH MAC PDU.
@@ -120,6 +120,12 @@ namespace p25
              * @return bool True, if MAC PDU decoded, otherwise false.
              */
             bool decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync);
+            /** 
+             * @brief Encode an inbound/IEMI Phase 2 VCH MAC PDU. 
+             * @param[out] data Buffer to encode the MAC PDU.
+             * @param sync Flag indicating if sync is to be included.
+             */
+            void encodeVCH_MACPDU_IEMI(uint8_t* data, bool sync);
             /**
              * @brief Decode a xOEMI VCH MAC PDU.
              * @param data Buffer containing the MAC PDU to decode.
@@ -133,6 +139,17 @@ namespace p25
              * @param sync Flag indicating if sync is to be included.
              */
             void encodeVCH_MACPDU(uint8_t* data, bool sync);
+
+            /**
+             * @brief Set the Phase 2 scrambler superframe bit offset for the current burst.
+             * @param offset Superframe bit offset in the 4320-bit lane sequence.
+             */
+            void setP2ScrambleOffset(uint16_t offset);
+            /**
+             * @brief Clear the Phase 2 scrambler superframe bit offset override.
+             */
+            void clearP2ScrambleOffset();
+
 
             /**
              * @brief Helper to determine if the MFId is a standard MFId.
@@ -329,8 +346,30 @@ namespace p25
             DECLARE_PROPERTY(ulong64_t, rsValue, RS);
             /** @} */
 
+            /** @name FEC Decode Confidence */
+            /**
+             * @brief Number of Reed-Solomon symbol errors corrected decoding the most recent
+             *  LDU1 Link Control or LDU2 Encryption Sync word. -1 if not yet decoded, or if the
+             *  last decode attempt was uncorrectable.
+             */
+            DECLARE_PROPERTY(int8_t, fecErrs, FECErrs);
+            /** @} */
+
             /** @name Phase 2 Raw MCO Data */
-            uint8_t* p2MCOData; // ?? - this should probably be private with getters/setters
+            uint8_t* p2MCOData;
+
+            /**
+             * @brief Get the Phase 2 MCO data.
+             * @param[in] data Buffer to store the MCO data.
+             * @param[in] length Length of the buffer.
+             * @return Number of bytes copied to the buffer.
+             */
+            uint32_t getP2MCOData(uint8_t* data, uint32_t length) const;
+            /**
+             * @brief Get the length of the Phase 2 MCO data.
+             * @return Length of the Phase 2 MCO data.
+             */
+            uint32_t getP2MCODataLength() const { return m_p2MCODataLength; }
             /** @} */
 
         private:
@@ -340,6 +379,9 @@ namespace p25
             bool m_encryptOverride;
             bool m_tsbkVendorSkip;
 
+            uint16_t m_p2ScrambleOffset;
+            bool m_p2ScrambleOffsetValid;
+
             uint32_t m_callTimer;
 
             // Encryption data
@@ -347,8 +389,10 @@ namespace p25
 
             // User Alias data
             uint8_t* m_userAlias;
+
             bool m_gotUserAliasPartA;
             bool m_gotUserAlias;
+            uint32_t m_p2MCODataLength;
 
             static bool s_warnCRC;
 
@@ -398,6 +442,15 @@ namespace p25
              * @param[in] raw 
              */
             void encodeP2_DUIDHamming(uint8_t* data, const uint8_t* raw);
+
+            /**
+             * @brief Apply the Phase 2 TDMA MAC burst scrambler.
+             * @param data Buffer containing the over-the-air burst bits.
+             * @param inbound True for inbound/IEMI, false for outbound/OEMI.
+             * @param sync True when the burst includes sync symbols.
+             */
+            void applyP2Scrambler(uint8_t* data, bool inbound, bool sync);
+
         };
     } // namespace lc
 } // namespace p25

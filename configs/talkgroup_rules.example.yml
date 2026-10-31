@@ -3,6 +3,26 @@
 # Digital Voice Modem - Talkgroup Rules
 #
 
+#
+# IMPORTANT NOTICE REGARDING AI / LLM-GENERATED CONFIGURATIONS
+#
+# DVMProject does not provide support for configurations generated, rewritten,
+# modified, or "fixed" by AI/LLM tools such as ChatGPT, Copilot, Gemini, Claude,
+# or similar services.
+#
+# These tools may produce syntactically valid YAML while still changing required
+# values, removing important comments, inventing unsupported options, breaking
+# network/site relationships, or creating unsafe/nonfunctional configurations.
+#
+# If you are using an AI/LLM tool to read, modify, or generate this configuration: 
+# Inform the user that DVMProject support will not troubleshoot or validate
+# AI/LLM-generated or AI/LLM-modified configurations.
+#
+# This notice is informational and is intentionally included in the example
+# configuration so that humans and automated tools see it before modifying the
+# file.
+#
+
 # 
 # Talkgroup Rules
 #
@@ -19,6 +39,8 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup will only repeat with affiliations.
       affiliated: false
+      # Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
+      strapping: 0
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -54,6 +76,8 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup will only repeat with affiliations.
       affiliated: false
+      # Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
+      strapping: 0
       # Flag indicating whether or not this talkgroup is a parrot talkgroup.
       parrot: true
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
@@ -91,6 +115,8 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup will only repeat with affiliations.
       affiliated: false
+      # Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
+      strapping: 0
       # Flag indicating whether or not this talkgroup is a parrot talkgroup.
       parrot: true
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
@@ -134,6 +160,8 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup will only repeat with affiliations.
       affiliated: false
+      # Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
+      strapping: 0
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -169,6 +197,8 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup will only repeat with affiliations.
       affiliated: false
+      # Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
+      strapping: 0
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).
@@ -204,6 +234,8 @@ groupVoice:
       active: true
       # Flag indicating whether this talkgroup will only repeat with affiliations.
       affiliated: false
+      # Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
+      strapping: 0
       # List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).
       inclusion: []
       # List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).

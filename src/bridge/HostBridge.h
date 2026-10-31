@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,6 +21,8 @@
 #include "common/dmr/data/EmbeddedData.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
+#include "common/nxdn/lc/RTCH.h"
+#include "common/nxdn/Crypto.h"
 #include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
 #include "common/network/RTPHeader.h"
@@ -67,6 +69,7 @@ const uint8_t HALF_RATE_MODE = 0x01U;
 const uint8_t TX_MODE_DMR = 1U;
 const uint8_t TX_MODE_P25 = 2U;
 const uint8_t TX_MODE_ANALOG = 3U;
+const uint8_t TX_MODE_NXDN = 4U;
 
 
 // ---------------------------------------------------------------------------
@@ -168,6 +171,7 @@ private:
     bool m_grantDemand;
 
     uint8_t m_txMode;
+    bool m_duplicateToAnalog;
 
     float m_rxAudioGain;
     float m_vocoderDecoderAudioGain;
@@ -184,6 +188,8 @@ private:
     bool m_requestedTek;
 
     p25::crypto::P25Crypto* m_p25Crypto;
+    nxdn::crypto::NXDNCrypto* m_nxdnCrypto;
+    uint8_t m_nxdnCipherType;
 
     bool m_localAudio;
 
@@ -253,6 +259,19 @@ private:
     uint8_t* m_netLDU2;
     uint32_t m_p25SeqNo;
     uint8_t m_p25N;
+
+    /*
+    ** NXDN
+    */
+
+    nxdn::lc::RTCH m_rxNXDNLC;
+    nxdn::lc::RTCH m_rxNXDNSACCHLC;
+    uint8_t m_rxNXDNSACCHMask;
+    bool m_rxNXDNPendingMI;
+    uint8_t m_rxNXDNNextMI[nxdn::defines::MI_LENGTH_BYTES];
+    uint8_t* m_nxdnAMBE;
+    uint32_t m_nxdnSeqNo;
+    uint8_t m_nxdnN;
 
     /*
     ** Analog
@@ -552,8 +571,8 @@ private:
 
     /**
      * @brief Helper to send silence audio frames.
-     * @param srcId
-     * @param dstId
+     * @param srcId Source ID.
+     * @param dstId Destination ID.
      */
     void padSilenceAudio(uint32_t srcId, uint32_t dstId);
 
@@ -615,6 +634,29 @@ private:
      * @param forcedDstId 
      */
     void encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
+
+    // NXDN (HostBridge.NXDN.cpp)
+    /**
+     * @brief Helper to process NXDN network traffic.
+     * @param buffer
+     * @param length
+     */
+    void processNXDNNetwork(uint8_t* buffer, uint32_t length);
+    /**
+     * @brief Helper to decode NXDN network traffic audio frames.
+     * @param frame
+     * @param srcId
+     * @param dstId
+     * @param nxdnN
+     */
+    void decodeNXDNAudioFrame(uint8_t* frame, uint32_t srcId, uint32_t dstId, uint8_t nxdnN);
+    /**
+     * @brief Helper to encode NXDN network traffic audio frames.
+     * @param pcm
+     * @param forcedSrcId
+     * @param forcedDstId
+     */
+    void encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
 
     // Analog (HostBridge.Analog.cpp)
     /**

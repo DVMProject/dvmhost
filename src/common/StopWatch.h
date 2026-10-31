@@ -38,7 +38,7 @@
  * @brief StopWatch Provides a set of methods and properties that you can use to accurately measure elapsed time.
  * @ingroup timers
  */
-class HOST_SW_API StopWatch {
+class DVM_COMMON_API StopWatch {
 public:
     /**
      * @brief Initializes a new instance of the StopWatch class.

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "fne/Defines.h"
@@ -13,6 +13,7 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "fne/network/PeerNetwork.h"
+#include "FNEMain.h"
 
 using namespace network;
 using namespace compress;
@@ -43,19 +44,27 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_attachedKeyRSPHandler(false),
     m_dmrCallback(nullptr),
     m_p25Callback(nullptr),
+    m_p25P2Callback(nullptr),
     m_nxdnCallback(nullptr),
     m_analogCallback(nullptr),
     m_netTreeDiscCallback(nullptr),
     m_peerReplicaCallback(nullptr),
+    m_patchStatusCallback(nullptr),
     m_masterPeerId(0U),
+    m_ridAliasLookup(nullptr),
     m_pidLookup(nullptr),
     m_peerReplica(false),
     m_peerReplicaSavesACL(false),
     m_tgidPkt(true, "Peer Replication, TGID List"),
     m_ridPkt(true, "Peer Replication, RID List"),
     m_pidPkt(true, "Peer Replication, PID List"),
+    m_ridAliasPkt(true, "Peer Replication, RID Alias List"),
+    m_patchStatusPkt(true, "Peer Replication, Patch Status"),
     m_threadPool(WORKER_CNT, "peer"),
-    m_prevSpanningTreeChildren(0U)
+    m_prevSpanningTreeChildren(0U),
+    m_nakFallOver(false),
+    m_nakFallOverCount(0U),
+    m_nakFallOverCountThreshold(50U)
 {
     assert(!address.empty());
     assert(port > 0U);
@@ -66,6 +75,9 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
 
     // never disable peer network services on ACL NAK from master
     m_neverDisableOnACLNAK = true;
+
+    // allow passing encryption keys without a preshared key set
+    m_passKeysWithNoPresharedKey = true;
 
     // FNE peer network manually handle protocol packets
     m_userHandleProtocol = true;
@@ -83,6 +95,14 @@ PeerNetwork::~PeerNetwork()
     m_threadPool.wait();
 }
 
+/* Sets the instnace of the Radio Alias lookup table. */
+
+void PeerNetwork::setRadioAliasLookups(lookups::RadioAliasLookup* ridAliasLookup)
+{
+    Network::setRadioAliasLookups(ridAliasLookup);
+    m_ridAliasLookup = ridAliasLookup;
+}
+
 /* Sets the instances of the Peer List lookup tables. */
 
 void PeerNetwork::setPeerLookups(lookups::PeerListLookup* pidLookup)
@@ -96,6 +116,8 @@ bool PeerNetwork::open()
 {
     if (!m_enabled)
         return false;
+
+    m_nakFallOverCount = 0U;
 
     return Network::open();
 }
@@ -127,7 +149,11 @@ bool PeerNetwork::writePeerLinkPeers(json::array* peerList)
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
         PacketBuffer pkt(true, "Peer Replication, Active Peer List");
-        pkt.encode((uint8_t*)buffer, len);
+        bool success = pkt.encode((uint8_t*)buffer, len);
+        if (!success) {
+            LogError(LOG_REPL, "PEER %u Peer Replication, Active Peer List, failed to encode packet", m_peerId);
+            return false;
+        }
 
         uint32_t streamId = createStreamId();
         LogInfoEx(LOG_REPL, "PEER %u Peer Replication, Active Peer List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
@@ -169,7 +195,11 @@ bool PeerNetwork::writeSpanningTree(SpanningTree* treeRoot)
         ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
 
         PacketBuffer pkt(true, "Network Tree, Tree List");
-        pkt.encode((uint8_t*)buffer, len);
+        bool success = pkt.encode((uint8_t*)buffer, len);
+        if (!success) {
+            LogError(LOG_STP, "PEER %u Network Tree, Tree List, failed to encode packet", m_peerId);
+            return false;
+        }
 
         uint32_t streamId = createStreamId();
         LogInfoEx(LOG_STP, "PEER %u Network Tree, Tree List, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
@@ -205,7 +235,7 @@ bool PeerNetwork::writeHAParams(std::vector<HAParameters>& haParams)
         SET_UINT32((len - 4U), buffer, 0U);
 
         uint32_t offs = 4U;
-        for (uint8_t i = 0U; i < haParams.size(); i++) {
+        for (uint32_t i = 0U; i < haParams.size(); i++) {
             uint32_t peerId = haParams[i].peerId;
             uint32_t ipAddr = haParams[i].masterIP;
             uint16_t port = haParams[i].masterPort;
@@ -225,6 +255,40 @@ bool PeerNetwork::writeHAParams(std::vector<HAParameters>& haParams)
     }
 
     return false;
+}
+
+/* Writes a complete console patch status update upstream. */
+
+bool PeerNetwork::writePatchStatus(json::object obj)
+{
+    if (!m_peerReplica)
+        return false;
+
+    obj["type"].set<std::string>("publish");
+    json::value v = json::value(obj);
+    std::string json = std::string(v.serialize());
+
+    size_t len = json.length() + 9U;
+    DECLARE_CHAR_ARRAY(buffer, len);
+
+    ::memcpy(buffer + 0U, TAG_PEER_REPLICA, 4U);
+    ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
+
+    PacketBuffer pkt(true, "Peer Replication, Patch Status");
+    pkt.encode((uint8_t*)buffer, len);
+
+    uint32_t streamId = createStreamId();
+    LogInfoEx(LOG_REPL, "PEER %u Peer Replication, Patch Status, blocks %u, streamId = %u", m_peerId, pkt.fragments.size(), streamId);
+    if (pkt.fragments.size() > 0U) {
+        for (auto frag : pkt.fragments) {
+            writeMaster({ NET_FUNC::REPL, NET_SUBFUNC::REPL_PATCH_STATUS },
+                frag.second->data, FRAG_SIZE, RTP_END_OF_CALL_SEQ, streamId, true);
+            Thread::sleep(60U); // pace block transmission
+        }
+    }
+
+    pkt.clear();
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +511,104 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         }
         break;
 
+        case NET_SUBFUNC::REPL_RID_ALIAS_LIST:                      // Peer List
+        {
+            uint32_t decompressedLen = 0U;
+            uint8_t* decompressed = nullptr;
+
+            if (m_ridAliasPkt.decode(data, &decompressed, &decompressedLen)) {
+                if (m_ridAliasLookup == nullptr) {
+                    LogError(LOG_PEER, "Radio Alias lookup not available yet.");
+                    m_ridAliasPkt.clear();
+                    delete[] decompressed;
+                    break;
+                }
+
+                // store to file
+                DECLARE_CHAR_ARRAY(str, decompressedLen + 1U);
+                ::memcpy(str, decompressed, decompressedLen);
+                str[decompressedLen] = 0; // null termination
+
+                // randomize filename
+                std::ostringstream s;
+                if (!m_peerReplicaSavesACL) {
+                    std::random_device rd;
+                    std::mt19937 mt(rd());
+                    std::uniform_int_distribution<uint32_t> dist(0x00U, 0xFFFFFFFFU);
+                    s << "/tmp/rid_alias.dat." << dist(mt);
+                } else {
+                    s << m_ridAliasLookup->filename();
+                }
+
+                std::string filename = s.str();
+                std::ofstream file(filename, std::ofstream::out);
+                if (file.fail()) {
+                    LogError(LOG_PEER, "Cannot open the radio alias lookup file - %s", filename.c_str());
+                    m_ridAliasPkt.clear();
+                    delete[] decompressed;
+                    break;
+                }
+
+                file << str;
+                file.close();
+
+                m_ridAliasLookup->stop(true);
+                m_ridAliasLookup->setReloadTime(0U);
+                m_ridAliasLookup->filename(filename);
+                m_ridAliasLookup->reload();
+
+                // flag this peer as replica enabled
+                m_peerReplica = true;
+                if (m_peerReplicaCallback != nullptr)
+                    m_peerReplicaCallback(this);
+
+                // cleanup temporary file
+                ::remove(filename.c_str());
+                m_ridAliasPkt.clear();
+                delete[] decompressed;
+            }
+        }
+        break;
+
+        case NET_SUBFUNC::REPL_PATCH_STATUS:                        // Patch Status
+        {
+            if (length < FRAG_SIZE) {
+                LogWarning(LOG_PEER, "PEER %u Peer Replication, Patch Status, ignoring short data phase frame (%u bytes)", m_peerId, length);
+                break;
+            }
+
+            uint32_t decompressedLen = 0U;
+            uint8_t* decompressed = nullptr;
+
+            if (m_patchStatusPkt.decode(data, &decompressed, &decompressedLen)) {
+                if (decompressedLen < 8U) {
+                    LogError(LOG_PEER, "PEER %u Peer Replication, Patch Status, decoded length too short (%u bytes)", m_peerId, decompressedLen);
+                    m_patchStatusPkt.clear();
+                    if (decompressed != nullptr)
+                        delete[] decompressed;
+                    break;
+                }
+
+                std::string payload(decompressed + 8U, decompressed + decompressedLen);
+
+                json::value v;
+                std::string err = json::parse(v, payload);
+                if (!err.empty() || !v.is<json::object>()) {
+                    LogError(LOG_PEER, "PEER %u error parsing patch status replication, %s", m_peerId, err.c_str());
+                    m_patchStatusPkt.clear();
+                    delete[] decompressed;
+                    break;
+                }
+
+                if (m_patchStatusCallback != nullptr)
+                    m_patchStatusCallback(this, v.get<json::object>());
+
+                m_patchStatusPkt.clear();
+                delete[] decompressed;
+            }
+        }
+        break;
+
         default:
             break;
         }
@@ -477,6 +639,44 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
         Utils::dump("Unknown opcode from the master", data, length);
         break;
     }
+}
+
+/* User overrideable handler that allows user code to process NAKs received from the master. */
+
+bool PeerNetwork::userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)
+{
+    switch (reason) {
+    case NET_CONN_NAK_FNE_UNAUTHORIZED:
+    {
+        // if we have an FNE unauthorized, lets force a connection reset, FNE's should very rarely receive these
+        // packets
+        LogWarning(LOG_PEER, "PEER %u received unauthorized NAK from master, resetting connection", peerId);
+
+        m_enabled = false;
+        close();
+
+        m_enabled = true;
+        open();
+    }
+    return true;
+
+    default:
+        break;
+    }
+
+    // if NAK fall over is enabled, track the count of NAKs received from the master and fall over (restart) if too 
+    //  many are received, this is to help mitigate cases where the master is repeatedly sending NAKs to this peer
+    if (m_nakFallOver) {
+        m_nakFallOverCount++;
+        LogWarning(LOG_PEER, "PEER %u received NAK from master, reason = %u, nakFallOverCount = %u", peerId, reason, m_nakFallOverCount);
+
+        if (m_nakFallOverCount >= m_nakFallOverCountThreshold) {
+            LogError(LOG_PEER, "PEER %u received too many NAKs from master, nakFallOverCount = %u exceeds threshold of %u, falling over (restart)", peerId, m_nakFallOverCount, m_nakFallOverCountThreshold);
+            g_killed = true;
+        }
+    }
+
+    return false; // return false to perform default handling of the NAK
 }
 
 /* Writes configuration to the network. */
@@ -521,14 +721,20 @@ bool PeerNetwork::writeConfig()
     rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    // Flags
+    uint32_t peerClass = (uint32_t)PEER_CONN_CLASS::PEER_CONN_CLASS_NEIGHBOR;
+    config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
+    config["masterPeerId"].set<uint32_t>(m_masterPeerId);                           // Master Peer ID
+
     /*
-    ** bryanb: don't change externalPeer to neighborPeer -- this will break backward
-    **  compat with older FNE versions (we're stuck with this naming :()
+    ** bryanb: this is deprecated -- it remains here for backwards compatibility with older master versions, 
+    **  but is no longer used by the master and have no effect on R05A06 systems, and may be removed in a future release
+    ** {
     */
     bool external = true;
-    config["externalPeer"].set<bool>(external);                                     // External FNE Neighbor Peer Marker
-    config["masterPeerId"].set<uint32_t>(m_masterPeerId);                           // Master Peer ID
+    config["externalPeer"].set<bool>(external);                                     // External Peer Marker
+    /*
+    ** }
+    */
 
     config["software"].set<std::string>(std::string(software));                     // Software ID
 
@@ -608,6 +814,13 @@ void PeerNetwork::taskNetworkRx(PeerPacketRequest* req)
                 {
                     if (network->m_p25Callback != nullptr)
                         network->m_p25Callback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
+                }
+                break;
+            
+            case NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2:              // Encapsulated P25 Phase 2 data frame
+                {
+                    if (network->m_p25P2Callback != nullptr)
+                        network->m_p25P2Callback(network, req->buffer, req->length, req->streamId, req->fneHeader, req->rtpHeader);
                 }
                 break;
 

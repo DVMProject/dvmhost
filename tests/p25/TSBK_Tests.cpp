@@ -10,6 +10,9 @@
 #include "host/Defines.h"
 #include "common/p25/lc/tsbk/OSP_SCCB.h"
 #include "common/p25/lc/tsbk/OSP_TSBK_RAW.h"
+#include "common/p25/lc/tsbk/TSBKFactory.h"
+#include "common/p25/data/DataBlock.h"
+#include "common/p25/data/DataHeader.h"
 #include "common/p25/P25Defines.h"
 #include "common/edac/CRC.h"
 #include "common/Log.h"
@@ -28,6 +31,56 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         REQUIRE(P25_TSBK_LENGTH_BYTES == 12);
         REQUIRE(P25_TSBK_FEC_LENGTH_BYTES == 25);
         REQUIRE(P25_TSBK_FEC_LENGTH_BITS == (P25_TSBK_FEC_LENGTH_BYTES * 8 - 4)); // 196 bits (Trellis)
+    }
+
+    SECTION("Standard_Unconfirmed_MBT_TELE_INT_DIAL_REQ") {
+        const uint8_t counts[] = { 1U, 10U, 11U, 34U };
+        for (uint8_t count : counts) {
+            MBT_ISP_TELE_INT_DIAL_REQ source;
+            source.setSrcId(0x654321U);
+            source.setEmergency(true);
+            source.setEncrypted(true);
+            source.setDuplex(true);
+            source.setPacketMode(false);
+            source.setPriority(5U);
+
+            uint8_t expectedDigits[34U];
+            for (uint8_t i = 0U; i < count; i++)
+                expectedDigits[i] = i % 12U;
+            REQUIRE(source.setDialDigits(expectedDigits, count));
+
+            data::DataHeader header;
+            uint8_t raw[2U * P25_PDU_UNCONFIRMED_LENGTH_BYTES] = { 0U };
+            source.encodeMBT(header, raw);
+
+            CHECK(header.getFormat() == PDUFormatType::UNCONFIRMED);
+            CHECK(header.getSAP() == PDUSAP::TRUNK_CTRL);
+            CHECK_FALSE(header.getOutbound());
+            CHECK(header.getBlocksToFollow() == ((count <= 10U) ? 1U : 2U));
+
+            data::DataBlock blocks[2U];
+            for (uint8_t i = 0U; i < header.getBlocksToFollow(); i++) {
+                blocks[i].setFormat(header);
+                blocks[i].setData(raw + (i * P25_PDU_UNCONFIRMED_LENGTH_BYTES));
+            }
+
+            std::unique_ptr<AMBT> decoded = TSBKFactory::createAMBT(header, blocks);
+            REQUIRE(decoded != nullptr);
+            MBT_ISP_TELE_INT_DIAL_REQ* dial = dynamic_cast<MBT_ISP_TELE_INT_DIAL_REQ*>(decoded.get());
+            REQUIRE(dial != nullptr);
+            CHECK(dial->getLCO() == TSBKO::IOSP_TELE_INT_DIAL);
+            CHECK(dial->getSrcId() == source.getSrcId());
+            CHECK(dial->getDigitCount() == count);
+            CHECK(dial->getEmergency());
+            CHECK(dial->getEncrypted());
+            CHECK(dial->getDuplex());
+            CHECK_FALSE(dial->getPacketMode());
+            CHECK(dial->getPriority() == 5U);
+
+            uint8_t actualDigits[34U] = { 0U };
+            CHECK(dial->getDialDigits(actualDigits) == count);
+            CHECK(::memcmp(actualDigits, expectedDigits, count) == 0);
+        }
     }
 
     SECTION("RawTSBK_Encode_Decode_NoTrellis") {
@@ -257,6 +310,22 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         REQUIRE(result == true);
         REQUIRE(tsbk2.getLCO() == 0x00);
         REQUIRE(tsbk2.getMFId() == 0x00);
+    }
+
+    SECTION("RawTSBK_Reports_Invalid_CRC_But_Decodes") {
+        OSP_TSBK_RAW tsbk;
+
+        uint8_t rawTSBK[P25_TSBK_LENGTH_BYTES];
+        ::memset(rawTSBK, 0x00U, P25_TSBK_LENGTH_BYTES);
+        rawTSBK[0] = 0x34;
+        rawTSBK[1] = 0x00;
+        edac::CRC::addCCITT162(rawTSBK, P25_TSBK_LENGTH_BYTES);
+        rawTSBK[P25_TSBK_LENGTH_BYTES - 1U] ^= 0xFFU;
+
+        REQUIRE_FALSE(edac::CRC::checkCCITT162(rawTSBK, P25_TSBK_LENGTH_BYTES, true));
+        REQUIRE(tsbk.decode(rawTSBK, true));
+        REQUIRE(tsbk.getLCO() == 0x34U);
+        REQUIRE(tsbk.getMFId() == 0x00U);
     }
 
     SECTION("AllOnes_Pattern") {

@@ -74,9 +74,6 @@ TEST_CASE("P25 PDU Confirmed Small Test", "[p25][pdu_confirmed_small]") {
         uint8_t buffer[P25_PDU_FRAME_LENGTH_BYTES];
         ::memset(buffer, 0x00U, P25_PDU_FRAME_LENGTH_BYTES);
 
-        // for the purposes of our test we strip the pad bit length from the bit length
-        bitLength -= dataHeader.getPadLength() * 8U;
-
         uint32_t blockCnt = 0U;
         for (uint32_t i = P25_PREAMBLE_LENGTH_BITS; i < bitLength; i += P25_PDU_FEC_LENGTH_BITS) {
             ::memset(buffer, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
@@ -113,4 +110,25 @@ TEST_CASE("P25 PDU Confirmed Small Test", "[p25][pdu_confirmed_small]") {
     }
 
     REQUIRE(failed==false);
+}
+
+TEST_CASE("P25 PDU exact block boundaries have no padding", "[p25][pdu][length]")
+{
+    DataHeader confirmed;
+    confirmed.setFormat(PDUFormatType::CONFIRMED);
+    confirmed.setSAP(PDUSAP::USER_DATA);
+    confirmed.calculateLength(28U); // payload + CRC32 == two 16-octet blocks
+    CHECK(confirmed.getBlocksToFollow() == 2U);
+    CHECK(confirmed.getPadLength() == 0U);
+    CHECK(confirmed.getPacketLength() == 28U);
+    CHECK(DataHeader::calculatePadLength(PDUFormatType::CONFIRMED, 28U) == 0U);
+
+    DataHeader unconfirmed;
+    unconfirmed.setFormat(PDUFormatType::UNCONFIRMED);
+    unconfirmed.setSAP(PDUSAP::USER_DATA);
+    unconfirmed.calculateLength(20U); // payload + CRC32 == two 12-octet blocks
+    CHECK(unconfirmed.getBlocksToFollow() == 2U);
+    CHECK(unconfirmed.getPadLength() == 0U);
+    CHECK(unconfirmed.getPacketLength() == 20U);
+    CHECK(DataHeader::calculatePadLength(PDUFormatType::UNCONFIRMED, 20U) == 0U);
 }

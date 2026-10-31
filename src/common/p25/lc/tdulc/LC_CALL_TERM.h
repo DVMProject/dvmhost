@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements CALL TERM - Call Termination or Cancellation
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_CALL_TERM : public TDULC {
+            class DVM_COMMON_API LC_CALL_TERM : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_CALL_TERM class.

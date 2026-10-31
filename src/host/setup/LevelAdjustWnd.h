@@ -60,7 +60,7 @@ private:
     FLabel m_dmrRxDelayLabel{"DMR Rx Delay: ", this};
     FLabel m_p25CorrCountLabel{"P25 Corr. Count: ", this};
 
-    FLabel m_freqAdjustLabel{"Hotspot Frequency Offset", this};
+    FLabel m_freqAdjustLabel{"Hotspot/SDR Frequency Offset", this};
     FLabel m_rxFreqAdjLabel{"Rx Freq. Offset: ", this};
     FLabel m_txFreqAdjLabel{"Tx Freq. Offset: ", this};
 
@@ -303,8 +303,14 @@ private:
                 m_txCoarseLevel.setEnable();
                 m_rssiCoarseLevel.setEnable();
 
-                m_rxTuning.setDisable();
-                m_txTuning.setDisable();
+                if (m_setup->m_isPTY) {
+                    m_rxTuning.setEnable();
+                    m_txTuning.setEnable();
+                }
+                else {
+                    m_rxTuning.setDisable();
+                    m_txTuning.setDisable();
+                }
             }
         }
 

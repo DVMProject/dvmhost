@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -25,6 +25,7 @@
 #include "common/concurrent/vector.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/lookups/ChannelLookup.h"
+#include "common/StopWatch.h"
 #include "common/Timer.h"
 
 #include <cstdio>
@@ -42,7 +43,7 @@ namespace lookups
      *  and group affiliation information.
      * @ingroup lookups_aff
      */
-    class HOST_SW_API AffiliationLookup : public concurrent::concurrent_lock {
+    class DVM_COMMON_API AffiliationLookup : public concurrent::concurrent_lock {
     public:
         /**
          * @brief Initializes a new instance of the AffiliationLookup class.
@@ -103,6 +104,13 @@ namespace lookups
          */
         virtual bool isUnitReg(uint32_t srcId) const;
         /**
+         * @brief Atomically replaces the unit registration table with a peer snapshot.
+         * @param[in] registrations Complete source ID registration snapshot.
+         * @note Timers for unchanged registrations are preserved; new registrations
+         *  receive new timers.
+         */
+        virtual void replaceUnitRegistrations(const std::vector<uint32_t>& registrations);
+        /**
          * @brief Helper to release unit registrations.
          */
         virtual void clearUnitReg();
@@ -144,6 +152,13 @@ namespace lookups
          * @returns bool True, if the source ID is affiliated to the talkgroup ID, otherwise false.
          */
         virtual bool isGroupAff(uint32_t srcId, uint32_t dstId) const;
+        /**
+         * @brief Atomically replaces the group affiliation table with a peer snapshot.
+         * @param[in] affiliations Complete source-to-talkgroup affiliation snapshot.
+         * @note Timers for unchanged affiliations are preserved; new and changed
+         *  affiliations receive new timers.
+         */
+        virtual void replaceGroupAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations);
         /**
          * @brief Helper to release group affiliations.
          * @param dstId Talkgroup ID.
@@ -235,6 +250,13 @@ namespace lookups
          */
         virtual uint32_t getGrantedSrcId(uint32_t dstId);
         /**
+         * @brief Helper to get the current elapsed time for the given destination ID.
+         * @note This is the time since the grant was first granted.
+         * @param dstId Destination Address.
+         * @returns uint32_t Current elapsed time for the channel grant.
+         */
+        uint32_t getGrantCallElapsed(uint32_t dstId);
+        /**
          * @brief Gets the count of granted RF channels.
          * @returns uint8_t Total number of granted RF channels.
          */
@@ -265,6 +287,17 @@ namespace lookups
         void setDisableUnitRegTimeout(bool disabled) { m_disableUnitRegTimeout = disabled; }
 
         /**
+         * @brief Helper to determine if the group affiliation timeout is enabled or not.
+         * @returns bool True, if idle group affiliation timeouts are disabled, otherwise false.
+         */
+        virtual bool isDisableGrpAffTimeout() const { return m_disableGrpAffTimeout; }
+        /**
+         * @brief Disables the group affiliation timeout.
+         * @param disable Flag indicating idle group affiliation timeout should be disabled.
+         */
+        void setDisableGrpAffTimeout(bool disabled) { m_disableGrpAffTimeout = disabled; }
+
+        /**
          * @brief Helper to set the release grant callback.
          * @note Do not call AffiliationLookup get functions from within this callback, deadlock protection
          *  is not guaranteed.
@@ -285,12 +318,14 @@ namespace lookups
         concurrent::vector<uint32_t> m_unitRegTable;
         concurrent::unordered_map<uint32_t, Timer> m_unitRegTimers;
         concurrent::unordered_map<uint32_t, uint32_t> m_grpAffTable;
+        concurrent::unordered_map<uint32_t, Timer> m_grpAffTimers;
 
         concurrent::unordered_map<uint32_t, uint32_t> m_grantChTable;
         concurrent::unordered_map<uint32_t, uint32_t> m_grantSrcIdTable;
         concurrent::unordered_map<uint32_t, bool> m_uuGrantedTable;
         concurrent::unordered_map<uint32_t, bool> m_netGrantedTable;
         concurrent::unordered_map<uint32_t, Timer> m_grantTimers;
+        concurrent::unordered_map<uint32_t, StopWatch> m_grantCallTimers;
 
         //                 chNo      srcId     dstId     slot
         std::function<void(uint32_t, uint32_t, uint32_t, uint8_t)> m_releaseGrant;
@@ -301,8 +336,16 @@ namespace lookups
         ChannelLookup* m_chLookup;
 
         bool m_disableUnitRegTimeout;
+        bool m_disableGrpAffTimeout;
 
         bool m_verbose;
+
+        /**
+         * @brief Helper to determine if the source ID has group affiliations.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the source ID has group affiliations, otherwise false.
+         */
+        bool isSrcIdGrpAff(uint32_t srcId) const;
     };
 } // namespace lookups
 

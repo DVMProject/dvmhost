@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements MOT PSH CCH - Motorola / Planned Control Channel Shutdown
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_MOT_PSH_CCH : public TSBK {
+            class DVM_COMMON_API OSP_MOT_PSH_CCH : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_MOT_PSH_CCH class.

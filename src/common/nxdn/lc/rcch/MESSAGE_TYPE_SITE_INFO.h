@@ -33,7 +33,7 @@ namespace nxdn
              * @brief Implements SITE_INFO - Site Information
              * @ingroup nxdn_rcch
              */
-            class HOST_SW_API MESSAGE_TYPE_SITE_INFO : public RCCH {
+            class DVM_COMMON_API MESSAGE_TYPE_SITE_INFO : public RCCH {
             public:
                 /**
                  * @brief Initializes a new instance of the MESSAGE_TYPE_SITE_INFO class.

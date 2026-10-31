@@ -59,7 +59,7 @@ struct thread_t {
  * @brief Creates and controls a thread.
  * @ingroup threading
  */
-class HOST_SW_API Thread {
+class DVM_COMMON_API Thread {
 public:
     /**
      * @brief Initializes a new instance of the Thread class.

@@ -83,8 +83,10 @@ bool Data::process(uint8_t* data, uint32_t len)
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
                 m_tscc->s_affiliations->releaseGrant(m_slot->m_rfLC->getDstId(), false);
-                m_slot->clearTSCCActivated();
             }
+        }
+        else {
+            m_slot->notifyCC_ReleaseGrant(m_slot->m_rfLC->getDstId());
         }
 
         if (m_slot->m_rssi != 0U) {
@@ -124,6 +126,8 @@ bool Data::process(uint8_t* data, uint32_t len)
         uint32_t srcId = m_rfDataHeader.getSrcId();
         uint32_t dstId = m_rfDataHeader.getDstId();
 
+        m_rfUDT = false;
+
         if (!m_slot->s_authoritative && m_slot->m_permittedDstId != dstId) {
             if (!g_disableNonAuthoritativeLogging)
                 LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
@@ -147,7 +151,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-            m_slot->m_tsccPayloadActRetry.stop();
+            m_slot->confirmTSCCPayloadActive();
         }
 
         // validate the source RID
@@ -164,6 +168,18 @@ bool Data::process(uint8_t* data, uint32_t len)
                 m_slot->m_rfState = RS_RF_REJECTED;
                 return false;
             }
+        }
+
+        if (m_slot->m_enableTSCC && m_rfDataHeader.getDPF() == DPF::UDT) {
+            m_rfUDTSource = srcId;
+            m_rfUDT = m_slot->prepareUDTHeader(m_rfDataHeader);
+            if (!m_rfUDT) {
+                LogWarning(LOG_RF, "DMR Slot %u, unsolicited or invalid UDT upload from %u", m_slot->m_slotNo, srcId);
+                return false;
+            }
+            gi = m_rfDataHeader.getGI();
+            dstId = m_rfDataHeader.getDstId();
+            srcId = m_rfDataHeader.getSrcId();
         }
 
         m_rfDataBlockCnt = 0U;
@@ -227,7 +243,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         data[0U] = m_slot->m_rfFrames == 0U ? modem::TAG_EOT : modem::TAG_DATA;
         data[1U] = 0x00U;
 
-        if (m_slot->s_duplex && m_repeatDataPacket)
+        if (m_slot->s_duplex && (m_repeatDataPacket || m_rfUDT))
             m_slot->addFrame(data);
 
         uint8_t controlByte = 0U;
@@ -251,6 +267,10 @@ bool Data::process(uint8_t* data, uint32_t len)
         m_pduDataOffset = 0U;
 
         if (m_slot->m_rfFrames == 0U) {
+            if (m_rfUDT) {
+                m_slot->completeUDT(m_rfUDTSource);
+            }
+
             ::ActivityLog("DMR", true, "Slot %u ended RF data transmission", m_slot->m_slotNo);
             m_slot->writeEndRF();
         }
@@ -288,7 +308,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             m_rfDataBlockCnt++;
         }
 
-        if (m_rfDataHeader.getBlocksToFollow() > 0U && m_slot->m_rfFrames == 0U) {
+        if (!m_rfUDT && m_rfDataHeader.getBlocksToFollow() > 0U && m_slot->m_rfFrames == 0U) {
             // ooookay -- lets do the insane, and ridiculously stupid, ETSI Big-Endian reversed byte ordering bullshit for the CRC-32
             uint8_t crcBytes[MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U];
             ::memset(crcBytes, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
@@ -323,11 +343,15 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         m_slot->writeNetwork(data, dataType, 0U);
 
-        if (m_slot->s_duplex && m_repeatDataPacket) {
+        if (m_slot->s_duplex && (m_repeatDataPacket || m_rfUDT)) {
             m_slot->addFrame(data);
         }
 
         if (m_slot->m_rfFrames == 0U) {
+            if (m_rfUDT) {
+                m_slot->completeUDT(m_rfUDTSource);
+            }
+
             LogInfoEx(LOG_RF, "DMR Slot %u, RATE_12/34_DATA, ended data transmission", m_slot->m_slotNo);
             m_slot->writeEndRF();
         }
@@ -387,8 +411,10 @@ void Data::processNetwork(const data::NetData& dmrData)
         if (m_tscc != nullptr) {
             if (m_tscc->m_enableTSCC) {
                 m_tscc->s_affiliations->releaseGrant(m_slot->m_netLC->getDstId(), false);
-                m_slot->clearTSCCActivated();
             }
+        }
+        else {
+            m_slot->notifyCC_ReleaseGrant(m_slot->m_netLC->getDstId());
         }
 
         // We've received the voice header and terminator haven't we?
@@ -426,7 +452,7 @@ void Data::processNetwork(const data::NetData& dmrData)
         }
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-            m_slot->m_tsccPayloadActRetry.stop();
+            m_slot->confirmTSCCPayloadActive();
         }
 
         m_netDataBlockCnt = 0U;
@@ -617,6 +643,8 @@ Data::Data(Slot* slot, network::BaseNetwork* network, bool dumpDataPacket, bool 
     m_lastRejectId(0U),
     m_dumpDataPacket(dumpDataPacket),
     m_repeatDataPacket(repeatDataPacket),
+    m_rfUDT(false),
+    m_rfUDTSource(0U),
     m_verbose(verbose),
     m_debug(debug)
 {

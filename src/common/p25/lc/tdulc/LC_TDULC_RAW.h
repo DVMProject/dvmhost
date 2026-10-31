@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements a mechanism to generate raw TDULC data from bytes.
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_TDULC_RAW : public TDULC {
+            class DVM_COMMON_API LC_TDULC_RAW : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_TDULC_RAW class.

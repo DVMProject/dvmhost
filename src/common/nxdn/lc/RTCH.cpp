@@ -50,7 +50,8 @@ RTCH::RTCH() :
     m_delayCount(0U),
     m_algId(CIPHER_TYPE_NONE),
     m_kId(0U),
-    m_causeRsp(CauseResponse::VD_ACCEPTED)
+    m_causeRsp(CauseResponse::VD_ACCEPTED),
+    m_mi(nullptr)
 {
     m_mi = new uint8_t[MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
@@ -76,7 +77,8 @@ RTCH::RTCH(const RTCH& data) :
     m_delayCount(0U),
     m_algId(CIPHER_TYPE_NONE),
     m_kId(0U),
-    m_causeRsp(CauseResponse::VD_ACCEPTED)
+    m_causeRsp(CauseResponse::VD_ACCEPTED),
+    m_mi(nullptr)
 {
     copy(data);
 }
@@ -104,6 +106,12 @@ RTCH& RTCH::operator=(const RTCH& data)
 void RTCH::decode(const uint8_t* data, uint32_t length, uint32_t offset)
 {
     assert(data != nullptr);
+
+    if (length > NXDN_RTCH_LC_LENGTH_BITS) {
+        LogError(LOG_NXDN, "RTCH::decode(), invalid LC length, len = %u, maximum = %u",
+            length, NXDN_RTCH_LC_LENGTH_BITS);
+        return;
+    }
 
     uint8_t rtch[NXDN_RTCH_LC_LENGTH_BYTES];
     ::memset(rtch, 0x00U, NXDN_RTCH_LC_LENGTH_BYTES);
@@ -169,6 +177,23 @@ void RTCH::reset()
     m_kId = 0U;
 
     m_causeRsp = CauseResponse::VD_ACCEPTED;
+    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+}
+
+/* Gets the 64-bit on-air initialization vector. */
+
+void RTCH::getMI(uint8_t* mi) const
+{
+    assert(mi != nullptr);
+    ::memcpy(mi, m_mi, MI_LENGTH_BYTES);
+}
+
+/* Sets the 64-bit on-air initialization vector. */
+
+void RTCH::setMI(const uint8_t* mi)
+{
+    assert(mi != nullptr);
+    ::memcpy(m_mi, mi, MI_LENGTH_BYTES);
 }
 
 // ---------------------------------------------------------------------------
@@ -199,16 +224,14 @@ bool RTCH::decodeLC(const uint8_t* data)
         m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
         m_algId = (data[7U] >> 6) & 0x03U;                                          // Cipher Type
         m_kId = (data[7U] & 0x3FU);                                                 // Key ID
+        m_encrypted = m_algId != CIPHER_TYPE_NONE;
         break;
     case MessageType::RTCH_VCALL_IV:
     case MessageType::RTCH_SDCALL_IV:
-        if (m_algId != CIPHER_TYPE_NONE && m_kId > 0U) {
-            m_mi = new uint8_t[MI_LENGTH_BYTES];
-            ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
-            ::memcpy(m_mi, data + 1U, MI_LENGTH_BYTES);                             // Message Indicator
-        }
+        ::memcpy(m_mi, data + 1U, MI_LENGTH_BYTES);                                 // Initialization Vector
         break;
     case MessageType::RTCH_TX_REL:
+    case MessageType::RTCH_TX_REL_EX:
         m_callType = (data[2U] >> 5) & 0x07U;                                       // Call Type
         m_emergency = (data[1U] & 0x80U) == 0x80U;                                  // Emergency Flag
         m_priority = (data[1U] & 0x20U) == 0x20U;                                   // Priority Flag
@@ -225,6 +248,7 @@ bool RTCH::decodeLC(const uint8_t* data)
         m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
         m_algId = (data[7U] >> 6) & 0x03U;                                          // Cipher Type
         m_kId = (data[7U] & 0x3FU);                                                 // Key ID
+        m_encrypted = m_algId != CIPHER_TYPE_NONE;
 
         m_packetInfo = PacketInformation();
         m_packetInfo.decode(m_messageType, data + 8U);                              // Packet Information
@@ -325,11 +349,11 @@ void RTCH::encodeLC(uint8_t* data)
             (m_kId & 0x3FU);                                                        // Key ID
         break;
     case MessageType::RTCH_VCALL_IV:
-        if (m_algId != CIPHER_TYPE_NONE && m_kId > 0U) {
-            ::memcpy(data + 1U, m_mi, MI_LENGTH_BYTES);                             // Message Indicator
-        }
+    case MessageType::RTCH_SDCALL_IV:
+        ::memcpy(data + 1U, m_mi, MI_LENGTH_BYTES);                                 // Initialization Vector
         break;
     case MessageType::RTCH_TX_REL:
+    case MessageType::RTCH_TX_REL_EX:
         data[1U] = (m_emergency ? 0x80U : 0x00U) +                                  // Emergency Flag
             (m_priority ? 0x20U : 0x00U);                                           // Priority Flag
         data[2U] = (m_callType & 0x07U) << 5;                                       // Call Type
@@ -362,7 +386,7 @@ void RTCH::encodeLC(uint8_t* data)
         break;
     case MessageType::RTCH_DCALL_DATA:
     case MessageType::RTCH_SDCALL_REQ_DATA:
-        data[1U] = (m_dataFrameNumber & 0x0FU << 4) +                               // Frame Number
+        data[1U] = ((m_dataFrameNumber & 0x0FU) << 4) +                             // Frame Number
             (m_dataBlockNumber & 0x0FU);                                            // Block Number
         break;
     case MessageType::RTCH_DCALL_ACK:
@@ -425,6 +449,10 @@ void RTCH::encodeLC(uint8_t* data)
 
 void RTCH::copy(const RTCH& data)
 {
+    if (m_mi == nullptr) {
+        m_mi = new uint8_t[MI_LENGTH_BYTES];
+    }
+
     m_messageType = data.m_messageType;
     m_callType = data.m_callType;
 
@@ -439,7 +467,7 @@ void RTCH::copy(const RTCH& data)
     m_transmissionMode = data.m_transmissionMode;
 
     m_packetInfo = data.m_packetInfo;
-    m_rsp = data.m_packetInfo;
+    m_rsp = data.m_rsp;
     m_dataFrameNumber = data.m_dataFrameNumber;
     m_dataBlockNumber = data.m_dataBlockNumber;
 
@@ -449,4 +477,6 @@ void RTCH::copy(const RTCH& data)
     m_kId = data.m_kId;
 
     m_causeRsp = data.m_causeRsp;
+
+    ::memcpy(m_mi, data.m_mi, MI_LENGTH_BYTES);
 }

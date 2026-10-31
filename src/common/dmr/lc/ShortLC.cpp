@@ -87,7 +87,7 @@ void ShortLC::encode(const uint8_t* in, uint8_t* out)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Extracts the raw binary data from the input bytes. */
 
 void ShortLC::decodeExtractBinary(const uint8_t* in)
 {
@@ -104,7 +104,7 @@ void ShortLC::decodeExtractBinary(const uint8_t* in)
     Utils::byteToBitsBE(in[8U], m_rawData + 64U);
 }
 
-/* */
+/* Helper function to deinterleave the raw binary data. */
 
 void ShortLC::decodeDeInterleave()
 {
@@ -121,7 +121,7 @@ void ShortLC::decodeDeInterleave()
     m_deInterData[67U] = m_rawData[67U];
 }
 
-/* */
+/* Helper function to perform error checking on the deinterleaved data. */
 
 bool ShortLC::decodeErrorCheck()
 {
@@ -140,7 +140,7 @@ bool ShortLC::decodeErrorCheck()
     return true;
 }
 
-/* */
+/* Extracts the raw short-link control data from the deinterleaved data. */
 
 void ShortLC::decodeExtractData(uint8_t* data) const
 {
@@ -168,7 +168,7 @@ void ShortLC::decodeExtractData(uint8_t* data) const
     Utils::bitsToByteBE(bData + 32U, data[4U]);
 }
 
-/* */
+/* Extracts the raw short-link control data from the input buffer and prepares it for encoding. */
 
 void ShortLC::encodeExtractData(const uint8_t* in) const
 {
@@ -195,7 +195,7 @@ void ShortLC::encodeExtractData(const uint8_t* in) const
         m_deInterData[a] = bData[pos];
 }
 
-/* */
+/* Helper function to perform error checking on the data before encoding. */
 
 void ShortLC::encodeErrorCheck()
 {
@@ -209,7 +209,7 @@ void ShortLC::encodeErrorCheck()
         m_deInterData[c + 51U] = m_deInterData[c + 0U] ^ m_deInterData[c + 17U] ^ m_deInterData[c + 34U];
 }
 
-/* */
+/* Helper function to interleave the data before encoding. */
 
 void ShortLC::encodeInterleave()
 {
@@ -227,7 +227,7 @@ void ShortLC::encodeInterleave()
     m_rawData[67U] = m_deInterData[67U];
 }
 
-/* */
+/* Extracts the encoded short-link control data from the interleaved data and prepares it for output. */
 
 void ShortLC::encodeExtractBinary(uint8_t* data)
 {

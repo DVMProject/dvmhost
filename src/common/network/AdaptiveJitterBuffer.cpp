@@ -122,13 +122,30 @@ bool AdaptiveJitterBuffer::processFrame(uint16_t seq, const uint8_t* data, uint3
     // frame is in the future - buffer it
     m_reorderedFrames++;
 
+    auto existing = m_buffer.find(seq);
+    if (existing != m_buffer.end()) {
+        delete existing->second;
+        m_buffer.erase(existing);
+        m_droppedFrames++;
+    }
+
     // check buffer capacity
     if (m_buffer.size() >= m_maxBufferSize) {
-        // buffer is full - drop oldest frame to make room
-        auto oldestIt = m_buffer.begin();
-        delete oldestIt->second;
-        m_buffer.erase(oldestIt);
-        m_droppedFrames++;
+        // buffer is full - drop the oldest received frame to make room
+        auto oldestIt = m_buffer.end();
+        uint64_t oldestTimestamp = UINT64_MAX;
+        for (auto it = m_buffer.begin(); it != m_buffer.end(); ++it) {
+            if (it->second != nullptr && it->second->timestamp < oldestTimestamp) {
+                oldestTimestamp = it->second->timestamp;
+                oldestIt = it;
+            }
+        }
+
+        if (oldestIt != m_buffer.end()) {
+            delete oldestIt->second;
+            m_buffer.erase(oldestIt);
+            m_droppedFrames++;
+        }
     }
 
     // add frame to buffer

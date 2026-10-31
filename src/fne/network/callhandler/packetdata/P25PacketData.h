@@ -9,16 +9,15 @@
  */
 /**
  * @file P25PacketData.h
- * @ingroup fne_callhandler
+ * @ingroup fne_packetdata
  * @file P25PacketData.cpp
- * @ingroup fne_callhandler
+ * @ingroup fne_packetdata
  */
 #if !defined(__PACKETDATA__P25_PACKET_DATA_H__)
 #define __PACKETDATA__P25_PACKET_DATA_H__
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
-#include "common/concurrent/deque.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/Assembler.h"
@@ -27,8 +26,11 @@
 #include "network/TrafficNetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/callhandler/TagP25Data.h"
-
-#include <deque>
+#include "network/callhandler/packetdata/DataRouting.h"
+#include "network/callhandler/packetdata/P25PacketScheduler.h"
+#include "network/callhandler/packetdata/p25/ConventionalDataService.h"
+#include "network/callhandler/packetdata/p25/IPConvergenceService.h"
+#include "network/callhandler/packetdata/p25/PacketDataState.h"
 
 namespace network
 {
@@ -42,7 +44,7 @@ namespace network
 
             /**
              * @brief Implements the P25 packet data handler.
-             * @ingroup fne_callhandler
+             * @ingroup fne_packetdata
              */
             class HOST_SW_API P25PacketData {
             public:
@@ -96,8 +98,12 @@ namespace network
                  * @param len Length of data.
                  * @param llId Logical Link ID.
                  * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
+                 * @param algId Encryption Algorithm ID.
+                 * @param kId Encryption Key ID.
+                 * @param mi 9-byte Encryption Message Indicator.
                  */
-                void write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted);
+                bool write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted,
+                    uint8_t algId = P25DEF::ALGO_UNENCRYPT, uint16_t kId = 0U, const uint8_t* mi = nullptr);
 
                 /**
                  * @brief Updates the timer by the passed number of milliseconds.
@@ -114,39 +120,24 @@ namespace network
                 TrafficNetwork* m_network;
                 TagP25Data* m_tag;
 
-                p25::data::Assembler* m_assembler;
+                ::p25::data::Assembler* m_assembler;
 
                 /**
                  * @brief Represents the data required for a PDU assembler custom writer context.
                  * @ingroup fne_network
                  */
                 struct UserContext {
-                    void* obj;                      //!< Instance of the P25PacketData class.
-                    uint32_t peerId;                //!< Peer ID for this request.
-                    uint32_t srcPeerId;             //!< Source Peer ID for this request.
-                    network::PeerNetwork* peerNet;  //!< Instance of the peer network for an upstream peer.
-                    p25::data::DataHeader* header;  //!< PDU data header.
-                    uint16_t pktSeq;                //!< Packet sequence.
-                    uint32_t streamId;              //!< Stream ID.
+                    void* obj;                                  //!< Instance of the P25PacketData class.
+                    uint32_t peerId;                            //!< Peer ID for this request.
+                    uint32_t srcPeerId;                         //!< Source Peer ID for this request.
+                    network::PeerNetwork* peerNet;              //!< Instance of the peer network for an upstream peer.
+                    ::p25::data::DataHeader* header;            //!< PDU data header.
+                    uint16_t pktSeq;                            //!< Packet sequence.
+                    uint32_t streamId;                          //!< Stream ID.
+                    bool success;                               //!< Flag indicating every network block was accepted.
                 };
 
-                /**
-                 * @brief Represents a queued data frame from the VTUN.
-                 */
-                class QueuedDataFrame {
-                public:
-                    p25::data::DataHeader* header;  //!< Instance of a PDU data header.
-                    uint32_t llId;                  //!< Logical Link ID
-                    uint32_t tgtProtoAddr;          //!< Target Protocol Address
-
-                    uint8_t* userData;              //!< Raw data buffer
-                    uint32_t userDataLen;           //!< Length of raw data buffer
-
-                    uint64_t timestamp;             //!< Timestamp in milliseconds
-                    uint8_t retryCnt;               //!< Packet Retry Counter
-                    bool extendRetry;               //!< Flag indicating whether or not to extend the retry count for this packet.
-                };
-                concurrent::deque<QueuedDataFrame*> m_queuedFrames;
+                P25PacketScheduler m_packetScheduler;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -160,7 +151,7 @@ namespace network
                     uint32_t peerId;                            //!< Peer ID
 
                     std::unordered_map<uint16_t, uint8_t*> receivedBlocks;
-                    p25::data::Assembler assembler;             //!< PDU Assembler Instance
+                    ::p25::data::Assembler assembler;           //!< PDU Assembler Instance
                     bool hasRxHeader;                           //!< Flag indicating whether or not a valid Rx header has been received
                     uint16_t dataBlockCnt;                      //!< Number of data blocks received
                     uint16_t totalBlocks;                       //!< Total number of blocks expected
@@ -221,12 +212,12 @@ namespace network
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
                 concurrent::unordered_map<uint32_t, RxStatus*> m_status;
 
-                typedef std::pair<const uint32_t, uint32_t> ArpTablePair;
-                std::unordered_map<uint32_t, uint32_t> m_arpTable;
-                typedef std::pair<const uint32_t, bool> ReadyForNextPktPair;
-                std::unordered_map<uint32_t, bool> m_readyForNextPkt;
-                std::unordered_map<uint32_t, uint8_t> m_suSendSeq;      // V(S) send state variable per LLId
-                std::unordered_map<uint32_t, uint8_t> m_suRecvSeq;      // V(R) receive state variable per LLId
+                RouteNeighborCache m_neighborCache;
+                p25data::DataBindingRegistry m_bindingRegistry;
+                DataLocationRegistry m_locationRegistry;
+                p25data::DataLinkManager m_dataLinkManager;
+                p25data::ConventionalDataService m_conventionalDataService;
+                p25data::SCEPService m_scepService;
 
                 bool m_debug;
 
@@ -247,7 +238,7 @@ namespace network
                  * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
+                bool dispatchUserFrameToFNE(::p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
                 /**
                  * @brief Helper used to process conventional data registration from PDU data.
@@ -286,7 +277,7 @@ namespace network
                  * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
+                bool write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, ::p25::data::DataHeader& dataHeader,
                     bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
                 /**
@@ -301,7 +292,7 @@ namespace network
                  * @param pktSeq RTP packet sequence.
                  * @param streamId Stream ID.
                  */
-                bool writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
+                bool writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const ::p25::data::DataHeader& dataHeader, const uint8_t currentBlock,
                     const uint8_t* data, uint32_t len, uint16_t pktSeq, uint32_t streamId);
 
                 /**

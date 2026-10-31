@@ -27,6 +27,14 @@
 #include <cstdio>
 #include <string>
 
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
+
 namespace p25
 {
     // ---------------------------------------------------------------------------
@@ -81,11 +89,15 @@ namespace p25
         protected:
             friend class packet::ControlSignaling;
             friend class p25::Control;
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::HostTestHooks;
+#endif
             Control* m_p25;
 
             uint32_t m_rfFrames;
             uint32_t m_rfBits;
             uint32_t m_rfErrs;
+            uint16_t m_dfsiReportedErrs;
             uint32_t m_rfUndecodableLC;
             uint32_t m_netFrames;
             uint32_t m_netLost;
@@ -124,6 +136,9 @@ namespace p25
             uint8_t m_pktLDU1Count;
             uint8_t m_grpUpdtCount;
             uint8_t m_roamLDU1Count;
+
+            uint8_t m_rfUserAliasPhase;
+            uint8_t m_netUserAliasPhase;
 
             bool m_inbound;
 
@@ -209,6 +224,26 @@ namespace p25
              * @param encrypted Flag indicating whether or not the data is encrypted.
              */
             void resetWithNullAudio(uint8_t* data, bool encrypted);
+
+            /**
+             * @brief Replaces an eligible outbound voice LC with the next User Alias conveyance LC.
+             * @param control Link control to update.
+             * @param phase Per-call User Alias conveyance phase.
+             * @returns bool True if a User Alias LC was selected.
+             */
+            bool applyUserAlias(lc::LC& control, uint8_t& phase);
+
+            /**
+             * @brief Helper to determine the next active talkgroup in a active multi-group scenario,
+             *  this is intended to update the GROUP_UPDT LC field for the next transmission.
+             * @param activeTG Vector of active talkgroups.
+             * @param groupUpdtIndex Index of the current group update.
+             * @param dstId Destination ID of the channel's current working talkgroup. This value is not modified.
+             * @param dstIdB Destination ID of the secondary talkgroup.
+             * @param hasDstIdB Flag indicating whether a secondary talkgroup exists.
+             * @return bool True if there is a next active talkgroup, otherwise false.
+             */
+            bool nextActiveTalkgroups(const std::vector<uint32_t>& activeTG, uint8_t& groupUpdtIndex, const uint32_t dstId, uint32_t& dstIdB, bool& hasDstIdB);
 
             /**
              * @brief Given the last MI, generate the next MI using LFSR.

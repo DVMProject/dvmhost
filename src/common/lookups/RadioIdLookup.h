@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2022,2024,2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2022,2024,2025-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (c) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -27,6 +27,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace lookups
 {
@@ -38,7 +39,7 @@ namespace lookups
      * @brief Represents an individual entry in the radio ID table.
      * @ingroup lookups_rid
      */
-    class HOST_SW_API RadioId {
+    class DVM_COMMON_API RadioId {
     public:
         /**
          * @brief Initializes a new instance of the RadioId class.
@@ -46,7 +47,11 @@ namespace lookups
         RadioId() :
             m_radioEnabled(false),
             m_radioDefault(false),
-            m_radioAlias("")
+            m_radioAlias(""),
+            m_radioIPAddress(""),
+            m_canRequestKeys(false),
+            m_canRekey(false),
+            m_allowedKIds()
         {
             /* stub */
         }
@@ -60,7 +65,10 @@ namespace lookups
             m_radioEnabled(radioEnabled),
             m_radioDefault(radioDefault),
             m_radioAlias(""),
-            m_radioIPAddress("")
+            m_radioIPAddress(""),
+            m_canRequestKeys(false),
+            m_canRekey(false),
+            m_allowedKIds()
         {
             /* stub */
         }
@@ -72,11 +80,15 @@ namespace lookups
          * @param radioAlias Textual alias for the radio.
          * @param ipAddress Textual IP Address for the radio.
          */
-        RadioId(bool radioEnabled, bool radioDefault, const std::string& radioAlias, const std::string& ipAddress = "") :
+        RadioId(bool radioEnabled, bool radioDefault, const std::string& radioAlias, const std::string& ipAddress = "",
+            bool canRequestKeys = false, bool canRekey = false, const std::vector<uint16_t>& allowedKIds = std::vector<uint16_t>()) :
             m_radioEnabled(radioEnabled),
             m_radioDefault(radioDefault),
             m_radioAlias(radioAlias),
-            m_radioIPAddress(ipAddress)
+            m_radioIPAddress(ipAddress),
+            m_canRequestKeys(canRequestKeys),
+            m_canRekey(canRekey),
+            m_allowedKIds(allowedKIds)
         {
             /* stub */
         }
@@ -92,6 +104,9 @@ namespace lookups
                 m_radioDefault = data.m_radioDefault;
                 m_radioAlias = data.m_radioAlias;
                 m_radioIPAddress = data.m_radioIPAddress;
+                m_canRequestKeys = data.m_canRequestKeys;
+                m_canRekey = data.m_canRekey;
+                m_allowedKIds = data.m_allowedKIds;
             }
 
             return *this;
@@ -104,12 +119,16 @@ namespace lookups
          * @param radioAlias Textual alias for the radio.
          * @param ipAddress Textual IP Address for the radio.
          */
-        void set(bool radioEnabled, bool radioDefault, const std::string& radioAlias, const std::string& ipAddress = "")
+        void set(bool radioEnabled, bool radioDefault, const std::string& radioAlias, const std::string& ipAddress = "",
+            bool canRequestKeys = false, bool canRekey = false, const std::vector<uint16_t>& allowedKIds = std::vector<uint16_t>())
         {
             m_radioEnabled = radioEnabled;
             m_radioDefault = radioDefault;
             m_radioAlias = radioAlias;
             m_radioIPAddress = ipAddress;
+            m_canRequestKeys = canRequestKeys;
+            m_canRekey = canRekey;
+            m_allowedKIds = allowedKIds;
         }
 
     public:
@@ -129,6 +148,18 @@ namespace lookups
          * @brief IP Address for the radio.
          */
         DECLARE_RO_PROPERTY_PLAIN(std::string, radioIPAddress);
+        /**
+         * @brief Flag indicating if the radio can request keys from FNE.
+         */
+        DECLARE_RO_PROPERTY_PLAIN(bool, canRequestKeys);
+        /**
+         * @brief Flag indicating if the radio can receive OTAR rekey command payloads.
+         */
+        DECLARE_RO_PROPERTY_PLAIN(bool, canRekey);
+        /**
+         * @brief Allowed encryption key IDs for this radio.
+         */
+        DECLARE_RO_PROPERTY_PLAIN(std::vector<uint16_t>, allowedKIds);
     };
 
     // ---------------------------------------------------------------------------
@@ -140,15 +171,16 @@ namespace lookups
      *  lookup table.
      * @ingroup lookups_rid
      */
-    class HOST_SW_API RadioIdLookup : public LookupTable<RadioId> {
+    class DVM_COMMON_API RadioIdLookup : public LookupTable<RadioId> {
     public:
         /**
          * @brief Initializes a new instance of the RadioIdLookup class.
          * @param filename Full-path to the radio ID table file.
          * @param reloadTime Interval of time to reload the radio ID table.
          * @param ridAcl Flag indicating whether radio ID access control is enabled.
+         * @param verbose Flag indicating if logging should be enabled for this lookup table.
          */
-        RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl);
+        RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl, bool verbose = false);
 
         /**
          * @brief Clears all entries from the lookup table.
@@ -169,7 +201,8 @@ namespace lookups
          * @param alias Alias for the radio ID
          * @param ipAddress IP Address for Radio
          */
-        void addEntry(uint32_t id, bool enabled, const std::string& alias, const std::string& ipAddress = "");
+        void addEntry(uint32_t id, bool enabled, const std::string& alias, const std::string& ipAddress = "",
+            bool canRequestKeys = false, bool canRekey = false, const std::vector<uint16_t>& allowedKIds = std::vector<uint16_t>());
         /**
          * @brief Erases an existing entry from the lookup table by the specified unique ID.
          * @param id Unique ID to erase.
@@ -207,6 +240,8 @@ namespace lookups
     protected:
         bool m_acl;
 
+        bool m_verbose;
+
         /**
          * @brief Loads the table from the passed lookup table file.
          * @return True, if lookup table was loaded, otherwise false.
@@ -223,6 +258,19 @@ namespace lookups
     private:
         static std::mutex s_mutex;  //!< Mutex used for change locking.
         static bool s_locked;       //!< Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
+
+        /**
+         * @brief Parses a string of KIDs from the lookup file into a vector of uint16_t KIDs.
+         * @param input String representation of KID list from the lookup file.
+         * @returns Vector of KIDs parsed from the input string.
+         */
+        std::vector<uint16_t> parseKIdList(const std::string& input);
+        /**
+         * @brief Serializes a list of KIDs into a string for storage in the lookup file.
+         * @param kids List of KIDs to serialize.
+         * @returns String representation of the KID list.
+         */
+        std::string serializeKIdList(const std::vector<uint16_t>& kids);
     };
 } // namespace lookups
 

@@ -259,5 +259,4 @@ void UDCH::copy(const UDCH& data)
     ::memcpy(m_data, data.m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
 
     m_ran = data.m_ran;
-    m_ran = m_data[0U] & 0x3FU;
 }

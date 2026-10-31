@@ -326,28 +326,32 @@ int Host::run()
     std::string ridLookupFile = systemConf["radio_id"]["file"].as<std::string>();
     uint32_t ridReloadTime = systemConf["radio_id"]["time"].as<uint32_t>(0U);
     bool ridAcl = systemConf["radio_id"]["acl"].as<bool>(false);
+    bool verboseRIDRules = systemConf["radio_id"]["verbose"].as<bool>(false);
 
     LogInfo("Radio Id Lookups");
     LogInfo("    File: %s", ridLookupFile.length() > 0U ? ridLookupFile.c_str() : "None");
     if (ridReloadTime > 0U)
         LogInfo("    Reload: %u mins", ridReloadTime);
     LogInfo("    ACL: %s", ridAcl ? "yes" : "no");
+    LogInfo("    Verbose: %s", verboseRIDRules ? "true" : "false");
 
-    m_ridLookup = new RadioIdLookup(ridLookupFile, ridReloadTime, ridAcl);
+    m_ridLookup = new RadioIdLookup(ridLookupFile, ridReloadTime, ridAcl, verboseRIDRules);
     m_ridLookup->read();
 
     // try to load talkgroup IDs table
     std::string tidLookupFile = systemConf["talkgroup_id"]["file"].as<std::string>();
     uint32_t tidReloadTime = systemConf["talkgroup_id"]["time"].as<uint32_t>(0U);
     bool tidAcl = systemConf["talkgroup_id"]["acl"].as<bool>(false);
+    bool verboseTalkgroupRules = systemConf["talkgroup_id"]["verbose"].as<bool>(true);
 
     LogInfo("Talkgroup Rule Lookups");
     LogInfo("    File: %s", tidLookupFile.length() > 0U ? tidLookupFile.c_str() : "None");
     if (tidReloadTime > 0U)
         LogInfo("    Reload: %u mins", tidReloadTime);
     LogInfo("    ACL: %s", tidAcl ? "yes" : "no");
+    LogInfo("    Verbose: %s", verboseTalkgroupRules ? "true" : "false");
 
-    m_tidLookup = new TalkgroupRulesLookup(tidLookupFile, tidReloadTime, tidAcl);
+    m_tidLookup = new TalkgroupRulesLookup(tidLookupFile, tidReloadTime, tidAcl, verboseTalkgroupRules);
     m_tidLookup->read();
 
     // initialize networking
@@ -1364,7 +1368,10 @@ json::object Host::getStatus()
             uint8_t chId = entry.second.chId();
             chData["channelId"].set<uint8_t>(chId);
 
-            uint32_t dstId = 0U, srcId = 0U;
+            uint32_t peerId = m_voiceChPeerId[chNo];
+            chData["peerId"].set<uint32_t>(peerId);
+
+            uint32_t dstId = 0U, srcId = 0U, grantElapsedTime = 0U;
 
             // fetch affiliations from DMR if we're a DMR CC
             if (m_dmrTSCCData && m_dmr->affiliations() != nullptr) {
@@ -1375,8 +1382,10 @@ json::object Host::getStatus()
                 }
 
                 dstId = m_dmr->affiliations()->getGrantedDstByCh(chNo);
-                if (dstId > 0U)
+                if (dstId > 0U) {
                     srcId = m_dmr->affiliations()->getGrantedSrcId(dstId);
+                    grantElapsedTime = m_dmr->affiliations()->getGrantCallElapsed(dstId);
+                }
             }
 
             // fetch affiliations from P25 if we're a P25 CC
@@ -1388,8 +1397,10 @@ json::object Host::getStatus()
                 }
 
                 dstId = m_p25->affiliations()->getGrantedDstByCh(chNo);
-                if (dstId > 0U)
+                if (dstId > 0U) {
                     srcId = m_p25->affiliations()->getGrantedSrcId(dstId);
+                    grantElapsedTime = m_p25->affiliations()->getGrantCallElapsed(dstId);
+                }
             }
 
             // fetch affiliations from NXDN if we're a NXDN CC
@@ -1401,12 +1412,15 @@ json::object Host::getStatus()
                 }
 
                 dstId = m_nxdn->affiliations()->getGrantedDstByCh(chNo);
-                if (dstId > 0U)
+                if (dstId > 0U) {
                     srcId = m_nxdn->affiliations()->getGrantedSrcId(dstId);
+                    grantElapsedTime = m_nxdn->affiliations()->getGrantCallElapsed(dstId);
+                }
             }
 
             chData["lastDstId"].set<uint32_t>(dstId);
             chData["lastSrcId"].set<uint32_t>(srcId);
+            chData["grantElapsedTime"].set<uint32_t>(grantElapsedTime);
 
             vcChannels.push_back(json::value(chData));
         }

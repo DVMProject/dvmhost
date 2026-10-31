@@ -229,7 +229,7 @@ uint8_t* DES::fromValue(const ulong64_t value)
     return payload;
 }
 
-/* */
+/* Generates the subkeys for the DES algorithm. */
 
 void DES::generateSubkeys(uint64_t key)
 {
@@ -262,7 +262,7 @@ void DES::generateSubkeys(uint64_t key)
     }
 }
 
-/* */
+/* Encrypts or decrypts a block of data using the DES algorithm. */
 
 ulong64_t DES::des(ulong64_t block, bool decrypt)
 {
@@ -286,7 +286,7 @@ ulong64_t DES::des(ulong64_t block, bool decrypt)
     return finalPermutation(block);
 }
 
-/* */
+/* Performs the initial permutation on a block of data. */
 
 ulong64_t DES::intialPermutation(ulong64_t block)
 {
@@ -300,7 +300,7 @@ ulong64_t DES::intialPermutation(ulong64_t block)
     return result;
 }
 
-/* */
+/* Performs the final permutation on a block of data. */
 
 ulong64_t DES::finalPermutation(ulong64_t block)
 {
@@ -314,7 +314,7 @@ ulong64_t DES::finalPermutation(ulong64_t block)
     return result;
 }
 
-/* */
+/* Performs the Feistel function on a block of data. */
 
 void DES::feistel(uint32_t& L, uint32_t& R, uint32_t F)
 {
@@ -323,7 +323,7 @@ void DES::feistel(uint32_t& L, uint32_t& R, uint32_t F)
     L = temp;
 }
 
-/* */
+/* The f function used in the Feistel network. */
 
 uint32_t DES::f(uint32_t R, ulong64_t k)
 {

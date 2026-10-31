@@ -37,7 +37,7 @@ namespace nxdn
          * @brief Implements NXDN frame convolution processing.
          * @ingroup nxdn_edac
          */
-        class HOST_SW_API Convolution {
+        class DVM_COMMON_API Convolution {
         public:
             /**
              * @brief Initializes a new instance of the Convolution class.
@@ -53,25 +53,25 @@ namespace nxdn
              */
             void start();
             /**
-             * @brief 
-             * @param out 
-             * @param nBits 
-             * @returns uint32_t 
+             * @brief Performs chainback to determine the most likely transmitted sequence.
+             * @param out Buffer to store the decoded output bits.
+             * @param nBits Number of bits to decode.
+             * @returns uint32_t Minimum path metric.
              */
             uint32_t chainback(uint8_t* out, uint32_t nBits);
 
             /**
-             * @brief 
-             * @param s0 
-             * @param s1 
-             * @returns bool
+             * @brief Starts convolution decoding for a single pair of received symbols.
+             * @param s0 First received symbol.
+             * @param s1 Second received symbol.
+             * @returns bool True if decoding was successful, false otherwise.
              */
             bool decode(uint8_t s0, uint8_t s1);
             /**
-             * @brief 
-             * @param[in] in 
-             * @param[out] out 
-             * @param nBits 
+             * @brief Performs convolution encoding on the input bit sequence.
+             * @param[in] in Input buffer containing the bits to encode.
+             * @param[out] out Output buffer to store the encoded bits.
+             * @param nBits Number of bits to encode.
              */
             void encode(const uint8_t* in, uint8_t* out, uint32_t nBits) const;
 

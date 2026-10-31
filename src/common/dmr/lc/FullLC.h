@@ -35,7 +35,7 @@ namespace dmr
          * @brief Represents full DMR link control.
          * @ingroup dmr_lc
          */
-        class HOST_SW_API FullLC {
+        class DVM_COMMON_API FullLC {
         public:
             /**
              * @brief Initializes a new instance of the FullLC class.

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -71,9 +71,42 @@ namespace network
         void unlockPeerStatus() { s_peerStatusMutex.unlock(); }
 
         /**
+         * @brief Gets the current DMR stream ID.
+         * @param slotNo DMR slot to get stream ID for.
+         * @return uint32_t Stream ID for the given DMR slot.
+         */
+        uint32_t getRxDMRStreamId(uint32_t slotNo) const;
+        /**
+         * @brief Gets the current P25 stream ID.
+         * @return uint32_t Stream ID.
+         */
+        uint32_t getRxP25StreamId() const { return m_rxP25StreamId; }
+        /**
+         * @brief Gets the current P25 Phase 2 stream ID.
+         * @param slotNo P25 Phase 2 slot to get stream ID for.
+         * @return uint32_t Stream ID for the given P25 Phase 2 slot.
+         */
+        uint32_t getRxP25P2StreamId(uint32_t slotNo) const;
+        /**
+         * @brief Gets the current NXDN stream ID.
+         * @return uint32_t Stream ID.
+         */
+        uint32_t getRxNXDNStreamId() const { return m_rxNXDNStreamId; }
+        /**
+         * @brief Gets the current analog stream ID.
+         * @return uint32_t Stream ID.
+         */
+        uint32_t getRxAnalogStreamId() const { return m_rxAnalogStreamId; }
+
+        /**
          * @brief Map of peer status.
          */
         std::unordered_map<uint32_t, json::object> peerStatus;
+        /**
+         * @brief Map of peer status timers, used to track when peer status entries should be expired and 
+         *  removed from the map.
+         */
+        std::unordered_map<uint32_t, Timer> peerStatusTimers;
 
     protected:
         /**

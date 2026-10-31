@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements UU VCH REQ - Unit-to-Unit Voice Channel Request
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_UU_V_REQ : public CSBK {
+            class DVM_COMMON_API CSBK_UU_V_REQ : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_UU_V_REQ class.

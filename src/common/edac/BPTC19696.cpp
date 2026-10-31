@@ -83,7 +83,7 @@ void BPTC19696::encode(const uint8_t* in, uint8_t* out)
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Helper to extract the raw binary data from the input. */
 
 void BPTC19696::decodeExtractBinary(const uint8_t* in)
 {
@@ -123,7 +123,7 @@ void BPTC19696::decodeExtractBinary(const uint8_t* in)
     Utils::byteToBitsBE(in[32U], m_rawData + 188U);
 }
 
-/* */
+/* Helper to deinterleave the raw binary data. */
 
 void BPTC19696::decodeDeInterleave()
 {
@@ -139,7 +139,7 @@ void BPTC19696::decodeDeInterleave()
     }
 }
 
-/* */
+/* Helper to perform error checking and correction on the deinterleaved data. */
 
 void BPTC19696::decodeErrorCheck()
 {
@@ -179,7 +179,7 @@ void BPTC19696::decodeErrorCheck()
     } while (fixing && count < 5U);
 }
 
-/* */
+/* Helper to extract the decoded data from the deinterleaved data. */
 
 void BPTC19696::decodeExtractData(uint8_t* data) const
 {
@@ -226,7 +226,7 @@ void BPTC19696::decodeExtractData(uint8_t* data) const
     Utils::bitsToByteBE(bData + 88U, data[11U]);
 }
 
-/* */
+/* Helper to encode the input data into the deinterleaved data. */
 
 void BPTC19696::encodeExtractData(const uint8_t* in) const
 {
@@ -276,7 +276,7 @@ void BPTC19696::encodeExtractData(const uint8_t* in) const
         m_deInterData[a] = bData[pos];
 }
 
-/* */
+/* Helper to perform error checking and correction on the deinterleaved data. */
 
 void BPTC19696::encodeErrorCheck()
 {
@@ -305,7 +305,7 @@ void BPTC19696::encodeErrorCheck()
     }
 }
 
-/* */
+/* Helper to interleave the deinterleaved data into the raw binary data. */
 
 void BPTC19696::encodeInterleave()
 {
@@ -321,7 +321,7 @@ void BPTC19696::encodeInterleave()
     }
 }
 
-/* */
+/* Helper to extract the raw binary data from the deinterleaved data. */
 
 void BPTC19696::encodeExtractBinary(uint8_t* data)
 {

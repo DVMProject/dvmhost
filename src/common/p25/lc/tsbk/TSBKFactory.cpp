@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -19,6 +19,15 @@ using namespace p25::lc;
 using namespace p25::lc::tsbk;
 
 #include <cassert>
+
+// ---------------------------------------------------------------------------
+//  Macros
+// ---------------------------------------------------------------------------
+
+// MBT is a Standard MBT (SMBT)
+#define MBT_IS_SMBT if (smbt)
+// MBT is a Alternate MBT (AMBT)
+#define MBT_IS_AMBT if (!smbt)
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -56,7 +65,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
     if (rawTSBK) {
         ::memcpy(tsbk, data, P25_TSBK_LENGTH_BYTES);
 
-        bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
+        bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES, true);
         if (!ret) {
             if (s_warnCRC) {
                 // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
@@ -85,7 +94,7 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
             }
 
             if (ret) {
-                ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
+                ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES, true);
                 if (!ret) {
                     if (s_warnCRC) {
                         LogWarning(LOG_P25, "TSBKFactory::createTSBK(), failed CRC CCITT-162 check");
@@ -225,14 +234,14 @@ std::unique_ptr<TSBK> TSBKFactory::createTSBK(const uint8_t* data, bool rawTSBK)
     return nullptr;
 }
 
-/* Create an instance of a AMBT. */
+/* Create an instance of a SMBT/AMBT. */
 
 std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks)
 {
     assert(blocks != nullptr);
 
-    if (dataHeader.getFormat() != PDUFormatType::AMBT) {
-        LogError(LOG_P25, "TSBKFactory::createAMBT(), PDU is not a AMBT PDU");
+    if (!AMBT::isMBT(dataHeader)) {
+        LogError(LOG_P25, "TSBKFactory::createAMBT(), PDU is not a standard or alternate MBT PDU");
         return nullptr;
     }
 
@@ -241,7 +250,19 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
         return nullptr;
     }
 
+    bool smbt = false;
     uint8_t lco = dataHeader.getAMBTOpcode();                                       // LCO
+    if (dataHeader.getFormat() == PDUFormatType::UNCONFIRMED) {
+        uint8_t firstBlock[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+        if (blocks[0U].getData(firstBlock) != P25_PDU_UNCONFIRMED_LENGTH_BYTES) {
+            LogError(LOG_P25, "TSBKFactory::createAMBT(), failed to read first PDU data block");
+            return nullptr;
+        }
+
+        smbt = true;
+        lco = firstBlock[0U] & 0x3FU;
+    }
+
     uint8_t mfId = dataHeader.getMFId();                                            // Mfg Id.
 
     // Motorola P25 vendor opcodes
@@ -267,7 +288,7 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
             mfId = MFG_STANDARD;
             break;
         case TSBKO::ISP_GRP_AFF_Q_RSP:
-            return decode(new MBT_ISP_GRP_AFF_Q_RSP(), dataHeader, blocks);
+            MBT_IS_AMBT return decode(new MBT_ISP_GRP_AFF_Q_RSP(), dataHeader, blocks);
         default:
             LogError(LOG_P25, "TSBKFactory::createAMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
             break;
@@ -283,24 +304,26 @@ std::unique_ptr<AMBT> TSBKFactory::createAMBT(const data::DataHeader& dataHeader
 
     // standard P25 reference opcodes
     switch (lco) {
+    case TSBKO::IOSP_TELE_INT_DIAL:
+        MBT_IS_SMBT return decode(new MBT_ISP_TELE_INT_DIAL_REQ(), dataHeader, blocks);
     case TSBKO::IOSP_STS_UPDT:
-        return decode(new MBT_IOSP_STS_UPDT(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_IOSP_STS_UPDT(), dataHeader, blocks);
     case TSBKO::IOSP_MSG_UPDT:
-        return decode(new MBT_IOSP_MSG_UPDT(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_IOSP_MSG_UPDT(), dataHeader, blocks);
     case TSBKO::IOSP_CALL_ALRT:
-        return decode(new MBT_IOSP_CALL_ALRT(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_IOSP_CALL_ALRT(), dataHeader, blocks);
     case TSBKO::IOSP_ACK_RSP:
-        return decode(new MBT_IOSP_ACK_RSP(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_IOSP_ACK_RSP(), dataHeader, blocks);
     case TSBKO::IOSP_GRP_AFF:
-        return decode(new MBT_IOSP_GRP_AFF(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_IOSP_GRP_AFF(), dataHeader, blocks);
     case TSBKO::ISP_CAN_SRV_REQ:
-        return decode(new MBT_ISP_CAN_SRV_REQ(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_ISP_CAN_SRV_REQ(), dataHeader, blocks);
     case TSBKO::IOSP_EXT_FNCT:
-        return decode(new MBT_IOSP_EXT_FNCT(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_IOSP_EXT_FNCT(), dataHeader, blocks);
     case TSBKO::ISP_AUTH_RESP_M:
-        return decode(new MBT_ISP_AUTH_RESP_M(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_ISP_AUTH_RESP_M(), dataHeader, blocks);
     case TSBKO::ISP_AUTH_SU_DMD:
-        return decode(new MBT_ISP_AUTH_SU_DMD(), dataHeader, blocks);
+        MBT_IS_AMBT return decode(new MBT_ISP_AUTH_SU_DMD(), dataHeader, blocks);
     default:
         LogError(LOG_P25, "TSBKFactory::createAMBT(), unknown TSBK LCO value, mfId = $%02X, lco = $%02X", mfId, lco);
         break;

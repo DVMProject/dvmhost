@@ -30,7 +30,7 @@ namespace dmr
          * @brief Represents short DMR link control.
          * @ingroup dmr_lc
          */
-        class HOST_SW_API ShortLC {
+        class DVM_COMMON_API ShortLC {
         public:
             /**
              * @brief Initializes a new instance of the ShortLC class.
@@ -59,40 +59,41 @@ namespace dmr
             bool* m_deInterData;
 
             /**
-             * @brief 
-             * @param[in] in 
+             * @brief Extracts the raw binary data from the encoded short-link control data.
+             * @param[in] in Buffer containing encoded short-link control data.
              */
             void decodeExtractBinary(const uint8_t* in);
             /**
-             * @brief 
+             * @brief Helper function to deinterleave the raw binary data.
              */
             void decodeDeInterleave();
             /**
-             * @brief 
+             * @brief Helper function to perform error checking on the deinterleaved data.
+             * @return True if the error check passes, false otherwise.
              */
             bool decodeErrorCheck();
             /**
-             * @brief 
-             * @param[out] data 
+             * @brief Extracts the raw short-link control data from the deinterleaved data.
+             * @param[out] data Buffer to copy raw short-link control data.
              */
             void decodeExtractData(uint8_t* data) const;
 
             /**
-             * @brief 
-             * @param[in] in 
+             * @brief Extracts the raw short-link control data from the input buffer and prepares it for encoding.
+             * @param[in] in Buffer containing raw short-link control data.
              */
             void encodeExtractData(const uint8_t* in) const;
             /**
-             * @brief 
+             * @brief Helper function to perform error checking on the data before encoding.
              */
             void encodeErrorCheck();
             /**
-             * @brief 
+             * @brief Helper function to interleave the data before encoding.
              */
             void encodeInterleave();
             /**
-             * @brief 
-             * @param[out] data
+             * @brief Extracts the encoded short-link control data from the interleaved data and prepares it for output.
+             * @param[out] data Buffer to copy encoded short-link control data.
              */
             void encodeExtractBinary(uint8_t* data);
         };

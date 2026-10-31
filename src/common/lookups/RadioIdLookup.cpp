@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2022,2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2022,2025-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (c) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -16,9 +16,11 @@
 using namespace lookups;
 
 #include <cstdlib>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -52,8 +54,9 @@ bool RadioIdLookup::s_locked = false;
 
 /* Initializes a new instance of the RadioIdLookup class. */
 
-RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl) : LookupTable(filename, reloadTime),
-    m_acl(ridAcl)
+RadioIdLookup::RadioIdLookup(const std::string& filename, uint32_t reloadTime, bool ridAcl, bool verbose) : LookupTable(filename, reloadTime),
+    m_acl(ridAcl),
+    m_verbose(verbose)
 {
     /* stub */
 }
@@ -74,27 +77,30 @@ void RadioIdLookup::clear()
 void RadioIdLookup::toggleEntry(uint32_t id, bool enabled)
 {
     RadioId rid = find(id);
-    addEntry(id, enabled, rid.radioAlias());
+    addEntry(id, enabled, rid.radioAlias(), rid.radioIPAddress(), rid.canRequestKeys(), rid.canRekey(), rid.allowedKIds());
 }
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
 
-void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias, const std::string& ipAddress)
+void RadioIdLookup::addEntry(uint32_t id, bool enabled, const std::string& alias, const std::string& ipAddress,
+    bool canRequestKeys, bool canRekey, const std::vector<uint16_t>& allowedKIds)
 {
     if ((id == p25::defines::WUID_ALL) || (id == p25::defines::WUID_FNE)) {
         return;
     }
 
-    RadioId entry = RadioId(enabled, false, alias, ipAddress);
+    RadioId entry = RadioId(enabled, false, alias, ipAddress, canRequestKeys, canRekey, allowedKIds);
 
     __LOCK_TABLE();
 
     try {
         RadioId _entry = m_table.at(id);
-        // if either the alias or the enabled flag doesn't match, update the entry
-        if (_entry.radioEnabled() != enabled || _entry.radioAlias() != alias) {
+        // if any configured parameter doesn't match, update the entry
+        if (_entry.radioEnabled() != enabled || _entry.radioAlias() != alias ||
+            _entry.radioIPAddress() != ipAddress || _entry.canRequestKeys() != canRequestKeys ||
+            _entry.canRekey() != canRekey || _entry.allowedKIds() != allowedKIds) {
             //LogDebug(LOG_HOST, "Updating existing RID %d (%s) in ACL", id, alias.c_str());
-            _entry = RadioId(enabled, false, alias, ipAddress);
+            _entry = RadioId(enabled, false, alias, ipAddress, canRequestKeys, canRekey, allowedKIds);
             m_table[id] = _entry;
         } else {
             //LogDebug(LOG_HOST, "No changes made to RID %d (%s) in ACL", id, alias.c_str());
@@ -211,6 +217,9 @@ bool RadioIdLookup::load()
             bool radioEnabled = ::atoi(parsed[1].c_str()) == 1;
             std::string alias = "";
             std::string ipAddress = "";
+            bool canRequestKeys = false;
+            bool canRekey = false;
+            std::vector<uint16_t> allowedKIds;
 
             // check for an optional alias field
             if (parsed.size() >= 3) {
@@ -222,8 +231,34 @@ bool RadioIdLookup::load()
                 ipAddress = parsed[3];
             }
 
-            m_table[id] = RadioId(radioEnabled, false, alias, ipAddress);
-            //::LogInfoEx(LOG_HOST, "Radio NAME: %s RID: %u ENABLED: %u IPADDR: %s", alias.c_str(), id, radioEnabled, ipAddress.c_str());
+            // check for optional key-request permission
+            if (parsed.size() >= 5) {
+                canRequestKeys = ::atoi(parsed[4].c_str()) == 1;
+            }
+
+            // check for optional rekey permission
+            if (parsed.size() >= 6) {
+                canRekey = ::atoi(parsed[5].c_str()) == 1;
+            }
+
+            // check for optional allowed key IDs list (pipe-delimited)
+            if (parsed.size() >= 7) {
+                allowedKIds = parseKIdList(parsed[6]);
+            }
+
+            m_table[id] = RadioId(radioEnabled, false, alias, ipAddress, canRequestKeys, canRekey, allowedKIds);
+
+            if (m_verbose) {
+                std::string kIdList;
+                if (allowedKIds.empty()) {
+                    kIdList = "ALL";
+                } else {
+                    kIdList = serializeKIdList(allowedKIds);
+                }
+
+                LogInfoEx(LOG_HOST, "Radio NAME: %s RID: %u ENABLED: %u IPADDR: %s CANREQKEYS: %u CANREKEY: %u ALLOWEDKIDS: %s",
+                    alias.c_str(), id, radioEnabled, ipAddress.c_str(), canRequestKeys, canRekey, kIdList.c_str());
+            }
         }
     }
 
@@ -274,21 +309,22 @@ bool RadioIdLookup::save(bool quiet)
         bool enabled = entry.second.radioEnabled();
         std::string alias = entry.second.radioAlias();
         std::string ipAddress = entry.second.radioIPAddress();
+        bool canRequestKeys = entry.second.canRequestKeys();
+        bool canRekey = entry.second.canRekey();
+        std::string allowedKIds = serializeKIdList(entry.second.allowedKIds());
 
         // format into a string
         line = std::to_string(rid) + "," + std::to_string(enabled) + ",";
-
-        // add the alias if we have one
-        if (alias.length() > 0) {
-            line += alias;
-            line += ",";
-        }
-
-        // add the IP address if we have one
-        if (ipAddress.length() > 0) {
-            line += ipAddress;
-            line += ",";
-        }
+        line += alias;
+        line += ",";
+        line += ipAddress;
+        line += ",";
+        line += std::to_string(canRequestKeys);
+        line += ",";
+        line += std::to_string(canRekey);
+        line += ",";
+        line += allowedKIds;
+        line += ",";
 
         line += "\n";
         file << line;
@@ -304,4 +340,60 @@ bool RadioIdLookup::save(bool quiet)
         LogInfoEx(LOG_HOST, "Saved %u entries to lookup table file %s", lines, m_filename.c_str());
 
     return true;
+}
+
+/* Parses a string of KIDs from the lookup file into a vector of uint16_t KIDs. */
+
+std::vector<uint16_t> RadioIdLookup::parseKIdList(const std::string& input)
+{
+    std::vector<uint16_t> kids;
+
+    if (input.empty()) {
+        return kids;
+    }
+
+    // tokenize the input string by pipe delimiter and parse each token as a hex value for a KID, ensuring no 
+    // duplicates and that each KID is in the valid range of 0x0000 to 0xFFFF
+    std::stringstream ss(input);
+    std::string token;
+    while (std::getline(ss, token, '|')) {
+        if (token.empty()) {
+            continue;
+        }
+
+        // parse token as hex value for KID
+        uint32_t value = (uint32_t)::strtoul(token.c_str(), nullptr, 16);
+        if (value > 0xFFFFU) {
+            continue;
+        }
+
+        uint16_t kid = (uint16_t)value;
+
+        // check for duplicates before adding to the list
+        if (std::find(kids.begin(), kids.end(), kid) == kids.end()) {
+            kids.push_back(kid);
+        }
+    }
+
+    return kids;
+}
+
+/* Serializes a list of KIDs into a string for storage in the lookup file. */
+
+std::string RadioIdLookup::serializeKIdList(const std::vector<uint16_t>& kids)
+{
+    if (kids.empty()) {
+        return "";
+    }
+
+    // serialize the list of KIDs into a pipe-delimited string
+    std::stringstream ss;
+    for (size_t i = 0U; i < kids.size(); i++) {
+        ss << std::uppercase << std::hex << std::setw(4) << std::setfill('0') << kids[i];
+        if (i + 1U < kids.size()) {
+            ss << "|";
+        }
+    }
+
+    return ss.str();
 }

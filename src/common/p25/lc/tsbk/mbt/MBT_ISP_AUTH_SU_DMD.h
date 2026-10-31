@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements AUTH SU DMD - Authentication SU Demand
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_ISP_AUTH_SU_DMD : public AMBT {
+            class DVM_COMMON_API MBT_ISP_AUTH_SU_DMD : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_ISP_AUTH_SU_DMD class.

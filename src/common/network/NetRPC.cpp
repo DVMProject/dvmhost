@@ -98,7 +98,7 @@ void NetRPC::clock(uint32_t ms)
                 udp::Socket::address(address).c_str(), udp::Socket::port(address), rpcHeader.getFunction(), rpcHeader.getMessageLength());
         }
 
-        if (length < RPC_HEADER_LENGTH_BYTES + rpcHeader.getMessageLength()) {
+        if (length < (int)(RPC_HEADER_LENGTH_BYTES + rpcHeader.getMessageLength())) {
             LogError(LOG_NET, "NetRPC::clock(), message received from network is malformed! %u bytes != %u bytes", 
                 RPC_HEADER_LENGTH_BYTES + rpcHeader.getMessageLength(), length);
             return;

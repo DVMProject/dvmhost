@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -267,6 +267,7 @@ namespace network
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             concurrent::unordered_map<uint32_t, RxStatus> m_status;
             concurrent::unordered_map<uint32_t, RxStatus> m_statusPVCall;
+            concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_rejectedCallStreams;
 
             friend class packetdata::P25PacketData;
             packetdata::P25PacketData* m_packetData;
@@ -333,10 +334,11 @@ namespace network
              * @param control Instance of p25::lc::LC.
              * @param duid DUID.
              * @param[in] tsbk Instance of p25::lc::TSBK.
+             * @param frameType Frame Type.
              * @param streamId Stream ID.
              * @returns bool True, if valid, otherwise false.
              */
-            bool validate(uint32_t peerId, p25::lc::LC& control, P25DEF::DUID::E duid, const p25::lc::TSBK* tsbk, uint32_t streamId);
+            bool validate(uint32_t peerId, p25::lc::LC& control, P25DEF::DUID::E duid, const p25::lc::TSBK* tsbk, uint8_t frameType, uint32_t streamId);
 
             /**
              * @brief Helper to write a grant packet.

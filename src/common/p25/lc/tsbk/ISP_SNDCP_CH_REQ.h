@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SNDCP CH REQ - SNDCP Data Channel Request (ISP)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API ISP_SNDCP_CH_REQ : public TSBK {
+            class DVM_COMMON_API ISP_SNDCP_CH_REQ : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the ISP_SNDCP_CH_REQ class.

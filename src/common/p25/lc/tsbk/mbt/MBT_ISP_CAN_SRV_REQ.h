@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements CAN SRV REQ - Cancel Service Request
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_ISP_CAN_SRV_REQ : public AMBT {
+            class DVM_COMMON_API MBT_ISP_CAN_SRV_REQ : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_ISP_CAN_SRV_REQ class.

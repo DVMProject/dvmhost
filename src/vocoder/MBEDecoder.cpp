@@ -15,6 +15,8 @@
 #include "common/edac/Golay24128.h"
 #include "vocoder/MBEDecoder.h"
 
+#include <cassert>
+
 using namespace edac;
 using namespace vocoder;
 
@@ -150,6 +152,31 @@ int32_t MBEDecoder::decodeBits(uint8_t* codeword, char* mbeBits)
     }
 
     return errs;
+}
+
+/* Decodes a deinterleaved 49-bit AMBE payload to PCM samples. */
+
+int32_t MBEDecoder::decodeBits(const uint8_t* mbeBits, int16_t samples[])
+{
+    assert(mbeBits != nullptr);
+    assert(samples != nullptr);
+
+    if (m_mbeMode != DECODE_DMR_AMBE)
+        return -1;
+
+    char ambe[49U];
+    for (uint32_t i = 0U; i < 49U; i++)
+        ambe[i] = mbeBits[i] != 0U ? 1 : 0;
+
+    int errs = 0;
+    int errs2 = 0;
+    char errStr[64U];
+    ::memset(errStr, 0x20U, sizeof(errStr));
+    mbe_processAmbe2450Data(samples, &errs, &errs2, errStr, ambe,
+        m_mbelibParms->m_cur_mp, m_mbelibParms->m_prev_mp,
+        m_mbelibParms->m_prev_mp_enhanced, 3);
+
+    return errs2;
 }
 
 /* Decodes the given MBE codewords to PCM samples using the decoder mode. */

@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements GRP AFF Q - Group Affiliation Query
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_GRP_AFF_Q : public TSBK {
+            class DVM_COMMON_API OSP_GRP_AFF_Q : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_GRP_AFF_Q class.

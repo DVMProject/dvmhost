@@ -88,6 +88,8 @@ namespace dmr
 
             bool m_dumpDataPacket;
             bool m_repeatDataPacket;
+            bool m_rfUDT;
+            uint32_t m_rfUDTSource;
 
             bool m_verbose;
             bool m_debug;

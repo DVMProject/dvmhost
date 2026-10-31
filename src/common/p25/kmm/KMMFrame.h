@@ -39,7 +39,9 @@ namespace p25
          * @{
          */
 
-        const uint32_t KMM_FRAME_LENGTH = 9U;
+        // message length counts Format + Dest RSI + Source RSI (7 octets),
+        // followed by optional MN/body/MAC; ID and Length are excluded
+        const uint32_t KMM_FRAME_LENGTH = 7U;
 
         /** @} */
 
@@ -51,7 +53,7 @@ namespace p25
          * @brief Represents a KMM frame packet header.
          * @ingroup p25_kmm
          */
-        class HOST_SW_API KMMFrame {
+        class DVM_COMMON_API KMMFrame {
         public:
             /**
              * @brief Initializes a copy instance of the KMMFrame class.
@@ -74,7 +76,7 @@ namespace p25
             virtual uint32_t length() const
             {
                 uint32_t len = KMM_FRAME_LENGTH;
-                if (m_messageNumber > 0U)
+                if (m_hasMessageNumber || m_messageNumber > 0U)
                     len += 2U;
                 if (m_macType == P25DEF::KMM_MAC::ENH_MAC)
                     len += P25DEF::KMM_AES_MAC_LENGTH + 5U;
@@ -111,6 +113,14 @@ namespace p25
              * @param[out] data Buffer to encode KMM MAC to.
              */
             void generateMAC(uint8_t* kek, uint8_t* data);
+            /**
+             * @brief Verify the MAC code for the given KMM frame.
+             * @param tek Traffic Encryption Key
+             * @param[in] data Buffer containing KMM frame data to verify.
+             * @param len Length of the buffer.
+             * @returns bool True, if the MAC is valid, otherwise false.
+             */
+            bool verifyMAC(const uint8_t* tek, const uint8_t* data, uint32_t len);
 
             /**
              * @brief Returns a string that represents the current KMM frame.
@@ -154,6 +164,10 @@ namespace p25
              * @brief Message Number.
              */
             DECLARE_PROTECTED_PROPERTY(uint16_t, messageNumber, MessageNumber);
+            /**
+             * @brief Flag indicating whether the Message Number field is present.
+             */
+            DECLARE_PROTECTED_PROPERTY(bool, hasMessageNumber, HasMessageNumber);
 
             /**
              * @brief Destination Logical link ID.

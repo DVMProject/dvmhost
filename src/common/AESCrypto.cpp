@@ -421,7 +421,7 @@ uint8_t* AES::decryptCFB(const uint8_t in[], uint32_t inLen, const uint8_t key[]
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Substitutes bytes in the state using the S-Box. */
 
 void AES::subBytes(uint8_t state[4][AES_NB]) 
 {
@@ -433,7 +433,7 @@ void AES::subBytes(uint8_t state[4][AES_NB])
     }
 }
 
-/* */
+/* Inverse substitutes bytes in the state using the inverse S-Box. */
 
 void AES::invSubBytes(uint8_t state[4][AES_NB]) 
 {
@@ -445,7 +445,7 @@ void AES::invSubBytes(uint8_t state[4][AES_NB])
     }
 }
 
-/* Shift row i on n positions. */
+/* Shifts the row of the state to the left by a certain number of positions. */
 
 void AES::shiftRow(uint8_t state[4][AES_NB], uint32_t i, uint32_t n)
 {
@@ -456,7 +456,7 @@ void AES::shiftRow(uint8_t state[4][AES_NB], uint32_t i, uint32_t n)
     memcpy(state[i], tmp, AES_NB * sizeof(uint8_t));
 }
 
-/* */
+/* Shifts the rows of the state to the left by a certain number of positions. */
 
 void AES::shiftRows(uint8_t state[4][AES_NB]) 
 {
@@ -465,7 +465,7 @@ void AES::shiftRows(uint8_t state[4][AES_NB])
     shiftRow(state, 3, 3);
 }
 
-/* */
+/* Inverse shifts the rows of the state to the right by a certain number of positions. */
 
 void AES::invShiftRows(uint8_t state[4][AES_NB]) 
 {
@@ -474,7 +474,7 @@ void AES::invShiftRows(uint8_t state[4][AES_NB])
     shiftRow(state, 3, AES_NB - 3);
 }
 
-/* */
+/* Mixes the columns of the state using the Galois field multiplication. */
 
 void AES::mixColumns(uint8_t state[4][AES_NB]) {
     uint8_t tempState[4][AES_NB];
@@ -498,7 +498,7 @@ void AES::mixColumns(uint8_t state[4][AES_NB]) {
     }
 }
 
-/* */
+/* Inverse mixes the columns of the state using the Galois field multiplication. */
 
 void AES::invMixColumns(uint8_t state[4][AES_NB]) {
     uint8_t tempState[4][AES_NB];
@@ -519,7 +519,7 @@ void AES::invMixColumns(uint8_t state[4][AES_NB]) {
     }
 }
 
-/* */
+/* Adds the round key to the state. */
 
 void AES::addRoundKey(uint8_t state[4][AES_NB], uint8_t* key) 
 {
@@ -530,7 +530,7 @@ void AES::addRoundKey(uint8_t state[4][AES_NB], uint8_t* key)
     }
 }
 
-/* */
+/* Substitutes a word using the S-Box. */
 
 void AES::subWord(uint8_t* a) 
 {
@@ -539,7 +539,7 @@ void AES::subWord(uint8_t* a)
     }
 }
 
-/* */
+/* Rotates a word by shifting its bytes to the left. */
 
 void AES::rotWord(uint8_t* a) 
 {
@@ -550,7 +550,7 @@ void AES::rotWord(uint8_t* a)
     a[3] = c;
 }
 
-/* */
+/* Performs the XOR operation on two words and stores the result in a third word. */
 
 void AES::xorWords(uint8_t* a, uint8_t* b, uint8_t* c) 
 {
@@ -559,7 +559,7 @@ void AES::xorWords(uint8_t* a, uint8_t* b, uint8_t* c)
     }
 }
 
-/* */
+/* Performs the round constants operation on a word. */
 
 void AES::rCon(uint8_t *a, uint32_t n) 
 {
@@ -572,7 +572,7 @@ void AES::rCon(uint8_t *a, uint32_t n)
     a[1] = a[2] = a[3] = 0;
 }
 
-/* */
+/* Expands the encryption key into round keys for the AES algorithm. */
 
 void AES::keyExpansion(const uint8_t key[], uint8_t w[]) {
     uint8_t temp[4], rcon[4];
@@ -607,7 +607,7 @@ void AES::keyExpansion(const uint8_t key[], uint8_t w[]) {
     }
 }
 
-/* */
+/* Encrypts a single block of data using the AES algorithm. */
 
 void AES::encryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys) 
 {
@@ -638,7 +638,7 @@ void AES::encryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys)
     }
 }
 
-/* */
+/* Decrypts a single block of data using the AES algorithm. */
 
 void AES::decryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys) 
 {
@@ -669,7 +669,7 @@ void AES::decryptBlock(const uint8_t in[], uint8_t out[], uint8_t* roundKeys)
     }
 }
 
-/* */
+/* Performs the XOR operation on two blocks of data. */
 
 void AES::xorBlocks(const uint8_t *a, const uint8_t *b, uint8_t *c, uint32_t len) 
 {

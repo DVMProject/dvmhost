@@ -34,7 +34,7 @@ namespace p25
              *  GRP VCH GRANT - Group Voice Channel Grant (OSP).
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API IOSP_GRP_VCH : public TSBK {
+            class DVM_COMMON_API IOSP_GRP_VCH : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the IOSP_GRP_VCH class.

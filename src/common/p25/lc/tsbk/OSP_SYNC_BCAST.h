@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SYNC BCAST - Synchronization Broadcast
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_SYNC_BCAST : public TSBK {
+            class DVM_COMMON_API OSP_SYNC_BCAST : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_SYNC_BCAST class.

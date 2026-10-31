@@ -182,6 +182,7 @@ namespace p25
             std::unordered_map<uint8_t, uint8_t> m_sccbUpdateCnt;
 
             std::unordered_map<uint32_t, ulong64_t> m_llaDemandTable;
+            std::vector<uint32_t> m_llaDeferredAuthList;
 
             uint8_t m_lastMFID;
 

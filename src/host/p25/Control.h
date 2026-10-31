@@ -34,6 +34,7 @@
 #include "common/network/NetRPC.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/Network.h"
+#include "common/p25/kmm/KeysetItem.h"
 #include "common/p25/SiteData.h"
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
@@ -50,6 +51,14 @@
 #include <unordered_map>
 #include <random>
 #include <mutex>
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 namespace p25
 {
@@ -277,6 +286,9 @@ namespace p25
 
     private:
         friend class packet::Voice;
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::HostTestHooks;
+#endif
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
@@ -307,8 +319,9 @@ namespace p25
         bool m_voiceOnControl;
         bool m_controlOnly;
         bool m_ackTSBKRequests;
-        bool m_disableNetworkGrant;
+        bool m_allowRFGrantTGSteering;
         bool m_disableNetworkHDU;
+        bool m_hideRemoteGrantLog;
         bool m_allowExplicitSourceId;
         bool m_convNetGrantDemand;
         bool m_sndcpSupport;
@@ -350,10 +363,10 @@ namespace p25
         bool m_ccPrevRunning;
         bool m_ccHalted;
 
-        Timer m_rfTimeout;
+        Timer m_rfTimeoutTimer;
         Timer m_rfTGHang;
         Timer m_rfLossWatchdog;
-        Timer m_netTimeout;
+        Timer m_netTimeoutTimer;
         Timer m_netTGHang;
         Timer m_networkWatchdog;
 
@@ -379,10 +392,16 @@ namespace p25
 
         std::mt19937 m_random;
 
-        uint8_t* m_llaK;
-        uint8_t* m_llaRS;
-        uint8_t* m_llaCRS;
-        uint8_t* m_llaKS;
+        /**
+         * @brief Struct to hold LLA data for a given Radio ID for FNE KMM LLA responses.
+         */
+        struct LLAParams {
+            uint8_t* k;
+            uint8_t* rs;
+            uint8_t* crs;
+            uint8_t* ks;
+        };
+        std::unordered_map<uint32_t, LLAParams*> m_llaRID;
 
         NID m_nid;
 
@@ -394,6 +413,9 @@ namespace p25
         uint8_t m_minRSSI;
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
+
+        bool m_rfTimeout;
+        bool m_netTimeout;
 
         static std::mutex s_activeTGLock;
         bool m_ccNotifyActiveTG;
@@ -413,7 +435,7 @@ namespace p25
          * @param net Flag indicating whether the data came from the network or not
          * @param imm Flag indicating whether or not the data is priority and is added to the immediate queue.
          */
-        void addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
+        bool addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
 
         /**
          * @brief Process a data frames from the network.
@@ -421,8 +443,9 @@ namespace p25
         void processNetwork();
         /**
          * @brief Helper to process loss of frame stream from modem.
+         * @param type Type of RF frame loss.
          */
-        void processFrameLoss();
+        void processFrameLoss(RPT_RF_LOSS_TYPE type);
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.
@@ -503,9 +526,27 @@ namespace p25
         /** @} */
 
         /**
-         * @brief Helper to setup and generate LLA AM1 parameters.
+         * @brief Helper to retrieve LLA AM1 parameters for a given source ID.
+         * @param srcId Source ID.
+         * @param[out] rs Buffer to store generated RS parameter.
+         * @param[out] crs Buffer to store generated CRS parameter.
+         * @param[out] ks Buffer to store generated KS parameter.
+         * @returns bool True, if LLA AM1 parameters were successfully retrieved, otherwise false
          */
-        void generateLLA_AM1_Parameters();
+        bool getLLA_AM1_Parameters(uint32_t srcId, uint8_t* rs, uint8_t* crs, uint8_t* ks);
+        /**
+         * @brief Helper to clear LLA AM1 parameters for a given source ID.
+         * @param srcId Source ID.
+         */
+        void clearLLA_AM1_Parameters(uint32_t srcId);
+
+        /**
+         * @brief Helper to process a FNE KMM LLA response.
+         * @param srcId Source Radio ID for the LLA response.
+         * @param ki Key Item.
+         * @param keyLength Length of key in bytes.
+         */
+        void processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* ki, uint8_t keyLength);
     };
 } // namespace p25
 

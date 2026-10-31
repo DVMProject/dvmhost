@@ -138,11 +138,42 @@ TEST_CASE("Golay24128 encode24128 detects uncorrectable errors", "[edac][golay24
     }
 }
 
-/*
-** NOTE: Three-bit error correction test disabled. While Golay(24,12,8) theoretically
-** corrects up to 3 errors, the underlying getSyndrome23127 has edge case bugs that
-** can cause incorrect decoding with certain error patterns.
-*/
+TEST_CASE("Golay24128 encode24128 accepts all correctable <=3-bit errors", "[edac][golay24128]") {
+    const uint32_t testValues[] = {0x000U, 0xA5AU};
+
+    // Test all correctable error patterns (1, 2, and 3 bit errors) for each test value
+    for (auto original : testValues) {
+        uint32_t encoded = Golay24128::encode24128(original);
+
+        // Test single-bit errors first
+        for (uint32_t i = 0U; i < 24U; i++) {
+            uint32_t corrupted = encoded ^ (1U << i);
+            uint32_t decoded;
+            bool result = Golay24128::decode24128(corrupted, decoded);
+
+            REQUIRE(result);
+            REQUIRE(decoded == original);
+
+            // Test two-bit errors next
+            for (uint32_t j = i + 1U; j < 24U; j++) {
+                corrupted = encoded ^ (1U << i) ^ (1U << j);
+                result = Golay24128::decode24128(corrupted, decoded);
+
+                REQUIRE(result);
+                REQUIRE(decoded == original);
+
+                // Test three-bit errors next
+                for (uint32_t k = j + 1U; k < 24U; k++) {
+                    corrupted = encoded ^ (1U << i) ^ (1U << j) ^ (1U << k);
+                    result = Golay24128::decode24128(corrupted, decoded);
+
+                    REQUIRE(result);
+                    REQUIRE(decoded == original);
+                }
+            }
+        }
+    }
+}
 
 TEST_CASE("Golay24128 encode24128 byte array interface works", "[edac][golay24128]") {
     // Test the byte array encode/decode interface

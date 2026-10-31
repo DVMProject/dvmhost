@@ -19,6 +19,14 @@ else ()
     message(CHECK_PASS "no")
 endif (ENABLE_TESTS)
 
+option(SHARED_LIBS "Build dvmcommon and vocoder as shared libraries" off)
+message(CHECK_START "Build dvmcommon and vocoder as shared libraries")
+if (SHARED_LIBS)
+    message(CHECK_PASS "yes")
+else ()
+    message(CHECK_PASS "no")
+endif (SHARED_LIBS)
+
 option(ENABLE_TUI_SUPPORT "Enable TUI support" on)
 message(CHECK_START "Enable TUI support")
 if (ENABLE_TUI_SUPPORT)
@@ -40,6 +48,7 @@ option(CROSS_COMPILE_AARCH64 "Cross-compile for 64-bit ARM" off)
 option(COMPILE_WIN32 "Compile for Win32" off)
 
 set(ENABLE_LIBDW_SUPPORT ON)
+option(ENABLE_BACKWARD "Enable support for backtraces" ON)
 
 if (COMPILE_WIN32)
     set(ARCH amd64)
@@ -151,6 +160,8 @@ if (COMPILE_WIN32)
     set(CMAKE_CXX_FLAGS_RELEASE "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
 endif (COMPILE_WIN32)
 
+message(STATUS "GCC version ${CMAKE_CXX_COMPILER_VERSION}")
+
 set(CMAKE_INSTALL_PREFIX "/usr/local")
 
 #
@@ -187,36 +198,40 @@ if (NOT DISABLE_WEBSOCKETS)
             GIT_TAG 4dfe1be74e684acca19ac1cf96cce0df9eac2a2d # 0.8.2 with modified CMake version
         )
         FetchContent_MakeAvailable(WEBSOCKETPP)
-        add_subdirectory(${websocketpp_SOURCE_DIR} EXCLUDE_FROM_ALL)
         set(WEBSOCKETPP_INCLUDED 1)
     endif (NOT WEBSOCKETPP_INCLUDED)
 endif (NOT DISABLE_WEBSOCKETS)
 
 # elfutils (libdw-dev)
-if (ENABLE_LIBDW_SUPPORT)
-    find_path(LIBDW_INCLUDE_DIR NAMES elfutils/libdw.h elfutils/libdwfl.h HINTS /usr /usr/local PATH_SUFFIXES include)
+if (ENABLE_BACKWARD)
+    if (ENABLE_LIBDW_SUPPORT)
+        find_path(LIBDW_INCLUDE_DIR NAMES elfutils/libdw.h elfutils/libdwfl.h HINTS /usr /usr/local PATH_SUFFIXES include)
 
-    include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(Libdw DEFAULT_MSG LIBDW_INCLUDE_DIR)
+        include(FindPackageHandleStandardArgs)
+        find_package_handle_standard_args(Libdw DEFAULT_MSG LIBDW_INCLUDE_DIR)
 
-    if (LIBDW_FOUND)
-        message("-- libdw (libdw-dev) found, detailed backtrace support enabled")
-        add_definitions(-DBACKWARD_HAS_DW=1)
-        set(LIBDW_LIBRARY "dw")
+        if (LIBDW_FOUND)
+            message("-- libdw (libdw-dev) found, detailed backtrace support enabled")
+            add_definitions(-DBACKWARD_HAS_DW=1)
+            set(LIBDW_LIBRARY "dw")
+        else()
+            message("-- libdw (libdw-dev) not found, simple backtrace only")
+            add_definitions(-DBACKWARD_HAS_DW=0 -DBACKWARD_HAS_BACKTRACE_SYMBOL=1)
+            set(LIBDW_INCLUDE_DIR "")
+            set(LIBDW_LIBRARY "")
+        endif (LIBDW_FOUND)
+
+        mark_as_advanced(LIBDW_INCLUDE_DIR LIBDW_LIBRARY)
     else()
-        message("-- libdw (libdw-dev) not found, simple backtrace only")
+        message("-- libdw (libdw-dev) disabled, simple backtrace only")
         add_definitions(-DBACKWARD_HAS_DW=0 -DBACKWARD_HAS_BACKTRACE_SYMBOL=1)
         set(LIBDW_INCLUDE_DIR "")
         set(LIBDW_LIBRARY "")
-    endif (LIBDW_FOUND)
-
-    mark_as_advanced(LIBDW_INCLUDE_DIR LIBDW_LIBRARY)
+    endif (ENABLE_LIBDW_SUPPORT)
 else()
-    message("-- libdw (libdw-dev) disabled, simple backtrace only")
-    add_definitions(-DBACKWARD_HAS_DW=0 -DBACKWARD_HAS_BACKTRACE_SYMBOL=1)
-    set(LIBDW_INCLUDE_DIR "")
-    set(LIBDW_LIBRARY "")
-endif (ENABLE_LIBDW_SUPPORT)
+    message("-- backtrace has been disabled per user request. Here be dragons!")
+    add_definitions(-DBACKWARD_HAS_BACKTRACE_SYMBOL=0 -DBACKWARD_SYSTEM_UNKNOWN=1)
+endif (ENABLE_BACKWARD)
 
 # FinalCut
 if (ENABLE_TUI_SUPPORT AND NOT FC_INCLUDED)
@@ -247,6 +262,9 @@ project(dvm)
 include(src/CMakeLists.txt)
 
 if (ENABLE_TESTS)
+    include(CTest)
+    enable_testing()
+
     include(tests/CMakeLists.txt)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
     Include(FetchContent)
@@ -258,6 +276,9 @@ if (ENABLE_TESTS)
     )
     
     FetchContent_MakeAvailable(Catch2)
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+    include(Catch)
+
     find_package(Threads REQUIRED)
     
     # add ASIO
@@ -265,10 +286,21 @@ if (ENABLE_TESTS)
     target_compile_definitions(asio::asio INTERFACE "ASIO_STANDALONE")
     target_link_libraries(asio::asio INTERFACE Threads::Threads)
     
-    add_executable(dvmtests ${common_INCLUDE} ${dvmhost_SRC} ${dvmtests_SRC})
+    set(dvmfnetest_SRC ${dvmfne_SRC})
+    list(FILTER dvmfnetest_SRC EXCLUDE REGEX "/FNEMain\\.cpp$")
+    list(FILTER dvmfnetest_SRC EXCLUDE REGEX "/ActivityLog\\.cpp$")
+    list(FILTER dvmfnetest_SRC EXCLUDE REGEX "/HostFNE\\.cpp$")
+    add_executable(dvmtests ${common_INCLUDE} ${dvmhost_SRC} ${dvmfnetest_SRC} ${dvmtests_SRC} src/remote/RESTClient.cpp)
     target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
     target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
-    target_include_directories(dvmtests PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host tests)
+    target_include_directories(dvmtests PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/fne tests)
+    if (SHARED_LIBS AND NOT COMPILE_WIN32)
+        set_target_properties(dvmtests PROPERTIES
+            BUILD_RPATH_USE_ORIGIN TRUE
+            BUILD_RPATH "$ORIGIN;/opt/dvm/bin;/opt/dvm/lib;/usr/local/bin;/usr/local/lib;/usr/bin"
+            INSTALL_RPATH "$ORIGIN;/opt/dvm/bin;/opt/dvm/lib;/usr/local/bin;/usr/local/lib;/usr/bin")
+    endif ()
+    catch_discover_tests(dvmtests)
 endif (ENABLE_TESTS)
 
 #
@@ -283,6 +315,12 @@ install(TARGETS tged DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 endif (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
 install(TARGETS dvmbridge DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(TARGETS dvmpatch DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+if (SHARED_LIBS)
+    install(TARGETS common vocoder
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+endif (SHARED_LIBS)
 install(FILES configs/config.example.yml configs/fne-config.example.yml configs/fne-sysview.example.yml configs/monitor-config.example.yml configs/iden_table.example.dat configs/RSSI.dat configs/rid_acl.example.dat configs/talkgroup_rules.example.yml configs/bridge-config.example.yml configs/patch-config.example.yml DESTINATION ${CMAKE_INSTALL_PREFIX}/etc)
 install(PROGRAMS tools/start-dvm.sh tools/stop-dvm.sh tools/dvm-watchdog.sh tools/stop-watchdog.sh tools/fne-watchdog.sh tools/start-dvm-fne.sh DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(CODE "execute_process(COMMAND bash \"-c\" \"sed -i 's/filePath: ./filePath: \\\\/var\\\\/log\\\\//' /usr/local/etc/config.example.yml\")")

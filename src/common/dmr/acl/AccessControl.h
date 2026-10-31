@@ -36,7 +36,7 @@ namespace dmr
          * @brief Implements radio and talkgroup ID access control checking.
          * @ingroup dmr
          */
-        class HOST_SW_API AccessControl {
+        class DVM_COMMON_API AccessControl {
         public:
             /**
              * @brief Initializes the DMR access control.

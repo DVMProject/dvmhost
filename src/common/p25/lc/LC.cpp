@@ -25,7 +25,118 @@ using namespace p25::lc;
 
 #include <cstdio>
 #include <cassert>
+#include <algorithm>
 #include <cstring>
+
+// ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+const uint64_t P25_P2_SCRAMBLER_MASK = ((1ULL << 44U) - 1ULL);
+const uint32_t P25_P2_SCRAMBLER_SUPERFRAME_BITS = 4320U;
+
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Advances the P25 Phase 2 scrambler state by one step.
+ * @param state Current scrambler state.
+ * @returns uint64_t New scrambler state.
+ */
+inline uint64_t p25P2ScramblerStep(uint64_t state)
+{
+    uint64_t feedback = ((state >> 43U) ^ (state >> 39U) ^ (state >> 34U) ^
+        (state >> 28U) ^ (state >> 23U) ^ (state >> 9U)) & 0x01U;
+    return (((state << 1U) & P25_P2_SCRAMBLER_MASK) | feedback);
+}
+
+/**
+ * @brief Gets the output of the P25 Phase 2 scrambler.
+ * @param state Current scrambler state.
+ * @returns bool Scrambler output bit.
+ */
+inline bool p25P2ScramblerOutput(uint64_t state)
+{
+    return ((state >> 43U) & 0x01U) == 0x01U;
+}
+
+/**
+ * @brief Applies a P25 Phase 2 scrambler transform to a state.
+ * @param basis Basis transform to apply.
+ * @param state Current scrambler state.
+ * @returns uint64_t New scrambler state.
+ */
+uint64_t p25P2ApplyTransform(const uint64_t* basis, uint64_t state)
+{
+    uint64_t value = 0U;
+    for (uint8_t bit = 0U; bit < 44U; bit++) {
+        if (((state >> bit) & 0x01U) == 0x01U)
+            value ^= basis[bit];
+    }
+    return value & P25_P2_SCRAMBLER_MASK;
+}
+
+/**
+ * @brief Composes two P25 Phase 2 scrambler transforms.
+ * @param out Output transform.
+ * @param lhs Left-hand side transform.
+ * @param rhs Right-hand side transform.
+ * @returns uint64_t New scrambler state.
+ */
+void p25P2ComposeTransform(uint64_t* out, const uint64_t* lhs, const uint64_t* rhs)
+{
+    for (uint8_t bit = 0U; bit < 44U; bit++)
+        out[bit] = p25P2ApplyTransform(rhs, lhs[bit]);
+}
+
+/**
+ * @brief Advances the P25 Phase 2 scrambler state by a number of cycles.
+ * @param state Current scrambler state.
+ * @param cycles Number of cycles to advance.
+ * @returns uint64_t New scrambler state.
+ */
+uint64_t p25P2AdvanceScrambler(uint64_t state, uint64_t cycles)
+{
+    uint64_t basis[44U];
+    for (uint8_t bit = 0U; bit < 44U; bit++)
+        basis[bit] = p25P2ScramblerStep(1ULL << bit);
+
+    while (cycles != 0U) {
+        if ((cycles & 0x01U) == 0x01U)
+            state = p25P2ApplyTransform(basis, state);
+
+        uint64_t squared[44U];
+        p25P2ComposeTransform(squared, basis, basis);
+        ::memcpy(basis, squared, sizeof(squared));
+        cycles >>= 1U;
+    }
+
+    return state & P25_P2_SCRAMBLER_MASK;
+}
+
+/**
+ * @brief Gets the initial P25 Phase 2 scrambler state for a given network and system ID.
+ * @param netId P25 Network ID.
+ * @param sysId P25 System ID.
+ * @param colorCode P25 Color Code.
+ * @param inbound Flag indicating if the scrambler is for inbound (true) or outbound (false) traffic.
+ * @returns uint64_t Initial scrambler state.
+ */
+uint64_t p25P2InitialScramblerState(uint32_t netId, uint32_t sysId, uint16_t colorCode, bool inbound)
+{
+    uint64_t state = (((uint64_t)P25Utils::netId(netId) & 0xFFFFFU) << 24U) |
+        (((uint64_t)P25Utils::sysId(sysId) & 0x0FFFU) << 12U) |
+        ((uint64_t)colorCode & 0x0FFFU);
+
+    if (state == 0U)
+        state = P25_P2_SCRAMBLER_MASK;
+
+    if (inbound)
+        state = p25P2AdvanceScrambler(state, (1ULL << 43U));
+
+    return state & P25_P2_SCRAMBLER_MASK;
+}
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -77,15 +188,19 @@ LC::LC() :
     m_macPduOffset(P2_MAC_HEADER_OFFSET::NO_VOICE_OR_UNK),
     m_macPartition(P2_MAC_MCO_PARTITION::ABBREVIATED),
     m_rsValue(0U),
+    m_fecErrs(-1),
     p2MCOData(nullptr),
     m_rs(),
     m_encryptOverride(false),
     m_tsbkVendorSkip(false),
+    m_p2ScrambleOffset(0U),
+    m_p2ScrambleOffsetValid(false),
     m_callTimer(0U),
     m_mi(nullptr),
     m_userAlias(nullptr),
     m_gotUserAliasPartA(false),
-    m_gotUserAlias(false)
+    m_gotUserAlias(false),
+    m_p2MCODataLength(0U)
 {
     m_mi = new uint8_t[MI_LENGTH_BYTES];
     ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
@@ -152,7 +267,9 @@ bool LC::decodeHDU(const uint8_t* data, bool rawOnly)
 
     // decode RS (36,20,17) FEC
     try {
-        bool ret = m_rs.decode362017(rs);
+        int8_t errs = -1;
+        bool ret = m_rs.decode362017(rs, &errs);
+        m_fecErrs = errs;
         if (!ret) {
             LogError(LOG_P25, "LC::decodeHDU(), failed to decode RS (36,20,17) FEC");
             return false;
@@ -287,13 +404,16 @@ bool LC::decodeLDU1(const uint8_t* data, bool rawOnly)
 
     // decode RS (24,12,13) FEC
     try {
-        bool ret = m_rs.decode241213(rs);
+        int8_t errs = -1;
+        bool ret = m_rs.decode241213(rs, &errs);
+        m_fecErrs = errs;
         if (!ret) {
             LogError(LOG_P25, "LC::decodeLDU1(), failed to decode RS (24,12,13) FEC");
             return false;
         }
     }
     catch (...) {
+        m_fecErrs = -1;
         Utils::dump(2U, "P25, LC::decodeLDU1(), RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         return false;
     }
@@ -386,13 +506,16 @@ bool LC::decodeLDU2(const uint8_t* data)
 
     // decode RS (24,16,9) FEC
     try {
-        bool ret = m_rs.decode24169(rs);
+        int8_t errs = -1;
+        bool ret = m_rs.decode24169(rs, &errs);
+        m_fecErrs = errs;
         if (!ret) {
             LogError(LOG_P25, "LC::decodeLDU2(), failed to decode RS (24,16,9) FEC");
             return false;
         }
     }
     catch (...) {
+        m_fecErrs = -1;
         Utils::dump(2U, "P25, LC::decodeLDU2(), RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);
         return false;
     }
@@ -495,7 +618,7 @@ bool LC::decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync)
     uint32_t lengthBytes = sync ? P25_P2_IEMI_WSYNC_LENGTH_BYTES : P25_P2_IEMI_LENGTH_BYTES;
 
     // decode the Phase 2 DUID
-    uint8_t duid[1U], raw[P25_P2_IEMI_LENGTH_BYTES];  // Use max size for stack allocation
+    uint8_t duid[2U], raw[P25_P2_IEMI_LENGTH_BYTES];  // Use max size for stack allocation
     ::memset(duid, 0x00U, 1U);
     ::memset(raw, 0x00U, lengthBytes);
 
@@ -534,22 +657,34 @@ bool LC::decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync)
 
     m_p2DUID = duid[0U] >> 4U;
 
-    if (m_p2DUID == P2_DUID::VTCH_4V || m_p2DUID == P2_DUID::VTCH_2V || !sync)
+    if (m_p2DUID == P2_DUID::VTCH_4V || m_p2DUID == P2_DUID::VTCH_2V)
         return true; // don't handle 4V or 2V voice PDUs here -- user code will handle
     else {
         ::memset(raw, 0x00U, lengthBytes);
 
-        // IEMI with sync: extract data bits (skip 14-bit sync and DUIDs)
+        const uint8_t* source = data;
+        uint8_t burst[P25_P2_FRAME_LENGTH_BYTES];
+        if (m_p2DUID == P2_DUID::FACCH_SCRAMBLED || m_p2DUID == P2_DUID::SACCH_SCRAMBLED) {
+            ::memset(burst, 0x00U, P25_P2_FRAME_LENGTH_BYTES);
+            ::memcpy(burst, data, P25_P2_FRAME_LENGTH_BYTES);
+            applyP2Scrambler(burst, true, sync);
+            source = burst;
+        }
+
+        // extract the four information fields, skipping sync (when present) and DUIDs
         for (uint32_t i = 0U; i < lengthBits; i++) {
-            uint32_t n = i + 14U; // Skip 14-bit sync
-            if (i >= 36U)
+            uint32_t n = i + (sync ? 14U : 0U);
+            uint32_t field1 = sync ? 36U : 72U;
+            uint32_t field2 = field1 + 72U;
+            uint32_t field3 = field2 + 96U;
+            if (i >= field1)
                 n += 2U; // skip DUID 1 after field 1 (36 bits)
-            if (i >= 108U)
+            if (i >= field2)
                 n += 2U; // skip DUID 2 after field 2 (36+72)
-            if (i >= 204U)
+            if (i >= field3)
                 n += 2U; // skip DUID 3 after field 3 (36+72+96)
 
-            bool b = READ_BIT(data, n);
+            bool b = READ_BIT(source, n);
             WRITE_BIT(raw, i, b);
         }
 
@@ -559,7 +694,9 @@ bool LC::decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync)
 
         // decode RS (46,26,21) FEC
         try {
-            bool ret = m_rs.decode462621(raw);
+            int8_t errs = -1;
+            bool ret = m_rs.decode462621(raw, &errs);
+            m_fecErrs = errs;
             if (!ret) {
                 LogError(LOG_P25, "LC::decodeVCH_MACPDU_IEMI(), failed to decode RS (46,26,21) FEC");
                 return false;
@@ -574,20 +711,62 @@ bool LC::decodeVCH_MACPDU_IEMI(const uint8_t* data, bool sync)
         Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_IEMI(), MAC PDU", raw, lengthBytes);
 #endif
 
-        // are we decoding a FACCH with scrambling?
-        if (m_p2DUID == P2_DUID::FACCH_SCRAMBLED) {
-            /* TODO: if scrambled handle scrambling */
-        }
-
-        // are we decoding a SACCH with scrambling?
-        if (m_p2DUID == P2_DUID::SACCH_SCRAMBLED) {
-            /* TODO: if scrambled handle scrambling */
-        }
-
         return decodeMACPDU(raw, P25_P2_IEMI_MAC_LENGTH_BITS);
     }
 
     return true;
+}
+
+/* Encode an inbound/IEMI VCH MAC PDU. */
+
+void LC::encodeVCH_MACPDU_IEMI(uint8_t* data, bool sync)
+{
+    assert(data != nullptr);
+    ::memset(data, 0x00U, P25_P2_FRAME_LENGTH_BYTES);
+
+    uint32_t lengthBits = sync ? P25_P2_IEMI_WSYNC_LENGTH_BITS : P25_P2_IEMI_LENGTH_BITS;
+    uint8_t raw[P25_P2_IEMI_LENGTH_BYTES] = { 0U };
+    if (m_p2DUID != P2_DUID::VTCH_4V && m_p2DUID != P2_DUID::VTCH_2V) {
+        // encode the MAC PDU into the raw buffer, apply RS encoding, and map it into the data buffer
+        encodeMACPDU(raw, P25_P2_IEMI_MAC_LENGTH_BITS);
+        m_rs.encode462621(raw);
+
+        // map the encoded MAC PDU bits into the data buffer, accounting for sync and DUID fields
+        for (uint32_t i = 0U; i < lengthBits; i++) {
+            uint32_t field1 = sync ? 36U : 72U;
+            uint32_t field2 = field1 + 72U;
+            uint32_t field3 = field2 + 96U;
+            uint32_t n = i + (sync ? 14U : 0U);
+            if (i >= field1)
+                n += 2U; // skip DUID 1 after field 1 (36 bits)
+            if (i >= field2)
+                n += 2U; // skip DUID 2 after field 2 (36+72)
+            if (i >= field3)
+                n += 2U; // skip DUID 3 after field 3 (36+72+96)
+
+            WRITE_BIT(data, n, READ_BIT(raw, i));
+        }
+    }
+
+    uint8_t duidRaw[2U] = { static_cast<uint8_t>((m_p2DUID & 0x0FU) << 4U), 0U };
+    uint8_t duid[2U] = { 0U };
+
+    // encode the Phase 2 DUID into the duid buffer using Hamming code
+    encodeP2_DUIDHamming(duid, duidRaw);
+    for (uint8_t i = 0U; i < 8U; i++) {
+        uint32_t n = i + (sync ? 50U : 72U);
+        if (i >= 2U) 
+            n += 72U; // skip field 2
+        if (i >= 4U) 
+            n += 96U; // skip field 3
+        if (i >= 6U) 
+            n += 72U; // skip field 4
+
+        WRITE_BIT(data, n, READ_BIT(duid, i));
+    }
+
+    if (m_p2DUID == P2_DUID::FACCH_SCRAMBLED || m_p2DUID == P2_DUID::SACCH_SCRAMBLED)
+        applyP2Scrambler(data, true, sync);
 }
 
 /* Decode a xOEMI VCH MAC PDU. */
@@ -597,7 +776,7 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
     assert(data != nullptr);
 
     // decode the Phase 2 DUID
-    uint8_t duid[1U], raw[P25_P2_IEMI_LENGTH_BYTES];
+    uint8_t duid[2U], raw[P25_P2_IEMI_LENGTH_BYTES];
     ::memset(duid, 0x00U, 1U);
     ::memset(raw, 0x00U, P25_P2_IEMI_LENGTH_BYTES);
 
@@ -618,10 +797,21 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
 
     m_p2DUID = duid[0U] >> 4U;
 
+    bool scrambledBurst = (m_p2DUID == P2_DUID::FACCH_SCRAMBLED || m_p2DUID == P2_DUID::SACCH_SCRAMBLED);
+
     if (m_p2DUID == P2_DUID::VTCH_4V || m_p2DUID == P2_DUID::VTCH_2V)
         return true; // don't handle 4V or 2V voice PDUs here -- user code will handle
     else {
         ::memset(raw, 0x00U, P25_P2_IEMI_LENGTH_BYTES);
+
+        const uint8_t* source = data;
+        uint8_t burst[P25_P2_FRAME_LENGTH_BYTES];
+        if (scrambledBurst) {
+            ::memset(burst, 0x00U, P25_P2_FRAME_LENGTH_BYTES);
+            ::memcpy(burst, data, P25_P2_FRAME_LENGTH_BYTES);
+            applyP2Scrambler(burst, false, sync);
+            source = burst;
+        }
 
         if (sync) {
             for (uint32_t i = 0U; i < P25_P2_SOEMI_LENGTH_BITS; i++) {
@@ -633,7 +823,7 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
                 if (i >= 198U)
                     n += 2U; // skip DUID 3
 
-                bool b = READ_BIT(data, n);
+                bool b = READ_BIT(source, n);
                 WRITE_BIT(raw, i, b);
             }
 
@@ -643,7 +833,9 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
 
             // decode RS (45,26,20) FEC
             try {
-                bool ret = m_rs.decode452620(raw);
+                int8_t errs = -1;
+                bool ret = m_rs.decode452620(raw, &errs);
+                m_fecErrs = errs;
                 if (!ret) {
                     LogError(LOG_P25, "LC::decodeVCH_MACPDU_OEMI(), failed to decode RS (45,26,20) FEC");
                     return false;
@@ -657,6 +849,7 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
 #if DEBUG_P25_MAC_PDU
             Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
 #endif
+
         } else {
             for (uint32_t i = 0U; i < P25_P2_IEMI_LENGTH_BITS; i++) {
                 uint32_t n = i + 2U; // skip DUID 1
@@ -664,8 +857,10 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
                     n += 2U; // skip DUID 2
                 if (i >= 168U)
                     n += 2U; // skip DUID 3
+                if (i >= 240U)
+                    n += 2U; // skip DUID 4
 
-                bool b = READ_BIT(data, n);
+                bool b = READ_BIT(source, n);
                 WRITE_BIT(raw, i, b);
             }
 
@@ -675,7 +870,9 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
 
             // decode RS (52,30,23) FEC
             try {
-                bool ret = m_rs.decode523023(raw);
+                int8_t errs = -1;
+                bool ret = m_rs.decode523023(raw, &errs);
+                m_fecErrs = errs;
                 if (!ret) {
                     LogError(LOG_P25, "LC::decodeVCH_MACPDU_OEMI(), failed to decode RS (52,30,23) FEC");
                     return false;
@@ -689,16 +886,6 @@ bool LC::decodeVCH_MACPDU_OEMI(const uint8_t* data, bool sync)
 #if DEBUG_P25_MAC_PDU
             Utils::dump(2U, "P25, LC::decodeVCH_MACPDU_OEMI(), MAC PDU", raw, P25_P2_IEMI_LENGTH_BYTES);
 #endif
-        }
-
-        // are we decoding a FACCH with scrambling?
-        if (m_p2DUID == P2_DUID::FACCH_SCRAMBLED) {
-            /* TODO: if scrambled handle scrambling */
-        }
-
-        // are we decoding a SACCH with scrambling?
-        if (m_p2DUID == P2_DUID::SACCH_SCRAMBLED) {
-            /* TODO: if scrambled handle scrambling */
         }
 
         return decodeMACPDU(raw, sync ? P25_P2_SOEMI_MAC_LENGTH_BITS : P25_P2_IOEMI_MAC_LENGTH_BITS);
@@ -743,6 +930,7 @@ void LC::encodeVCH_MACPDU(uint8_t* data, bool sync)
                 bool b = READ_BIT(raw, i);
                 WRITE_BIT(data, n, b);
             }
+
         } else {
             // encode RS (52,30,23) FEC
             m_rs.encode523023(raw);
@@ -756,10 +944,13 @@ void LC::encodeVCH_MACPDU(uint8_t* data, bool sync)
                     n += 2U; // skip DUID 2
                 if (i >= 168U)
                     n += 2U; // skip DUID 3
+                if (i >= 240U)
+                    n += 2U; // skip DUID 4
 
                 bool b = READ_BIT(raw, i);
                 WRITE_BIT(data, n, b);
             }
+
         }
     }
 
@@ -768,11 +959,11 @@ void LC::encodeVCH_MACPDU(uint8_t* data, bool sync)
     }
 
     // encode the Phase 2 DUID
-    uint8_t duid[1U];
-    ::memset(duid, 0x00U, 1U);
+    uint8_t duid[2U];
+    ::memset(duid, 0x00U, 2U);
     duid[0U] = (m_p2DUID & 0x0FU) << 4U;
 
-    ::memset(raw, 0x00U, 1U);
+    ::memset(raw, 0x00U, 2U);
     encodeP2_DUIDHamming(raw, duid);
 
     for (uint8_t i = 0U; i < 8U; i++) {
@@ -787,6 +978,9 @@ void LC::encodeVCH_MACPDU(uint8_t* data, bool sync)
         bool b = READ_BIT(raw, i);
         WRITE_BIT(data, n, b);
     }
+
+    if (m_p2DUID == P2_DUID::FACCH_SCRAMBLED || m_p2DUID == P2_DUID::SACCH_SCRAMBLED)
+        applyP2Scrambler(data, false, sync);
 }
 
 /* Helper to determine if the MFId is a standard MFId. */
@@ -796,6 +990,32 @@ bool LC::isStandardMFId() const
     if ((m_mfId == MFG_STANDARD) || (m_mfId == MFG_STANDARD_ALT))
         return true;
     return false;
+}
+
+/* Get the Phase 2 MCO data. */
+
+uint32_t LC::getP2MCOData(uint8_t* data, uint32_t length) const
+{
+    if (data == nullptr || length == 0U || p2MCOData == nullptr)
+        return 0U;
+
+    uint32_t count = length < m_p2MCODataLength ? length : m_p2MCODataLength;
+    ::memcpy(data, p2MCOData, count);
+    return count;
+}
+
+/* Set the Phase 2 scrambler superframe bit offset. */
+
+void LC::setP2ScrambleOffset(uint16_t offset)
+{
+    m_p2ScrambleOffset = offset % P25_P2_SCRAMBLER_SUPERFRAME_BITS;
+    m_p2ScrambleOffsetValid = true;
+}
+
+void LC::clearP2ScrambleOffset()
+{
+    m_p2ScrambleOffset = 0U;
+    m_p2ScrambleOffsetValid = false;
 }
 
 /* Decode link control. */
@@ -837,20 +1057,19 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
         if (m_mfId == MFG_HARRIS) {
             // Harris P25 opcodes
             switch (m_lco) {
-            case LCO::HARRIS_USER_ALIAS_PA_ODD:
-            case LCO::HARRIS_USER_ALIAS_PA_EVEN:
+            case LCO::HARRIS_USER_ALIAS_A_ODD:
+            case LCO::HARRIS_USER_ALIAS_A_EVEN:
                 m_gotUserAliasPartA = true;
                 m_gotUserAlias = false;
 
                 if (m_userAlias != nullptr) {
                     ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
                     ::memcpy(m_userAlias, rs + 2U, 7U);
-                    m_gotUserAlias = true;
                 }
                 break;
 
-            case LCO::HARRIS_USER_ALIAS_PB_ODD:
-            case LCO::HARRIS_USER_ALIAS_PB_EVEN:
+            case LCO::HARRIS_USER_ALIAS_B_ODD:
+            case LCO::HARRIS_USER_ALIAS_B_EVEN:
                 if (m_gotUserAliasPartA && (m_userAlias != nullptr)) {
                     ::memcpy(m_userAlias + 7U, rs + 2U, 7U);
                     m_gotUserAlias = true;
@@ -947,8 +1166,8 @@ void LC::encodeLC(uint8_t* rs)
         if (m_mfId == MFG_HARRIS) {
             // Harris P25 opcodes
             switch (m_lco) {
-            case LCO::HARRIS_USER_ALIAS_PA_ODD:
-            case LCO::HARRIS_USER_ALIAS_PA_EVEN:
+            case LCO::HARRIS_USER_ALIAS_A_ODD:
+            case LCO::HARRIS_USER_ALIAS_A_EVEN:
                 if (m_userAlias != nullptr) {
                     // split ulong64_t (8 byte) value into bytes
                     rs[1U] = m_mfId;                                                // Manufacturer ID
@@ -962,8 +1181,8 @@ void LC::encodeLC(uint8_t* rs)
                 }
                 return;
 
-            case LCO::HARRIS_USER_ALIAS_PB_ODD:
-            case LCO::HARRIS_USER_ALIAS_PB_EVEN:
+            case LCO::HARRIS_USER_ALIAS_B_ODD:
+            case LCO::HARRIS_USER_ALIAS_B_EVEN:
                 if (m_userAlias != nullptr) {
                     // split ulong64_t (8 byte) value into bytes
                     rs[1U] = m_mfId;                                                // Manufacturer ID
@@ -1111,7 +1330,7 @@ bool LC::decodeMACPDU(const uint8_t* raw, uint32_t macLength)
             ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
             ::memcpy(m_mi, raw + 1U, MI_LENGTH_BYTES);                              // Message Indicator
 
-            m_kId = (raw[10U] << 8) + raw[11U];                                     // Key ID
+            m_kId = static_cast<uint16_t>(raw[11U] | (raw[12U] << 8U));              // Key ID
             if (!m_encrypted) {
                 m_encryptOverride = true;
                 m_encrypted = true;
@@ -1146,8 +1365,8 @@ bool LC::decodeMACPDU(const uint8_t* raw, uint32_t macLength)
         ** bryanb: likely will need extra work here -- IDLE,ACTIVE,HANGTIME PDUs can contain multiple
         **  MCOs; for now we're only gonna be decoding the first one...
         */
-        m_macPartition = raw[1U] >> 5U;                                             // MAC Partition
-        m_lco = raw[1U] & 0x1FU;                                                    // MCO
+        m_macPartition = raw[1U] & 0xC0U;                                           // MAC Partition
+        m_lco = raw[1U] & 0x3FU;                                                    // MCO
 
         if (m_macPartition == P2_MAC_MCO_PARTITION::UNIQUE) {
             switch (m_lco) {
@@ -1182,6 +1401,9 @@ bool LC::decodeMACPDU(const uint8_t* raw, uint32_t macLength)
                     m_srcId = GET_UINT24(raw, 5U);                                  // Source/Target Address
                 }
                 break;
+            case P2_MAC_MCO::MAC_RELEASE:
+                m_srcId = GET_UINT24(raw, 3U);                                      // Source Radio Address
+                break;
 
             case P2_MAC_MCO::PDU_NULL:
                 break;
@@ -1197,11 +1419,9 @@ bool LC::decodeMACPDU(const uint8_t* raw, uint32_t macLength)
                 delete[] p2MCOData;
 
             uint32_t macLengthBytes = (macLength / 8U) + ((macLength % 8U) ? 1U : 0U);
-            p2MCOData = new uint8_t[macLengthBytes];
-            ::memset(p2MCOData, 0x00U, macLengthBytes);
-
-            // this will include the entire MCO (and depending on message length multiple MCOs)
-            ::memcpy(p2MCOData, raw + 1U, macLengthBytes - 3U); // excluding MAC PDU header and CRC
+            m_p2MCODataLength = macLengthBytes - 3U;
+            p2MCOData = new uint8_t[m_p2MCODataLength];
+            ::memcpy(p2MCOData, raw + 1U, m_p2MCODataLength);
         }
         break;
 
@@ -1248,8 +1468,8 @@ void LC::encodeMACPDU(uint8_t* raw, uint32_t macLength)
         ** bryanb: likely will need extra work here -- IDLE,ACTIVE,HANGTIME PDUs can contain multiple
         **  MCOs; for now we're only gonna be decoding the first one...
         */
-        raw[1U] = ((m_macPartition & 0x07U) << 5U) +                                // MAC Partition
-            (m_lco & 0x1FU);                                                        // MCO
+        raw[1U] = (m_macPartition & 0xC0U) +                                        // MAC Partition
+            (m_lco & 0x3FU);                                                        // MCO
 
         if (m_macPartition == P2_MAC_MCO_PARTITION::UNIQUE) {
             switch (m_lco) {
@@ -1335,11 +1555,12 @@ void LC::getMI(uint8_t* mi) const
 
 std::string LC::getUserAlias() const
 {
-    std::string alias;
-    if (m_gotUserAlias) {
-        for (uint32_t i = 0; i < HARRIS_USER_ALIAS_LENGTH_BYTES; i++)
-            alias[i] = m_userAlias[i];
-    }
+    if (!m_gotUserAlias || m_userAlias == nullptr)
+        return std::string();
+
+    std::string alias(reinterpret_cast<const char*>(m_userAlias), HARRIS_USER_ALIAS_LENGTH_BYTES);
+    while (!alias.empty() && (alias.back() == '\0' || alias.back() == ' '))
+        alias.pop_back();
 
     return alias;
 }
@@ -1352,8 +1573,10 @@ void LC::setUserAlias(std::string alias)
         m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
 
     ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
-    for (uint32_t i = 0; i < HARRIS_USER_ALIAS_LENGTH_BYTES; i++)
-        m_userAlias[i] = alias[i];
+    const std::size_t length = std::min<std::size_t>(alias.length(), HARRIS_USER_ALIAS_LENGTH_BYTES);
+    ::memcpy(m_userAlias, alias.data(), length);
+    m_gotUserAliasPartA = false;
+    m_gotUserAlias = length > 0U;
 }
 
 // ---------------------------------------------------------------------------
@@ -1396,8 +1619,11 @@ void LC::copy(const LC& data)
     m_macPduOpcode = data.m_macPduOpcode;
     m_macPduOffset = data.m_macPduOffset;
     m_macPartition = data.m_macPartition;
+    m_p2ScrambleOffset = data.m_p2ScrambleOffset;
+    m_p2ScrambleOffsetValid = data.m_p2ScrambleOffsetValid;
 
     m_rsValue = data.m_rsValue;
+    m_fecErrs = data.m_fecErrs;
 
     m_algId = data.m_algId;
     if (m_algId != ALGO_UNENCRYPT) {
@@ -1431,12 +1657,14 @@ void LC::copy(const LC& data)
 
         m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
         ::memcpy(m_userAlias, data.m_userAlias, HARRIS_USER_ALIAS_LENGTH_BYTES);
+        m_gotUserAliasPartA = data.m_gotUserAliasPartA;
         m_gotUserAlias = data.m_gotUserAlias;
     } else {
         delete[] m_userAlias;
 
         m_userAlias = new uint8_t[HARRIS_USER_ALIAS_LENGTH_BYTES];
         ::memset(m_userAlias, 0x00U, HARRIS_USER_ALIAS_LENGTH_BYTES);
+        m_gotUserAliasPartA = false;
         m_gotUserAlias = false;
     }
 
@@ -1445,14 +1673,15 @@ void LC::copy(const LC& data)
         if (p2MCOData != nullptr)
             delete[] p2MCOData;
 
-        p2MCOData = new uint8_t[P25_P2_IOEMI_MAC_LENGTH_BYTES];
-        ::memset(p2MCOData, 0x00U, P25_P2_IOEMI_MAC_LENGTH_BYTES);
-        ::memcpy(p2MCOData, data.p2MCOData, P25_P2_IOEMI_MAC_LENGTH_BYTES);
+        m_p2MCODataLength = data.m_p2MCODataLength;
+        p2MCOData = new uint8_t[m_p2MCODataLength];
+        ::memcpy(p2MCOData, data.p2MCOData, m_p2MCODataLength);
     } else {
         if (p2MCOData != nullptr) {
             delete[] p2MCOData;
             p2MCOData = nullptr;
         }
+        m_p2MCODataLength = 0U;
     }
 
     s_siteData = data.s_siteData;
@@ -1571,44 +1800,98 @@ void LC::encodeHDUGolay(uint8_t* data, const uint8_t* raw)
 
 void LC::decodeP2_DUIDHamming(const uint8_t* data, uint8_t* raw)
 {
-    uint32_t n = 0U;
-    uint32_t m = 0U;
-    for (uint32_t i = 0U; i < 4U; i++) {
-        bool hamming[8U];
+    bool hamming[8U];
+    for (uint32_t i = 0U; i < 8U; i++)
+        hamming[i] = READ_BIT(data, i);
 
-        for (uint32_t j = 0U; j < 8U; j++) {
-            hamming[j] = READ_BIT(data, n);
-            n++;
-        }
-
-        edac::Hamming::decode844(hamming);
-
-        for (uint32_t j = 0U; j < 4U; j++) {
-            WRITE_BIT(raw, m, hamming[j]);
-            m++;
-        }
-    }
+    edac::Hamming::decode844(hamming);
+    for (uint32_t i = 0U; i < 4U; i++)
+        WRITE_BIT(raw, i, hamming[i]);
 }
 
 /* Encode Phase 2 DUID hamming FEC. */
 
 void LC::encodeP2_DUIDHamming(uint8_t* data, const uint8_t* raw)
 {
-    uint32_t n = 0U;
-    uint32_t m = 0U;
-    for (uint32_t i = 0U; i < 4U; i++) {
-        bool hamming[8U];
+    bool hamming[8U] = { false };
+    for (uint32_t i = 0U; i < 4U; i++)
+        hamming[i] = READ_BIT(raw, i);
 
-        for (uint32_t j = 0U; j < 4U; j++) {
-            hamming[j] = READ_BIT(raw, m);
-            m++;
+    edac::Hamming::encode844(hamming);
+    for (uint32_t i = 0U; i < 8U; i++)
+        WRITE_BIT(data, i, hamming[i]);
+}
+
+/* Apply the Phase 2 TDMA MAC burst scrambler. */
+
+void LC::applyP2Scrambler(uint8_t* data, bool inbound, bool sync)
+{
+    assert(data != nullptr);
+
+    if (!m_p2ScrambleOffsetValid) {
+        LogWarning(LOG_P25, "LC::applyP2Scrambler(), scramble offset not set, defaulting to superframe offset 0");
+    }
+
+    uint16_t cursor = 0U;
+    uint8_t fieldCount = 0U;
+    uint16_t fieldLengths[4U] = { 0U, 0U, 0U, 0U };
+    uint16_t interFieldSkips[3U] = { 0U, 0U, 0U };
+
+    // set up the initial cursor position, field lengths, and inter-field skips based on the direction and sync status
+    if (inbound) {
+        cursor = sync ? 14U : 0U;
+        fieldCount = 4U;
+        fieldLengths[0U] = sync ? 36U : 72U;
+        fieldLengths[1U] = 72U;
+        fieldLengths[2U] = 96U;
+        fieldLengths[3U] = 72U;
+        interFieldSkips[0U] = 2U;
+        interFieldSkips[1U] = 2U;
+        interFieldSkips[2U] = 2U;
+    }
+    else if (sync) {
+        cursor = 2U;
+        fieldCount = 4U;
+        fieldLengths[0U] = 72U;
+        fieldLengths[1U] = 62U;
+        fieldLengths[2U] = 64U;
+        fieldLengths[3U] = 72U;
+        interFieldSkips[0U] = 2U;
+        interFieldSkips[1U] = 42U;
+        interFieldSkips[2U] = 2U;
+    }
+    else {
+        cursor = 2U;
+        fieldCount = 4U;
+        fieldLengths[0U] = 72U;
+        fieldLengths[1U] = 96U;
+        fieldLengths[2U] = 72U;
+        fieldLengths[3U] = 72U;
+        interFieldSkips[0U] = 2U;
+        interFieldSkips[1U] = 2U;
+        interFieldSkips[2U] = 2U;
+    }
+
+    // initialize the scrambler state based on the network ID, system ID, color code, and direction
+    uint64_t state = p25P2InitialScramblerState(s_siteData.netId(), s_siteData.sysId(), m_colorCode, inbound);
+    state = p25P2AdvanceScrambler(state, (uint64_t)m_p2ScrambleOffset);
+    // Scrambler-sequence bits corresponding to leading sync/DUID positions are
+    // discarded even though those burst bits are not XORed.
+    state = p25P2AdvanceScrambler(state, cursor);
+
+    // apply the scrambler to each field, advancing the scrambler state as necessary
+    for (uint8_t field = 0U; field < fieldCount; field++) {
+        // process each bit in the current field
+        for (uint16_t bit = 0U; bit < fieldLengths[field]; bit++, cursor++) {
+            bool scrambledBit = (READ_BIT(data, cursor) != 0U) ^ p25P2ScramblerOutput(state);
+            WRITE_BIT(data, cursor, scrambledBit);
+            state = p25P2ScramblerStep(state);
         }
 
-        edac::Hamming::encode844(hamming);
-
-        for (uint32_t j = 0U; j < 8U; j++) {
-            WRITE_BIT(data, n, hamming[j]);
-            n++;
+        // advance the scrambler state for the inter-field skip
+        if (field + 1U < fieldCount) {
+            cursor += interFieldSkips[field];
+            state = p25P2AdvanceScrambler(state, interFieldSkips[field]);
         }
     }
 }

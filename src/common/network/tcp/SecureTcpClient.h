@@ -43,7 +43,7 @@ namespace network
          * @brief Implements a secure TCP client.
          * @ingroup tcp_socket
          */
-        class HOST_SW_API SecureTcpClient : public Socket
+        class DVM_COMMON_API SecureTcpClient : public Socket
         {
         public:
             auto operator=(SecureTcpClient&) -> SecureTcpClient& = delete;
