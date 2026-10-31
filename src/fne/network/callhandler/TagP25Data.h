@@ -5,6 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
  *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 /**
@@ -339,6 +340,33 @@ namespace network
              * @returns bool True, if valid, otherwise false.
              */
             bool validate(uint32_t peerId, p25::lc::LC& control, P25DEF::DUID::E duid, const p25::lc::TSBK* tsbk, uint8_t frameType, uint32_t streamId);
+
+            /**
+             * @brief Helper to determine if the P25 traffic is telephone interconnect traffic.
+             * @param control Instance of p25::lc::LC.
+             * @param duid DUID.
+             * @param[in] tsbk Instance of p25::lc::TSBK.
+             * @returns bool True, if telephone interconnect traffic, otherwise false.
+             */
+            bool isTelIntTraffic(p25::lc::LC& control, P25DEF::DUID::E duid, const p25::lc::TSBK* tsbk);
+            /**
+             * @brief Helper to determine if the peer is a telephone interconnect gateway.
+             * @param peerId Peer ID.
+             * @returns bool True, if the peer is a telephone interconnect gateway, otherwise false.
+             */
+            bool isTelIntGateway(uint32_t peerId);
+            /**
+             * @brief Helper to determine if telephone interconnect traffic may be repeated to a peer. Traffic from a
+             *  site is only repeated to gateway peers, and traffic from a gateway is only repeated to the peer the
+             *  subscriber unit is registered to and its voice channel peers (or every site, if the registration is
+             *  unknown).
+             * @param srcPeerId Originating Peer ID.
+             * @param dstPeerId Destination Peer ID.
+             * @param dstConn Instance of the FNEPeerConnection for the destination peer.
+             * @param dstId Subscriber unit radio ID.
+             * @returns bool True, if permitted, otherwise false.
+             */
+            bool isTelIntPeerPermitted(uint32_t srcPeerId, uint32_t dstPeerId, const TrafficNetwork::PeerConnectionPtr& dstConn, uint32_t dstId);
 
             /**
              * @brief Helper to write a grant packet.

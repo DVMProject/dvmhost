@@ -43,12 +43,15 @@ bool LC_TEL_INT_VCH_USER::decode(const uint8_t* data)
 
     ulong64_t rsValue = TDULC::toValue(rs);
 
+    m_group = false;
     m_emergency = (rs[2U] & 0x80U) == 0x80U;                                        // Emergency Flag
     m_encrypted = (rs[2U] & 0x40U) == 0x40U;                                        // Encryption Flag
     m_priority = (rs[2U] & 0x07U);                                                  // Priority
     m_callTimer = (uint32_t)((rsValue >> 24) & 0xFFFFU);                            // Call Timer
+    // the single address is the subscriber unit in the call, which also identifies the call
+    m_dstId = (uint32_t)(rsValue & 0xFFFFFFU);                                      // Source/Target Address
     if (m_srcId == 0U) {
-        m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source/Target Address
+        m_srcId = m_dstId;
     }
 
     return true;
@@ -64,13 +67,13 @@ void LC_TEL_INT_VCH_USER::encode(uint8_t* data)
 
     m_implicit = true;
 
-    rsValue = m_mfId;
-    rsValue = (rsValue << 8) +
+    rsValue =
         (m_emergency ? 0x80U : 0x00U) +                                             // Emergency Flag
         (m_encrypted ? 0x40U : 0x00U) +                                             // Encrypted Flag
         (m_priority & 0x07U);                                                       // Priority
-    rsValue = (rsValue << 24) + m_dstId;                                            // Target Radio Address
-    rsValue = (rsValue << 24) + m_srcId;                                            // Source Radio Address
+    rsValue = (rsValue << 8);                                                       // Reserved
+    rsValue = (rsValue << 16) + m_callTimer;                                        // Call Timer
+    rsValue = (rsValue << 24) + ((m_dstId != 0U) ? m_dstId : m_srcId);              // Source/Target Radio Address
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);
     TDULC::encode(data, rs.get());

@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 #include "Defines.h"
@@ -107,6 +108,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netLastDstId(0U),
     m_netLastSrcId(0U),
     m_permittedDstId(0U),
+    m_permittedTelInt(false),
     m_tailOnIdle(false),
     m_ccRunning(false),
     m_ccPrevRunning(false),
@@ -272,6 +274,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_control->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_control->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
+    m_control->m_telephoneInterconnect = p25Protocol["telephoneInterconnect"].as<bool>(false);
 
     m_sndcpSupport = p25Protocol["sndcpSupport"].as<bool>(false);
 
@@ -422,6 +425,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
+        m_control->m_telIntGrants.erase(dstId);
+
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
             ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
@@ -522,6 +527,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    No Status ACK: %s", m_control->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");
+        LogInfo("    Telephone Interconnect: %s", m_control->m_telephoneInterconnect ? "yes" : "no");
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
         LogInfo("    Demand Unit Registration for Refused Affiliation: %s", m_demandUnitRegForRefusedAff ? "yes" : "no");
@@ -941,8 +947,9 @@ void Control::clock()
             m_rfLastDstId = 0U;
             m_rfLastSrcId = 0U;
 
-            // reset permitted ID and clear permission state
-            if (!m_authoritative && m_permittedDstId != 0U) {
+            // reset permitted ID and clear permission state (a telephone interconnect permit is held for the
+            // whole call and only cleared by the control channel)
+            if (!m_authoritative && m_permittedDstId != 0U && !m_permittedTelInt) {
                 m_permittedDstId = 0U;
             }
 
@@ -1255,7 +1262,7 @@ void Control::clockSiteData(uint32_t ms)
 
 /* Permits a TGID on a non-authoritative host. */
 
-void Control::permittedTG(uint32_t dstId, bool dataPermit)
+void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt)
 {
     if (m_authoritative) {
         return;
@@ -1265,7 +1272,7 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
         if (dstId == 0U)
             LogInfoEx(LOG_P25, "non-authoritative TG unpermit");
         else
-            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u, telInt = %u", dstId, telInt);
     }
 
     // if this a unpermit ensure we write TDUs
@@ -1280,6 +1287,7 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
     }
 
     m_permittedDstId = dstId;
+    m_permittedTelInt = (dstId != 0U) && telInt;
 
     // is this a data permit?
     if (dataPermit && m_sndcpSupport) {
@@ -1653,9 +1661,23 @@ void Control::processNetwork()
                     return;
                 }
 
-                // validate the target ID, if the target is a talkgroup
-                if (!acl::AccessControl::validateTGId(dstId)) {
-                    return;
+                // a telephone interconnect grant demand targets the subscriber unit in dstId
+                bool telInt = (lco == LCO::TEL_INT_VCH_USER) && control.isStandardMFId();
+                if (telInt) {
+                    if (!m_control->m_telephoneInterconnect) {
+                        return;
+                    }
+
+                    // validate the target RID
+                    if (!acl::AccessControl::validateSrcId(dstId)) {
+                        return;
+                    }
+                }
+                else {
+                    // validate the target ID, if the target is a talkgroup
+                    if (!acl::AccessControl::validateTGId(dstId)) {
+                        return;
+                    }
                 }
 
                 if (grantEncrypt)
@@ -1666,28 +1688,48 @@ void Control::processNetwork()
                     (control.getPriority() & 0x07U);                                    // Priority
 
                 if (m_verbose && !m_hideRemoteGrantLog) {
-                    LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, encrypted = %u", srcId, dstId, unitToUnit, grantEncrypt);
+                    LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, telInt = %u, encrypted = %u", srcId, dstId, unitToUnit, telInt, grantEncrypt);
                 }
 
                 // are we denying the grant?
                 if (grantDenial) {
-                    m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (!unitToUnit) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH);
+                    if (telInt) {
+                        // the telephone interconnect gateway could not complete the call for the unit
+                        m_control->writeRF_TSDU_Deny(dstId, WUID_FNE, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_TELE_INT_DIAL);
+                    }
+                    else {
+                        m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (!unitToUnit) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH);
+                    }
                     return;
                 }
 
                 if (!m_affiliations->isGranted(dstId)) {
                     // perform grant response logic
-                    if (m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit, true)) {
+                    if (m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit && !telInt, true, false, 0U, telInt)) {
                         m_netLastSrcId = srcId;
                         m_netLastDstId = dstId;
                     }
+                }
+                else if (telInt) {
+                    // repeated telephone interconnect grant demands keep the call's grant alive
+                    m_affiliations->touchGrant(dstId);
                 }
 
                 return;
             }
 
+            // telephone interconnect grants are held for the whole call and only released by the TDULC that ends it
+            if (m_enableControl && m_dedicatedControl && m_control->m_telIntGrants.find(dstId) != m_control->m_telIntGrants.end()) {
+                if (duid == DUID::TDULC) {
+                    if (m_verbose) {
+                        LogInfoEx(LOG_NET, P25_TDULC_STR ", telephone interconnect call end, srcId = %u, dstId = %u", srcId, dstId);
+                    }
+
+                    m_affiliations->releaseGrant(dstId, false);
+                }
+            }
             // if we're a control channel and this is a TDU trying to terminate a call release the channel
-            if (duid == DUID::TDU && m_enableControl && m_dedicatedControl && m_explicitTDUGrantRelease) {
+            else if (duid == DUID::TDU && m_enableControl && m_dedicatedControl && m_explicitTDUGrantRelease) {
                 if (srcId == 0U && dstId == 0U) {
                     LogError(LOG_NET, "P25, invalid call, srcId = %u, dstId = %u", srcId, dstId);
                     return;
@@ -2101,9 +2143,14 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
         dataPermit = (bool)req["dataPermit"].get<bool>();
     }
 
+    bool telInt = false;
+    if (req["telInt"].is<bool>()) {
+        telInt = (bool)req["telInt"].get<bool>();
+    }
+
     // LogDebugEx(LOG_P25, "Control::RPC_permittedTG()", "callback, dstId = %u, dataPermit = %u", dstId, dataPermit);
 
-    permittedTG(dstId, dataPermit);
+    permittedTG(dstId, dataPermit, telInt);
 }
 
 /* (RPC Handler) Active TGID list from the authoritative CC host. */

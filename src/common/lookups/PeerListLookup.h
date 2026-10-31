@@ -54,6 +54,7 @@ namespace lookups
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_hasCallPriority(false),
+            m_telephoneInterconnect(false),
             m_jitterBufferEnabled(false),
             m_jitterBufferMaxSize(4U),
             m_jitterBufferMaxWait(40000U),
@@ -77,6 +78,7 @@ namespace lookups
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_hasCallPriority(false),
+            m_telephoneInterconnect(false),
             m_jitterBufferEnabled(false),
             m_jitterBufferMaxSize(4U),
             m_jitterBufferMaxWait(40000U),
@@ -99,6 +101,7 @@ namespace lookups
                 m_canRequestKeys = data.m_canRequestKeys;
                 m_canIssueInhibit = data.m_canIssueInhibit;
                 m_hasCallPriority = data.m_hasCallPriority;
+                m_telephoneInterconnect = data.m_telephoneInterconnect;
                 m_jitterBufferEnabled = data.m_jitterBufferEnabled;
                 m_jitterBufferMaxSize = data.m_jitterBufferMaxSize;
                 m_jitterBufferMaxWait = data.m_jitterBufferMaxWait;
@@ -176,6 +179,10 @@ namespace lookups
          * @brief Flag indicating if the peer has call transmit priority.
          */
         DECLARE_PROPERTY_PLAIN(bool, hasCallPriority);
+        /**
+         * @brief Flag indicating if the peer is a telephone interconnect gateway.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, telephoneInterconnect);
 
         /**
          * @brief Jitter buffer enabled flag.

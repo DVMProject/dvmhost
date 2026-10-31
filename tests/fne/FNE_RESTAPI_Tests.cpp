@@ -312,6 +312,7 @@ TEST_CASE("FNE REST peer endpoints query, persist, and delete ACL entries", "[fn
     add["canRequestKeys"] = json::value(true);
     add["canIssueInhibit"] = json::value(true);
     add["hasCallPriority"] = json::value(true);
+    add["telephoneInterconnect"] = json::value(true);
     sendRequest(port, HTTP_PUT, FNE_PUT_PEER_ADD, add);
     CHECK(readFileContents(aclFile.path) == initialContents);
 
@@ -322,10 +323,12 @@ TEST_CASE("FNE REST peer endpoints query, persist, and delete ACL entries", "[fn
     CHECK(peer.canRequestKeys());
     CHECK(peer.canIssueInhibit());
     CHECK(peer.hasCallPriority());
+    CHECK(peer.telephoneInterconnect());
 
     json::object query = sendRequest(port, HTTP_GET, FNE_GET_PEER_LIST);
     REQUIRE(query["peers"].get<json::array>().size() == 1U);
     CHECK(query["peers"].get<json::array>()[0U].get<json::object>()["peerPassword"].get<bool>());
+    CHECK(query["peers"].get<json::array>()[0U].get<json::object>()["telephoneInterconnect"].get<bool>());
 
     sendRequest(port, HTTP_GET, FNE_GET_PEER_COMMIT);
     const std::string committedContents = readFileContents(aclFile.path);
