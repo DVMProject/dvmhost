@@ -1110,14 +1110,17 @@ bool LC::decodeLC(const uint8_t* rs, bool rawOnly)
         m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source Radio Address
         break;
     case LCO::TEL_INT_VCH_USER:
+        m_group = false;
         m_emergency = (rs[2U] & 0x80U) == 0x80U;                                    // Emergency Flag
         if (!m_encryptOverride) {
             m_encrypted = (rs[2U] & 0x40U) == 0x40U;                                // Encryption Flag
         }
         m_priority = (rs[2U] & 0x07U);                                              // Priority
         m_callTimer = (uint32_t)((rsValue >> 24) & 0xFFFFU);                        // Call Timer
+        // the single address is the subscriber unit in the call, which also identifies the call
+        m_dstId = (uint32_t)(rsValue & 0xFFFFFFU);                                  // Source/Target Address
         if (m_srcId == 0U) {
-            m_srcId = (uint32_t)(rsValue & 0xFFFFFFU);                              // Source/Target Address
+            m_srcId = m_dstId;
         }
         break;
     case LCO::EXPLICIT_SOURCE_ID:
@@ -1239,8 +1242,9 @@ void LC::encodeLC(uint8_t* rs)
                 (m_emergency ? 0x80U : 0x00U) +                                     // Emergency Flag
                 (m_encrypted ? 0x40U : 0x00U) +                                     // Encrypted Flag
                 (m_priority & 0x07U);                                               // Priority
+            rsValue = (rsValue << 8);                                               // Reserved
             rsValue = (rsValue << 16) + m_callTimer;                                // Call Timer
-            rsValue = (rsValue << 24) + m_srcId;                                    // Source/Target Radio Address
+            rsValue = (rsValue << 24) + ((m_dstId != 0U) ? m_dstId : m_srcId);      // Source/Target Radio Address
             break;
         case LCO::EXPLICIT_SOURCE_ID:
             rs[0U] |= 0x40U;                                                        // Implicit Operation

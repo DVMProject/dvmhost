@@ -213,8 +213,9 @@ namespace p25
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
          * @param dataPermit Flag indicating this permit is for data.
+         * @param telInt Flag indicating this permit is for a telephone interconnect call to the unit in dstId.
          */
-        void permittedTG(uint32_t dstId, bool dataPermit = false);
+        void permittedTG(uint32_t dstId, bool dataPermit = false, bool telInt = false);
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -357,6 +358,7 @@ namespace p25
         uint32_t m_netLastSrcId;
 
         uint32_t m_permittedDstId;
+        bool m_permittedTelInt;
 
         bool m_tailOnIdle;
         bool m_ccRunning;
