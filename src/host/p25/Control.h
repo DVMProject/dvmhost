@@ -320,8 +320,9 @@ namespace p25
         bool m_voiceOnControl;
         bool m_controlOnly;
         bool m_ackTSBKRequests;
-        bool m_disableNetworkGrant;
+        bool m_allowRFGrantTGSteering;
         bool m_disableNetworkHDU;
+        bool m_hideRemoteGrantLog;
         bool m_allowExplicitSourceId;
         bool m_convNetGrantDemand;
         bool m_sndcpSupport;

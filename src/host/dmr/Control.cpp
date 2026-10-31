@@ -242,13 +242,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId, slotNo); });
     }
 
-    /*
-    ** Network Grant Disables
-    */
-    bool disableNetworkGrant = dmrProtocol["disableNetworkGrant"].as<bool>(false);
-    m_slot1->m_disableNetworkGrant = disableNetworkGrant;
-    m_slot2->m_disableNetworkGrant = disableNetworkGrant;
-
     bool convNetGrantDemand = dmrProtocol["convNetGrantDemand"].as<bool>(false);
     m_slot1->m_convNetGrantDemand = convNetGrantDemand;
     m_slot2->m_convNetGrantDemand = convNetGrantDemand;
@@ -264,9 +257,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             }
             if (m_supervisor)
                 LogInfoEx(LOG_DMR, "Host is configured to operate as a DMR TSCC, site controller mode.");
-        }
-        if (disableNetworkGrant) {
-            LogInfo("    Disable Network Grants: yes");
         }
 
         if (defaultNetIdleTalkgroup != 0U) {

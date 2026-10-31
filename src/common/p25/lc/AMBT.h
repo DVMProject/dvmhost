@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -48,9 +48,11 @@ namespace p25
              */
             virtual bool decodeMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks) = 0;
             /**
-             * @brief Encode a alternate trunking signalling block.
+             * @brief Encode a trunking signalling block.
              * @param[out] dataHeader P25 PDU data header
              * @param[out] pduUserData P25 PDU user data
+             * @note Set dataHeader format to UNCONFIRMED before calling to request
+             *       the standard MBT header; all other formats produce alternate MBT.
              */
             virtual void encodeMBT(data::DataHeader& dataHeader, uint8_t* pduUserData) = 0;
 
@@ -68,6 +70,19 @@ namespace p25
              * @param noTrellis Flag indicating whether or not the encoded data should be Trellis encoded.
              */
             void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false);
+
+            /**
+             * @brief Determines whether a PDU header identifies either standard or alternate MBT.
+             * @param[in] dataHeader P25 PDU data header
+             * @returns bool True, if the header identifies an MBT packet.
+             */
+            static bool isMBT(const data::DataHeader& dataHeader);
+
+        public:
+            /**
+             * @brief Determines whether the AMBT instance represents a standard or alternate MBT.
+             */
+            DECLARE_RO_PROPERTY(bool, isAMBT, isAMBT);
 
         protected:
             /**
@@ -87,7 +102,7 @@ namespace p25
              */
             bool decode(const data::DataHeader& dataHeader, const data::DataBlock* blocks, uint8_t* pduUserData);
             /**
-             * @brief Internal helper to encode a trunking signalling block.
+             * @brief Internal helper to encode a standard or alternate trunking signalling block.
              * @param[out] dataHeader P25 PDU data header
              * @param[out] pduUserData P25 PDU user data
              */

@@ -42,6 +42,29 @@ using namespace fne_restapi;
 #define REST_API_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1,  std::placeholders::_2, std::placeholders::_3)
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define HEALTH_INIT                                     "INITIALIZING"
+#define HEALTH_IDLE                                     "IDLE"
+#define HEALTH_DEGRADED                                 "DEGRADED"
+#define HEALTH_FAILED                                   "FAILED"
+#define HEALTH_PARTITIONED                              "PARTITIONED"
+#define HEALTH_HEALTHY                                  "HEALTHY"
+#define HEALTH_FAILED                                   "FAILED"
+#define HEALTH_UNAVAILABLE                              "UNAVAILABLE"
+
+#define HEALTH_REASON_ALL_UPSTREAMS_DISCONNECTED        "ALL_UPSTREAMS_DISCONNECTED"
+#define HEALTH_REASON_TRAFFIC_DATA_PLANE_STALLED        "TRAFFIC_DATA_PLANE_STALLED"
+#define HEALTH_REASON_METADATA_NETWORK_UNAVAILABLE      "METADATA_NETWORK_UNAVAILABLE"
+#define HEALTH_REASON_METADATA_DATA_PLANE_STALLED       "METADATA_DATA_PLANE_STALLED"
+#define HEALTH_REASON_TRAFFIC_INBOUND_QUEUE_STALLED     "TRAFFIC_INBOUND_QUEUE_STALLED"
+#define HEALTH_REASON_METADATA_INBOUND_QUEUE_STALLED    "METADATA_INBOUND_QUEUE_STALLED"
+#define HEALTH_REASON_UPSTREAM_CONNECTIVITY_DEGRADED    "UPSTREAM_CONNECTIVITY_DEGRADED"
+#define HEALTH_REASON_METADATA_UPDATES_MISSED           "METADATA_UPDATES_MISSED"
+#define HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE       "TRAFFIC_NETWORK_UNAVAILABLE"
+
+// ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
 namespace fne_restapi {
@@ -691,6 +714,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_RELOAD_CRYPTO).get(REST_API_BIND(RESTAPI::restAPI_GetReloadCrypto, this));
 
     m_dispatcher.match(FNE_GET_STATS).get(REST_API_BIND(RESTAPI::restAPI_GetStats, this));
+    m_dispatcher.match(FNE_GET_HEALTH).get(REST_API_BIND(RESTAPI::restAPI_GetHealth, this));
     m_dispatcher.match(FNE_GET_RESET_TOTAL_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetTotalCalls, this));
     m_dispatcher.match(FNE_GET_RESET_ACTIVE_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetActiveCalls, this));
     m_dispatcher.match(FNE_GET_RESET_CALL_COLLISIONS).get(REST_API_BIND(RESTAPI::restAPI_GetResetCallCollisions, this));
@@ -898,17 +922,16 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
 
     json::array peers = json::array();
     if (m_network != nullptr) {
-        m_network->m_peers.shared_lock();
-        if (m_network->m_peers.size() > 0) {
-            for (auto entry : m_network->m_peers) {
+        if (m_network->peerCount() > 0U) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     if (m_debug) {
                         LogDebug(LOG_REST, "preparing PEER %u (%s) for REST API query", peerId, peer->address().c_str());
                     }
 
-                    json::object peerObj = m_network->fneConnObject(peerId, peer);
+                    json::object peerObj = m_network->fneConnObject(peerId, peer.get());
                     peers.push_back(json::value(peerObj));
                 }
             }
@@ -916,11 +939,11 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
         else {
             LogError(LOG_REST, "peer query failed, no peers connected to this FNE");
         }
-        m_network->m_peers.shared_unlock();
 
         // report any peers from replica peers
-        if (m_network->m_peerReplicaPeers.size() > 0) {
-            for (auto entry : m_network->m_peerReplicaPeers) {
+        std::unordered_map<uint32_t, json::array> replicatedPeers = m_network->replicatedPeersSnapshot();
+        if (!replicatedPeers.empty()) {
+            for (const auto& entry : replicatedPeers) {
                 json::array peerObjs = entry.second;
                 if (entry.second.size() > 0) {
                     for (auto linkEntry : entry.second) {
@@ -953,9 +976,7 @@ void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& repl
 
     json::array peers = json::array();
     if (m_network != nullptr) {
-        m_network->m_peers.shared_lock();
-        uint32_t count = m_network->m_peers.size();
-        m_network->m_peers.shared_unlock();
+        uint32_t count = static_cast<uint32_t>(m_network->peerCount());
         response["peerCount"].set<uint32_t>(count);
     }
 
@@ -2029,11 +2050,10 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
     if (m_network != nullptr) {
         // peer statistics (right now this is just a list of connected peers)
         json::array peerStats = json::array();
-        m_network->m_peers.shared_lock();
-        if (m_network->m_peers.size() > 0) {
-            for (auto entry : m_network->m_peers) {
+        if (m_network->peerCount() > 0U) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     json::object peerObj = json::object();
                     peerObj["peerId"].set<uint32_t>(peerId);
@@ -2081,7 +2101,6 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
                 }
             }
         }
-        m_network->m_peers.shared_unlock();
         response["peerStats"].set<json::array>(peerStats);
 
         // table load statistics
@@ -2214,6 +2233,288 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
     reply.payload(response);
 }
 
+/* REST API endpoint; reports passive FNE health information. */
+
+void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::object health = json::object();
+    json::array reasonCodes = json::array();
+    json::array reasons = json::array();
+
+    const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto ageMs = [now](uint64_t timestamp) -> uint64_t {
+        return timestamp == 0U || timestamp > now ? 0U : now - timestamp;
+    };
+
+    const uint32_t localFneId = m_network != nullptr ? m_network->m_peerId : 0U;
+    health["fneId"].set<uint32_t>(localFneId);
+    health["observedAtMs"].set<uint64_t>(now);
+
+    json::object process = json::object();
+    process["status"].set<std::string>(HEALTH_HEALTHY);
+    const bool restApiResponsive = true;
+    process["restApiResponsive"].set<bool>(restApiResponsive);
+    health["process"].set<json::object>(process);
+
+    // check if the traffic network is available and healthy
+    if (m_network == nullptr) {
+        health["overall"].set<std::string>(HEALTH_FAILED);
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE));
+        reasons.push_back(json::value("traffic network is not initialized"));
+
+        health["reasonCodes"].set<json::array>(reasonCodes);
+        health["reasons"].set<json::array>(reasons);
+        response["health"].set<json::object>(health);
+        reply.payload(response);
+
+        return;
+    }
+
+    const uint64_t loopStallThreshold = 5000U;
+    const uint64_t trafficEpoch = m_network->m_healthDataPlaneEpoch.load(std::memory_order_relaxed);
+    const uint64_t trafficLastTick = m_network->m_healthLastDataPlaneTick.load(std::memory_order_relaxed);
+    const uint64_t trafficTickAge = ageMs(trafficLastTick);
+    const bool trafficPlaneInitializing = trafficLastTick == 0U;
+    const bool trafficPlaneStalled = !trafficPlaneInitializing && trafficTickAge > loopStallThreshold;
+
+    network::MetadataNetwork* mdNetwork = m_host->m_mdNetwork;
+    const bool metadataUnavailable = mdNetwork == nullptr;
+    const uint64_t metadataEpoch = metadataUnavailable ? 0U : mdNetwork->m_healthDataPlaneEpoch.load(std::memory_order_relaxed);
+    const uint64_t metadataLastTick = metadataUnavailable ? 0U : mdNetwork->m_healthLastDataPlaneTick.load(std::memory_order_relaxed);
+    const uint64_t metadataTickAge = ageMs(metadataLastTick);
+    const bool metadataPlaneInitializing = !metadataUnavailable && metadataLastTick == 0U;
+    const bool metadataPlaneStalled = metadataUnavailable || (!metadataPlaneInitializing && metadataTickAge > loopStallThreshold);
+    const bool dataPlaneInitializing = trafficPlaneInitializing || metadataPlaneInitializing;
+    const bool dataPlaneStalled = trafficPlaneStalled || metadataPlaneStalled;
+
+    // construct JSON objects representing the status of the traffic, metadata, and overall data planes
+    json::object trafficPlane = json::object();
+    trafficPlane["status"].set<std::string>(trafficPlaneInitializing ? HEALTH_INIT : (trafficPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY));
+    trafficPlane["epoch"].set<uint64_t>(trafficEpoch);
+    trafficPlane["lastTickAgeMs"].set<uint64_t>(trafficTickAge);
+
+    json::object metadataPlane = json::object();
+    metadataPlane["status"].set<std::string>(metadataUnavailable ? HEALTH_UNAVAILABLE : (metadataPlaneInitializing ? HEALTH_INIT : (metadataPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY)));
+    metadataPlane["epoch"].set<uint64_t>(metadataEpoch);
+    metadataPlane["lastTickAgeMs"].set<uint64_t>(metadataTickAge);
+
+    json::object dataPlane = json::object();
+    dataPlane["status"].set<std::string>(dataPlaneInitializing ? HEALTH_INIT : (dataPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY));
+    dataPlane["loopStallThresholdMs"].set<uint64_t>(loopStallThreshold);
+    dataPlane["traffic"].set<json::object>(trafficPlane);
+    dataPlane["metadata"].set<json::object>(metadataPlane);
+    health["dataPlane"].set<json::object>(dataPlane);
+
+    const uint64_t submitted = m_network->m_healthTasksSubmitted.load(std::memory_order_relaxed);
+    const uint64_t completed = m_network->m_healthTasksCompleted.load(std::memory_order_relaxed);
+    const uint64_t inFlight = submitted >= completed ? submitted - completed : 0U;
+    const uint64_t lastTaskProgress = m_network->m_healthLastTaskProgress.load(std::memory_order_relaxed);
+    const uint64_t taskProgressAge = inFlight > 0U ? ageMs(lastTaskProgress) : 0U;
+    const uint64_t queueStallThreshold = 5000U;
+    const bool trafficQueueStalled = inFlight > 0U && taskProgressAge > queueStallThreshold;
+
+    // construct JSON object representing the status of the traffic inbound worker queue
+    json::object inboundQueue = json::object();
+    inboundQueue["submittedTotal"].set<uint64_t>(submitted);
+    inboundQueue["completedTotal"].set<uint64_t>(completed);
+    inboundQueue["inFlight"].set<uint64_t>(inFlight);
+    inboundQueue["lastProgressAgeMs"].set<uint64_t>(taskProgressAge);
+    const uint64_t trafficEnqueueFailures = m_network->m_healthTaskEnqueueFailures.load(std::memory_order_relaxed);
+    const bool trafficQueueProgressing = !trafficQueueStalled;
+    inboundQueue["enqueueFailures"].set<uint64_t>(trafficEnqueueFailures);
+    inboundQueue["progressing"].set<bool>(trafficQueueProgressing);
+
+    const uint64_t metadataSubmitted = metadataUnavailable ? 0U : mdNetwork->m_healthTasksSubmitted.load(std::memory_order_relaxed);
+    const uint64_t metadataCompleted = metadataUnavailable ? 0U : mdNetwork->m_healthTasksCompleted.load(std::memory_order_relaxed);
+    const uint64_t metadataInFlight = metadataSubmitted >= metadataCompleted ? metadataSubmitted - metadataCompleted : 0U;
+    const uint64_t metadataLastTaskProgress = metadataUnavailable ? 0U : mdNetwork->m_healthLastTaskProgress.load(std::memory_order_relaxed);
+    const uint64_t metadataTaskProgressAge = metadataInFlight > 0U ? ageMs(metadataLastTaskProgress) : 0U;
+    const bool metadataQueueStalled = !metadataUnavailable && metadataInFlight > 0U && metadataTaskProgressAge > queueStallThreshold;
+    const bool queueStalled = trafficQueueStalled || metadataQueueStalled;
+
+    // construct JSON object representing the status of the metadata inbound worker queue
+    json::object metadataQueue = json::object();
+    metadataQueue["submittedTotal"].set<uint64_t>(metadataSubmitted);
+    metadataQueue["completedTotal"].set<uint64_t>(metadataCompleted);
+    metadataQueue["inFlight"].set<uint64_t>(metadataInFlight);
+    metadataQueue["lastProgressAgeMs"].set<uint64_t>(metadataTaskProgressAge);
+    const uint64_t metadataEnqueueFailures = metadataUnavailable ? 0U : mdNetwork->m_healthTaskEnqueueFailures.load(std::memory_order_relaxed);
+    const bool metadataQueueProgressing = !metadataQueueStalled && !metadataUnavailable;
+    metadataQueue["enqueueFailures"].set<uint64_t>(metadataEnqueueFailures);
+    metadataQueue["progressing"].set<bool>(metadataQueueProgressing);
+
+    // construct JSON object representing the status of all inbound worker queues
+    json::object queues = json::object();
+    queues["status"].set<std::string>(queueStalled ? HEALTH_FAILED : HEALTH_HEALTHY);
+    queues["stallThresholdMs"].set<uint64_t>(queueStallThreshold);
+    queues["trafficInboundWorkerQueue"].set<json::object>(inboundQueue);
+    queues["metadataInboundWorkerQueue"].set<json::object>(metadataQueue);
+    health["queues"].set<json::object>(queues);
+
+    // construct JSON array representing the status of upstream peer networks
+    json::array upstreams = json::array();
+    uint32_t configuredUpstreams = 0U;
+    uint32_t connectedUpstreams = 0U;
+    for (const auto& entry : m_host->m_peerNetworks) {
+        network::PeerNetwork* upstream = entry.second;
+        if (upstream == nullptr)
+            continue;
+
+        json::object obj = json::object();
+        const bool enabled = upstream->isEnabled();
+        const bool connected = upstream->getStatus() == NET_STAT_RUNNING;
+        if (enabled)
+            configuredUpstreams++;
+        if (enabled && connected)
+            connectedUpstreams++;
+
+        obj["peerId"].set<uint32_t>(entry.first);
+        const uint32_t remotePeerId = upstream->getRemotePeerId();
+        obj["remotePeerId"].set<uint32_t>(remotePeerId);
+        obj["enabled"].set<bool>(enabled);
+        obj["connected"].set<bool>(connected);
+        upstreams.push_back(json::value(obj));
+    }
+
+    // construct JSON array representing the status of child peer connections
+    json::array children = json::array();
+    uint32_t connectedPeers = 0U;
+    uint32_t connectedChildren = 0U;
+    bool metadataDegraded = false;
+    for (const auto& entry : m_network->peersSnapshot()) {
+        TrafficNetwork::PeerConnectionPtr peer = entry.second;
+        if (peer == nullptr)
+            continue;
+        if (peer->connected())
+            connectedPeers++;
+        if (peer->peerClass() != PEER_CONN_CLASS_NEIGHBOR)
+            continue;
+
+        if (peer->connected())
+            connectedChildren++;
+        if (peer->missedMetadataUpdates() > 0U)
+            metadataDegraded = true;
+
+        json::object obj = json::object();
+        obj["peerId"].set<uint32_t>(entry.first);
+        obj["identity"].set<std::string>(peer->identity());
+        const bool peerConnected = peer->connected();
+        const uint64_t lastPingAge = ageMs(peer->lastPing());
+        const uint32_t pingsReceived = peer->pingsReceived();
+        const uint32_t missedMetadataUpdates = peer->missedMetadataUpdates();
+        obj["connected"].set<bool>(peerConnected);
+        obj["lastPingAgeMs"].set<uint64_t>(lastPingAge);
+        obj["pingsReceived"].set<uint32_t>(pingsReceived);
+        obj["missedMetadataUpdates"].set<uint32_t>(missedMetadataUpdates);
+        children.push_back(json::value(obj));
+    }
+
+    // construct JSON object representing the connectivity status of the network
+    const bool partitioned = configuredUpstreams > 0U && connectedUpstreams == 0U;
+    const bool upstreamDegraded = configuredUpstreams > connectedUpstreams && connectedUpstreams > 0U;
+    json::object connectivity = json::object();
+    connectivity["status"].set<std::string>(partitioned ? HEALTH_PARTITIONED : ((upstreamDegraded || metadataDegraded) ? HEALTH_DEGRADED : HEALTH_HEALTHY));
+    connectivity["configuredUpstreams"].set<uint32_t>(configuredUpstreams);
+    connectivity["connectedUpstreams"].set<uint32_t>(connectedUpstreams);
+    connectivity["connectedPeers"].set<uint32_t>(connectedPeers);
+    connectivity["connectedChildren"].set<uint32_t>(connectedChildren);
+    connectivity["upstreams"].set<json::array>(upstreams);
+    connectivity["children"].set<json::array>(children);
+    health["connectivity"].set<json::object>(connectivity);
+
+    // construct JSON object representing the status of network traffic
+    const uint64_t lastPacket = m_network->m_healthLastPacketReceived.load(std::memory_order_relaxed);
+    const uint64_t lastProtocolPacket = m_network->m_healthLastProtocolPacketReceived.load(std::memory_order_relaxed);
+    const uint64_t trafficIdleThreshold = 60000U;
+    const bool trafficSeen = lastProtocolPacket != 0U;
+    const bool trafficIdle = !trafficSeen || ageMs(lastProtocolPacket) > trafficIdleThreshold;
+    json::object traffic = json::object();
+    traffic["status"].set<std::string>(trafficIdle ? HEALTH_IDLE : HEALTH_HEALTHY);
+    const uint64_t packetsReceived = m_network->m_healthPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t protocolPacketsReceived = m_network->m_healthProtocolPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t lastPacketAge = ageMs(lastPacket);
+    const uint64_t lastProtocolPacketAge = ageMs(lastProtocolPacket);
+    const uint64_t metadataPacketsReceived = metadataUnavailable ? 0U : mdNetwork->m_healthPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t lastMetadataPacketAge = metadataUnavailable ? 0U : ageMs(mdNetwork->m_healthLastPacketReceived.load(std::memory_order_relaxed));
+    const int32_t activeCalls = network::TrafficNetwork::MetricsLogging::getTotalActiveCalls();
+    traffic["packetsReceived"].set<uint64_t>(packetsReceived);
+    traffic["protocolPacketsReceived"].set<uint64_t>(protocolPacketsReceived);
+    traffic["lastPacketAgeMs"].set<uint64_t>(lastPacketAge);
+    traffic["lastProtocolPacketAgeMs"].set<uint64_t>(lastProtocolPacketAge);
+    traffic["metadataPacketsReceived"].set<uint64_t>(metadataPacketsReceived);
+    traffic["lastMetadataPacketAgeMs"].set<uint64_t>(lastMetadataPacketAge);
+    traffic["idleThresholdMs"].set<uint64_t>(trafficIdleThreshold);
+    traffic["activeCalls"].set<int32_t>(activeCalls);
+    health["traffic"].set<json::object>(traffic);
+
+    // determine the overall health status of the network based on individual components
+    std::string overall = HEALTH_HEALTHY;
+    if (dataPlaneInitializing) {
+        overall = HEALTH_INIT;
+    }
+
+    if (trafficIdle && overall == HEALTH_HEALTHY) {
+        overall = HEALTH_IDLE;
+    }
+
+    if (upstreamDegraded || metadataDegraded) {
+        overall = HEALTH_DEGRADED;
+    }
+
+    if (partitioned) {
+        overall = HEALTH_PARTITIONED;
+        reasonCodes.push_back(json::value(HEALTH_REASON_ALL_UPSTREAMS_DISCONNECTED));
+        reasons.push_back(json::value("all configured upstream FNE connections are disconnected"));
+    }
+
+    if (dataPlaneStalled || queueStalled) {
+        overall = HEALTH_FAILED;
+    }
+
+    if (trafficPlaneStalled) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_DATA_PLANE_STALLED));
+        reasons.push_back(json::value("traffic processing loop is not progressing"));
+    }
+
+    if (metadataPlaneStalled) {
+        reasonCodes.push_back(json::value(metadataUnavailable ? HEALTH_REASON_METADATA_NETWORK_UNAVAILABLE : HEALTH_REASON_METADATA_DATA_PLANE_STALLED));
+        reasons.push_back(json::value(metadataUnavailable ? "metadata network is not initialized" : "metadata processing loop is not progressing"));
+    }
+
+    if (trafficQueueStalled) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_INBOUND_QUEUE_STALLED));
+        reasons.push_back(json::value("traffic inbound worker queue contains stale work"));
+    }
+
+    if (metadataQueueStalled) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_METADATA_INBOUND_QUEUE_STALLED));
+        reasons.push_back(json::value("metadata inbound worker queue contains stale work"));
+    }
+
+    if (upstreamDegraded) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_UPSTREAM_CONNECTIVITY_DEGRADED));
+        reasons.push_back(json::value("one or more configured upstream FNE connections are disconnected"));
+    }
+
+    if (metadataDegraded) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_METADATA_UPDATES_MISSED));
+        reasons.push_back(json::value("one or more child FNEs have missed metadata updates"));
+    }
+
+    health["overall"].set<std::string>(overall);
+    health["reasonCodes"].set<json::array>(reasonCodes);
+    health["reasons"].set<json::array>(reasons);
+    response["health"].set<json::object>(health);
+    reply.payload(response);
+}
+
 /* REST API endpoint; implements get reset total calls request. */
 
 void RESTAPI::restAPI_GetResetTotalCalls(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
@@ -2332,19 +2633,16 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
     json::array affs = json::array();
     if (m_network != nullptr) {
         uint32_t totalAffiliations = 0U;
-        m_network->m_peers.shared_lock();
-        if (m_network->m_peers.size() > 0) {
+        if (m_network->peerCount() > 0U) {
             std::vector<uint32_t> peerIds = std::vector<uint32_t>();
 
-            m_network->m_peers.shared_lock();
-            for (auto entry : m_network->m_peers) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     peerIds.push_back(peerId);
                 }
             }
-            m_network->m_peers.shared_unlock();
 
             for (uint32_t peerId : peerIds) {
                 std::shared_ptr<fne_lookups::AffiliationLookup> affLookup = m_network->getPeerAffiliations(peerId);
@@ -2373,7 +2671,6 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
                 }
             }
         }
-        m_network->m_peers.shared_unlock();
 
         response["totalAffiliations"].set<uint32_t>(totalAffiliations);
     }

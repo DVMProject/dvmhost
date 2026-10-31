@@ -202,6 +202,34 @@ bool AffiliationLookup::isUnitReg(uint32_t srcId) const
     }
 }
 
+/* Atomically replaces the unit registration table with a peer snapshot. */
+
+void AffiliationLookup::replaceUnitRegistrations(const std::vector<uint32_t>& registrations)
+{
+    std::vector<uint32_t> replacement = registrations;
+    std::sort(replacement.begin(), replacement.end());
+    replacement.erase(std::unique(replacement.begin(), replacement.end()), replacement.end());
+
+    const std::unordered_map<uint32_t, Timer> currentTimers = m_unitRegTimers.get();
+    std::unordered_map<uint32_t, Timer> replacementTimers;
+    replacementTimers.reserve(replacement.size());
+
+    for (const uint32_t srcId : replacement) {
+        const auto currentTimer = currentTimers.find(srcId);
+        if (currentTimer != currentTimers.end()) {
+            replacementTimers.emplace(srcId, currentTimer->second);
+        }
+        else {
+            Timer timer(1000U, UNIT_REG_TIMEOUT);
+            timer.start();
+            replacementTimers.emplace(srcId, timer);
+        }
+    }
+
+    m_unitRegTable = replacement;
+    m_unitRegTimers = replacementTimers;
+}
+
 /* Helper to release unit registrations. */
 
 void AffiliationLookup::clearUnitReg()
@@ -297,6 +325,34 @@ bool AffiliationLookup::isGroupAff(uint32_t srcId, uint32_t dstId) const
     m_grpAffTable.unlock();
 
     return false;
+}
+
+/* Atomically replaces the group affiliation table with a peer snapshot. */
+
+void AffiliationLookup::replaceGroupAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations)
+{
+    const std::unordered_map<uint32_t, uint32_t> currentAffiliations = m_grpAffTable.get();
+    const std::unordered_map<uint32_t, Timer> currentTimers = m_grpAffTimers.get();
+    std::unordered_map<uint32_t, Timer> replacementTimers;
+    replacementTimers.reserve(affiliations.size());
+
+    for (const auto& affiliation : affiliations) {
+        const auto currentAffiliation = currentAffiliations.find(affiliation.first);
+        const auto currentTimer = currentTimers.find(affiliation.first);
+        if (currentAffiliation != currentAffiliations.end() && currentAffiliation->second == affiliation.second &&
+            currentTimer != currentTimers.end()) {
+            replacementTimers.emplace(affiliation.first, currentTimer->second);
+        }
+        else {
+            Timer timer(1000U, GRP_AFF_TIMEOUT);
+            timer.start();
+            replacementTimers.emplace(affiliation.first, timer);
+        }
+    }
+
+    // Routing readers observe either the old or complete replacement table.
+    m_grpAffTable = affiliations;
+    m_grpAffTimers = replacementTimers;
 }
 
 /* Helper to release group affiliations. */

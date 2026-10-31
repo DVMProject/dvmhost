@@ -91,6 +91,16 @@ void HostTestHooks::dmrSetRFCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId
     slot.m_rfTGHang.start();
 }
 
+/* Forces DMR slot into residual RF talkgroup hang state. */
+
+void HostTestHooks::dmrSetRFHang(dmr::Slot& slot, uint32_t srcId, uint32_t dstId)
+{
+    slot.m_rfState = RS_RF_LISTENING;
+    slot.m_rfLastSrcId = srcId;
+    slot.m_rfLastDstId = dstId;
+    slot.m_rfTGHang.start();
+}
+
 /* Returns DMR slot to RF listening state. */
 
 void HostTestHooks::dmrClearRFCall(dmr::Slot& slot)
@@ -351,6 +361,40 @@ Timer& HostTestHooks::p25RFTGHang(p25::Control& control) { return control.m_rfTG
 
 Timer& HostTestHooks::p25RFLossWatchdog(p25::Control& control) { return control.m_rfLossWatchdog; }
 
+/* Configures P25 RF grant talkgroup steering for a test. */
+
+void HostTestHooks::p25ConfigureRFGrantSteering(p25::Control& control, bool enabled, bool dedicated)
+{
+    control.m_enableControl = true;
+    control.m_dedicatedControl = dedicated;
+    control.m_allowRFGrantTGSteering = enabled;
+}
+
+/* Tests whether the P25 affiliation table contains a grant. */
+
+bool HostTestHooks::p25IsGranted(const p25::Control& control, uint32_t dstId)
+{
+    return control.m_affiliations->isGranted(dstId);
+}
+
+/* Seeds a P25 grant for a steering-policy test. */
+
+bool HostTestHooks::p25SeedGrant(p25::Control& control, uint32_t srcId, uint32_t dstId, bool netGranted)
+{
+    return control.m_affiliations->grantCh(dstId, srcId, 15U, true, netGranted);
+}
+
+/* Releases a P25 grant for a steering-policy test. */
+
+bool HostTestHooks::p25ReleaseGrant(p25::Control& control, uint32_t dstId)
+{
+    return control.m_affiliations->releaseGrant(dstId, false);
+}
+
+/* Gets the last P25 RF destination ID. */
+
+uint32_t HostTestHooks::p25RFLastDstId(const p25::Control& control) { return control.m_rfLastDstId; }
+
 /* Forces P25 control network state and last IDs. */
 
 void HostTestHooks::p25SetNetState(p25::Control& control, RPT_NET_STATE netState, uint32_t srcId, uint32_t dstId)
@@ -486,6 +530,16 @@ Timer& HostTestHooks::nxdnRFLossWatchdog(nxdn::Control& control) { return contro
 void HostTestHooks::nxdnSetRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId)
 {
     control.m_rfState = RS_RF_AUDIO;
+    control.m_rfLastSrcId = srcId;
+    control.m_rfLastDstId = dstId;
+    control.m_rfTGHang.start();
+}
+
+/* Forces NXDN control into residual RF talkgroup hang state. */
+
+void HostTestHooks::nxdnSetRFHang(nxdn::Control& control, uint32_t srcId, uint32_t dstId)
+{
+    control.m_rfState = RS_RF_LISTENING;
     control.m_rfLastSrcId = srcId;
     control.m_rfLastDstId = dstId;
     control.m_rfTGHang.start();

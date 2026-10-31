@@ -485,6 +485,12 @@ namespace network
         bool writeUKEKReq(const uint32_t rsi);
 
         /**
+         * @brief Requests the current radio alias table from the upstream master.
+         * @returns bool True, if the request was sent, otherwise false.
+         */
+        bool writeRadioAliasSyncRequest();
+
+        /**
          * @brief Writes the local activity log to the network.
          * \code{.unparsed}
          *  Below is the representation of the data layout for the activity log message.

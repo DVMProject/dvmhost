@@ -56,6 +56,7 @@
 #include <unordered_map>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <atomic>
 #include <array>
 
@@ -156,6 +157,7 @@ namespace network
         uint8_t* buffer = nullptr;          //!< Raw data buffer
 
         uint64_t pktRxTime;                 //!< Packet receive time
+        bool healthMetadataTracked = false; //!< Health task originated on metadata port.
     };
 
     // ---------------------------------------------------------------------------
@@ -209,6 +211,11 @@ namespace network
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
         void setOptions(yaml::Node& conf, bool printOptions);
+        /**
+         * @brief Sets packet-data options from the top-level VTUN configuration.
+         * @param conf VTUN configuration node.
+         */
+        void setPacketDataOptions(yaml::Node& conf);
 
         /**
          * @brief Gets the current status of the network.
@@ -372,10 +379,14 @@ namespace network
         uint32_t m_parrotOverrideSrcId;
 
         bool m_kmfServicesEnabled;
+        uint32_t m_kmfRsi;
         bool m_kmfAllowRID0;
+        bool m_kmfForgeSrcLLId;
         bool m_kmfEncKeyRequest;
         uint8_t* m_kmfPresharedKey;
         bool m_kmfWarmStart;
+        bool m_kmfChangeoverAfterRekey;
+        bool m_kmfDebug;
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::RadioAliasLookup* m_ridAliasLookup;
@@ -387,12 +398,16 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
-        concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-        concurrent::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
-        typedef std::pair<const uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
+        using PeerConnectionPtr = std::shared_ptr<network::FNEPeerConnection>;
+        using PeerMapPair = std::pair<uint32_t, PeerConnectionPtr>;
+        std::unordered_map<uint32_t, PeerConnectionPtr> m_peers;
+        mutable std::shared_timed_mutex m_peersMutex;
+        std::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
+        mutable std::mutex m_peerReplicaPeersMutex;
+        typedef std::pair<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
         concurrent::unordered_map<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> m_peerAffiliations;
         mutable std::mutex m_peerAffiliationsMutex;
+        mutable std::mutex m_affiliationUpdateMutex;
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
@@ -469,6 +484,20 @@ namespace network
         ThreadPool m_threadPool;
         ThreadPool m_metadataUpdateThreadPool;
 
+        // passive health telemetry -- these counters are intentionally lock-free so
+        // the REST thread can diagnose a stalled worker without waiting
+        // for a lock held by that worker
+        std::atomic<uint64_t> m_healthDataPlaneEpoch;
+        std::atomic<uint64_t> m_healthLastDataPlaneTick;
+        std::atomic<uint64_t> m_healthPacketsReceived;
+        std::atomic<uint64_t> m_healthProtocolPacketsReceived;
+        std::atomic<uint64_t> m_healthLastPacketReceived;
+        std::atomic<uint64_t> m_healthLastProtocolPacketReceived;
+        std::atomic<uint64_t> m_healthTasksSubmitted;
+        std::atomic<uint64_t> m_healthTasksCompleted;
+        std::atomic<uint64_t> m_healthLastTaskProgress;
+        std::atomic<uint64_t> m_healthTaskEnqueueFailures;
+
         /**
          * @brief Represents the state of a metadata update for a given peer ID.
          * @ingroup fne_network
@@ -486,15 +515,15 @@ namespace network
         std::mutex m_metadataUpdateMutex;
         std::unordered_map<uint32_t, MetadataUpdateState> m_metadataUpdateState;
 
+        bool m_packetDataBroadcast;
+        uint32_t m_sndcpStartAddr;
+        uint32_t m_sndcpEndAddr;
         bool m_disablePacketData;
         bool m_dumpPacketData;
         bool m_verbosePacketData;
 
         uint32_t m_vtunQueueMaxFrames;
         uint32_t m_vtunQueueMaxBytes;
-
-        uint32_t m_sndcpStartAddr;
-        uint32_t m_sndcpEndAddr;
 
         bool m_logDenials;
         bool m_logUpstreamCallStartEnd;
@@ -509,6 +538,52 @@ namespace network
          * @return A reference to the mutex associated with the peer ID.
          */
         static std::mutex& getPeerStateLock(uint32_t peerId) { return s_peerStateLocks[peerId % PEER_STATE_LOCK_STRIPES]; }
+
+        /**
+         * @brief Finds a peer while retaining its lifetime for the caller.
+         * @param peerId Peer ID to find.
+         * @return Shared peer connection, or nullptr when the peer is absent.
+         */
+        PeerConnectionPtr findPeer(uint32_t peerId) const;
+        /**
+         * @brief Gets the current number of registered peers.
+         * @return Number of registered peers.
+         */
+        size_t peerCount() const;
+        /**
+         * @brief Creates a stable snapshot of the registered peers.
+         * @return Peer IDs and shared peer connections.
+         */
+        std::vector<PeerMapPair> peersSnapshot() const;
+        /**
+         * @brief Adds or replaces a peer connection.
+         * @param peerId Peer ID to store.
+         * @param connection Shared peer connection.
+         */
+        void storePeer(uint32_t peerId, const PeerConnectionPtr& connection);
+        /**
+         * @brief Removes a peer connection from the registry.
+         * @param peerId Peer ID to remove.
+         * @return Removed shared peer connection, or nullptr when absent.
+         */
+        PeerConnectionPtr removePeer(uint32_t peerId);
+
+        /**
+         * @brief Replaces the active peer list received from a replica peer.
+         * @param peerId Peer ID that supplied the active peer list.
+         * @param peers Active peer list reported by the replica peer.
+         */
+        void updateReplicatedPeers(uint32_t peerId, const json::array& peers);
+        /**
+         * @brief Removes the active peer list associated with a replica peer.
+         * @param peerId Peer ID whose replicated active peer list should be removed.
+         */
+        void eraseReplicatedPeers(uint32_t peerId);
+        /**
+         * @brief Creates a stable snapshot of all replicated active peer lists.
+         * @return Map of replica peer IDs to their reported active peer lists.
+         */
+        std::unordered_map<uint32_t, json::array> replicatedPeersSnapshot() const;
 
         /**
          * @brief Entry point to parrot handler thread.
@@ -710,16 +785,82 @@ namespace network
          */
         std::vector<PeerAffiliationMapPair> peerAffiliationsSnapshot() const;
         /**
+         * @brief Adds or updates one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param dstId Talkgroup ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint32_t dstId);
+        /**
+         * @brief Removes one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerAffiliation(uint32_t peerId, uint32_t srcId);
+        /**
+         * @brief Replaces one peer's affiliations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param affiliations Complete source-to-talkgroup affiliation snapshot.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerAffiliations(uint32_t peerId, const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Rebuilds the aggregate downstream affiliation snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::unordered_map<uint32_t, uint32_t> Aggregate affiliation snapshot.
+         */
+        std::unordered_map<uint32_t, uint32_t> buildAggregatedAffiliations();
+        /**
+         * @brief Publishes an aggregate downstream affiliation snapshot upstream.
+         * @param affiliations Complete aggregate source-to-talkgroup affiliation snapshot.
+         */
+        void publishAggregatedAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Adds one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param ssrc Originating peer ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc);
+        /**
+         * @brief Removes one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerUnitRegistration(uint32_t peerId, uint32_t srcId);
+        /**
+         * @brief Replaces one peer's unit registrations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param registrations Complete source ID registration snapshot.
+         * @param ssrc Originating peer ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerUnitRegistrations(uint32_t peerId, const std::vector<uint32_t>& registrations, uint32_t ssrc);
+        /**
+         * @brief Rebuilds the aggregate downstream unit registration snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::vector<uint32_t> Aggregate unit registration snapshot.
+         */
+        std::vector<uint32_t> buildAggregatedUnitRegistrations();
+        /**
+         * @brief Publishes an aggregate downstream unit registration snapshot upstream.
+         * @param registrations Complete aggregate source ID registration snapshot.
+         */
+        void publishAggregatedUnitRegistrations(const std::vector<uint32_t>& registrations);
+        /**
          * @brief Helper to disconnect a downstream peer.
          * @param peerId Peer ID.
          * @param connection Instance of the FNEPeerConnection class.
          */
-        void disconnectPeer(uint32_t peerId, FNEPeerConnection* connection);
+        void disconnectPeer(uint32_t peerId, const PeerConnectionPtr& connection);
         /**
          * @brief Helper to erase the peer from the peers list.
-         * @note This does not delete or otherwise free the FNEConnection instance!
+         * @note The connection remains alive while any worker retains a shared reference.
          * @param peerId Peer ID.
-         * @returns bool True, if peer was deleted, otherwise false.
          */
         void erasePeer(uint32_t peerId);
         /**
@@ -749,7 +890,7 @@ namespace network
          * @param streamId Stream ID for the login sequence.
          * @param connection Instance of the FNEPeerConnection class.
          */
-        void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection);
+        void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, const PeerConnectionPtr& connection);
 
         /**
          * @brief Helper to process an In-Call Control message.

@@ -2241,27 +2241,36 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
 
-    if (dstId == TGID_ALL) {
-        return true; // do not generate grant packets for $FFFF (All Call) TGID
+    const bool rfGrantSteering = m_p25->m_allowRFGrantTGSteering && m_p25->m_enableControl && !m_p25->m_dedicatedControl && !net && grp;
+    uint32_t activeGrantDstId = 0U;
+    bool activeGrantFromNetwork = false;
+    bool preemptNetworkGrant = false;
+    bool preemptNetworkTraffic = false;
+
+    // determine the active grant destination ID and network preemption status
+    if (rfGrantSteering) {
+        if (m_p25->m_rfLastDstId != 0U && m_p25->m_affiliations->isGranted(m_p25->m_rfLastDstId)) {
+            activeGrantDstId = m_p25->m_rfLastDstId;
+        }
+        else if (m_p25->m_netLastDstId != 0U && m_p25->m_affiliations->isGranted(m_p25->m_netLastDstId)) {
+            activeGrantDstId = m_p25->m_netLastDstId;
+        }
+        else {
+            std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations->grantTable();
+            for (const auto& grant : grantTable) {
+                if (grant.second == m_p25->m_siteData.channelNo() || grantTable.size() == 1U) {
+                    activeGrantDstId = grant.first;
+                    break;
+                }
+            }
+        }
+
+        activeGrantFromNetwork = activeGrantDstId != 0U && m_p25->m_affiliations->isNetGranted(activeGrantDstId);
+        preemptNetworkTraffic = m_p25->m_netState != RS_NET_IDLE && m_p25->m_netLastDstId != 0U && m_p25->m_netLastDstId != dstId;
     }
 
-    // are network channel grants disabled?
-    if (m_p25->m_disableNetworkGrant) {
-        // don't process RF grant if the network isn't in a idle state and the RF destination is the network destination
-        if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
-            LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic collision, dstId = %u", dstId);
-            writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
-
-            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
-            m_p25->m_rfState = RS_RF_REJECTED;
-            return false;
-        }
-
-        // ensure network watchdog is stopped
-        if (m_p25->m_networkWatchdog.isRunning()) {
-            m_p25->m_networkWatchdog.stop();
-        }
+    if (dstId == TGID_ALL) {
+        return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
     // are we skipping checking?
@@ -2279,6 +2288,32 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
 
             return false;
+        }
+
+        // check if an RF grant is currently active and if it should preempt network traffic
+        if (rfGrantSteering && activeGrantDstId != 0U) {
+            if (!activeGrantFromNetwork) {
+                // An RF-originated grant owns the channel until it is released or expires.
+                if (activeGrantDstId != dstId) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, RF grant active, grantedDstId = %u, dstId = %u",
+                        activeGrantDstId, dstId);
+                    writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, TSBKO::IOSP_GRP_VCH, true, true);
+                    ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+            }
+            else if (activeGrantDstId == dstId) {
+                // matching network traffic retains ownership to avoid treating a duplicate as a new RF call
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, matching network grant active, dstId = %u", dstId);
+                writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, TSBKO::IOSP_GRP_VCH, true, true);
+                ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                m_p25->m_rfState = RS_RF_REJECTED;
+                return false;
+            }
+            else {
+                preemptNetworkGrant = true;
+            }
         }
 
         // only do the last destination ID checking if we're operating in non-dedicated mode (e.g. DVRS)
@@ -2300,7 +2335,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
             if (m_p25->m_rfLastDstId != 0U) {
-                if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+                if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) && !rfGrantSteering) {
                     if (!net) {
                         writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
                         m_p25->m_rfState = RS_RF_REJECTED;
@@ -2317,7 +2352,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
                 if (tid.config().affiliated()) {
                     if (!m_p25->m_affiliations->hasGroupAff(dstId)) {
-                        LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
+                        if (!m_p25->m_hideRemoteGrantLog) {
+                            LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
+                        }
                         return false;
                     }
                 }
@@ -2345,6 +2382,30 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 if (!m_p25->m_affiliations->isUnitReg(dstId)) {
                     LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) ignored, no unit registration, dstId = %u", dstId);
                     return false;
+                }
+            }
+
+            // preempt network traffic or grant if necessary
+            if (preemptNetworkGrant || preemptNetworkTraffic) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), preempting network traffic/grant, grantedDstId = %u, dstId = %u",
+                    activeGrantDstId, dstId);
+
+                if (preemptNetworkGrant)
+                    m_p25->m_affiliations->releaseGrant(activeGrantDstId, false);
+
+                if (m_p25->m_netState != RS_NET_IDLE) {
+                    m_p25->m_voice->resetNet();
+                    m_p25->m_netTimeoutTimer.stop();
+                    m_p25->m_netTimeout = false;
+                    m_p25->m_netTGHang.stop();
+                    m_p25->m_networkWatchdog.stop();
+                    m_p25->m_netState = RS_NET_IDLE;
+
+                    if (m_p25->m_network != nullptr)
+                        m_p25->m_network->resetP25();
+
+                    if (m_p25->m_duplex)
+                        m_p25->writeRF_TDU(true);
                 }
             }
 
@@ -2699,6 +2760,13 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
         }
+    }
+
+    // handle RF grant steering if applicable
+    if (rfGrantSteering && chNo > 0U) {
+        m_p25->m_rfLastSrcId = srcId;
+        m_p25->m_rfLastDstId = dstId;
+        m_p25->m_rfTGHang.start();
     }
 
     return true;

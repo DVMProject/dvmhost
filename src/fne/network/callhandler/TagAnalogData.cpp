@@ -232,17 +232,15 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
 
                         // determine if the peer trying to transmit has call priority
                         if (m_network->m_callCollisionTimeout > 0U) {
-                            m_network->m_peers.shared_lock();
-                            for (auto peer : m_network->m_peers) {
+                            for (const auto& peer : m_network->peersSnapshot()) {
                                 if (peerId == peer.first) {
-                                    FNEPeerConnection* conn = peer.second;
+                                    TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                     if (conn != nullptr) {
                                         hasCallPriority = conn->hasCallPriority();
                                         break;
                                     }
                                 }
                             }
-                            m_network->m_peers.shared_unlock();
                         }
 
                         // perform standard call collision if the call collision timeout is set *and*
@@ -384,12 +382,11 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
         */
 
         // repeat traffic to nodes peered to us as master
-        if (m_network->m_peers.size() > 0U) {
+        if (m_network->peerCount() > 0U) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 if (peer.second == nullptr)
                     continue;
                 if (peerId != peer.first) {
@@ -424,7 +421,6 @@ bool TagAnalogData::processFrame(const uint8_t* data, uint32_t len, uint32_t pee
                 }
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         /*
@@ -536,8 +532,7 @@ void TagAnalogData::playbackParrot()
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 // every MAX_QUEUED_PEER_MSGS peers flush the queue
                 if (i % MAX_QUEUED_PEER_MSGS == 0U) {
                     m_network->m_frameQueue->flushQueue(&queue);
@@ -552,7 +547,6 @@ void TagAnalogData::playbackParrot()
                 i++;
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         delete[] pkt.buffer;
@@ -624,12 +618,7 @@ bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32
         return false;
     }
 
-    FNEPeerConnection* connection = nullptr; // bryanb: this is a possible null ref concurrency issue
-                                             //     it is possible if the timing is just right to get a valid 
-                                             //     connection back initially, and then for it to be deleted
-    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-        connection = m_network->m_peers[peerId];
-    }
+    TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
 
     if (connection != nullptr) {
         // is this peer a replica peer?

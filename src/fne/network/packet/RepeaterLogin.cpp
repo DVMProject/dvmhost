@@ -25,23 +25,24 @@ void TrafficNetwork::PacketHandler::repeaterLogin(TrafficNetwork* network, NetPa
 {
     std::lock_guard<std::mutex> peerGuard(TrafficNetwork::getPeerStateLock(peerId));
 
-    if (peerId > 0 && (network->m_peers.find(peerId) == network->m_peers.end())) {
-        if (network->m_peers.size() >= MAX_HARD_CONN_CAP) {
-            LogError(LOG_MASTER, "PEER %u attempted to connect with no more connections available, currConnections = %u", peerId, network->m_peers.size());
+    TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+    if (peerId > 0 && connection == nullptr) {
+        if (network->peerCount() >= MAX_HARD_CONN_CAP) {
+            LogError(LOG_MASTER, "PEER %u attempted to connect with no more connections available, currConnections = %u", peerId, network->peerCount());
             network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_FNE_MAX_CONN, req->address, req->addrLen);
             return;
         }
 
-        if (network->m_softConnLimit > 0U && network->m_peers.size() >= network->m_softConnLimit) {
-            LogError(LOG_MASTER, "PEER %u attempted to connect with no more connections available, maxConnections = %u, currConnections = %u", peerId, network->m_softConnLimit, network->m_peers.size());
+        if (network->m_softConnLimit > 0U && network->peerCount() >= network->m_softConnLimit) {
+            LogError(LOG_MASTER, "PEER %u attempted to connect with no more connections available, maxConnections = %u, currConnections = %u", peerId, network->m_softConnLimit, network->peerCount());
             network->writePeerNAK(peerId, TAG_REPEATER_LOGIN, NET_CONN_NAK_FNE_MAX_CONN, req->address, req->addrLen);
             return;
         }
 
-        FNEPeerConnection* connection = new FNEPeerConnection(peerId, req->address, req->addrLen);
+        connection = std::make_shared<FNEPeerConnection>(peerId, req->address, req->addrLen);
         connection->lastPing(now);
 
-        network->applyJitterBufferConfig(peerId, connection);
+        network->applyJitterBufferConfig(peerId, connection.get());
         network->setupRepeaterLogin(peerId, streamId, connection);
 
         // check if the peer is in the peer ACL list
@@ -61,18 +62,17 @@ void TrafficNetwork::PacketHandler::repeaterLogin(TrafficNetwork* network, NetPa
     else {
         // check if the peer is in our peer list -- if he is, and he isn't in a running state, reset
         // the login sequence
-        if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-            FNEPeerConnection* connection = network->m_peers[peerId];
+        if (peerId > 0) {
             if (connection != nullptr) {
                 if (connection->connectionState() == NET_STAT_RUNNING) {
                     LogInfoEx(LOG_MASTER, "PEER %u (%s) resetting peer connection, connectionState = %u", peerId, connection->identWithQualifier().c_str(),
                         connection->connectionState());
                     network->disconnectPeer(peerId, connection);
 
-                    connection = new FNEPeerConnection(peerId, req->address, req->addrLen);
+                    connection = std::make_shared<FNEPeerConnection>(peerId, req->address, req->addrLen);
                     connection->lastPing(now);
 
-                    network->applyJitterBufferConfig(peerId, connection);
+                    network->applyJitterBufferConfig(peerId, connection.get());
                     network->erasePeerAffiliations(peerId);
                     network->setupRepeaterLogin(peerId, streamId, connection);
 

@@ -218,6 +218,19 @@ bool BaseNetwork::writeUKEKReq(const uint32_t rsi)
     return writeMaster({ NET_FUNC::KEY_KEK_REQ, NET_SUBFUNC::NOP }, buffer, modifyKeyCmd.fullLength() + 11U, RTP_END_OF_CALL_SEQ, 0U);
 }
 
+/* Requests the current radio alias table from the upstream master. */
+
+bool BaseNetwork::writeRadioAliasSyncRequest()
+{
+    using namespace p25::defines;
+
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[1U] = { 0U };
+    return writeMaster({ NET_FUNC::RADIO_ALIAS_SYNC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, 0U, true);
+}
+
 /* Writes the local activity log to the network. */
 
 bool BaseNetwork::writeActLog(const char* message)

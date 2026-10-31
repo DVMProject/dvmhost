@@ -49,6 +49,9 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_saveLookup(saveLookup),
     m_ridLookup(nullptr),
     m_tidLookup(nullptr),
+    m_ridAliasLookup(nullptr),
+    m_radioAliasSyncPkt(true, "Radio Alias Sync"),
+    m_radioAliasSyncStreamId(0U),
     m_salt(nullptr),
     m_kmfPresharedKey(nullptr),
     m_retryTimer(1000U, DEFAULT_RETRY_TIME),
@@ -186,6 +189,13 @@ void Network::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRu
 {
     m_ridLookup = ridLookup;
     m_tidLookup = tidLookup;
+}
+
+/* Sets the instance of the Radio Alias lookup table. */
+
+void Network::setRadioAliasLookups(lookups::RadioAliasLookup* ridAliasLookup)
+{
+    m_ridAliasLookup = ridAliasLookup;
 }
 
 /* Sets metadata configuration settings from the modem. */
@@ -344,6 +354,8 @@ void Network::clock(uint32_t ms)
 
             { NET_FUNC::MASTER, &Network::PacketHandler::master },
 
+            { NET_FUNC::RADIO_ALIAS_SYNC, &Network::PacketHandler::radioAliasSync },
+
             { NET_FUNC::INCALL_CTRL, &Network::PacketHandler::inCallControl },
 
             { NET_FUNC::NAK, &Network::PacketHandler::nak },
@@ -465,6 +477,9 @@ void Network::close()
 
         writeMaster({ NET_FUNC::RPT_DISC, NET_SUBFUNC::NOP }, buffer, 1U, pktSeq(true), createStreamId());
     }
+
+    m_radioAliasSyncPkt.clear();
+    m_radioAliasSyncStreamId = 0U;
 
     m_socket->close();
 

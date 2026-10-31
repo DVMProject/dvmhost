@@ -36,7 +36,7 @@ static std::vector<const PacketBuffer::Fragment*> fragmentsInOrder(PacketBuffer&
 {
     std::vector<const PacketBuffer::Fragment*> fragments;
     for (uint32_t index = 0U; index < 32U; index++) {
-        auto it = buffer.fragments.find((uint8_t)index);
+        auto it = buffer.fragments.find((uint16_t)index);
         if (it == buffer.fragments.end() || it->second == nullptr)
             break;
 
@@ -94,6 +94,95 @@ TEST_CASE("PacketBuffer reassembles uncompressed fragments in order", "[network]
     REQUIRE(decoder.fragments.size() == 0U);
     encoder.clear();
     REQUIRE(encoder.fragments.size() == 0U);
+}
+
+TEST_CASE("PacketBuffer reassembles fragments received out of order", "[network][packetbuffer]")
+{
+    PacketBuffer encoder(false, "packetbuffer-out-of-order");
+    std::vector<uint8_t> payload(FRAG_BLOCK_SIZE * 2U + 73U);
+    for (size_t i = 0U; i < payload.size(); i++)
+        payload[i] = (uint8_t)((i * 17U) & 0xFFU);
+
+    REQUIRE(encoder.encode(payload.data(), (uint32_t)payload.size()));
+    auto encodedFragments = fragmentsInOrder(encoder);
+    REQUIRE(encodedFragments.size() == 3U);
+
+    PacketBuffer decoder(false, "packetbuffer-out-of-order");
+    uint8_t* message = nullptr;
+    uint32_t messageLength = 0U;
+
+    REQUIRE_FALSE(decoder.decode(encodedFragments[2U]->data, &message, &messageLength));
+    REQUIRE(message == nullptr);
+    REQUIRE(decoder.fragments.size() == 1U);
+
+    REQUIRE_FALSE(decoder.decode(encodedFragments[0U]->data, &message, &messageLength));
+    REQUIRE(message == nullptr);
+    REQUIRE(decoder.fragments.size() == 2U);
+
+    REQUIRE(decoder.decode(encodedFragments[1U]->data, &message, &messageLength));
+    REQUIRE(message != nullptr);
+    REQUIRE(messageLength == payload.size());
+    REQUIRE(std::memcmp(message, payload.data(), payload.size()) == 0);
+    delete[] message;
+    REQUIRE(decoder.fragments.empty());
+}
+
+TEST_CASE("PacketBuffer ignores duplicate fragments without corrupting assembly", "[network][packetbuffer]")
+{
+    PacketBuffer encoder(false, "packetbuffer-duplicate");
+    std::vector<uint8_t> payload(FRAG_BLOCK_SIZE * 2U + 19U, 0x6BU);
+
+    REQUIRE(encoder.encode(payload.data(), (uint32_t)payload.size()));
+    auto encodedFragments = fragmentsInOrder(encoder);
+    REQUIRE(encodedFragments.size() == 3U);
+
+    PacketBuffer decoder(false, "packetbuffer-duplicate");
+    uint8_t* message = nullptr;
+    uint32_t messageLength = 0U;
+
+    REQUIRE_FALSE(decoder.decode(encodedFragments[1U]->data, &message, &messageLength));
+    REQUIRE(decoder.fragments.size() == 1U);
+
+    REQUIRE_FALSE(decoder.decode(encodedFragments[1U]->data, &message, &messageLength));
+    REQUIRE(message == nullptr);
+    REQUIRE(messageLength == 0U);
+    REQUIRE(decoder.fragments.size() == 1U);
+
+    REQUIRE_FALSE(decoder.decode(encodedFragments[0U]->data, &message, &messageLength));
+    REQUIRE(decoder.decode(encodedFragments[2U]->data, &message, &messageLength));
+    REQUIRE(message != nullptr);
+    REQUIRE(messageLength == payload.size());
+    REQUIRE(std::memcmp(message, payload.data(), payload.size()) == 0);
+    delete[] message;
+    REQUIRE(decoder.fragments.empty());
+}
+
+TEST_CASE("PacketBuffer rejects more fragments than block zero declares", "[network][packetbuffer]")
+{
+    PacketBuffer encoder(false, "packetbuffer-excess-source");
+    std::vector<uint8_t> payload(FRAG_BLOCK_SIZE * 2U + 11U, 0xA7U);
+
+    REQUIRE(encoder.encode(payload.data(), (uint32_t)payload.size()));
+    auto encodedFragments = fragmentsInOrder(encoder);
+    REQUIRE(encodedFragments.size() == 3U);
+
+    PacketBuffer decoder(false, "packetbuffer-excess");
+    uint8_t* message = nullptr;
+    uint32_t messageLength = 0U;
+
+    REQUIRE_FALSE(decoder.decode(encodedFragments[1U]->data, &message, &messageLength));
+    REQUIRE_FALSE(decoder.decode(encodedFragments[2U]->data, &message, &messageLength));
+    REQUIRE(decoder.fragments.size() == 2U);
+
+    std::array<uint8_t, FRAG_SIZE> blockZero = {};
+    std::memcpy(blockZero.data(), encodedFragments[0U]->data, FRAG_SIZE);
+    setFragmentHeader(blockZero.data(), FRAG_BLOCK_SIZE * 2U,
+        FRAG_BLOCK_SIZE * 2U, 0U, 1U);
+
+    REQUIRE_FALSE(decoder.decode(blockZero.data(), &message, &messageLength));
+    REQUIRE(message == nullptr);
+    REQUIRE(messageLength == 0U);
+    REQUIRE(decoder.fragments.empty());
 }
 
 TEST_CASE("PacketBuffer reassembles compressed fragments", "[network][packetbuffer]")
@@ -159,9 +248,9 @@ TEST_CASE("PacketBuffer rejects invalid ZLIB data", "[network][packetbuffer]")
     REQUIRE(buffer.fragments.empty());
 }
 
-TEST_CASE("PacketBuffer enforces the maximum block count", "[network][packetbuffer]")
+TEST_CASE("PacketBuffer preserves the legacy format through its maximum block count", "[network][packetbuffer]")
 {
-    constexpr uint32_t maxBlockCount = 254U;
+    constexpr uint32_t maxBlockCount = 256U;
 
     SECTION("accepts exactly the maximum number of blocks") {
         PacketBuffer buffer(false, "packetbuffer-max-blocks");
@@ -170,18 +259,82 @@ TEST_CASE("PacketBuffer enforces the maximum block count", "[network][packetbuff
         REQUIRE(buffer.encode(payload.data(), (uint32_t)payload.size()));
         REQUIRE(buffer.fragments.size() == maxBlockCount);
 
-        auto last = buffer.fragments.find((uint8_t)(maxBlockCount - 1U));
+        auto last = buffer.fragments.find((uint16_t)(maxBlockCount - 1U));
         REQUIRE(last != buffer.fragments.end());
         REQUIRE(last->second != nullptr);
         REQUIRE(last->second->data[8U] == maxBlockCount - 1U);
         REQUIRE(last->second->data[9U] == maxBlockCount - 1U);
     }
 
-    SECTION("rejects one block over the maximum") {
-        PacketBuffer buffer(false, "packetbuffer-too-many-blocks");
+    SECTION("switches to extended format above the legacy capacity") {
+        PacketBuffer buffer(false, "packetbuffer-extended-threshold");
         std::vector<uint8_t> payload(FRAG_BLOCK_SIZE * maxBlockCount + 1U, 0xA5U);
 
-        REQUIRE_FALSE(buffer.encode(payload.data(), (uint32_t)payload.size()));
-        REQUIRE(buffer.fragments.empty());
+        REQUIRE(buffer.encode(payload.data(), (uint32_t)payload.size()));
+        REQUIRE_FALSE(buffer.fragments.empty());
+
+        auto first = buffer.fragments.find(0U);
+        REQUIRE(first != buffer.fragments.end());
+        REQUIRE(first->second != nullptr);
+        REQUIRE(first->second->extended);
+        uint32_t size = GET_UINT32(first->second->data, 0U);
+        uint32_t compressedSize = GET_UINT32(first->second->data, 4U);
+        uint16_t blockId = GET_UINT16(first->second->data, 8U);
+        uint16_t lastBlock = GET_UINT16(first->second->data, 10U);
+        REQUIRE(size == payload.size());
+        REQUIRE(compressedSize == payload.size());
+        REQUIRE(blockId == 0U);
+        REQUIRE(lastBlock == buffer.fragments.size() - 1U);
     }
+}
+
+TEST_CASE("PacketBuffer reassembles extended fragments received out of order", "[network][packetbuffer]")
+{
+    const uint32_t legacyCapacity = FRAG_BLOCK_SIZE * 256U;
+    std::vector<uint8_t> payload((legacyCapacity * 2U) + EXTENDED_FRAG_BLOCK_SIZE + 17U);
+    for (size_t i = 0U; i < payload.size(); i++)
+        payload[i] = (uint8_t)((i * 29U) & 0xFFU);
+
+    PacketBuffer encoder(false, "packetbuffer-extended-source");
+    REQUIRE(encoder.encode(payload.data(), (uint32_t)payload.size()));
+    REQUIRE(encoder.fragments.size() > 256U);
+
+    // extended repeats the size metadata in every fragment, including nonzero fragments.
+    auto nonzero = encoder.fragments.find(1U);
+    REQUIRE(nonzero != encoder.fragments.end());
+    REQUIRE(nonzero->second != nullptr);
+    REQUIRE(nonzero->second->extended);
+    uint32_t size = GET_UINT32(nonzero->second->data, 0U);
+    uint32_t compressedSize = GET_UINT32(nonzero->second->data, 4U);
+    uint16_t blockId = GET_UINT16(nonzero->second->data, 8U);
+    REQUIRE(size == payload.size());
+    REQUIRE(compressedSize == payload.size());
+    REQUIRE(blockId == 1U);
+
+    auto highBlock = encoder.fragments.find(256U);
+    REQUIRE(highBlock != encoder.fragments.end());
+    REQUIRE(highBlock->second != nullptr);
+    uint16_t highBlockId = GET_UINT16(highBlock->second->data, 8U);
+    REQUIRE(highBlockId == 256U);
+
+    PacketBuffer decoder(false, "packetbuffer-extended-destination");
+    uint8_t* message = nullptr;
+    uint32_t messageLength = 0U;
+
+    // Deliver every block except block zero first to exercise format detection and 16-bit IDs.
+    for (uint32_t i = (uint32_t)encoder.fragments.size() - 1U; i > 0U; i--) {
+        auto fragment = encoder.fragments.find((uint16_t)i);
+        REQUIRE(fragment != encoder.fragments.end());
+        REQUIRE_FALSE(decoder.decode(fragment->second->data, &message, &messageLength));
+        REQUIRE(message == nullptr);
+    }
+
+    auto first = encoder.fragments.find(0U);
+    REQUIRE(first != encoder.fragments.end());
+    REQUIRE(decoder.decode(first->second->data, &message, &messageLength));
+    REQUIRE(message != nullptr);
+    REQUIRE(messageLength == payload.size());
+    REQUIRE(std::memcmp(message, payload.data(), payload.size()) == 0);
+    delete[] message;
+    REQUIRE(decoder.fragments.empty());
 }

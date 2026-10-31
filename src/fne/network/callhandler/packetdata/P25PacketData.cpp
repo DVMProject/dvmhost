@@ -71,7 +71,8 @@ P25PacketData::P25PacketData(TrafficNetwork* network, TagP25Data* tag, bool debu
     m_bindingRegistry(),
     m_locationRegistry(CONVENTIONAL_LOCATION_MAX_AGE_MS),
     m_dataLinkManager(),
-    m_conventionalDataService(m_bindingRegistry, m_dataLinkManager),
+    m_conventionalDataService(m_bindingRegistry, m_dataLinkManager,
+        ConventionalRegistrationPolicy { false, 0U, [this](uint32_t llId, uint32_t) { return allocateIPAddress(llId); } }),
     m_scepService(m_bindingRegistry),
     m_debug(debug)
 {
@@ -677,9 +678,10 @@ void P25PacketData::dispatch(uint32_t peerId)
     if (status->assembler.getAuxiliaryES())
         sap = status->assembler.dataHeader.getEXSAP();
 
-    // the peer is the only channel identity carried at this boundary -- preserve
-    // unknown channel fields as zero until peer metadata supplies them, a
-    // registration establishes location only after the binding is accepted
+    // The peer is the only channel identity carried at this boundary. Remember
+    // any valid inbound PDU so DLD OTAR can return KMMs without conventional
+    // packet-data registration (TIA-102.AACA makes DLD registration optional).
+    // Registration PDUs establish location only after the binding is accepted.
     if (sap != PDUSAP::CONV_DATA_REG && m_locationRegistry.learnFromInbound()) {
         uint32_t inboundLlId = status->assembler.getExtendedAddress() ?
             status->assembler.dataHeader.getSrcLLId() : status->assembler.dataHeader.getLLId();
@@ -923,10 +925,10 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
     uint32_t dstId = status->assembler.dataHeader.getLLId();
 
     std::vector<DataRoute> routes;
-    bool groupDelivery = dstId == WUID_ALL;
+    bool groupDelivery = dstId == WUID_ALL || m_network->m_packetDataBroadcast;
     if (groupDelivery) {
         std::vector<uint32_t> availablePeers;
-        for (const auto& peer : m_network->m_peers)
+        for (const auto& peer : m_network->peersSnapshot())
             availablePeers.push_back(peer.first);
 
         for (const auto& peer : m_network->m_host->m_peerNetworks) {
@@ -957,8 +959,8 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
     */
 
     // repeat traffic to the connected peers
-    if (m_network->m_peers.size() > 0U) {
-        for (auto peer : m_network->m_peers) {
+    if (m_network->peerCount() > 0U) {
+        for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first && selectedPeer(peer.first)) {
                 write_PDU_User(peer.first, peerId, nullptr, status->assembler.dataHeader, status->assembler.getExtendedAddress(),
                     status->assembler.getAuxiliaryES(), status->pduUserData);
@@ -1006,9 +1008,9 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
     uint32_t dstId = dataHeader.getLLId();
 
     std::vector<DataRoute> routes;
-    if (dstId == WUID_ALL) {
+    if (dstId == WUID_ALL || m_network->m_packetDataBroadcast) {
         std::vector<uint32_t> availablePeers;
-        for (const auto& peer : m_network->m_peers)
+        for (const auto& peer : m_network->peersSnapshot())
             availablePeers.push_back(peer.first);
 
         routes = m_locationRegistry.resolveGroup(availablePeers);
@@ -1036,8 +1038,8 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
     // dispatch the user frame to each resolved RF route
     bool dispatched = false;
     for (const DataRoute& route : routes) {
-        auto localPeer = m_network->m_peers.find(route.peerId);
-        if (localPeer != m_network->m_peers.end()) {
+        TrafficNetwork::PeerConnectionPtr localPeer = m_network->findPeer(route.peerId);
+        if (localPeer != nullptr) {
             dispatched = write_PDU_User(route.peerId, m_network->m_peerId, nullptr, dataHeader,
                 extendedAddress, auxiliaryES, pduUserData) || dispatched;
         }

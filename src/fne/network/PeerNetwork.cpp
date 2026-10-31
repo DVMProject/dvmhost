@@ -99,6 +99,7 @@ PeerNetwork::~PeerNetwork()
 
 void PeerNetwork::setRadioAliasLookups(lookups::RadioAliasLookup* ridAliasLookup)
 {
+    Network::setRadioAliasLookups(ridAliasLookup);
     m_ridAliasLookup = ridAliasLookup;
 }
 

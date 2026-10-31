@@ -31,19 +31,18 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
     // resolve peer ID (used for Activity Log and Status Transfer)
     bool validPeerId = false;
     uint32_t pktPeerId = 0U;
-    if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
+    TrafficNetwork::PeerConnectionPtr sourceConnection = network->findPeer(peerId);
+    if (peerId > 0 && sourceConnection != nullptr) {
         validPeerId = true;
         pktPeerId = peerId;
     } else {
         if (peerId > 0) {
             // this could be a replica transfer -- in which case, we need to check the SSRC of the packet not the peer ID
-            if (network->m_peers.find(req->rtpHeader.getSSRC()) != network->m_peers.end()) {
-                FNEPeerConnection* connection = network->m_peers[req->rtpHeader.getSSRC()];
-                if (connection != nullptr) {
-                    if (connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR && connection->isReplica()) {
-                        validPeerId = true;
-                        pktPeerId = req->rtpHeader.getSSRC();
-                    }
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(req->rtpHeader.getSSRC());
+            if (connection != nullptr) {
+                if (connection->peerClass() == PEER_CONN_CLASS_NEIGHBOR && connection->isReplica()) {
+                    validPeerId = true;
+                    pktPeerId = req->rtpHeader.getSSRC();
                 }
             }
         }
@@ -55,7 +54,7 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
         {
             if (network->m_allowActivityTransfer) {
                 if (pktPeerId > 0 && validPeerId) {
-                    FNEPeerConnection* connection = network->m_peers[pktPeerId];
+                    TrafficNetwork::PeerConnectionPtr connection = network->findPeer(pktPeerId);
                     if (connection != nullptr) {
                         std::string ip = udp::Socket::address(req->address);
 
@@ -70,8 +69,8 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                             TrafficNetwork::MetricsLogging::logActivity(network, pktPeerId, connection->identity(), payload);
 
                             // repeat traffic to the connected SysView peers
-                            if (network->m_peers.size() > 0U) {
-                                for (auto peer : network->m_peers) {
+                            if (network->peerCount() > 0U) {
+                                for (const auto& peer : network->peersSnapshot()) {
                                     if (peer.second != nullptr) {
                                         if (peer.second->peerClass() == PEER_CONN_CLASS_SYSVIEW) {
                                             sockaddr_storage addr = peer.second->socketStorage();
@@ -110,8 +109,8 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
     case NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG:            // Peer Diagnostic Log Transfer
         {
             if (network->m_allowDiagnosticTransfer) {
-                if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                    FNEPeerConnection* connection = network->m_peers[peerId];
+                TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+                if (peerId > 0 && connection != nullptr) {
                     if (connection != nullptr) {
                         std::string ip = udp::Socket::address(req->address);
 
@@ -140,15 +139,15 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
     case NET_SUBFUNC::TRANSFER_SUBFUNC_STATUS:          // Peer Status Transfer
         {
             if (pktPeerId > 0 && validPeerId) {
-                FNEPeerConnection* connection = network->m_peers[pktPeerId];
+                TrafficNetwork::PeerConnectionPtr connection = network->findPeer(pktPeerId);
                 if (connection != nullptr) {
                     std::string ip = udp::Socket::address(req->address);
 
                     // validate peer (simple validation really)
                     if (connection->connected() && connection->address() == ip) {
-                        if (network->m_peers.size() > 0U) {
+                        if (network->peerCount() > 0U) {
                             // attempt to repeat status traffic to SysView clients
-                            for (auto peer : network->m_peers) {
+                            for (const auto& peer : network->peersSnapshot()) {
                                 if (peer.second != nullptr) {
                                     if (peer.second->peerClass() == PEER_CONN_CLASS_SYSVIEW) {
                                         sockaddr_storage addr = peer.second->socketStorage();
@@ -190,7 +189,7 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
     case NET_SUBFUNC::TRANSFER_SUBFUNC_PATCH_STATUS:    // Console Patch Status Transfer
         {
             if (pktPeerId > 0 && validPeerId) {
-                FNEPeerConnection* connection = network->m_peers[pktPeerId];
+                TrafficNetwork::PeerConnectionPtr connection = network->findPeer(pktPeerId);
                 if (connection != nullptr) {
                     if (!network->patchStatusEnabled()) {
                         network->writePeerNAK(pktPeerId, network->createStreamId(), TAG_TRANSFER_PATCH_STAT, NET_CONN_NAK_FNE_UNAUTHORIZED);

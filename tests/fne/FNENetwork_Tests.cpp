@@ -12,8 +12,10 @@
 
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
+#include "common/lookups/AffiliationLookup.h"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -52,6 +54,38 @@ public:
     network::MetadataNetwork metadata;
 };
 
+TEST_CASE("Affiliation snapshots replace prior state", "[fne][affiliations]")
+{
+    lookups::AffiliationLookup affiliations("test-affiliations", nullptr, false);
+    affiliations.groupAff(1001U, 3100U);
+    affiliations.groupAff(1002U, 3200U);
+
+    std::unordered_map<uint32_t, uint32_t> replacement = {
+        { 1002U, 3300U },
+        { 1003U, 3400U }
+    };
+    affiliations.replaceGroupAffiliations(replacement);
+
+    REQUIRE(affiliations.grpAffTable() == replacement);
+
+    affiliations.replaceGroupAffiliations({});
+    REQUIRE(affiliations.grpAffTable().empty());
+}
+
+TEST_CASE("Unit registration snapshots replace prior state", "[fne][registrations]")
+{
+    lookups::AffiliationLookup registrations("test-registrations", nullptr, false);
+    registrations.unitReg(1001U);
+    registrations.unitReg(1002U);
+
+    registrations.replaceUnitRegistrations({ 1002U, 1003U, 1003U });
+
+    REQUIRE(registrations.unitRegTable() == std::vector<uint32_t>{ 1002U, 1003U });
+
+    registrations.replaceUnitRegistrations({});
+    REQUIRE(registrations.unitRegTable().empty());
+}
+
 TEST_CASE("FNE test hooks expose peer connection state", "[fne][hooks]")
 {
     FNEHarness harness;
@@ -60,6 +94,42 @@ TEST_CASE("FNE test hooks expose peer connection state", "[fne][hooks]")
     REQUIRE(FNETestHooks::hasPeer(harness.traffic, 1001U));
     REQUIRE(FNETestHooks::peerCount(harness.traffic) == 1U);
     REQUIRE(FNETestHooks::peerState(harness.traffic, 1001U) == network::NET_STAT_WAITING_AUTHORISATION);
+}
+
+TEST_CASE("FNE peer references remain valid after registry removal", "[fne][hooks][concurrency]")
+{
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, 1001U, network::NET_STAT_RUNNING, true);
+
+    std::shared_ptr<network::FNEPeerConnection> retained =
+        FNETestHooks::retainPeer(harness.traffic, 1001U);
+    REQUIRE(retained != nullptr);
+
+    FNETestHooks::removePeer(harness.traffic, 1001U);
+
+    REQUIRE_FALSE(FNETestHooks::hasPeer(harness.traffic, 1001U));
+    REQUIRE(FNETestHooks::peerCount(harness.traffic) == 0U);
+    REQUIRE(retained->id() == 1001U);
+    REQUIRE(retained->connectionState() == network::NET_STAT_RUNNING);
+}
+
+TEST_CASE("FNE replicated peer snapshots are stable copies", "[fne][replication]")
+{
+    FNEHarness harness;
+    json::array peers;
+    json::object peer;
+    uint32_t replicatedPeerId = 2001U;
+    peer["peerId"].set<uint32_t>(replicatedPeerId);
+    peers.push_back(json::value(peer));
+
+    FNETestHooks::updateReplicatedPeers(harness.traffic, 1001U, peers);
+    std::unordered_map<uint32_t, json::array> snapshot = FNETestHooks::replicatedPeersSnapshot(harness.traffic);
+    REQUIRE(snapshot.size() == 1U);
+    REQUIRE(snapshot.at(1001U).size() == 1U);
+
+    FNETestHooks::eraseReplicatedPeers(harness.traffic, 1001U);
+    REQUIRE(FNETestHooks::replicatedPeersSnapshot(harness.traffic).empty());
+    REQUIRE(snapshot.at(1001U).size() == 1U);
 }
 
 TEST_CASE("FNE traffic dispatcher rejects truncated pre-authentication packets", "[fne][hooks][security]")

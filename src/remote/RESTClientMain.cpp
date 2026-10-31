@@ -61,6 +61,7 @@
 #define RCD_FNE_SAVE_PEER_ACL           "fne-peer-commit"
 
 #define RCD_FNE_GET_STATS               "fne-stats"
+#define RCD_FNE_GET_HEALTH              "fne-health"
 #define RCD_FNE_PUT_RESET_TOTAL_CALLS   "fne-reset-total-calls"
 #define RCD_FNE_PUT_RESET_ACTIVE_CALLS  "fne-reset-active-calls"
 #define RCD_FNE_PUT_RESET_CALL_COLLISIONS "fne-reset-call-collisions"
@@ -991,6 +992,9 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_FNE_GET_STATS) {
             retCode = client->send(HTTP_GET, FNE_GET_STATS, json::object(), response);
+        }
+        else if (rcom == RCD_FNE_GET_HEALTH) {
+            retCode = client->send(HTTP_GET, FNE_GET_HEALTH, json::object(), response);
         }
         else if (rcom == RCD_FNE_PUT_RESET_TOTAL_CALLS) {
             retCode = client->send(HTTP_GET, FNE_GET_RESET_TOTAL_CALLS, json::object(), response);

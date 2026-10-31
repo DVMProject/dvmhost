@@ -577,7 +577,10 @@ bool HostFNE::createMasterNetwork()
     bool verbose = masterConf["verbose"].as<bool>(false);
     bool packetDump = masterConf["packetDump"].as<bool>(false);
     bool debug = masterConf["debug"].as<bool>(false);
-    bool kmfDebug = masterConf["kmfDebug"].as<bool>(false);
+
+    yaml::Node kmfConf = masterConf["kmf"];
+    bool kmfDebug = kmfConf["debug"].as<bool>(false);
+
     uint16_t workerCnt = (uint16_t)masterConf["workers"].as<uint32_t>(16U);
 
     // clamp worker thread count properly
@@ -640,19 +643,18 @@ bool HostFNE::createMasterNetwork()
     }
     bool parrotGrantDemand = masterConf["parrotGrantDemand"].as<bool>(true);
 
-    LogInfo("Network Parameters");
+    LogInfo("System Parameters");
     LogInfo("    Identity: %s", identity.c_str());
     LogInfo("    Peer ID: %u", id);
     LogInfo("    Address: %s", address.c_str());
     LogInfo("    Traffic Port: %u", port);
     LogInfo("    Metadata Port: %u", port + 1U);
+
     LogInfo("    Allow DMR Traffic: %s", m_dmrEnabled ? "yes" : "no");
     LogInfo("    Allow P25 Traffic: %s", m_p25Enabled ? "yes" : "no");
     LogInfo("    Allow P25 Phase 2 Traffic: %s", m_p25P2Enabled ? "yes" : "no");
     LogInfo("    Allow NXDN Traffic: %s", m_nxdnEnabled ? "yes" : "no");
     LogInfo("    Allow Analog Traffic: %s", m_analogEnabled ? "yes" : "no");
-    LogInfo("    Parrot Repeat Delay: %u ms", parrotDelay);
-    LogInfo("    Parrot Grant Demand: %s", parrotGrantDemand ? "yes" : "no");
 
     LogInfo("    Worker Threads: %u", workerCnt);
 
@@ -672,15 +674,13 @@ bool HostFNE::createMasterNetwork()
         LogInfo("    Debug: yes");
     }
 
-    if (kmfDebug) {
-        LogInfo("    P25 OTAR KMF Services Debug: yes");
-    }
-
     // initialize traffic networking
     m_network = new TrafficNetwork(this, address, port, id, password, identity, debug, kmfDebug, verbose, reportPeerPing,
         m_dmrEnabled, m_p25Enabled, m_p25P2Enabled, m_nxdnEnabled, m_analogEnabled,
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer,
         m_pingTime, m_updateLookupTime, workerCnt);
+    yaml::Node vtunConf = m_conf["vtun"];
+    m_network->setPacketDataOptions(vtunConf);
     m_network->setOptions(masterConf, true);
     m_network->setPacketDump(packetDump);
 

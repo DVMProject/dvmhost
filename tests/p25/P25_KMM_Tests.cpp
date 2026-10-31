@@ -68,6 +68,8 @@ public:
 };
 
 namespace {
+    constexpr uint32_t KMF_RSI = P25DEF::KMF_DEFAULT_RSI;
+
     /**
      * @brief Encodes a KMM frame into a byte vector.
      * @tparam T The type of the KMM frame.
@@ -151,7 +153,7 @@ TEST_CASE("KMM Warm-Start Command round-trips its wrapped temporary TEK", "[p25]
 
     KMMWarmStartCommand tx;
     tx.setDstLLId(0x123456U);
-    tx.setSrcLLId(WUID_FNE);
+    tx.setSrcLLId(KMF_RSI);
     tx.setHasMessageNumber(true);
     tx.setMessageNumber(7U);
     tx.setMACType(KMM_MAC::ENH_MAC);
@@ -209,7 +211,7 @@ TEST_CASE("P25 OTAR Warm Start transitions through temporary TEK Rekey", "[p25][
 
     FNETestHooks::setKMFServicesEnabled(harness.traffic, true);
     KMMHello hello;
-    hello.setDstLLId(WUID_FNE); hello.setSrcLLId(SU_RSI);
+    hello.setDstLLId(KMF_RSI); hello.setSrcLLId(SU_RSI);
     hello.setResponseKind(KMM_ResponseKind::IMMEDIATE);
     hello.setFlag(KMM_HelloFlag::REKEY_REQUEST_UKEK);
     std::vector<uint8_t> helloBytes = encodeKMM(hello);
@@ -252,7 +254,7 @@ TEST_CASE("P25 OTAR Warm Start transitions through temporary TEK Rekey", "[p25][
     warmStatus.algId(ALGO_AES_256); warmStatus.kId(temporaryKId);
     warmStatus.status(KMM_Status::CMD_PERFORMED);
     KMMRekeyAck warmAck;
-    warmAck.setDstLLId(WUID_FNE); warmAck.setSrcLLId(SU_RSI);
+    warmAck.setDstLLId(KMF_RSI); warmAck.setSrcLLId(SU_RSI);
     warmAck.setHasMessageNumber(true); warmAck.setMessageNumber(command->getMessageNumber());
     warmAck.setMACType(KMM_MAC::ENH_MAC); warmAck.setMACAlgId(ALGO_AES_256);
     warmAck.setMACKId(temporaryKId); warmAck.setMACFormat(KMM_MAC_FORMAT_CMAC);
@@ -277,7 +279,7 @@ TEST_CASE("P25 OTAR Warm Start transitions through temporary TEK Rekey", "[p25][
     rekeyStatus.algId(ALGO_AES_256); rekeyStatus.kId(FINAL_KID);
     rekeyStatus.status(KMM_Status::CMD_PERFORMED);
     KMMRekeyAck finalAck;
-    finalAck.setDstLLId(WUID_FNE); finalAck.setSrcLLId(SU_RSI);
+    finalAck.setDstLLId(KMF_RSI); finalAck.setSrcLLId(SU_RSI);
     finalAck.setHasMessageNumber(true); finalAck.setMessageNumber(rekey->getMessageNumber());
     finalAck.setMACType(KMM_MAC::ENH_MAC); finalAck.setMACAlgId(ALGO_AES_256);
     finalAck.setMACKId(FINAL_KID); finalAck.setMACFormat(KMM_MAC_FORMAT_CMAC);
@@ -286,15 +288,27 @@ TEST_CASE("P25 OTAR Warm Start transitions through temporary TEK Rekey", "[p25][
     std::vector<uint8_t> finalAckBytes = encodeKMM(finalAck);
     finalAck.generateMAC(finalKey, finalAckBytes.data());
     uint32_t finalResponseLength = 0U;
-    REQUIRE(FNETestHooks::processOTARKMM(harness.traffic, finalAckBytes, SU_RSI,
-        finalResponseLength, ALGO_AES_256, FINAL_KID) == nullptr);
+    UInt8Array finalResponse = FNETestHooks::processOTARKMM(harness.traffic,
+        finalAckBytes, SU_RSI, finalResponseLength, ALGO_AES_256, FINAL_KID);
+    REQUIRE(finalResponse != nullptr);
+
+    std::unique_ptr<KMMFrame> changeoverBase = KMMFactory::create(finalResponse.get(),
+        finalResponseLength);
+    KMMChangeover* changeover = dynamic_cast<KMMChangeover*>(changeoverBase.get());
+    REQUIRE(changeover != nullptr);
+    CHECK(changeover->getMessageId() == KMM_MessageType::CHANGEOVER_CMD);
+    CHECK(changeover->getSupersededKeysetId() == 1U);
+    CHECK(changeover->getActiveKeysetId() == 1U);
+    CHECK(changeover->getMessageNumber() == rekey->getMessageNumber() + 1U);
+    CHECK(changeover->getMACKId() == FINAL_KID);
+    CHECK(changeover->verifyMAC(finalKey, finalResponse.get(), finalResponseLength));
     CHECK_FALSE(FNETestHooks::hasOTARWarmStart(harness.traffic, SU_RSI));
 }
 
 TEST_CASE("KMM air-facing factory rejects malformed lengths", "[p25][kmm][security]")
 {
     KMMHello hello;
-    hello.setDstLLId(WUID_FNE);
+    hello.setDstLLId(KMF_RSI);
     hello.setSrcLLId(0x654321U);
     std::vector<uint8_t> bytes = encodeKMM(hello);
 
@@ -309,12 +323,149 @@ TEST_CASE("KMM air-facing factory rejects malformed lengths", "[p25][kmm][securi
     REQUIRE(KMMFactory::create(bytes.data(), (uint32_t)bytes.size()) == nullptr);
 }
 
+TEST_CASE("P25 OTAR direct Rekey issues Changeover after its final acknowledgment",
+    "[p25][kmm][otar][rekey][changeover]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    constexpr uint16_t FINAL_KID = 0x2001U;
+    const char* finalHex = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F";
+
+    EKCKeyItem finalTEK;
+    finalTEK.id(1U);
+    finalTEK.algId(ALGO_AES_256);
+    finalTEK.kId(FINAL_KID);
+    finalTEK.sln(1U);
+    finalTEK.keyMaterial(finalHex);
+    FNETestHooks::addCryptoKey(harness.traffic, finalTEK);
+    harness.rid.addEntry(SU_RSI, true, "direct-rekey-test", "", true, true,
+        { FINAL_KID });
+
+    const std::vector<std::vector<uint8_t>> rekeyFrames =
+        FNETestHooks::buildOTARRekey(harness.traffic, SU_RSI, SU_RSI);
+    REQUIRE(rekeyFrames.size() == 1U);
+
+    std::unique_ptr<KMMFrame> rekeyBase = KMMFactory::create(rekeyFrames[0U].data());
+    KMMRekeyCommand* rekey = dynamic_cast<KMMRekeyCommand*>(rekeyBase.get());
+    REQUIRE(rekey != nullptr);
+
+    uint8_t finalKey[P25DEF::MAX_ENC_KEY_LENGTH_BYTES] = { 0U };
+    finalTEK.getKey(finalKey);
+    KeyStatus status;
+    status.algId(ALGO_AES_256);
+    status.kId(FINAL_KID);
+    status.status(KMM_Status::CMD_PERFORMED);
+
+    KMMRekeyAck ack;
+    ack.setDstLLId(KMF_RSI);
+    ack.setSrcLLId(SU_RSI);
+    ack.setHasMessageNumber(true);
+    ack.setMessageNumber(rekey->getMessageNumber());
+    ack.setMACType(KMM_MAC::ENH_MAC);
+    ack.setMACAlgId(ALGO_AES_256);
+    ack.setMACKId(FINAL_KID);
+    ack.setMACFormat(KMM_MAC_FORMAT_CMAC);
+    ack.setAckMessageId(KMM_MessageType::REKEY_CMD);
+    ack.setNumberOfKeyStatus(1U);
+    ack.setKeyStatus({ status });
+    std::vector<uint8_t> ackBytes = encodeKMM(ack);
+    ack.generateMAC(finalKey, ackBytes.data());
+
+    uint32_t responseLength = 0U;
+    UInt8Array response = FNETestHooks::processOTARKMM(harness.traffic, ackBytes,
+        SU_RSI, responseLength, ALGO_AES_256, FINAL_KID);
+    REQUIRE(response != nullptr);
+
+    std::unique_ptr<KMMFrame> changeoverBase = KMMFactory::create(response.get(),
+        responseLength);
+    KMMChangeover* changeover = dynamic_cast<KMMChangeover*>(changeoverBase.get());
+    REQUIRE(changeover != nullptr);
+    CHECK(changeover->getSupersededKeysetId() == 1U);
+    CHECK(changeover->getActiveKeysetId() == 1U);
+    CHECK(changeover->getMessageNumber() == rekey->getMessageNumber() + 1U);
+    CHECK(changeover->getMACKId() == FINAL_KID);
+    CHECK(changeover->verifyMAC(finalKey, response.get(), responseLength));
+}
+
+TEST_CASE("P25 OTAR resynchronizes Rekey message numbers with same-RSI Change-RSI",
+    "[p25][kmm][otar][rekey][change-rsi]")
+{
+    KMMFNEHarness harness;
+    constexpr uint32_t SU_RSI = 0x654321U;
+    constexpr uint16_t TEK_KID = 0x2001U;
+
+    EKCKeyItem tek;
+    tek.id(1U); tek.algId(ALGO_AES_256); tek.kId(TEK_KID); tek.sln(1U);
+    tek.keyMaterial("000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F");
+    FNETestHooks::addCryptoKey(harness.traffic, tek);
+    EKCKeyItem ukek;
+    ukek.id(2U); ukek.rsiId(SU_RSI); ukek.algId(ALGO_AES_256);
+    ukek.kId(0x1001U); ukek.sln(0U);
+    ukek.keyMaterial("101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F");
+    FNETestHooks::addCryptoUKEK(harness.traffic, ukek);
+    harness.rid.addEntry(SU_RSI, true, "change-rsi-test", "", true, true,
+        { TEK_KID });
+
+    const std::vector<std::vector<uint8_t>> frames =
+        FNETestHooks::buildOTARRekey(harness.traffic, SU_RSI, SU_RSI);
+    REQUIRE(frames.size() == 1U);
+    std::unique_ptr<KMMFrame> rekeyBase = KMMFactory::create(frames[0U].data());
+    KMMRekeyCommand* rekey = dynamic_cast<KMMRekeyCommand*>(rekeyBase.get());
+    REQUIRE(rekey != nullptr);
+
+    uint8_t key[P25DEF::MAX_ENC_KEY_LENGTH_BYTES] = { 0U };
+    tek.getKey(key);
+    KMMNegativeAck nack;
+    nack.setDstLLId(KMF_RSI); nack.setSrcLLId(SU_RSI);
+    nack.setHasMessageNumber(true); nack.KMMFrame::setMessageNumber(10U);
+    nack.setMACType(KMM_MAC::ENH_MAC); nack.setMACAlgId(ALGO_AES_256);
+    nack.setMACKId(TEK_KID); nack.setMACFormat(KMM_MAC_FORMAT_CMAC);
+    nack.setNakMessageId(KMM_MessageType::REKEY_CMD);
+    nack.setMessageNumber(rekey->getMessageNumber());
+    nack.setStatus(KMM_Status::INVALID_MSG_NUMBER);
+    std::vector<uint8_t> nackBytes = encodeKMM(nack);
+    nack.generateMAC(key, nackBytes.data());
+
+    uint32_t commandLength = 0U;
+    UInt8Array commandBytes = FNETestHooks::processOTARKMM(harness.traffic,
+        nackBytes, SU_RSI, commandLength, ALGO_AES_256, TEK_KID);
+    REQUIRE(commandBytes != nullptr);
+    std::unique_ptr<KMMFrame> commandBase = KMMFactory::create(commandBytes.get(),
+        commandLength);
+    KMMChangeRSI* command = dynamic_cast<KMMChangeRSI*>(commandBase.get());
+    REQUIRE(command != nullptr);
+    CHECK(command->getMessageId() == KMM_MessageType::CHANGE_RSI_CMD);
+    CHECK(command->getOldRSI() == SU_RSI);
+    CHECK(command->getNewRSI() == SU_RSI);
+    CHECK(command->KMMFrame::getMessageNumber() == 10U);
+    CHECK(command->getInitialMessageNumber() == 11U);
+    CHECK(command->verifyMAC(key, commandBytes.get(), commandLength));
+
+    KMMChangeRSI response;
+    response.setMessageId(KMM_MessageType::CHANGE_RSI_RSP);
+    response.setDstLLId(KMF_RSI); response.setSrcLLId(SU_RSI);
+    response.setHasMessageNumber(true); response.setMessageNumber(11U);
+    response.setMACType(KMM_MAC::ENH_MAC); response.setMACAlgId(ALGO_AES_256);
+    response.setMACKId(TEK_KID); response.setMACFormat(KMM_MAC_FORMAT_CMAC);
+    response.setOldRSI(SU_RSI); response.setNewRSI(SU_RSI);
+    response.setStatus(KMM_Status::CMD_PERFORMED);
+    std::vector<uint8_t> responseBytes = encodeKMM(response);
+    response.generateMAC(key, responseBytes.data());
+
+    uint32_t retryLength = 0U;
+    UInt8Array retryBytes = FNETestHooks::processOTARKMM(harness.traffic,
+        responseBytes, SU_RSI, retryLength, ALGO_AES_256, TEK_KID);
+    REQUIRE(retryBytes != nullptr);
+    std::unique_ptr<KMMFrame> retryBase = KMMFactory::create(retryBytes.get());
+    KMMRekeyCommand* retry = dynamic_cast<KMMRekeyCommand*>(retryBase.get());
+    REQUIRE(retry != nullptr);
+    CHECK(retry->getMessageNumber() == 12U);
+}
+
 TEST_CASE("FNE OTAR dispatcher follows AACA response-kind procedures", "[p25][kmm][otar]")
 {
     KMMFNEHarness harness;
     constexpr uint32_t SU_RSI = 0x654321U;
-    constexpr uint32_t KMF_RSI = WUID_FNE;
-
     SECTION("Response Kind 1 Hello produces no OTAR response") {
         KMMHello request;
         request.setDstLLId(KMF_RSI);
@@ -361,7 +512,7 @@ TEST_CASE("FNE OTAR dispatcher follows AACA response-kind procedures", "[p25][km
         REQUIRE(decoded->getMessageId() == KMM_MessageType::NO_SERVICE);
         REQUIRE(decoded->getResponseKind() == KMM_ResponseKind::NONE);
         REQUIRE(decoded->getDstLLId() == SU_RSI);
-        REQUIRE(decoded->getSrcLLId() == WUID_FNE);
+        REQUIRE(decoded->getSrcLLId() == KMF_RSI);
     }
 
     SECTION("Response Kind 3 Deregistration receives Deregistration-Response") {
@@ -385,7 +536,7 @@ TEST_CASE("FNE OTAR dispatcher follows AACA response-kind procedures", "[p25][km
         REQUIRE(decoded->getMessageId() == KMM_MessageType::DEREG_RSP);
         REQUIRE(decoded->getResponseKind() == KMM_ResponseKind::NONE);
         REQUIRE(decoded->getDstLLId() == SU_RSI);
-        REQUIRE(decoded->getSrcLLId() == WUID_FNE);
+        REQUIRE(decoded->getSrcLLId() == KMF_RSI);
     }
 
     SECTION("security-sensitive KMM received without outer encryption is discarded") {
@@ -418,7 +569,7 @@ TEST_CASE("FNE OTAR authenticates and replay-checks KMM before dispatch", "[p25]
 
     auto makeSigned = [&](uint16_t mn, uint8_t flag, uint16_t macFormat = KMM_MAC_FORMAT_CBC) {
         KMMHello hello;
-        hello.setDstLLId(WUID_FNE); hello.setSrcLLId(SU_RSI);
+        hello.setDstLLId(KMF_RSI); hello.setSrcLLId(SU_RSI);
         hello.setResponseKind(KMM_ResponseKind::IMMEDIATE);
         hello.setHasMessageNumber(true); hello.setMessageNumber(mn); hello.setFlag(flag);
         hello.setMACType(KMM_MAC::ENH_MAC); hello.setMACAlgId(ALGO_AES_256);
@@ -475,7 +626,7 @@ TEST_CASE("FNE OTAR returns secured RK3 KMM NACKs for validation failures", "[p2
 
     auto signedHello = [&](uint16_t mn) {
         KMMHello hello;
-        hello.setDstLLId(WUID_FNE); hello.setSrcLLId(SU_RSI);
+        hello.setDstLLId(KMF_RSI); hello.setSrcLLId(SU_RSI);
         hello.setResponseKind(KMM_ResponseKind::IMMEDIATE);
         hello.setHasMessageNumber(true); hello.setMessageNumber(mn);
         hello.setMACType(KMM_MAC::ENH_MAC); hello.setMACAlgId(ALGO_AES_256);
@@ -517,7 +668,7 @@ TEST_CASE("FNE OTAR returns secured RK3 KMM NACKs for validation failures", "[p2
     requireNack(badMac, KMM_Status::INVALID_MAC, 101U);
 
     KMMHello noMac;
-    noMac.setDstLLId(WUID_FNE); noMac.setSrcLLId(SU_RSI);
+    noMac.setDstLLId(KMF_RSI); noMac.setSrcLLId(SU_RSI);
     noMac.setResponseKind(KMM_ResponseKind::IMMEDIATE);
     noMac.setHasMessageNumber(true); noMac.setMessageNumber(102U);
     requireNack(encodeKMM(noMac), KMM_Status::INVALID_MSG_NUMBER, 102U);
@@ -537,7 +688,7 @@ TEST_CASE("FNE OTAR returns secured RK3 KMM NACKs for validation failures", "[p2
     requireNack(missingMacKey, KMM_Status::ITEM_NOT_EXIST, 104U);
 
     KMMInventoryCommand unsupportedProcedure;
-    unsupportedProcedure.setDstLLId(WUID_FNE); unsupportedProcedure.setSrcLLId(SU_RSI);
+    unsupportedProcedure.setDstLLId(KMF_RSI); unsupportedProcedure.setSrcLLId(SU_RSI);
     unsupportedProcedure.setResponseKind(KMM_ResponseKind::IMMEDIATE);
     unsupportedProcedure.setHasMessageNumber(true); unsupportedProcedure.setMessageNumber(105U);
     unsupportedProcedure.setMACType(KMM_MAC::ENH_MAC); unsupportedProcedure.setMACAlgId(ALGO_AES_256);
@@ -563,7 +714,7 @@ TEST_CASE("P25 OTAR DLD processes KMM through the packet-data service entry poin
     FNETestHooks::addCryptoKey(harness.traffic, item);
 
     KMMHello hello;
-    hello.setDstLLId(WUID_FNE);
+    hello.setDstLLId(KMF_RSI);
     hello.setSrcLLId(SU_RSI);
     hello.setResponseKind(KMM_ResponseKind::NONE);
     hello.setHasMessageNumber(true); hello.setMessageNumber(MN);
@@ -626,7 +777,7 @@ TEST_CASE("P25 FNE accepts a KMM immediately after a PDU response", "[p25][kmm][
     REQUIRE(FNETestHooks::processP25PDUResponse(harness.traffic, SU_RSI, 5U));
 
     KMMHello hello;
-    hello.setDstLLId(WUID_FNE);
+    hello.setDstLLId(KMF_RSI);
     hello.setSrcLLId(SU_RSI);
     hello.setResponseKind(KMM_ResponseKind::NONE);
     hello.setHasMessageNumber(true);
@@ -659,7 +810,7 @@ TEST_CASE("P25 OTAR DLI validates its Version-0 preamble and dispatches KMM", "[
     };
 
     KMMHello hello;
-    hello.setDstLLId(WUID_FNE); hello.setSrcLLId(SU_RSI);
+    hello.setDstLLId(KMF_RSI); hello.setSrcLLId(SU_RSI);
     hello.setResponseKind(KMM_ResponseKind::NONE);
     hello.setHasMessageNumber(true); hello.setMessageNumber(MN);
     hello.setFlag(KMM_HelloFlag::IDENT_ONLY);
@@ -680,10 +831,10 @@ TEST_CASE("P25 OTAR DLI validates its Version-0 preamble and dispatches KMM", "[
         FNETestHooks::setKMFServicesEnabled(harness.traffic, true);
 
         KMMRegistrationCommand registration;
-        registration.setDstLLId(WUID_FNE);
+        registration.setDstLLId(KMF_RSI);
         registration.setSrcLLId(SU_RSI);
         registration.setResponseKind(KMM_ResponseKind::IMMEDIATE);
-        registration.setKMFRSI(WUID_FNE);
+        registration.setKMFRSI(KMF_RSI);
         uint32_t registrationResponseSize = 0U;
         UInt8Array registrationResponse = FNETestHooks::processOTARKMM(harness.traffic,
             encodeKMM(registration), SU_RSI, registrationResponseSize,
@@ -805,7 +956,7 @@ TEST_CASE("P25 OTAR builds authenticated Changeover Commands without dispatching
     REQUIRE(changeover != nullptr);
     CHECK(changeover->getMessageId() == KMM_MessageType::CHANGEOVER_CMD);
     CHECK(changeover->getResponseKind() == KMM_ResponseKind::IMMEDIATE);
-    CHECK(changeover->getSrcLLId() == WUID_FNE);
+    CHECK(changeover->getSrcLLId() == KMF_RSI);
     CHECK(changeover->getDstLLId() == SU_RSI);
     CHECK(changeover->getSupersededKeysetId() == SUPERSEDED_KEYSET);
     CHECK(changeover->getActiveKeysetId() == ACTIVE_KEYSET);
@@ -882,10 +1033,10 @@ TEST_CASE("P25 OTAR DLI traverses the real UDP endpoint", "[p25][kmm][otar][dli]
     serverAddress.sin_port = htons(serverPort);
 
     KMMRegistrationCommand registration;
-    registration.setDstLLId(WUID_FNE);
+    registration.setDstLLId(KMF_RSI);
     registration.setSrcLLId(SU_RSI);
     registration.setResponseKind(KMM_ResponseKind::IMMEDIATE);
-    registration.setKMFRSI(WUID_FNE);
+    registration.setKMFRSI(KMF_RSI);
     std::vector<uint8_t> registrationKMM = encodeKMM(registration);
     std::vector<uint8_t> datagram(14U + registrationKMM.size(), 0U);
     datagram[0U] = 0U;

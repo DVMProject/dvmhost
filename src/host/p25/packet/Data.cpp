@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -118,7 +118,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             }
 
             // if we're a dedicated CC or in control only mode, we only want to handle AMBTs. Otherwise return
-            if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_rfAssembler->dataHeader.getFormat() != PDUFormatType::AMBT) {
+            if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && !lc::AMBT::isMBT(m_rfAssembler->dataHeader)) {
                 if (m_debug) {
                     LogDebug(LOG_RF, "CC only mode, ignoring non-AMBT PDU from RF");
                 }
@@ -370,9 +370,14 @@ bool Data::process(uint8_t* data, uint32_t len)
                     if (m_rfAssembler->getUndecodableBlockCount() > 0U)
                         break;
 
-                    if (m_verbose) {
-                        LogInfoEx(LOG_RF, P25_PDU_STR ", TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u",
-                            m_rfAssembler->dataHeader.getAMBTOpcode(), m_rfAssembler->dataHeader.getBlocksToFollow());
+                    if (m_rfAssembler->dataHeader.getFormat() == PDUFormatType::UNCONFIRMED && m_verbose) {
+                        LogInfoEx(LOG_RF, P25_PDU_STR ", TRUNK_CTRL (Standard MBT Packet), blocksToFollow = %u",
+                            m_rfAssembler->dataHeader.getBlocksToFollow());
+                    } else {
+                        if (m_rfAssembler->dataHeader.getFormat() == PDUFormatType::AMBT && m_verbose) {
+                            LogInfoEx(LOG_RF, P25_PDU_STR ", TRUNK_CTRL (Alternate MBT Packet), lco = $%02X, blocksToFollow = %u",
+                                m_rfAssembler->dataHeader.getAMBTOpcode(), m_rfAssembler->dataHeader.getBlocksToFollow());
+                        }
                     }
 
                     m_p25->m_control->processMBT(m_rfAssembler->dataHeader, m_rfAssembler->dataBlocks);
@@ -480,7 +485,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
                         }
 
                         // if we're a dedicated CC or in control only mode, we only want to handle AMBTs. Otherwise return
-                        if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && m_netAssembler->dataHeader.getFormat() != PDUFormatType::AMBT) {
+                        if ((m_p25->m_dedicatedControl || m_p25->m_controlOnly) && !lc::AMBT::isMBT(m_netAssembler->dataHeader)) {
                             if (m_debug) {
                                 LogDebug(LOG_NET, "CC only mode, ignoring non-AMBT PDU from network");
                             }

@@ -1292,6 +1292,15 @@ bool Voice::checkRFTrafficCollision(uint32_t dstId)
         }
     }
 
+    // RF traffic on a different talkgroup preempts the active network call.
+    if (m_slot->m_netState != RS_NET_IDLE) {
+        m_slot->m_netState = RS_NET_IDLE;
+        m_slot->m_netTimeoutTimer.stop();
+        m_slot->m_netTimeout = false;
+        m_slot->m_netTGHang.stop();
+        m_slot->m_networkWatchdog.stop();
+    }
+
     return false;
 }
 

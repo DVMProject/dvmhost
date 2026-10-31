@@ -376,6 +376,62 @@ EKCKeyItem CryptoContainer::findLLA(uint32_t rsi)
     return entry;
 }
 
+/* Returns the last load time of this lookup table. */
+
+uint64_t CryptoContainer::lastLoadTime() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_lastLoadTime;
+}
+
+/* Returns thread-safe snapshots of the crypto tables. */
+
+std::vector<EKCKeyItem> CryptoContainer::keys() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_keys;
+}
+
+/* Sets thread-safe snapshots of the crypto tables. */
+
+void CryptoContainer::keys(std::vector<EKCKeyItem> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_keys = std::move(val);
+}
+
+/* Returns thread-safe snapshots of the UKEK RSI keys. */
+
+std::vector<EKCKeyItem> CryptoContainer::ukeks() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_ukeks;
+}
+
+/* Sets thread-safe snapshots of the UKEK RSI keys. */
+
+void CryptoContainer::ukeks(std::vector<EKCKeyItem> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_ukeks = std::move(val);
+}
+
+/* Returns thread-safe snapshots of the LLA RSI keys. */
+
+std::vector<EKCKeyItem> CryptoContainer::llas() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_llas;
+}
+
+/* Sets thread-safe snapshots of the LLA RSI keys. */
+
+void CryptoContainer::llas(std::vector<EKCKeyItem> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_llas = std::move(val);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
@@ -779,21 +835,34 @@ bool CryptoContainer::load()
         return false;
     }
 
-    if (m_keys.size() == 0U && m_ukeks.size() == 0U && m_llas.size() == 0U) {
+    size_t keyCount = 0U;
+    size_t ukekCount = 0U;
+    size_t llaCount = 0U;
+    {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        keyCount = m_keys.size();
+        ukekCount = m_ukeks.size();
+        llaCount = m_llas.size();
+    }
+
+    if (keyCount == 0U && ukekCount == 0U && llaCount == 0U) {
         ::LogError(LOG_HOST, "No encryption keys defined!");
         return false;
     }
 
-    size_t size = m_keys.size() + m_ukeks.size() + m_llas.size();
+    size_t size = keyCount + ukekCount + llaCount;
     if (size == 0U) {
         return false;
     }
 
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    m_lastLoadTime = now;
+    {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        m_lastLoadTime = now;
+    }
 
     LogInfoEx(LOG_HOST, "Loaded %lu entries into crypto lookup table (TEK=%lu, UKEK=%lu, LLA=%lu)",
-        size, m_keys.size(), m_ukeks.size(), m_llas.size());
+        size, keyCount, ukekCount, llaCount);
 
     return true;
 #endif // !ENABLE_SSL

@@ -261,7 +261,7 @@ public:
      * @brief Returns the last load time of this lookup table.
      * @return const uint64_t Last load time in milliseconds since epoch.
      */
-    const uint64_t lastLoadTime() const { return m_lastLoadTime; }
+    uint64_t lastLoadTime() const;
 
     /**
      * @brief Returns the filename of this lookup table.
@@ -279,6 +279,35 @@ public:
      * @return const bool True, if remote access is enabled, otherwise false.
      */
     const bool isRemoteAccessEnabled() const { return m_remoteAccessEnabled; }
+
+    /**
+     * @brief Returns a thread-safe snapshot of the keys.
+     */
+    std::vector<EKCKeyItem> keys() const;
+    /**
+     * @brief Sets the thread-safe snapshot of the keys.
+     * @param val Vector of key items to set.
+     */
+    void keys(std::vector<EKCKeyItem> val);
+
+    /**
+     * @brief Returns a thread-safe snapshot of the UKEK RSI keys.
+     */
+    std::vector<EKCKeyItem> ukeks() const;
+    /**
+     * @brief Sets the thread-safe snapshot of the UKEK RSI keys.
+     * @param val Vector of key items to set.
+     */
+    void ukeks(std::vector<EKCKeyItem> val);
+    /**
+     * @brief Returns a thread-safe snapshot of the LLA RSI keys.
+     */
+    std::vector<EKCKeyItem> llas() const;
+    /**
+     * @brief Sets the thread-safe snapshot of the LLA RSI keys.
+     * @param val Vector of key items to set.
+     */
+    void llas(std::vector<EKCKeyItem> val);
 
 private:
     std::string m_file;
@@ -301,20 +330,10 @@ private:
      */
     bool load();
 
-public:
-    /**
-     * @brief List of keys.
-     */
-    DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, keys);
-
-    /**
-     * @brief List of UKEK RSI keys.
-     */
-    DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, ukeks);
-    /**
-     * @brief List of LLA RSI keys.
-     */
-    DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, llas);
+private:
+    std::vector<EKCKeyItem> m_keys;
+    std::vector<EKCKeyItem> m_ukeks;
+    std::vector<EKCKeyItem> m_llas;
 };
 
 #endif // __CRYPTO_CONTAINER_H__

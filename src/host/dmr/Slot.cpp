@@ -152,7 +152,6 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_enableTSCC(false),
     m_dedicatedTSCC(false),
     m_ignoreAffiliationCheck(false),
-    m_disableNetworkGrant(false),
     m_convNetGrantDemand(false),
     m_legacyGroupReg(false),
     m_defaultNetIdleTalkgroup(0U),
@@ -460,16 +459,6 @@ void Slot::processNetwork(const data::NetData& dmrData)
                 bool unitToUnit = (dmrData.getControl() & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
                 
                 if (grantDemand) {
-                    if (m_disableNetworkGrant) {
-                        break;
-                    }
-
-                    // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
-                    // demands
-                    if (!dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
-                        break;
-                    }
-
                     // validate source RID
                     if (!acl::AccessControl::validateSrcId(dmrData.getSrcId())) {
                         break;
@@ -497,15 +486,11 @@ void Slot::processNetwork(const data::NetData& dmrData)
             break;
         }
 
-        // if *this slot* is the TSCC slot, stop processing after this point
-        if (m_enableTSCC && m_dedicatedTSCC)
-        {
-            if (dataType != DataType::CSBK && dataType != DataType::MBC_HEADER && dataType != DataType::MBC_DATA)
+        if (dataType != DataType::CSBK && dataType != DataType::MBC_HEADER && dataType != DataType::MBC_DATA)
+            return;
+        else {
+            if (m_slotNo != s_dmr->m_tsccSlotNo)
                 return;
-            else {
-                if (m_slotNo != s_dmr->m_tsccSlotNo)
-                    return;
-            }
         }
     }
 

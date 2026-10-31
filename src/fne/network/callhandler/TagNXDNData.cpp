@@ -388,17 +388,15 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
                                 // determine if the peer trying to transmit has call priority
                                 if (m_network->m_callCollisionTimeout > 0U) {
-                                    m_network->m_peers.shared_lock();
-                                    for (auto peer : m_network->m_peers) {
+                                    for (const auto& peer : m_network->peersSnapshot()) {
                                         if (peerId == peer.first) {
-                                            FNEPeerConnection* conn = peer.second;
+                                            TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                             if (conn != nullptr) {
                                                 hasCallPriority = conn->hasCallPriority();
                                                 break;
                                             }
                                         }
                                     }
-                                    m_network->m_peers.shared_unlock();
                                 }
 
                                 // perform standard call collision if the call collision timeout is set *and*
@@ -579,11 +577,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 } else {
                     // if this is a private call, check if the destination peer is one directly connected to us, if not
                     // flag the call so it only repeats to neighbor FNE peers
-                    if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+                    if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
                         noConnectedPeerRepeat = true;
-                        for (auto peer : m_network->m_peers) {
+                        for (const auto& peer : m_network->peersSnapshot()) {
                             if (peerId != peer.first) {
-                                FNEPeerConnection* conn = peer.second;
+                                TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                 if (conn != nullptr) {
                                     if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
                                         continue;
@@ -606,16 +604,15 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         */
 
         // repeat traffic to nodes peered to us as master
-        if (m_network->m_peers.size() > 0U && !noConnectedPeerRepeat) {
+        if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 if (peer.second == nullptr)
                     continue;
                 if (peerId != peer.first) {
-                    FNEPeerConnection* conn = peer.second;
+                    TrafficNetwork::PeerConnectionPtr conn = peer.second;
                     if (ssrc == peer.first) {
                         // skip the peer if it is the source peer
                         continue;
@@ -672,7 +669,6 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                 }
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         // if this is a private call, and we have already repeated to the connected peer that registered
@@ -769,8 +765,8 @@ bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUni
     }
 
     // repeat traffic to the connected peers
-    if (m_network->m_peers.size() > 0U) {
-        for (auto peer : m_network->m_peers) {
+    if (m_network->peerCount() > 0U) {
+        for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first) {
                 write_Message_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
             }
@@ -842,8 +838,7 @@ void TagNXDNData::playbackParrot()
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
-            m_network->m_peers.shared_lock();
-            for (auto peer : m_network->m_peers) {
+            for (const auto& peer : m_network->peersSnapshot()) {
                 // every MAX_QUEUED_PEER_MSGS peers flush the queue
                 if (i % MAX_QUEUED_PEER_MSGS == 0U) {
                     m_network->m_frameQueue->flushQueue(&queue);
@@ -858,7 +853,6 @@ void TagNXDNData::playbackParrot()
                 i++;
             }
             m_network->m_frameQueue->flushQueue(&queue);
-            m_network->m_peers.shared_unlock();
         }
 
         delete[] pkt.buffer;
@@ -934,12 +928,7 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
         return false;
     }
 
-    FNEPeerConnection* connection = nullptr; // bryanb: this is a possible null ref concurrency issue
-                                             //     it is possible if the timing is just right to get a valid 
-                                             //     connection back initially, and then for it to be deleted
-    if (peerId > 0 && (m_network->m_peers.find(peerId) != m_network->m_peers.end())) {
-        connection = m_network->m_peers[peerId];
-    }
+    TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
 
     if (connection != nullptr) {
         // is this peer a replica peer?

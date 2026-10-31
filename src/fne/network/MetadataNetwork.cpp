@@ -20,6 +20,7 @@ using namespace network;
 using namespace network::callhandler;
 
 #include <cassert>
+#include <chrono>
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -36,7 +37,15 @@ MetadataNetwork::MetadataNetwork(HostFNE* host, TrafficNetwork* trafficNetwork, 
     m_status(NET_STAT_INVALID),
     m_peerReplicaActPkt(),
     m_peerTreeListPkt(),
-    m_threadPool(workerCnt, "meta")
+    m_threadPool(workerCnt, "meta"),
+    m_healthDataPlaneEpoch(0U),
+    m_healthLastDataPlaneTick(0U),
+    m_healthPacketsReceived(0U),
+    m_healthLastPacketReceived(0U),
+    m_healthTasksSubmitted(0U),
+    m_healthTasksCompleted(0U),
+    m_healthLastTaskProgress(0U),
+    m_healthTaskEnqueueFailures(0U)
 {
     assert(trafficNetwork != nullptr);
     assert(host != nullptr);
@@ -59,6 +68,10 @@ void MetadataNetwork::setPresharedKey(const uint8_t* presharedKey)
 
 void MetadataNetwork::processNetwork()
 {
+    const uint64_t healthNow = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    m_healthDataPlaneEpoch.fetch_add(1U, std::memory_order_relaxed);
+    m_healthLastDataPlaneTick.store(healthNow, std::memory_order_relaxed);
+
     if (m_status != NET_STAT_MST_RUNNING) {
         return;
     }
@@ -72,6 +85,9 @@ void MetadataNetwork::processNetwork()
     // read message
     UInt8Array buffer = m_frameQueue->read(length, address, addrLen, &rtpHeader, &fneHeader);
     if (length > 0) {
+        m_healthPacketsReceived.fetch_add(1U, std::memory_order_relaxed);
+        m_healthLastPacketReceived.store(healthNow, std::memory_order_relaxed);
+
         if (m_debug)
             Utils::dump(1U, "MetadataNetwork::processNetwork(), Network Message", buffer.get(), length);
 
@@ -86,14 +102,25 @@ void MetadataNetwork::processNetwork()
         req->addrLen = addrLen;
         req->rtpHeader = rtpHeader;
         req->fneHeader = fneHeader;
+        req->healthMetadataTracked = true;
 
         req->length = length;
         req->buffer = new uint8_t[length];
         ::memcpy(req->buffer, buffer.get(), length);
 
+        const uint64_t pendingBefore = m_healthTasksSubmitted.load(std::memory_order_relaxed) - m_healthTasksCompleted.load(std::memory_order_relaxed);
+        if (pendingBefore == 0U)
+            m_healthLastTaskProgress.store(healthNow, std::memory_order_relaxed);
+        m_healthTasksSubmitted.fetch_add(1U, std::memory_order_relaxed);
+
         if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
+            m_healthTaskEnqueueFailures.fetch_add(1U, std::memory_order_relaxed);
+            m_healthTasksCompleted.fetch_add(1U, std::memory_order_relaxed);
+            m_healthLastTaskProgress.store(healthNow, std::memory_order_relaxed);
+
             LogError(LOG_NET, "Failed to task enqueue network packet request, peerId = %u, %s:%u", peerId, 
                 udp::Socket::address(address).c_str(), udp::Socket::port(address));
+
             if (req != nullptr) {
                 if (req->buffer != nullptr)
                     delete[] req->buffer;
@@ -269,6 +296,18 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
             return;
         }
 
+        const bool healthMetadataTracked = req->healthMetadataTracked;
+
+        // defines a lambda function to mark the completion of a health task
+        const auto healthTaskComplete = [mdNetwork, healthMetadataTracked]() {
+            if (!healthMetadataTracked)
+                return;
+
+            mdNetwork->m_healthTasksCompleted.fetch_add(1U, std::memory_order_relaxed);
+            const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            mdNetwork->m_healthLastTaskProgress.store(now, std::memory_order_relaxed);
+        };
+
         if (req == nullptr)
             return;
 
@@ -298,9 +337,12 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
             if (func == NET_FUNC::TRANSFER && (subFunc == NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY || subFunc == NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG) &&
                 !(req->length > TRANSFER_PCKT_HDR_LEN && req->length <= static_cast<int>(DATA_PACKET_LENGTH))) {
                 LogWarning(LOG_MASTER, "PEER %u malformed FNE transfer packet, subfunc = $%02X, length = %d", peerId, subFunc, req->length);
+
                 if (req->buffer != nullptr)
                     delete[] req->buffer;
                 delete req;
+
+                healthTaskComplete();
                 return;
             }
 
@@ -313,5 +355,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
         if (req->buffer != nullptr)
             delete[] req->buffer;
         delete req;
+
+        healthTaskComplete();
     }
 }

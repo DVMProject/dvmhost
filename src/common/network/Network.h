@@ -20,6 +20,8 @@
 #include "common/network/BaseNetwork.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/RTPFNEHeader.h"
+#include "common/network/PacketBuffer.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/p25/kmm/KeysetItem.h"
@@ -199,6 +201,12 @@ namespace network
          */
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
         /**
+         * @brief Sets the instance of the Radio Alias lookup table.
+         * @param ridAliasLookup Radio Alias Lookup Table Instance.
+         */
+        void setRadioAliasLookups(lookups::RadioAliasLookup* ridAliasLookup);
+
+        /**
          * @brief Sets metadata configuration settings from the modem.
          * @param identity Peer Identity.
          * @param rxFrequency Rx Frequency (Informational Only).
@@ -348,6 +356,10 @@ namespace network
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
+        lookups::RadioAliasLookup* m_ridAliasLookup;
+
+        PacketBuffer m_radioAliasSyncPkt;
+        uint32_t m_radioAliasSyncStreamId;
 
         uint8_t* m_salt;
 
@@ -482,6 +494,21 @@ namespace network
              * @returns bool True, if the packet was handled, otherwise false.
              */
             static bool master(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::RADIO_ALIAS_SYNC packets.
+             * @param network Instance of the Network class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing the received message.
+             * @param length Length of buffer.
+             * @returns bool True, if packet processing should stop, otherwise false.
+             */
+            static bool radioAliasSync(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
                 const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
 
             /**

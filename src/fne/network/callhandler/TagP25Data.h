@@ -366,7 +366,7 @@ namespace network
              * @param dstId Subscriber unit radio ID.
              * @returns bool True, if permitted, otherwise false.
              */
-            bool isTelIntPeerPermitted(uint32_t srcPeerId, uint32_t dstPeerId, FNEPeerConnection* dstConn, uint32_t dstId);
+            bool isTelIntPeerPermitted(uint32_t srcPeerId, uint32_t dstPeerId, const TrafficNetwork::PeerConnectionPtr& dstConn, uint32_t dstId);
 
             /**
              * @brief Helper to write a grant packet.

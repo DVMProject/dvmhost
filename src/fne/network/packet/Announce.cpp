@@ -29,38 +29,30 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
     switch (req->fneHeader.getSubFunction()) {
     case NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL:           // Announce Group Affiliation
         {
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
-                if (connection != nullptr) {
-                    std::string ip = udp::Socket::address(req->address);
-                    std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
-                    if (aff == nullptr) {
-                        LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
-                    }
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (peerId > 0 && connection != nullptr) {
+                std::string ip = udp::Socket::address(req->address);
+                std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
+                if (aff == nullptr) {
+                    LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                }
 
-                    // validate peer (simple validation really)
-                    if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                // validate peer (simple validation really)
+                if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                    if (req->length >= static_cast<int>(MSG_ANNC_GRP_AFFIL)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                         uint32_t dstId = GET_UINT24(req->buffer, 3U);           // Destination Address
-                        aff->groupUnaff(srcId);
-                        aff->groupAff(srcId, dstId);
-
-                        // attempt to repeat traffic to replica masters
-                        if (network->m_host->m_peerNetworks.size() > 0) {
-                            for (auto& peer : network->m_host->m_peerNetworks) {
-                                if (peer.second != nullptr) {
-                                    if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                        peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_AFFIL },
-                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true);
-                                    }
-                                }
-                            }
-                        }
+                        network->updatePeerAffiliation(peerId, srcId, dstId);
                     }
                     else {
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                        LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed group affiliation, length = %u",
+                            peerId, connection->identWithQualifier().c_str(), req->length);
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                     }
+                }
+                else {
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                 }
             }
         }
@@ -68,74 +60,58 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
 
     case NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG:            // Announce Unit Registration
         {
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
-                if (connection != nullptr) {
-                    std::string ip = udp::Socket::address(req->address);
-                    std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
-                    if (aff == nullptr) {
-                        LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
-                    }
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (peerId > 0 && connection != nullptr) {
+                std::string ip = udp::Socket::address(req->address);
+                std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
+                if (aff == nullptr) {
+                    LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                }
 
-                    // validate peer (simple validation really)
-                    if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                // validate peer (simple validation really)
+                if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                    if (req->length >= static_cast<int>(MSG_ANNC_UNIT_REG)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
-                        aff->unitReg(srcId, ssrc);
-                        network->m_globalAff->unitReg(srcId, ssrc);
-
-                        // attempt to repeat traffic to replica masters
-                        if (network->m_host->m_peerNetworks.size() > 0) {
-                            for (auto& peer : network->m_host->m_peerNetworks) {
-                                if (peer.second != nullptr) {
-                                    if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                        peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REG },
-                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true, 0U, ssrc);
-                                    }
-                                }
-                            }
-                        }
+                        network->updatePeerUnitRegistration(peerId, srcId, ssrc);
                     }
                     else {
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                        LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed unit registration, length = %u",
+                            peerId, connection->identWithQualifier().c_str(), req->length);
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                     }
+                }
+                else {
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                 }
             }
         }
         break;
     case NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG:          // Announce Unit Deregistration
         {
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
-                if (connection != nullptr) {
-                    std::string ip = udp::Socket::address(req->address);
-                    std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
-                    if (aff == nullptr) {
-                        LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
-                    }
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (peerId > 0 && connection != nullptr) {
+                std::string ip = udp::Socket::address(req->address);
+                std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
+                if (aff == nullptr) {
+                    LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                }
 
-                    // validate peer (simple validation really)
-                    if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                // validate peer (simple validation really)
+                if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                    if (req->length >= static_cast<int>(MSG_ANNC_UNIT_REG)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
-                        aff->unitDereg(srcId);
-                        network->m_globalAff->unitDereg(srcId);
-
-                        // attempt to repeat traffic to replica masters
-                        if (network->m_host->m_peerNetworks.size() > 0) {
-                            for (auto& peer : network->m_host->m_peerNetworks) {
-                                if (peer.second != nullptr) {
-                                    if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                        peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_DEREG },
-                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true);
-                                    }
-                                }
-                            }
-                        }
+                        network->removePeerUnitRegistration(peerId, srcId);
                     }
                     else {
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                        LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed unit deregistration, length = %u",
+                            peerId, connection->identWithQualifier().c_str(), req->length);
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                     }
+                }
+                else {
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                 }
             }
         }
@@ -143,37 +119,29 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
 
     case NET_SUBFUNC::ANNC_SUBFUNC_GRP_UNAFFIL:         // Announce Group Affiliation Removal
         {
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
-                if (connection != nullptr) {
-                    std::string ip = udp::Socket::address(req->address);
-                    std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
-                    if (aff == nullptr) {
-                        LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
-                    }
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (peerId > 0 && connection != nullptr) {
+                std::string ip = udp::Socket::address(req->address);
+                std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
+                if (aff == nullptr) {
+                    LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                }
 
-                    // validate peer (simple validation really)
-                    if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                // validate peer (simple validation really)
+                if (connection->connected() && connection->address() == ip && aff != nullptr) {
+                    if (req->length >= static_cast<int>(MSG_ANNC_GRP_UNAFFIL)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
-                        aff->groupUnaff(srcId);
-                        network->m_globalAff->groupUnaff(srcId);
-
-                        // attempt to repeat traffic to replica masters
-                        if (network->m_host->m_peerNetworks.size() > 0) {
-                            for (auto& peer : network->m_host->m_peerNetworks) {
-                                if (peer.second != nullptr) {
-                                    if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                        peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_GRP_UNAFFIL },
-                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true);
-                                    }
-                                }
-                            }
-                        }
+                        network->removePeerAffiliation(peerId, srcId);
                     }
                     else {
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                        LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed group unaffiliation, length = %u",
+                            peerId, connection->identWithQualifier().c_str(), req->length);
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                     }
+                }
+                else {
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                 }
             }
         }
@@ -181,51 +149,49 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
 
     case NET_SUBFUNC::ANNC_SUBFUNC_AFFILS:              // Announce Update All Affiliations
         {
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
-                if (connection != nullptr) {
-                    std::string ip = udp::Socket::address(req->address);
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (peerId > 0 && connection != nullptr) {
+                std::string ip = udp::Socket::address(req->address);
 
-                    // validate peer (simple validation really)
-                    if (connection->connected() && connection->address() == ip) {
-                        std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
-                        if (aff == nullptr) {
-                            LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                // validate peer (simple validation really)
+                if (connection->connected() && connection->address() == ip) {
+                    std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
+                    if (aff == nullptr) {
+                        LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                    }
+
+                    if (aff != nullptr && req->length >= 4) {
+                        const uint32_t len = GET_UINT32(req->buffer, 0U);
+                        const uint32_t availableEntries = (static_cast<uint32_t>(req->length) - 4U) / 8U;
+                        if (len != availableEntries || static_cast<uint32_t>(req->length) != 4U + (len * 8U)) {
+                            LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed affiliations, count = %u, length = %u",
+                                peerId, connection->identWithQualifier().c_str(), len, req->length);
                             network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                            break;
                         }
 
-                        if (aff != nullptr) {
-                            aff->clearGroupAff(0U, true);
-
-                            // update TGID lists
-                            uint32_t len = GET_UINT32(req->buffer, 0U);
-                            uint32_t offs = 4U;
-                            for (uint32_t i = 0; i < len; i++) {
-                                uint32_t srcId = GET_UINT24(req->buffer, offs);
-                                uint32_t dstId = GET_UINT24(req->buffer, offs + 4U);
-
-                                aff->groupAff(srcId, dstId);
-                                network->m_globalAff->groupAff(srcId, dstId);
-                                offs += 8U;
-                            }
-                            LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u affiliations", peerId, connection->identWithQualifier().c_str(), len);
-
-                            // attempt to repeat traffic to replica masters
-                            if (network->m_host->m_peerNetworks.size() > 0) {
-                                for (auto& peer : network->m_host->m_peerNetworks) {
-                                    if (peer.second != nullptr) {
-                                        if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                            peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_AFFILS },
-                                                req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true);
-                                        }
-                                    }
-                                }
-                            }
+                        std::unordered_map<uint32_t, uint32_t> affiliations;
+                        affiliations.reserve(len);
+                        uint32_t offs = 4U;
+                        for (uint32_t i = 0U; i < len; i++) {
+                            const uint32_t srcId = GET_UINT24(req->buffer, offs);
+                            const uint32_t dstId = GET_UINT24(req->buffer, offs + 4U);
+                            affiliations[srcId] = dstId;
+                            offs += 8U;
                         }
+
+                        network->replacePeerAffiliations(peerId, affiliations);
+                        LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u affiliations", peerId, connection->identWithQualifier().c_str(), len);
                     }
-                    else {
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                    else if (aff != nullptr) {
+                        LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed affiliations, length = %u",
+                            peerId, connection->identWithQualifier().c_str(), req->length);
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                     }
+                }
+                else {
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                 }
             }
         }
@@ -233,50 +199,48 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
 
     case NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REGS:           // Announce Update All Unit Registrations
         {
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
-                if (connection != nullptr) {
-                    std::string ip = udp::Socket::address(req->address);
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (peerId > 0 && connection != nullptr) {
+                std::string ip = udp::Socket::address(req->address);
 
-                    // validate peer (simple validation really)
-                    if (connection->connected() && connection->address() == ip) {
-                        std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
-                        if (aff == nullptr) {
-                            LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                // validate peer (simple validation really)
+                if (connection->connected() && connection->address() == ip) {
+                    std::shared_ptr<fne_lookups::AffiliationLookup> aff = network->getPeerAffiliations(peerId);
+                    if (aff == nullptr) {
+                        LogError(LOG_MASTER, "PEER %u (%s) has uninitialized affiliations lookup?", peerId, connection->identWithQualifier().c_str());
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                    }
+
+                    if (aff != nullptr && req->length >= 4) {
+                        const uint32_t len = GET_UINT32(req->buffer, 0U);
+                        const uint32_t availableEntries = (static_cast<uint32_t>(req->length) - 4U) / 3U;
+                        if (len != availableEntries || static_cast<uint32_t>(req->length) != 4U + (len * 3U)) {
+                            LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed unit registrations, count = %u, length = %u",
+                                peerId, connection->identWithQualifier().c_str(), len, req->length);
                             network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
+                            break;
                         }
 
-                        if (aff != nullptr) {
-                            aff->clearUnitReg();
-
-                            // update unit registration lists
-                            uint32_t len = GET_UINT32(req->buffer, 0U);
-                            uint32_t offs = 4U;
-                            for (uint32_t i = 0; i < len; i++) {
-                                uint32_t srcId = GET_UINT24(req->buffer, offs);
-
-                                aff->unitReg(srcId, ssrc);
-                                network->m_globalAff->unitReg(srcId, ssrc);
-                                offs += 3U;
-                            }
-                            LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u unit registrations", peerId, connection->identWithQualifier().c_str(), len);
-
-                            // attempt to repeat traffic to replica masters
-                            if (network->m_host->m_peerNetworks.size() > 0) {
-                                for (auto& peer : network->m_host->m_peerNetworks) {
-                                    if (peer.second != nullptr) {
-                                        if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                            peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_UNIT_REGS },
-                                                req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true);
-                                        }
-                                    }
-                                }
-                            }
+                        std::vector<uint32_t> registrations;
+                        registrations.reserve(len);
+                        uint32_t offs = 4U;
+                        for (uint32_t i = 0U; i < len; i++) {
+                            const uint32_t srcId = GET_UINT24(req->buffer, offs);
+                            registrations.push_back(srcId);
+                            offs += 3U;
                         }
+
+                        network->replacePeerUnitRegistrations(peerId, registrations, ssrc);
+                        LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u unit registrations", peerId, connection->identWithQualifier().c_str(), len);
                     }
-                    else {
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
+                    else if (aff != nullptr) {
+                        LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed unit registrations, length = %u",
+                            peerId, connection->identWithQualifier().c_str(), req->length);
+                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_INVALID);
                     }
+                }
+                else {
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                 }
             }
         }
@@ -284,47 +248,45 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
 
     case NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC:             // Announce Site VCs
         {
-            if (peerId > 0 && (network->m_peers.find(peerId) != network->m_peers.end())) {
-                FNEPeerConnection* connection = network->m_peers[peerId];
-                if (connection != nullptr) {
-                    std::string ip = udp::Socket::address(req->address);
+            TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+            if (peerId > 0 && connection != nullptr) {
+                std::string ip = udp::Socket::address(req->address);
 
-                    // validate peer (simple validation really)
-                    if (connection->connected() && connection->address() == ip) {
-                        std::vector<uint32_t> vcPeers;
+                // validate peer (simple validation really)
+                if (connection->connected() && connection->address() == ip) {
+                    std::vector<uint32_t> vcPeers;
 
-                        // update peer association
-                        uint32_t len = GET_UINT32(req->buffer, 0U);
-                        uint32_t offs = 4U;
-                        for (uint32_t i = 0; i < len; i++) {
-                            uint32_t vcPeerId = GET_UINT32(req->buffer, offs);
-                            if (vcPeerId > 0 && (network->m_peers.find(vcPeerId) != network->m_peers.end())) {
-                                FNEPeerConnection* vcConnection = network->m_peers[vcPeerId];
-                                if (vcConnection != nullptr) {
-                                    vcConnection->ccPeerId(peerId);
-                                    vcPeers.push_back(vcPeerId);
-                                }
+                    // update peer association
+                    uint32_t len = GET_UINT32(req->buffer, 0U);
+                    uint32_t offs = 4U;
+                    for (uint32_t i = 0; i < len; i++) {
+                        uint32_t vcPeerId = GET_UINT32(req->buffer, offs);
+                        TrafficNetwork::PeerConnectionPtr vcConnection = network->findPeer(vcPeerId);
+                        if (vcPeerId > 0 && vcConnection != nullptr) {
+                            if (vcConnection != nullptr) {
+                                vcConnection->ccPeerId(peerId);
+                                vcPeers.push_back(vcPeerId);
                             }
-                            offs += 4U;
                         }
-                        LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u VCs", peerId, connection->identWithQualifier().c_str(), len);
-                        network->m_ccPeerMap[peerId] = vcPeers;
+                        offs += 4U;
+                    }
+                    LogInfoEx(LOG_MASTER, "PEER %u (%s) announced %u VCs", peerId, connection->identWithQualifier().c_str(), len);
+                    network->m_ccPeerMap[peerId] = vcPeers;
 
-                        // attempt to repeat traffic to replica masters
-                        if (network->m_host->m_peerNetworks.size() > 0) {
-                            for (auto& peer : network->m_host->m_peerNetworks) {
-                                if (peer.second != nullptr) {
-                                    if (peer.second->isEnabled() && peer.second->isReplica()) {
-                                        peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC },
-                                            req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true);
-                                    }
+                    // attempt to repeat traffic to replica masters
+                    if (network->m_host->m_peerNetworks.size() > 0) {
+                        for (auto& peer : network->m_host->m_peerNetworks) {
+                            if (peer.second != nullptr) {
+                                if (peer.second->isEnabled() && peer.second->isReplica()) {
+                                    peer.second->writeMaster({ NET_FUNC::ANNOUNCE, NET_SUBFUNC::ANNC_SUBFUNC_SITE_VC },
+                                        req->buffer, req->length, req->rtpHeader.getSequence(), streamId, true);
                                 }
                             }
                         }
                     }
-                    else {
-                        network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
-                    }
+                }
+                else {
+                    network->writePeerNAK(peerId, streamId, TAG_ANNOUNCE, NET_CONN_NAK_FNE_UNAUTHORIZED);
                 }
             }
         }

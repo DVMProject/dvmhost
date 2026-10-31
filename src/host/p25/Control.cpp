@@ -78,8 +78,9 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_voiceOnControl(false),
     m_controlOnly(false),
     m_ackTSBKRequests(true),
-    m_disableNetworkGrant(false),
+    m_allowRFGrantTGSteering(false),
     m_disableNetworkHDU(false),
+    m_hideRemoteGrantLog(false),
     m_allowExplicitSourceId(false),
     m_convNetGrantDemand(false),
     m_sndcpSupport(false),
@@ -309,6 +310,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
+    m_allowRFGrantTGSteering = control["allowRFGrantTGSteering"].as<bool>(false);
+    if (m_allowRFGrantTGSteering && (!m_enableControl || m_dedicatedControl)) {
+        LogWarning(LOG_P25, "RF grant talkgroup steering requires non-dedicated control; disabling it.");
+        m_allowRFGrantTGSteering = false;
+    }
     m_control->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     if (m_isModemDFSI)
         m_control->m_ctrlTSDUMBF = false; // force single block TSDUs for DFSI mode
@@ -369,26 +375,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_P25, "Frame loss threshold may be excessive, default is %u, configured is %u", DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
     }
 
-    /*
-    ** Network HDU and Grant Disables
-    */
-    m_disableNetworkGrant = p25Protocol["disableNetworkGrant"].as<bool>(false);
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
-
-    if (m_disableNetworkGrant && m_enableControl && m_dedicatedControl) {
-        LogWarning(LOG_P25, "Cannot disable network traffic grants for dedicated control configuration.");
-        m_disableNetworkGrant = false;
-    }
-
-    if (m_disableNetworkGrant && m_controlOnly) {
-        LogWarning(LOG_P25, "Cannot disable network traffic grants for control-only configuration.");
-        m_disableNetworkGrant = false;
-    }
-
-    if (m_disableNetworkGrant && m_voiceOnControl) {
-        LogWarning(LOG_P25, "Cannot disable network traffic grants for voice on control configuration.");
-        m_disableNetworkGrant = false;
-    }
+    m_hideRemoteGrantLog = p25Protocol["hideRemoteGrantLog"].as<bool>(false);
 
     /*
     ** CC Service Class
@@ -514,11 +502,14 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         if (m_disableNetworkHDU) {
             LogInfo("    Disable Network HDUs: yes");
         }
-        if (m_disableNetworkGrant) {
-            LogInfo("    Disable Network Grants: yes");
+        if (m_hideRemoteGrantLog) {
+            LogInfo("    Hide Remote Grant Demand Logging: yes");
         }
         if (!m_control->m_ctrlTSDUMBF) {
             LogInfo("    Disable Multi-Block TSDUs: yes");
+        }
+        if (m_allowRFGrantTGSteering) {
+            LogInfo("    RF Grant Talkgroup Steering: yes");
         }
         LogInfo("    Time/Date Announcement TSBK: %s", m_control->m_ctrlTimeDateAnn ? "yes" : "no");
 
@@ -1648,10 +1639,6 @@ void Control::processNetwork()
         case DUID::TDULC:
             // is this an TDU with a grant demand?
             if (duid == DUID::TDU && m_enableControl && grantDemand) {
-                if (m_disableNetworkGrant) {
-                    return;
-                }
-
                 // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
                 // demands
                 if (!m_dedicatedControl && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
@@ -1700,7 +1687,7 @@ void Control::processNetwork()
                     (control.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                     (control.getPriority() & 0x07U);                                    // Priority
 
-                if (m_verbose) {
+                if (m_verbose && !m_hideRemoteGrantLog) {
                     LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, telInt = %u, encrypted = %u", srcId, dstId, unitToUnit, telInt, grantEncrypt);
                 }
 
