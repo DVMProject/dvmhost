@@ -2533,13 +2533,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            // there is no explicit channel form of the telephone interconnect grant
-            if (telInt && voiceChData.isExplicitCh()) {
-                ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, OSP_TELE_INT_VCH_GRANT (Telephone Interconnect Voice Channel Grant), explicit channels are not supported, chNo = %u-%u", voiceChData.chId(), chNo);
-                m_p25->m_affiliations->releaseGrant(dstId, false);
-                return false;
-            }
-
             // callback RPC to permit the granted TG on the specified voice channel
             if (m_p25->m_authoritative && m_p25->m_supervisor) {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
@@ -2589,6 +2582,39 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             if (telInt) {
                 ::ActivityLog("P25", !net, "telephone interconnect grant to %u", dstId);
 
+                // the grant is held for the whole call (message trunking) instead of per transmission
+                m_telIntGrants.insert(dstId);
+
+                if (voiceChData.isExplicitCh()) {
+                    std::unique_ptr<MBT_OSP_TELE_INT_VCH_GRANT> osp = std::make_unique<MBT_OSP_TELE_INT_VCH_GRANT>();
+                    osp->setMFId(MFG_STANDARD); // under MFG_MOT this opcode is not a telephone interconnect grant
+                    osp->setSrcId(dstId);
+                    osp->setGrpVchId(voiceChData.chId());
+                    osp->setGrpVchNo(chNo);
+                    osp->setRxGrpVchId(voiceChData.rxChId());
+                    osp->setRxGrpVchNo(voiceChData.rxChNo());
+                    osp->setEmergency(emergency);
+                    osp->setEncrypted(encryption);
+                    osp->setPriority(priority);
+
+                    osp->setForceChannelId(true);
+
+                    if (m_verbose) {
+                        LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, rxChNo = %u-%u, callTimer = %u, dstId = %u",
+                            osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(),
+                            osp->getRxGrpVchId(), osp->getRxGrpVchNo(), osp->getCallTimer(), dstId);
+                    }
+
+                    // transmit telephone interconnect grant
+                    writeRF_TSDU_AMBT(osp.get(), true);
+                    if (m_redundantGrant) {
+                        for (int i = 0; i < 3; i++)
+                            writeRF_TSDU_AMBT(osp.get(), true);
+                    }
+
+                    return true;
+                }
+
                 std::unique_ptr<OSP_TELE_INT_VCH_GRANT> osp = std::make_unique<OSP_TELE_INT_VCH_GRANT>();
                 osp->setMFId(MFG_STANDARD); // under MFG_MOT this opcode is not a telephone interconnect grant
                 osp->setSrcId(dstId);
@@ -2602,9 +2628,6 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, callTimer = %u, dstId = %u",
                         osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getCallTimer(), dstId);
                 }
-
-                // the grant is held for the whole call (message trunking) instead of per transmission
-                m_telIntGrants.insert(dstId);
 
                 // transmit telephone interconnect grant
                 writeRF_TSDU_SBF_Imm(osp.get(), net);

@@ -54,6 +54,50 @@ TEST_CASE("TSBK Telephone Interconnect", "[p25][tsbk]") {
         REQUIRE(decoded->getDstId() == 0x123456U);
     }
 
+    SECTION("MBT_OSP_TELE_INT_VCH_GRANT_Layout") {
+        MBT_OSP_TELE_INT_VCH_GRANT osp;
+        osp.setMFId(MFG_STANDARD);
+        osp.setPriority(4U);
+        osp.setGrpVchId(1U);
+        osp.setGrpVchNo(0x123U);
+        osp.setRxGrpVchId(2U);
+        osp.setRxGrpVchNo(0x456U);
+        osp.setCallTimer(600U);
+        osp.setSrcId(0x123456U);
+        osp.setForceChannelId(true);
+
+        data::DataHeader dataHeader = data::DataHeader();
+        uint8_t pduUserData[P25_PDU_UNCONFIRMED_LENGTH_BYTES];
+        ::memset(pduUserData, 0x00U, P25_PDU_UNCONFIRMED_LENGTH_BYTES);
+        osp.encodeMBT(dataHeader, pduUserData);
+
+        uint8_t header[P25_PDU_HEADER_LENGTH_BYTES];
+        ::memset(header, 0x00U, P25_PDU_HEADER_LENGTH_BYTES);
+        dataHeader.encode(header, true);
+
+        REQUIRE((header[0U] & 0x1FU) == PDUFormatType::AMBT);
+        REQUIRE((header[0U] & 0x20U) == 0x20U);     // Outbound
+        REQUIRE((header[1U] & 0x3FU) == PDUSAP::TRUNK_CTRL);
+        REQUIRE(header[2U] == MFG_STANDARD);
+        REQUIRE(header[3U] == 0x12U);               // Address
+        REQUIRE(header[4U] == 0x34U);
+        REQUIRE(header[5U] == 0x56U);
+        REQUIRE((header[6U] & 0x7FU) == 1U);        // Blocks to Follow
+        REQUIRE((header[7U] & 0x3FU) == TSBKO::IOSP_TELE_INT_DIAL);
+        REQUIRE(header[8U] == 0x04U);               // Service Options
+        REQUIRE(header[9U] == 0x00U);               // Reserved
+
+        REQUIRE(pduUserData[0U] == 0x11U);          // Channel (T)
+        REQUIRE(pduUserData[1U] == 0x23U);
+        REQUIRE(pduUserData[2U] == 0x24U);          // Channel (R)
+        REQUIRE(pduUserData[3U] == 0x56U);
+        REQUIRE(pduUserData[4U] == 0x02U);          // Call Timer
+        REQUIRE(pduUserData[5U] == 0x58U);
+        REQUIRE(pduUserData[6U] == 0x00U);          // Reserved
+        REQUIRE(pduUserData[7U] == 0x00U);
+        REQUIRE(edac::CRC::checkCRC32(pduUserData, P25_PDU_UNCONFIRMED_LENGTH_BYTES));
+    }
+
     SECTION("ISP_TELE_INT_PSTN_REQ_Layout") {
         ISP_TELE_INT_PSTN_REQ isp;
         isp.setEmergency(true);

@@ -101,6 +101,7 @@
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_GRP_VCH_GRANT.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_NET_STS_BCAST.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_RFSS_STS_BCAST.h"
+#include "common/p25/lc/tsbk/mbt/MBT_OSP_TELE_INT_VCH_GRANT.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_UU_VCH_GRANT.h"
 
 namespace p25
