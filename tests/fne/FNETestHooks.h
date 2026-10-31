@@ -12,6 +12,8 @@
 
 #include "fne/network/MetadataNetwork.h"
 #include "fne/network/TrafficNetwork.h"
+#include "common/p25/lc/LC.h"
+#include "common/p25/lc/TSBK.h"
 
 #include <cstdint>
 #include <memory>
@@ -28,6 +30,33 @@
  */
 class FNETestHooks {
 public:
+    /**
+     * @brief Tests whether a P25 frame is classified as telephone interconnect traffic.
+     * @param network The TrafficNetwork instance.
+     * @param control Link control associated with the frame.
+     * @param duid Data unit identifier.
+     * @param tsbk Optional trunking signalling block for a TSDU.
+     * @return True when the frame is telephone interconnect traffic.
+     */
+    static bool isP25TelIntTraffic(network::TrafficNetwork& network, p25::lc::LC& control,
+        p25::defines::DUID::E duid, const p25::lc::TSBK* tsbk = nullptr);
+    /**
+     * @brief Tests whether telephone interconnect traffic may be routed between two peers.
+     * @param network The TrafficNetwork instance.
+     * @param srcPeerId Originating peer ID.
+     * @param dstPeerId Destination peer ID.
+     * @param dstId Subscriber radio ID carried by the call.
+     * @return True when routing to the destination peer is permitted.
+     */
+    static bool isP25TelIntPeerPermitted(network::TrafficNetwork& network, uint32_t srcPeerId,
+        uint32_t dstPeerId, uint32_t dstId);
+    /**
+     * @brief Adds a unit registration owned by a site peer.
+     * @param network The TrafficNetwork instance.
+     * @param sitePeerId Site peer that owns the registration.
+     * @param unitId Registered subscriber radio ID.
+     */
+    static void registerP25Unit(network::TrafficNetwork& network, uint32_t sitePeerId, uint32_t unitId);
     /**
      * @brief Adds a peer to the specified TrafficNetwork.
      * @param network The TrafficNetwork instance.

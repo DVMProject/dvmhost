@@ -1075,6 +1075,39 @@ TEST_CASE("P25 non-authoritative unpermit clears active network state", "[p25][h
     REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
 }
 
+TEST_CASE("P25 telephone interconnect permit survives voice hang until explicitly released", "[p25][host][control][telephone]")
+{
+    P25HostHarness harness(false);
+    harness.m_control->permittedTG(2001U, false, true);
+    HostTestHooks::p25SetRFCall(*harness.m_control, 1001U, 2001U);
+
+    HostTestHooks::p25RFTGHang(*harness.m_control).start();
+    HostTestHooks::p25RFTGHang(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::p25RFTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
+    REQUIRE(HostTestHooks::p25PermittedDstId(*harness.m_control) == 2001U);
+
+    harness.m_control->permittedTG(0U);
+    REQUIRE(HostTestHooks::p25PermittedDstId(*harness.m_control) == 0U);
+}
+
+TEST_CASE("P25 ordinary permit is cleared when voice hang expires", "[p25][host][control][telephone]")
+{
+    P25HostHarness harness(false);
+    harness.m_control->permittedTG(2001U);
+    HostTestHooks::p25SetRFCall(*harness.m_control, 1001U, 2001U);
+
+    HostTestHooks::p25RFTGHang(*harness.m_control).start();
+    HostTestHooks::p25RFTGHang(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::p25RFTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
+    REQUIRE(HostTestHooks::p25PermittedDstId(*harness.m_control) == 0U);
+}
+
 TEST_CASE("P25 clearRFReject returns rejected RF state to listening", "[p25][host][control][rf]")
 {
     P25HostHarness harness;

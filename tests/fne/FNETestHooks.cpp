@@ -10,6 +10,8 @@
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 #include "fne/network/P25OTARService.h"
+#include "fne/network/callhandler/TagP25Data.h"
+#include "fne/lookups/AffiliationLookup.h"
 #include "common/p25/data/Assembler.h"
 #include "common/Utils.h"
 
@@ -30,6 +32,33 @@ bool g_promiscuousHub = false;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
+/* Tests whether a P25 frame is telephone interconnect traffic. */
+
+bool FNETestHooks::isP25TelIntTraffic(TrafficNetwork& network, p25::lc::LC& control,
+    DUID::E duid, const p25::lc::TSBK* tsbk)
+{
+    return network.m_tagP25->isTelIntTraffic(control, duid, tsbk);
+}
+
+/* Tests whether telephone interconnect traffic may be routed between two peers. */
+
+bool FNETestHooks::isP25TelIntPeerPermitted(TrafficNetwork& network, uint32_t srcPeerId,
+    uint32_t dstPeerId, uint32_t dstId)
+{
+    return network.m_tagP25->isTelIntPeerPermitted(srcPeerId, dstPeerId,
+        network.findPeer(dstPeerId), dstId);
+}
+
+/* Adds a unit registration owned by a site peer. */
+
+void FNETestHooks::registerP25Unit(TrafficNetwork& network, uint32_t sitePeerId, uint32_t unitId)
+{
+    std::shared_ptr<fne_lookups::AffiliationLookup> affiliations =
+        std::make_shared<fne_lookups::AffiliationLookup>("test-p25-registrations", nullptr, false);
+    affiliations->unitReg(unitId, sitePeerId);
+    network.m_peerAffiliations[sitePeerId] = affiliations;
+}
 
 /**
  * @brief Initializes an instance of the HostFNE class.
