@@ -59,6 +59,9 @@
 #include <shared_mutex>
 #include <atomic>
 #include <array>
+#if defined(CATCH2_TEST_COMPILATION)
+#include <functional>
+#endif
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -336,6 +339,7 @@ namespace network
     private:
 #if defined(CATCH2_TEST_COMPILATION)
         friend class ::FNETestHooks;
+        std::function<void(uint32_t, FrameQueue::OpcodePair)> m_testPeerWriteHandler;
 #endif
         friend class MetadataNetwork;
         friend class callhandler::TagDMRData;

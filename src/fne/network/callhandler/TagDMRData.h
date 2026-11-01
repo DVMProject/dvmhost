@@ -26,6 +26,14 @@
 #include "network/TrafficNetwork.h"
 #include "network/callhandler/packetdata/DMRPacketData.h"
 
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 namespace network
 {
     namespace callhandler
@@ -148,6 +156,9 @@ namespace network
             packetdata::DMRPacketData* packetData() { return m_packetData; }
 
         private:
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::FNETestHooks;
+#endif
             TrafficNetwork* m_network;
 
             /**

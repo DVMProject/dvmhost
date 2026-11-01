@@ -851,13 +851,30 @@ void TagDMRData::playbackParrot()
 
                 // skip peers that are not affiliated with the target group if parrot TG affiliation is enabled
                 if (tg.config().affiliated()) {
-                    // peer always send list takes priority over any other rules
                     bool skipChecks = false;
+
+                    // check if the peer is in the exclusion list
+                    std::vector<uint32_t> exclusion = tg.config().exclusion();
+                    if (exclusion.size() > 0) {
+                        auto it = std::find(exclusion.begin(), exclusion.end(), peer.first);
+                        if (it != exclusion.end()) {
+                            continue;
+                        }
+                    }
+
+                    // peer always send list takes priority over any other rules
                     std::vector<uint32_t> alwaysSend = tg.config().alwaysSend();
                     if (alwaysSend.size() > 0) {
                         auto it = std::find(alwaysSend.begin(), alwaysSend.end(), peer.first);
                         if (it != alwaysSend.end()) {
                             skipChecks = true; // skip any following checks and always send traffic
+                        }
+                    }
+
+                    TrafficNetwork::PeerConnectionPtr connection = peer.first > 0U ? m_network->findPeer(peer.first) : nullptr;
+                    if (connection != nullptr) {
+                        if (connection->peerClass() == PEER_CONN_CLASS_CONSOLE) {
+                            skipChecks = true; // skip any following checks for console peers
                         }
                     }
 

@@ -31,6 +31,17 @@
 class FNETestHooks {
 public:
     /**
+     * @brief Protocol handled by an FNE traffic call handler.
+     */
+    enum class ParrotProtocol {
+        DMR,    //!< DMR traffic.
+        P25,    //!< P25 Phase 1 traffic.
+        P25P2,  //!< P25 Phase 2 traffic.
+        NXDN,   //!< NXDN traffic.
+        ANALOG  //!< Analog traffic.
+    };
+
+    /**
      * @brief Tests whether a P25 frame is classified as telephone interconnect traffic.
      * @param network The TrafficNetwork instance.
      * @param control Link control associated with the frame.
@@ -57,6 +68,36 @@ public:
      * @param unitId Registered subscriber radio ID.
      */
     static void registerP25Unit(network::TrafficNetwork& network, uint32_t sitePeerId, uint32_t unitId);
+    /**
+     * @brief Adds a talkgroup affiliation owned by a site peer.
+     * @param network The TrafficNetwork instance.
+     * @param sitePeerId Site peer that owns the affiliation.
+     * @param unitId Subscriber radio ID affiliated to the talkgroup.
+     * @param talkgroupId Affiliated talkgroup ID.
+     */
+    static void addGroupAffiliation(network::TrafficNetwork& network, uint32_t sitePeerId,
+        uint32_t unitId, uint32_t talkgroupId);
+    /**
+     * @brief Captures peer IDs selected by subsequent test writes.
+     * @param network The TrafficNetwork instance.
+     * @param[out] peerIds Destination peer IDs selected for writes.
+     */
+    static void capturePeerWrites(network::TrafficNetwork& network, std::vector<uint32_t>& peerIds);
+    /**
+     * @brief Clears the test peer-write capture callback.
+     * @param network The TrafficNetwork instance.
+     */
+    static void clearPeerWriteCapture(network::TrafficNetwork& network);
+    /**
+     * @brief Queues and plays one synthetic parrot frame through a protocol handler.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param sourcePeerId Peer that originated the parrot frame.
+     * @param sourceId Source subscriber ID.
+     * @param talkgroupId Destination talkgroup ID.
+     */
+    static void playbackParrotFrame(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t sourcePeerId, uint32_t sourceId, uint32_t talkgroupId);
     /**
      * @brief Adds a peer to the specified TrafficNetwork.
      * @param network The TrafficNetwork instance.

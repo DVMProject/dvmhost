@@ -26,6 +26,14 @@
 #include "network/TrafficNetwork.h"
 #include "network/callhandler/packetdata/DMRPacketData.h"
 
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 namespace network
 {
     namespace callhandler
@@ -112,6 +120,9 @@ namespace network
             uint32_t lastParrotDstId() const { return m_lastParrotDstId; }
 
         private:
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::FNETestHooks;
+#endif
             TrafficNetwork* m_network;
 
             /**

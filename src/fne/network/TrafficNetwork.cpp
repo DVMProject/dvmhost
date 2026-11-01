@@ -3161,6 +3161,12 @@ bool TrafficNetwork::writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, 
 
     PeerConnectionPtr connection = findPeer(peerId);
     if (connection != nullptr) {
+#if defined(CATCH2_TEST_COMPILATION)
+        if (m_testPeerWriteHandler) {
+            m_testPeerWriteHandler(peerId, opcode);
+            return true;
+        }
+#endif
         sockaddr_storage addr = connection->socketStorage();
         uint32_t addrLen = connection->sockStorageLen();
 

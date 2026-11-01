@@ -11,6 +11,10 @@
 #include "fne/HostFNE.h"
 #include "fne/network/P25OTARService.h"
 #include "fne/network/callhandler/TagP25Data.h"
+#include "fne/network/callhandler/TagDMRData.h"
+#include "fne/network/callhandler/TagP25P2Data.h"
+#include "fne/network/callhandler/TagNXDNData.h"
+#include "fne/network/callhandler/TagAnalogData.h"
 #include "fne/lookups/AffiliationLookup.h"
 #include "common/p25/data/Assembler.h"
 #include "common/Utils.h"
@@ -58,6 +62,122 @@ void FNETestHooks::registerP25Unit(TrafficNetwork& network, uint32_t sitePeerId,
         std::make_shared<fne_lookups::AffiliationLookup>("test-p25-registrations", nullptr, false);
     affiliations->unitReg(unitId, sitePeerId);
     network.m_peerAffiliations[sitePeerId] = affiliations;
+}
+
+/* Adds a talkgroup affiliation owned by a site peer. */
+
+void FNETestHooks::addGroupAffiliation(TrafficNetwork& network, uint32_t sitePeerId,
+    uint32_t unitId, uint32_t talkgroupId)
+{
+    std::shared_ptr<fne_lookups::AffiliationLookup> affiliations =
+        network.getPeerAffiliations(sitePeerId);
+    if (affiliations == nullptr) {
+        affiliations = std::make_shared<fne_lookups::AffiliationLookup>(
+            "test-parrot-affiliations", nullptr, false);
+        network.m_peerAffiliations[sitePeerId] = affiliations;
+    }
+
+    affiliations->groupAff(unitId, talkgroupId);
+}
+
+/* Captures peer IDs selected by subsequent test writes. */
+
+void FNETestHooks::capturePeerWrites(TrafficNetwork& network, std::vector<uint32_t>& peerIds)
+{
+    network.m_testPeerWriteHandler = [&peerIds](uint32_t peerId, FrameQueue::OpcodePair) {
+        peerIds.push_back(peerId);
+    };
+}
+
+/* Clears the test peer-write capture callback. */
+
+void FNETestHooks::clearPeerWriteCapture(TrafficNetwork& network)
+{
+    network.m_testPeerWriteHandler = nullptr;
+}
+
+/* Queues and plays one synthetic parrot frame through a protocol handler. */
+
+void FNETestHooks::playbackParrotFrame(TrafficNetwork& network, ParrotProtocol protocol,
+    uint32_t sourcePeerId, uint32_t sourceId, uint32_t talkgroupId)
+{
+    constexpr uint32_t FRAME_LENGTH = 16U;
+    constexpr uint16_t PACKET_SEQUENCE = 1U;
+    constexpr uint32_t STREAM_ID = 100U;
+
+    switch (protocol) {
+    case ParrotProtocol::DMR:
+    {
+        callhandler::TagDMRData::ParrotFrame frame{};
+        frame.buffer = new uint8_t[FRAME_LENGTH]();
+        frame.bufferLen = FRAME_LENGTH;
+        frame.slotNo = 1U;
+        frame.pktSeq = PACKET_SEQUENCE;
+        frame.streamId = STREAM_ID;
+        frame.peerId = sourcePeerId;
+        frame.srcId = sourceId;
+        frame.dstId = talkgroupId;
+        network.m_tagDMR->m_parrotFrames.push_back(frame);
+        network.m_tagDMR->playbackParrot();
+        break;
+    }
+    case ParrotProtocol::P25:
+    {
+        callhandler::TagP25Data::ParrotFrame frame{};
+        frame.buffer = new uint8_t[FRAME_LENGTH]();
+        frame.bufferLen = FRAME_LENGTH;
+        frame.pktSeq = PACKET_SEQUENCE;
+        frame.streamId = STREAM_ID;
+        frame.peerId = sourcePeerId;
+        frame.srcId = sourceId;
+        frame.dstId = talkgroupId;
+        network.m_tagP25->m_parrotFrames.push_back(frame);
+        network.m_tagP25->playbackParrot();
+        break;
+    }
+    case ParrotProtocol::P25P2:
+    {
+        callhandler::TagP25P2Data::ParrotFrame frame{};
+        frame.buffer = new uint8_t[FRAME_LENGTH]();
+        frame.bufferLen = FRAME_LENGTH;
+        frame.pktSeq = PACKET_SEQUENCE;
+        frame.streamId = STREAM_ID;
+        frame.peerId = sourcePeerId;
+        frame.srcId = sourceId;
+        frame.dstId = talkgroupId;
+        network.m_tagP25P2->m_parrotFrames.push_back(frame);
+        network.m_tagP25P2->playbackParrot();
+        break;
+    }
+    case ParrotProtocol::NXDN:
+    {
+        callhandler::TagNXDNData::ParrotFrame frame{};
+        frame.buffer = new uint8_t[FRAME_LENGTH]();
+        frame.bufferLen = FRAME_LENGTH;
+        frame.pktSeq = PACKET_SEQUENCE;
+        frame.streamId = STREAM_ID;
+        frame.peerId = sourcePeerId;
+        frame.srcId = sourceId;
+        frame.dstId = talkgroupId;
+        network.m_tagNXDN->m_parrotFrames.push_back(frame);
+        network.m_tagNXDN->playbackParrot();
+        break;
+    }
+    case ParrotProtocol::ANALOG:
+    {
+        callhandler::TagAnalogData::ParrotFrame frame{};
+        frame.buffer = new uint8_t[FRAME_LENGTH]();
+        frame.bufferLen = FRAME_LENGTH;
+        frame.pktSeq = PACKET_SEQUENCE;
+        frame.streamId = STREAM_ID;
+        frame.peerId = sourcePeerId;
+        frame.srcId = sourceId;
+        frame.dstId = talkgroupId;
+        network.m_tagAnalog->m_parrotFrames.push_back(frame);
+        network.m_tagAnalog->playbackParrot();
+        break;
+    }
+    }
 }
 
 /**
