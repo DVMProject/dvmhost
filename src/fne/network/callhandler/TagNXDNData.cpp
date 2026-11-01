@@ -853,19 +853,20 @@ void TagNXDNData::playbackParrot()
                     m_network->m_frameQueue->flushQueue(&queue);
                 }
 
+                std::vector<uint32_t> inclusion = tg.config().inclusion();
+                if (!inclusion.empty() &&
+                    std::find(inclusion.begin(), inclusion.end(), peer.first) == inclusion.end()) {
+                    continue;
+                }
+
+                std::vector<uint32_t> exclusion = tg.config().exclusion();
+                if (std::find(exclusion.begin(), exclusion.end(), peer.first) != exclusion.end()) {
+                    continue;
+                }
+
                 // skip peers that are not affiliated with the target group if parrot TG affiliation is enabled
                 if (tg.config().affiliated()) {
                     bool skipChecks = false;
-
-                    // check if the peer is in the exclusion list
-                    std::vector<uint32_t> exclusion = tg.config().exclusion();
-                    if (exclusion.size() > 0) {
-                        auto it = std::find(exclusion.begin(), exclusion.end(), peer.first);
-                        if (it != exclusion.end()) {
-                            continue;
-                        }
-                    }
-
                     // peer always send list takes priority over any other rules
                     std::vector<uint32_t> alwaysSend = tg.config().alwaysSend();
                     if (alwaysSend.size() > 0) {

@@ -180,6 +180,170 @@ void FNETestHooks::playbackParrotFrame(TrafficNetwork& network, ParrotProtocol p
     }
 }
 
+/* Evaluates a call handler's peer-routing policy. */
+
+bool FNETestHooks::isPeerPermitted(TrafficNetwork& network, ParrotProtocol protocol,
+    uint32_t peerId, uint32_t destinationId, bool group, bool fromUpstream, uint8_t slotNo)
+{
+    constexpr uint32_t STREAM_ID = 101U;
+
+    switch (protocol) {
+    case ParrotProtocol::DMR:
+    {
+        dmr::data::NetData data;
+        data.setDstId(destinationId);
+        data.setSlotNo(slotNo);
+        data.setFLCO(group ? dmr::defines::FLCO::GROUP : dmr::defines::FLCO::PRIVATE);
+        return network.m_tagDMR->isPeerPermitted(peerId, data, STREAM_ID, fromUpstream);
+    }
+    case ParrotProtocol::P25:
+    {
+        p25::lc::LC control;
+        control.setDstId(destinationId);
+        control.setLCO(group ? p25::defines::LCO::GROUP : p25::defines::LCO::PRIVATE);
+        return network.m_tagP25->isPeerPermitted(
+            peerId, control, p25::defines::DUID::LDU1, STREAM_ID, fromUpstream);
+    }
+    case ParrotProtocol::P25P2:
+        return network.m_tagP25P2->isPeerPermitted(
+            peerId, destinationId, slotNo, !group, STREAM_ID, fromUpstream);
+    case ParrotProtocol::NXDN:
+    {
+        nxdn::lc::RTCH control;
+        control.setDstId((uint16_t)destinationId);
+        control.setGroup(group);
+        return network.m_tagNXDN->isPeerPermitted(
+            peerId, control, nxdn::defines::MessageType::RTCH_VCALL, STREAM_ID, fromUpstream);
+    }
+    case ParrotProtocol::ANALOG:
+    {
+        analog::data::NetData data;
+        data.setDstId(destinationId);
+        data.setGroup(group);
+        return network.m_tagAnalog->isPeerPermitted(peerId, data, STREAM_ID, fromUpstream);
+    }
+    }
+
+    return false;
+}
+
+/* Evaluates a call handler's group-call validation policy. */
+
+bool FNETestHooks::validateGroupCall(TrafficNetwork& network, ParrotProtocol protocol,
+    uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo)
+{
+    constexpr uint32_t STREAM_ID = 102U;
+
+    switch (protocol) {
+    case ParrotProtocol::DMR:
+    {
+        dmr::data::NetData data;
+        data.setSrcId(sourceId);
+        data.setDstId(talkgroupId);
+        data.setSlotNo(slotNo);
+        data.setFLCO(dmr::defines::FLCO::GROUP);
+        data.setDataType(dmr::defines::DataType::VOICE_LC_HEADER);
+        return network.m_tagDMR->validate(peerId, data, nullptr, STREAM_ID);
+    }
+    case ParrotProtocol::P25:
+    {
+        p25::lc::LC control;
+        control.setSrcId(sourceId);
+        control.setDstId(talkgroupId);
+        control.setLCO(p25::defines::LCO::GROUP);
+        return network.m_tagP25->validate(
+            peerId, control, p25::defines::DUID::LDU1, nullptr, 0U, STREAM_ID);
+    }
+    case ParrotProtocol::P25P2:
+        return network.m_tagP25P2->validate(
+            peerId, sourceId, talkgroupId, slotNo, false, STREAM_ID);
+    case ParrotProtocol::NXDN:
+    {
+        nxdn::lc::RTCH control;
+        control.setSrcId((uint16_t)sourceId);
+        control.setDstId((uint16_t)talkgroupId);
+        control.setGroup(true);
+        return network.m_tagNXDN->validate(
+            peerId, control, nxdn::defines::MessageType::RTCH_VCALL, STREAM_ID);
+    }
+    case ParrotProtocol::ANALOG:
+    {
+        analog::data::NetData data;
+        data.setSrcId(sourceId);
+        data.setDstId(talkgroupId);
+        data.setGroup(true);
+        data.setFrameType(analog::defines::AudioFrameType::VOICE);
+        return network.m_tagAnalog->validate(peerId, data, STREAM_ID);
+    }
+    }
+
+    return false;
+}
+
+/* Sets whether unit-to-unit traffic is globally disabled. */
+
+void FNETestHooks::disallowU2U(TrafficNetwork& network, bool disabled)
+{
+    network.m_disallowU2U = disabled;
+}
+
+/* Sets whether conventional sites bypass affiliation requirements. */
+
+void FNETestHooks::allowConventionalAffiliationOverride(TrafficNetwork& network, bool enabled)
+{
+    network.m_allowConvSiteAffOverride = enabled;
+}
+
+/* Sets whether P25 terminators are filtered by destination policy. */
+
+void FNETestHooks::filterTerminators(TrafficNetwork& network, bool enabled)
+{
+    network.m_filterTerminators = enabled;
+}
+
+/* Evaluates P25 TDU peer-routing policy. */
+
+bool FNETestHooks::isP25TerminatorPeerPermitted(TrafficNetwork& network,
+    uint32_t peerId, uint32_t talkgroupId)
+{
+    p25::lc::LC control;
+    control.setDstId(talkgroupId);
+    control.setLCO(p25::defines::LCO::GROUP);
+    return network.m_tagP25->isPeerPermitted(
+        peerId, control, p25::defines::DUID::TDU, 103U, false);
+}
+
+/* Passes a deliberately truncated frame to a protocol handler. */
+
+bool FNETestHooks::processTruncatedFrame(TrafficNetwork& network,
+    ParrotProtocol protocol, uint32_t peerId)
+{
+    constexpr uint32_t STREAM_ID = 104U;
+    std::vector<uint8_t> frame(1U, 0U);
+
+    switch (protocol) {
+    case ParrotProtocol::DMR:
+        return network.m_tagDMR->processFrame(
+            frame.data(), (uint32_t)frame.size(), peerId, peerId, 1U, STREAM_ID);
+    case ParrotProtocol::P25:
+        frame.resize(24U, 0U);
+        frame[22U] = p25::defines::DUID::LDU1;
+        return network.m_tagP25->processFrame(
+            frame.data(), (uint32_t)frame.size(), peerId, peerId, 1U, STREAM_ID);
+    case ParrotProtocol::P25P2:
+        return network.m_tagP25P2->processFrame(
+            frame.data(), (uint32_t)frame.size(), peerId, peerId, 1U, STREAM_ID);
+    case ParrotProtocol::NXDN:
+        return network.m_tagNXDN->processFrame(
+            frame.data(), (uint32_t)frame.size(), peerId, peerId, 1U, STREAM_ID);
+    case ParrotProtocol::ANALOG:
+        return network.m_tagAnalog->processFrame(
+            frame.data(), (uint32_t)frame.size(), peerId, peerId, 1U, STREAM_ID);
+    }
+
+    return false;
+}
+
 /**
  * @brief Initializes an instance of the HostFNE class.
  */

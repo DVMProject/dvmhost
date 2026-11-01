@@ -99,6 +99,68 @@ public:
     static void playbackParrotFrame(network::TrafficNetwork& network, ParrotProtocol protocol,
         uint32_t sourcePeerId, uint32_t sourceId, uint32_t talkgroupId);
     /**
+     * @brief Evaluates a call handler's peer-routing policy.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Destination peer ID.
+     * @param destinationId Destination talkgroup or radio ID.
+     * @param group Whether the call is group traffic.
+     * @param fromUpstream Whether the traffic arrived from an upstream network.
+     * @param slotNo Protocol slot number.
+     * @return True when the peer is permitted to receive the traffic.
+     */
+    static bool isPeerPermitted(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t peerId, uint32_t destinationId, bool group = true,
+        bool fromUpstream = false, uint8_t slotNo = 1U);
+    /**
+     * @brief Evaluates a call handler's group-call validation policy.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Originating peer ID.
+     * @param sourceId Source subscriber ID.
+     * @param talkgroupId Destination talkgroup ID.
+     * @param slotNo Protocol slot number.
+     * @return True when the call passes validation.
+     */
+    static bool validateGroupCall(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo = 1U);
+    /**
+     * @brief Sets whether unit-to-unit traffic is globally disabled.
+     * @param network The TrafficNetwork instance.
+     * @param disabled Whether unit-to-unit traffic is disabled.
+     */
+    static void disallowU2U(network::TrafficNetwork& network, bool disabled);
+    /**
+     * @brief Sets whether conventional sites bypass affiliation requirements.
+     * @param network The TrafficNetwork instance.
+     * @param enabled Whether the conventional-site override is enabled.
+     */
+    static void allowConventionalAffiliationOverride(network::TrafficNetwork& network, bool enabled);
+    /**
+     * @brief Sets whether P25 terminators are filtered by destination policy.
+     * @param network The TrafficNetwork instance.
+     * @param enabled Whether terminator filtering is enabled.
+     */
+    static void filterTerminators(network::TrafficNetwork& network, bool enabled);
+    /**
+     * @brief Evaluates P25 TDU peer-routing policy.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Destination peer ID.
+     * @param talkgroupId Destination talkgroup ID.
+     * @return True when the peer is permitted to receive the terminator.
+     */
+    static bool isP25TerminatorPeerPermitted(network::TrafficNetwork& network,
+        uint32_t peerId, uint32_t talkgroupId);
+    /**
+     * @brief Passes a deliberately truncated frame to a protocol handler.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Originating peer ID.
+     * @return The protocol handler's processing result.
+     */
+    static bool processTruncatedFrame(network::TrafficNetwork& network,
+        ParrotProtocol protocol, uint32_t peerId);
+    /**
      * @brief Adds a peer to the specified TrafficNetwork.
      * @param network The TrafficNetwork instance.
      * @param peerId The ID of the peer to add.
