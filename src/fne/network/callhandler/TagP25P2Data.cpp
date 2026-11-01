@@ -726,6 +726,15 @@ void TagP25P2Data::playbackParrot()
         m_lastParrotSrcId = pkt.srcId;
         m_lastParrotDstId = pkt.dstId;
 
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(pkt.dstId);
+        if (tg.isInvalid()) {
+            LogWarning(LOG_P25, "TagP25P2Data::playbackParrot(), invalid talkgroup, dstId = %u", pkt.dstId);
+            delete[] pkt.buffer;
+            m_parrotFrames.unlock();
+            m_parrotFrames.pop_front();
+            return;
+        }
+
         if (m_network->m_parrotOnlyOriginating) {
             m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
             if (m_network->m_debug) {
@@ -742,6 +751,38 @@ void TagP25P2Data::playbackParrot()
                 // every MAX_QUEUED_PEER_MSGS peers flush the queue
                 if (i % MAX_QUEUED_PEER_MSGS == 0U) {
                     m_network->m_frameQueue->flushQueue(&queue);
+                }
+
+                // skip peers that are not affiliated with the target group if parrot TG affiliation is enabled
+                if (tg.config().affiliated()) {
+                    // peer always send list takes priority over any other rules
+                    bool skipChecks = false;
+                    std::vector<uint32_t> alwaysSend = tg.config().alwaysSend();
+                    if (alwaysSend.size() > 0) {
+                        auto it = std::find(alwaysSend.begin(), alwaysSend.end(), peer.first);
+                        if (it != alwaysSend.end()) {
+                            skipChecks = true; // skip any following checks and always send traffic
+                        }
+                    }
+
+                    if (!skipChecks) {
+                        TrafficNetwork::PeerConnectionPtr connection = peer.first > 0U ? m_network->findPeer(peer.first) : nullptr;
+                        uint32_t lookupPeerId = peer.first;
+                        if (connection != nullptr) {
+                            if (connection->ccPeerId() > 0U)
+                                lookupPeerId = connection->ccPeerId();
+                        }
+
+                        std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(lookupPeerId);
+                        if (aff == nullptr) {
+                            continue;
+                        }
+                        else {
+                            if (!aff->hasGroupAff(pkt.dstId)) {
+                                continue;
+                            }
+                        }
+                    }
                 }
 
                 m_network->writePeerQueue(&queue, peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);

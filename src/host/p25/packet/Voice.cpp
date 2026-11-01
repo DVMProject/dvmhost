@@ -1914,10 +1914,14 @@ void Voice::writeNet_LDU1()
 
             if (!m_p25->m_affiliations->isGranted(dstId)) {
                 if (!m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
-                    LogError(LOG_NET, P25_HDU_STR " call rejected, network call not granted, dstId = %u", dstId);
+                    if (!m_p25->m_hideRemoteGrantLog) {
+                        LogError(LOG_NET, P25_HDU_STR " call rejected, network call not granted, dstId = %u", dstId);
+                    }
 
                     if ((!m_p25->m_networkWatchdog.isRunning() || m_p25->m_networkWatchdog.hasExpired()) &&
                         m_p25->m_netLastDstId != 0U) {
+                        LogWarning(LOG_NET, P25_HDU_STR ", call rejected, network watchdog not running or expired, netLastDstId = %u", m_p25->m_netLastDstId);
+
                         if (m_p25->m_network != nullptr)
                             m_p25->m_network->resetP25();
 

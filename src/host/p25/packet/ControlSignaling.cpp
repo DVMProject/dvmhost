@@ -2355,6 +2355,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         if (!m_p25->m_hideRemoteGrantLog) {
                             LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
                         }
+
                         return false;
                     }
                 }
