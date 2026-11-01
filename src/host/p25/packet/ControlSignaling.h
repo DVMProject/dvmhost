@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <algorithm>
 
 namespace p25
@@ -182,12 +183,15 @@ namespace p25
             std::unordered_map<uint8_t, uint8_t> m_sccbUpdateCnt;
 
             std::unordered_map<uint32_t, ulong64_t> m_llaDemandTable;
+            std::vector<uint32_t> m_llaDeferredAuthList;
 
             uint8_t m_lastMFID;
 
             bool m_noStatusAck;
             bool m_noMessageAck;
             bool m_unitToUnitAvailCheck;
+            bool m_telephoneInterconnect;
+            std::unordered_set<uint32_t> m_telIntGrants;
 
             uint8_t m_convFallbackPacketDelay;
             bool m_convFallback;
@@ -321,9 +325,11 @@ namespace p25
              * @param net Flag indicating this grant is coming from network traffic.
              * @param skip Flag indicating normal grant checking is skipped.
              * @param chNo Channel Number.
+             * @param telInt Flag indicating this grant is for a telephone interconnect call to the unit in dstId.
              * @returns True, if granted, otherwise false.
              */
-            bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
+            bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, 
+                bool skip = false, uint32_t chNo = 0U, bool telInt = false);
             /**
              * @brief Helper to write a grant update packet.
              */

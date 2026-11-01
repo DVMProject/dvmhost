@@ -58,7 +58,7 @@ KMMUnableToDecrypt::~KMMUnableToDecrypt()
 uint32_t KMMUnableToDecrypt::length() const
 {
     uint32_t len = KMMFrame::length() + KMM_BODY_UNABLE_TO_DECRYPT_LENGTH;
-    if ((m_bodyFormat & KEY_FORMAT_TEK) == KEY_FORMAT_TEK) {
+    if ((m_bodyFormat & KMM_BODY_FORMAT_TEK_INCLUDED) != 0U) {
         len += 3U;
     }
 
@@ -85,7 +85,7 @@ bool KMMUnableToDecrypt::decode(const uint8_t* data)
     m_status = data[15U + m_bodyOffset];                        // Status
 
     uint8_t offset = 0U;
-    if ((m_bodyFormat & KEY_FORMAT_TEK) == KEY_FORMAT_TEK) {
+    if ((m_bodyFormat & KMM_BODY_FORMAT_TEK_INCLUDED) != 0U) {
         m_decryptInfoFmt = data[16U + m_bodyOffset];            // Decrypt Info Format
         m_decryptAlgId = data[17U + m_bodyOffset];              // Decrypt Algorithm ID
         m_decryptKId = GET_UINT16(data, 18U + m_bodyOffset);    // Decrypt Key ID
@@ -134,7 +134,7 @@ void KMMUnableToDecrypt::encode(uint8_t* data)
     data[15U + m_bodyOffset] = m_status;                        // Status
 
     uint8_t offset = 0U;
-    if ((m_bodyFormat & KEY_FORMAT_TEK) == KEY_FORMAT_TEK) {
+    if ((m_bodyFormat & KMM_BODY_FORMAT_TEK_INCLUDED) != 0U) {
         data[16U + m_bodyOffset] = m_decryptInfoFmt;            // Decrypt Info Format
         data[17U + m_bodyOffset] = m_decryptAlgId;              // Decrypt Algorithm ID
         SET_UINT16(m_decryptKId, data, 18U + m_bodyOffset);     // Decrypt Key ID
@@ -146,6 +146,8 @@ void KMMUnableToDecrypt::encode(uint8_t* data)
     }
 
     data[16U + (m_bodyOffset + offset)] = m_key.getLength();
+    data[17U + (m_bodyOffset + offset)] = m_algId;
+    data[18U + (m_bodyOffset + offset)] = m_key.keyFormat();
 
     uint16_t sln = m_key.sln();
     SET_UINT16(sln, data, 19U + (m_bodyOffset + offset));

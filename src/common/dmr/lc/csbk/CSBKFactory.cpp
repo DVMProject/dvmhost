@@ -21,6 +21,8 @@ using namespace dmr::lc::csbk;
 
 #include <cassert>
 
+bool CSBKFactory::s_warnCRC = false;
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -55,6 +57,8 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBKFactory::createCSBK(), unhandled dataType = $%02X", dataType);
             break;
@@ -62,8 +66,13 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
-        LogError(LOG_DMR, "CSBKFactory::createCSBK(), failed CRC CCITT-162 check");
-        return nullptr;
+        if (s_warnCRC) {
+            LogWarning(LOG_DMR, "CSBKFactory::createCSBK(), failed CRC CCITT-162 check");
+        }
+        else {
+            LogError(LOG_DMR, "CSBKFactory::createCSBK(), failed CRC CCITT-162 check");
+            return nullptr;
+        }
     }
 
     // restore the checksum
@@ -76,6 +85,8 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBKFactory::createCSBK(), unhandled dataType = $%02X", dataType);
             break;
@@ -86,34 +97,37 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
 
     switch (CSBKO) {
     case CSBKO::BSDWNACT:
-        return decode(new CSBK_BSDWNACT(), data);
+        return decode(new CSBK_BSDWNACT(), data, dataType);
     case CSBKO::UU_V_REQ:
-        return decode(new CSBK_UU_V_REQ(), data);
+        return decode(new CSBK_UU_V_REQ(), data, dataType);
     case CSBKO::UU_ANS_RSP:
-        return decode(new CSBK_UU_ANS_RSP(), data);
+        return decode(new CSBK_UU_ANS_RSP(), data, dataType);
     case CSBKO::PRECCSBK:
-        return decode(new CSBK_PRECCSBK(), data);
+        return decode(new CSBK_PRECCSBK(), data, dataType);
     case CSBKO::RAND: // CSBKO::CALL_ALRT when FID == FID_MOT
         switch (FID)
         {
         case FID_MOT:
-            return decode(new CSBK_CALL_ALRT(), data);
+            return decode(new CSBK_CALL_ALRT(), data, dataType);
         case FID_ETSI:
         default:
-            return decode(new CSBK_RAND(), data);
+            return decode(new CSBK_RAND(), data, dataType);
         }
     case CSBKO::EXT_FNCT:
-        return decode(new CSBK_EXT_FNCT(), data);
+        return decode(new CSBK_EXT_FNCT(), data, dataType);
     case CSBKO::NACK_RSP:
-        return decode(new CSBK_NACK_RSP(), data);
+        return decode(new CSBK_NACK_RSP(), data, dataType);
 
     /** Tier 3 */
+    case CSBKO::AHOY:
+        return decode(new CSBK_AHOY(), data, dataType);
     case CSBKO::ACK_RSP:
-        return decode(new CSBK_ACK_RSP(), data);
+    case CSBKO::ACK_RSP_U:
+        return decode(new CSBK_ACK_RSP(), data, dataType);
     case CSBKO::BROADCAST:
-        return decode(new CSBK_BROADCAST(), data);
+        return decode(new CSBK_BROADCAST(), data, dataType);
     case CSBKO::MAINT:
-        return decode(new CSBK_MAINT(), data);
+        return decode(new CSBK_MAINT(), data, dataType);
 
     default:
         LogError(LOG_DMR, "CSBKFactory::create(), unknown CSBK type, csbko = $%02X", CSBKO);
@@ -129,10 +143,12 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
 
 /* Decode a CSBK. */
 
-std::unique_ptr<CSBK> CSBKFactory::decode(CSBK* csbk, const uint8_t* data)
+std::unique_ptr<CSBK> CSBKFactory::decode(CSBK* csbk, const uint8_t* data, DataType::E dataType)
 {
     assert(csbk != nullptr);
     assert(data != nullptr);
+
+    csbk->setDataType(dataType);
 
     if (!csbk->decode(data)) {
         return nullptr;

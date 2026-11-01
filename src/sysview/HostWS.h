@@ -60,8 +60,8 @@ public:
     int run();
 
     /**
-     * @brief 
-     * @param obj 
+     * @brief Sends a JSON object to all connected WebSocket clients.
+     * @param obj JSON object to send.
      */
     void send(json::object obj);
 

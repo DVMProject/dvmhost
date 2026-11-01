@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -311,7 +311,10 @@ namespace concurrent
          */
         iterator find(const Key& key)
         {
-            return m_map.find(key);
+            __shared_lock();
+            iterator it = m_map.find(key);
+            __shared_unlock();
+            return it;
         }
         /**
          * @brief Tries to locate an element in an unordered_map.
@@ -321,7 +324,10 @@ namespace concurrent
          */
         const_iterator find(const Key& key) const
         {
-            return m_map.find(key);
+            __shared_lock();
+            const_iterator it = m_map.find(key);
+            __shared_unlock();
+            return it;
         }
 
         /**

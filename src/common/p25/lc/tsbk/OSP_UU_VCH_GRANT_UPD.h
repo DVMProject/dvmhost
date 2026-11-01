@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements UU VCH GRANT UPD - Unit-to-Unit Voice Channel Grant Update.
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_UU_VCH_GRANT_UPD : public TSBK {
+            class DVM_COMMON_API OSP_UU_VCH_GRANT_UPD : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_UU_VCH_GRANT_UPD class.

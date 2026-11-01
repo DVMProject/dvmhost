@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SNDCP CH ANN - SNDCP Data Channel Announcement.
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_SNDCP_CH_ANN : public TSBK {
+            class DVM_COMMON_API OSP_SNDCP_CH_ANN : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_SNDCP_CH_ANN class.

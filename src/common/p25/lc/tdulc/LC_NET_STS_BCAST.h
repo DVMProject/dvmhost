@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements NET STS BCAST - Network Status Broadcast
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_NET_STS_BCAST : public TDULC {
+            class DVM_COMMON_API LC_NET_STS_BCAST : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_NET_STS_BCAST class.

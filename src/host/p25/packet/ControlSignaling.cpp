@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2022 Jason-UWU
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 #include "Defines.h"
@@ -310,6 +311,37 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
             }
             break;
+            case TSBKO::ISP_TELE_INT_PSTN_REQ:
+            {
+                // make sure control data is supported
+                IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBKO::ISP_TELE_INT_PSTN_REQ, srcId);
+
+                // validate the source RID
+                VALID_SRCID(tsbk->toString(true), TSBKO::ISP_TELE_INT_PSTN_REQ, srcId);
+
+                if (!m_telephoneInterconnect || m_p25->m_network == nullptr) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, unsupported service, srcId = %u", tsbk->toString(true).c_str(), srcId);
+                    writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::ISP_TELE_INT_PSTN_REQ);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+
+                // verify the source RID is registered
+                VERIFY_SRCID_REG(tsbk->toString(true), TSBKO::ISP_TELE_INT_PSTN_REQ, srcId);
+
+                ISP_TELE_INT_PSTN_REQ* isp = static_cast<ISP_TELE_INT_PSTN_REQ*>(tsbk.get());
+                if (m_verbose) {
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, pstnAddress = %u, srcId = %u",
+                        tsbk->toString(true).c_str(), isp->getPSTNAddress(), srcId);
+                }
+
+                ::ActivityLog("P25", true, "telephone interconnect request from %u to PSTN address %u", srcId, isp->getPSTNAddress());
+
+                // the telephone interconnect gateway places the call and demands the channel grant
+                RF_TO_WRITE_NET(isp);
+                writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_TELE_INT_PSTN_REQ, false, true);
+            }
+            break;
             case TSBKO::IOSP_TELE_INT_ANS:
             {
                 // make sure control data is supported
@@ -318,7 +350,23 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 // validate the source RID
                 VALID_SRCID(tsbk->toString(true), TSBKO::IOSP_TELE_INT_ANS, srcId);
 
-                writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::IOSP_TELE_INT_ANS);
+                if (!m_telephoneInterconnect || m_p25->m_network == nullptr) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, unsupported service, srcId = %u", tsbk->toString(true).c_str(), srcId);
+                    writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::IOSP_TELE_INT_ANS);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+
+                IOSP_TELE_INT_ANS* iosp = static_cast<IOSP_TELE_INT_ANS*>(tsbk.get());
+                if (m_verbose) {
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, response = $%02X, srcId = %u",
+                        tsbk->toString(true).c_str(), iosp->getResponse(), srcId);
+                }
+
+                ::ActivityLog("P25", true, "telephone interconnect answer response from %u", srcId);
+
+                // forward the received frame as-is; re-encoding would produce the OSP (answer request) layout
+                writeNetworkRF(iosp, data + 2U, true);
             }
             break;
             case TSBKO::ISP_SNDCP_CH_REQ:
@@ -475,6 +523,17 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ::ActivityLog("P25", true, "cancel service request from %u", srcId);
 
+                // the telephone interconnect gateway must release the call
+                uint8_t service = isp->getService();
+                if (m_telephoneInterconnect && (service == TSBKO::IOSP_TELE_INT_DIAL || service == TSBKO::ISP_TELE_INT_PSTN_REQ ||
+                    service == TSBKO::IOSP_TELE_INT_ANS)) {
+                    RF_TO_WRITE_NET(isp);
+
+                    if (m_telIntGrants.find(srcId) != m_telIntGrants.end()) {
+                        m_p25->m_affiliations->releaseGrant(srcId, false);
+                    }
+                }
+
                 writeRF_TSDU_ACK_FNE(srcId, isp->getService(), false, true);
             }
             break;
@@ -597,6 +656,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 writeRF_TSDU_U_Dereg_Ack(srcId);
+                if (m_requireLLAForReg)
+                    m_p25->clearLLA_AM1_Parameters(srcId);
             }
             break;
             case TSBKO::IOSP_U_REG:
@@ -643,52 +704,59 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ::ActivityLog("P25", true, "authentication response from %u", srcId);
 
-                crypto::AES* aes = new crypto::AES(crypto::AESKeyLength::AES_128);
+                DECLARE_UINT8_ARRAY(ks, AUTH_KEY_LENGTH_BYTES);
+                if (m_p25->getLLA_AM1_Parameters(srcId, nullptr, nullptr, ks)) {
+                    crypto::AES* aes = new crypto::AES(crypto::AESKeyLength::AES_128);
 
-                // get RES1 from response
-                uint8_t RES1[AUTH_RES_LENGTH_BYTES];
-                isp->getAuthRes(RES1);
+                    // get RES1 from response
+                    uint8_t RES1[AUTH_RES_LENGTH_BYTES];
+                    isp->getAuthRes(RES1);
 
-                // get challenge for our SU
-                ulong64_t challenge = 0U;
-                try {
-                    challenge = m_llaDemandTable.at(srcId);
-                }
-                catch (...) {
-                    challenge = 0U;
-                }
-
-                uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
-                SET_UINT32(challenge >> 8, RC, 0);
-                RC[4U] = (uint8_t)(challenge & 0xFFU);
-
-                // expand RAND1 to 16 bytes
-                uint8_t expandedRAND1[16];
-                ::memset(expandedRAND1, 0x00U, AUTH_KEY_LENGTH_BYTES);
-                for (uint32_t i = 0; i < AUTH_RAND_CHLNG_LENGTH_BYTES; i++)
-                    expandedRAND1[i] = RC[i];
-
-                // generate XRES1
-                uint8_t* XRES1 = aes->encryptECB(expandedRAND1, AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), m_p25->m_llaKS);
-
-                // compare RES1 and XRES1
-                bool authFailed = false;
-                for (uint32_t i = 0; i < AUTH_RES_LENGTH_BYTES; i++) {
-                    if (XRES1[i] != RES1[i]) {
-                        authFailed = true;
+                    // get challenge for our SU
+                    ulong64_t challenge = 0U;
+                    try {
+                        challenge = m_llaDemandTable.at(srcId);
                     }
-                }
+                    catch (...) {
+                        challenge = 0U;
+                    }
 
-                // cleanup buffers
-                delete[] XRES1;
-                delete aes;
+                    uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
+                    SET_UINT32(challenge >> 8, RC, 0);
+                    RC[4U] = (uint8_t)(challenge & 0xFFU);
 
-                if (!authFailed) {
-                    writeRF_TSDU_U_Reg_Rsp(srcId, m_p25->m_siteData.sysId());
-                }
-                else {
+                    // expand RAND1 to 16 bytes
+                    uint8_t expandedRAND1[16];
+                    ::memset(expandedRAND1, 0x00U, AUTH_KEY_LENGTH_BYTES);
+                    for (uint32_t i = 0; i < AUTH_RAND_CHLNG_LENGTH_BYTES; i++)
+                        expandedRAND1[i] = RC[i];
+
+                    // generate XRES1
+                    uint8_t* XRES1 = aes->encryptECB(expandedRAND1, AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), ks);
+
+                    // compare RES1 and XRES1
+                    bool authFailed = false;
+                    for (uint32_t i = 0; i < AUTH_RES_LENGTH_BYTES; i++) {
+                        if (XRES1[i] != RES1[i]) {
+                            authFailed = true;
+                        }
+                    }
+
+                    // cleanup buffers
+                    delete[] XRES1;
+                    delete aes;
+
+                    if (!authFailed) {
+                        writeRF_TSDU_U_Reg_Rsp(srcId, m_p25->m_siteData.sysId());
+                    }
+                    else {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, AUTH failed, src = %u", isp->toString().c_str(), srcId);
+                        ::ActivityLog("P25", true, "unit registration request from %u denied, authentication failure", srcId);
+                        writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SU_FAILED_AUTH, TSBKO::IOSP_U_REG);
+                    }
+                } else {
                     LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, AUTH failed, src = %u", isp->toString().c_str(), srcId);
-                    ::ActivityLog("P25", true, "unit registration request from %u denied, authentication failure", srcId);
+                    ::ActivityLog("P25", true, "unit registration request from %u denied, authentication failure, LLA keys not found", srcId);
                     writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SU_FAILED_AUTH, TSBKO::IOSP_U_REG);
                 }
             }
@@ -726,6 +794,8 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
     switch (duid) {
         case DUID::TSDU:
             if (m_p25->m_netState == RS_NET_IDLE) {
+                m_p25->m_networkWatchdog.stop();
+
                 std::unique_ptr<lc::TSBK> tsbk = TSBKFactory::createTSBK(data);
                 if (tsbk == nullptr) {
                     return false;
@@ -859,6 +929,32 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         else {
                             VERBOSE_LOG_TSBK_NET(tsbk->toString(), srcId, dstId);
                         }
+                    }
+                    break;
+                    case TSBKO::IOSP_TELE_INT_DIAL:
+                    case TSBKO::ISP_TELE_INT_PSTN_REQ:
+                        return true; // don't allow this to write to the air
+                    case TSBKO::IOSP_TELE_INT_ANS:
+                    {
+                        if (!m_telephoneInterconnect) {
+                            return true; // don't allow this to write to the air
+                        }
+
+                        // validate the target RID
+                        VALID_DSTID_NET(tsbk->toString(), dstId);
+
+                        // only alert units registered to this site
+                        if (!m_p25->m_affiliations->isUnitReg(dstId)) {
+                            return true; // don't allow this to write to the air
+                        }
+
+                        IOSP_TELE_INT_ANS* iosp = static_cast<IOSP_TELE_INT_ANS*>(tsbk.get());
+                        if (m_verbose) {
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, digits = %s, dstId = %u",
+                                tsbk->toString().c_str(), iosp->getDigits().c_str(), dstId);
+                        }
+
+                        ::ActivityLog("P25", false, "telephone interconnect answer request to %u", dstId);
                     }
                     break;
                     case TSBKO::IOSP_STS_UPDT:
@@ -1279,10 +1375,13 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
     m_sccbTable(),
     m_sccbUpdateCnt(),
     m_llaDemandTable(),
+    m_llaDeferredAuthList(),
     m_lastMFID(MFG_STANDARD),
     m_noStatusAck(false),
     m_noMessageAck(true),
     m_unitToUnitAvailCheck(true),
+    m_telephoneInterconnect(false),
+    m_telIntGrants(),
     m_convFallbackPacketDelay(0U),
     m_convFallback(false),
     m_adjSiteUpdateTimer(1000U),
@@ -1334,7 +1433,7 @@ void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool 
     if (m_p25->m_network == nullptr)
         return;
 
-    if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
+    if (m_p25->m_rfTimeoutTimer.isRunning() && m_p25->m_rfTimeoutTimer.hasExpired())
         return;
 
     lc::LC lc = lc::LC();
@@ -1357,7 +1456,7 @@ void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, boo
     if (m_p25->m_network == nullptr)
         return;
 
-    if (m_p25->m_rfTimeout.isRunning() && m_p25->m_rfTimeout.hasExpired())
+    if (m_p25->m_rfTimeoutTimer.isRunning() && m_p25->m_rfTimeoutTimer.hasExpired())
         return;
 
     lc::LC lc = lc::LC();
@@ -1394,7 +1493,8 @@ void ControlSignaling::writeRF_TDULC(lc::TDULC* lc, bool noNetwork)
     // add status bits
     P25Utils::addStatusBits(data + 2U, P25_TDULC_FRAME_LENGTH_BITS, false, false);
 
-    m_p25->m_rfTimeout.stop();
+    m_p25->m_rfTimeoutTimer.stop();
+    m_p25->m_rfTimeout = false;
 
     if (!noNetwork)
         writeNetworkRF(lc, data + 2U, false);
@@ -1450,7 +1550,8 @@ void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
     if (m_p25->m_network != nullptr)
         m_p25->m_network->resetP25();
 
-    m_p25->m_netTimeout.stop();
+    m_p25->m_netTimeoutTimer.stop();
+    m_p25->m_netTimeout = false;
     m_p25->m_networkWatchdog.stop();
     m_p25->m_netState = RS_NET_IDLE;
     m_p25->m_tailOnIdle = true;
@@ -1547,8 +1648,8 @@ void ControlSignaling::writeNet_TSDU(lc::TSBK* tsbk)
     tsbk->encode(buffer + 2U);
 
     // add status bits
-    P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES, false, true);
-    P25Utils::addIdleStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BYTES);
+    P25Utils::addStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BITS, false, true);
+    P25Utils::addIdleStatusBits(buffer + 2U, P25_TSDU_FRAME_LENGTH_BITS);
     P25Utils::setStatusBitsStartIdle(buffer + 2U);
 
     m_p25->addFrame(buffer, P25_TSDU_FRAME_LENGTH_BYTES + 2U, true);
@@ -2133,33 +2234,43 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
 
 /* Helper to write a grant packet. */
 
-bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
+bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo,
+    bool telInt)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
 
-    if (dstId == TGID_ALL) {
-        return true; // do not generate grant packets for $FFFF (All Call) TGID
+    const bool rfGrantSteering = m_p25->m_allowRFGrantTGSteering && m_p25->m_enableControl && !m_p25->m_dedicatedControl && !net && grp;
+    uint32_t activeGrantDstId = 0U;
+    bool activeGrantFromNetwork = false;
+    bool preemptNetworkGrant = false;
+    bool preemptNetworkTraffic = false;
+
+    // determine the active grant destination ID and network preemption status
+    if (rfGrantSteering) {
+        if (m_p25->m_rfLastDstId != 0U && m_p25->m_affiliations->isGranted(m_p25->m_rfLastDstId)) {
+            activeGrantDstId = m_p25->m_rfLastDstId;
+        }
+        else if (m_p25->m_netLastDstId != 0U && m_p25->m_affiliations->isGranted(m_p25->m_netLastDstId)) {
+            activeGrantDstId = m_p25->m_netLastDstId;
+        }
+        else {
+            std::unordered_map<uint32_t, uint32_t> grantTable = m_p25->m_affiliations->grantTable();
+            for (const auto& grant : grantTable) {
+                if (grant.second == m_p25->m_siteData.channelNo() || grantTable.size() == 1U) {
+                    activeGrantDstId = grant.first;
+                    break;
+                }
+            }
+        }
+
+        activeGrantFromNetwork = activeGrantDstId != 0U && m_p25->m_affiliations->isNetGranted(activeGrantDstId);
+        preemptNetworkTraffic = m_p25->m_netState != RS_NET_IDLE && m_p25->m_netLastDstId != 0U && m_p25->m_netLastDstId != dstId;
     }
 
-    // are network channel grants disabled?
-    if (m_p25->m_disableNetworkGrant) {
-        // don't process RF grant if the network isn't in a idle state and the RF destination is the network destination
-        if (m_p25->m_netState != RS_NET_IDLE && dstId == m_p25->m_netLastDstId) {
-            LogWarning(LOG_RF, "Traffic collision detect, preempting new RF traffic to existing network traffic!");
-            LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, traffic collision, dstId = %u", dstId);
-            writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
-
-            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
-            m_p25->m_rfState = RS_RF_REJECTED;
-            return false;
-        }
-
-        // ensure network watchdog is stopped
-        if (m_p25->m_networkWatchdog.isRunning()) {
-            m_p25->m_networkWatchdog.stop();
-        }
+    if (dstId == TGID_ALL) {
+        return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
     // are we skipping checking?
@@ -2177,6 +2288,32 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
 
             return false;
+        }
+
+        // check if an RF grant is currently active and if it should preempt network traffic
+        if (rfGrantSteering && activeGrantDstId != 0U) {
+            if (!activeGrantFromNetwork) {
+                // An RF-originated grant owns the channel until it is released or expires.
+                if (activeGrantDstId != dstId) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, RF grant active, grantedDstId = %u, dstId = %u",
+                        activeGrantDstId, dstId);
+                    writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, TSBKO::IOSP_GRP_VCH, true, true);
+                    ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+            }
+            else if (activeGrantDstId == dstId) {
+                // matching network traffic retains ownership to avoid treating a duplicate as a new RF call
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, matching network grant active, dstId = %u", dstId);
+                writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, TSBKO::IOSP_GRP_VCH, true, true);
+                ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                m_p25->m_rfState = RS_RF_REJECTED;
+                return false;
+            }
+            else {
+                preemptNetworkGrant = true;
+            }
         }
 
         // only do the last destination ID checking if we're operating in non-dedicated mode (e.g. DVRS)
@@ -2198,7 +2335,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             // don't transmit grants if the destination ID's don't match and the network TG hang timer is running
             if (m_p25->m_rfLastDstId != 0U) {
-                if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired())) {
+                if (m_p25->m_rfLastDstId != dstId && (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) && !rfGrantSteering) {
                     if (!net) {
                         writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_BONK, (grp) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH, grp, true);
                         m_p25->m_rfState = RS_RF_REJECTED;
@@ -2215,8 +2352,28 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
                 if (tid.config().affiliated()) {
                     if (!m_p25->m_affiliations->hasGroupAff(dstId)) {
-                        LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
+                        if (!m_p25->m_hideRemoteGrantLog) {
+                            LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) ignored, no group affiliations, dstId = %u", dstId);
+                        }
+
                         return false;
+                    }
+                }
+            }
+
+            if (grp) {
+                // perform encryption strapping check
+                ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
+                if (!tid.isInvalid()) {
+                    if (tid.config().strapping() == ::lookups::TG_STRAPPING_STRAPPED) {
+                        if (!encryption) {
+                            LogWarning(LOG_RF, "P25, " P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", srcId, dstId);
+                            writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::IOSP_GRP_VCH, grp, true);
+
+                            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                            m_p25->m_rfState = RS_RF_REJECTED;
+                            return false;
+                        }
                     }
                 }
             }
@@ -2226,6 +2383,30 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 if (!m_p25->m_affiliations->isUnitReg(dstId)) {
                     LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) ignored, no unit registration, dstId = %u", dstId);
                     return false;
+                }
+            }
+
+            // preempt network traffic or grant if necessary
+            if (preemptNetworkGrant || preemptNetworkTraffic) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), preempting network traffic/grant, grantedDstId = %u, dstId = %u",
+                    activeGrantDstId, dstId);
+
+                if (preemptNetworkGrant)
+                    m_p25->m_affiliations->releaseGrant(activeGrantDstId, false);
+
+                if (m_p25->m_netState != RS_NET_IDLE) {
+                    m_p25->m_voice->resetNet();
+                    m_p25->m_netTimeoutTimer.stop();
+                    m_p25->m_netTimeout = false;
+                    m_p25->m_netTGHang.stop();
+                    m_p25->m_networkWatchdog.stop();
+                    m_p25->m_netState = RS_NET_IDLE;
+
+                    if (m_p25->m_network != nullptr)
+                        m_p25->m_network->resetP25();
+
+                    if (m_p25->m_duplex)
+                        m_p25->writeRF_TDU(true);
                 }
             }
 
@@ -2267,7 +2448,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            if (!m_disableGrantSrcIdCheck && !net) {
+            if (!m_disableGrantSrcIdCheck) {
                 // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
                 // different source from the original grant
                 uint32_t grantedSrcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
@@ -2420,6 +2601,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
                     req["dstId"].set<uint32_t>(dstId);
+                    if (telInt) {
+                        req["telInt"].set<bool>(telInt);
+                    }
 
                     // send blocking RPC request
                     bool requestFailed = !g_RPC->req(RPC_PERMIT_P25_TG, req, [=, &requestFailed](json::object& req, json::object& reply) {
@@ -2455,6 +2639,66 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 else {
                     ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
                 }
+            }
+
+            if (telInt) {
+                ::ActivityLog("P25", !net, "telephone interconnect grant to %u", dstId);
+
+                // the grant is held for the whole call (message trunking) instead of per transmission
+                m_telIntGrants.insert(dstId);
+
+                if (voiceChData.isExplicitCh()) {
+                    std::unique_ptr<MBT_OSP_TELE_INT_VCH_GRANT> osp = std::make_unique<MBT_OSP_TELE_INT_VCH_GRANT>();
+                    osp->setMFId(MFG_STANDARD); // under MFG_MOT this opcode is not a telephone interconnect grant
+                    osp->setSrcId(dstId);
+                    osp->setGrpVchId(voiceChData.chId());
+                    osp->setGrpVchNo(chNo);
+                    osp->setRxGrpVchId(voiceChData.rxChId());
+                    osp->setRxGrpVchNo(voiceChData.rxChNo());
+                    osp->setEmergency(emergency);
+                    osp->setEncrypted(encryption);
+                    osp->setPriority(priority);
+
+                    osp->setForceChannelId(true);
+
+                    if (m_verbose) {
+                        LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, rxChNo = %u-%u, callTimer = %u, dstId = %u",
+                            osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(),
+                            osp->getRxGrpVchId(), osp->getRxGrpVchNo(), osp->getCallTimer(), dstId);
+                    }
+
+                    // transmit telephone interconnect grant
+                    writeRF_TSDU_AMBT(osp.get(), true);
+                    if (m_redundantGrant) {
+                        for (int i = 0; i < 3; i++)
+                            writeRF_TSDU_AMBT(osp.get(), true);
+                    }
+
+                    return true;
+                }
+
+                std::unique_ptr<OSP_TELE_INT_VCH_GRANT> osp = std::make_unique<OSP_TELE_INT_VCH_GRANT>();
+                osp->setMFId(MFG_STANDARD); // under MFG_MOT this opcode is not a telephone interconnect grant
+                osp->setSrcId(dstId);
+                osp->setGrpVchId(voiceChData.chId());
+                osp->setGrpVchNo(chNo);
+                osp->setEmergency(emergency);
+                osp->setEncrypted(encryption);
+                osp->setPriority(priority);
+
+                if (m_verbose) {
+                    LogInfoEx((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", %s, emerg = %u, encrypt = %u, prio = %u, chNo = %u-%u, callTimer = %u, dstId = %u",
+                        osp->toString().c_str(), osp->getEmergency(), osp->getEncrypted(), osp->getPriority(), osp->getGrpVchId(), osp->getGrpVchNo(), osp->getCallTimer(), dstId);
+                }
+
+                // transmit telephone interconnect grant
+                writeRF_TSDU_SBF_Imm(osp.get(), net);
+                if (m_redundantGrant) {
+                    for (int i = 0; i < 3; i++)
+                        writeRF_TSDU_SBF(osp.get(), net);
+                }
+
+                return true;
             }
 
             if (!net) {
@@ -2517,6 +2761,13 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
         }
+    }
+
+    // handle RF grant steering if applicable
+    if (rfGrantSteering && chNo > 0U) {
+        m_p25->m_rfLastSrcId = srcId;
+        m_p25->m_rfLastDstId = dstId;
+        m_p25->m_rfTGHang.start();
     }
 
     return true;
@@ -3066,32 +3317,42 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
 
 void ControlSignaling::writeRF_TSDU_Auth_Dmd(uint32_t srcId)
 {
-    std::unique_ptr<MBT_OSP_AUTH_DMD> osp = std::make_unique<MBT_OSP_AUTH_DMD>();
-    osp->setSrcId(WUID_FNE);
-    osp->setDstId(srcId);
-    osp->setAuthRS(m_p25->m_llaRS);
+    DECLARE_UINT8_ARRAY(rs, AUTH_KEY_LENGTH_BYTES);
+    if (m_p25->getLLA_AM1_Parameters(srcId, rs, nullptr, nullptr)) {
+        std::unique_ptr<MBT_OSP_AUTH_DMD> osp = std::make_unique<MBT_OSP_AUTH_DMD>();
+        osp->setSrcId(WUID_FNE);
+        osp->setDstId(srcId);
+        osp->setAuthRS(rs);
 
-    // generate challenge
-    uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
-    std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
-    uint32_t rnd = dist(m_p25->m_random);
-    SET_UINT32(rnd, RC, 0U);
+        // generate challenge
+        uint8_t RC[AUTH_RAND_CHLNG_LENGTH_BYTES];
+        std::uniform_int_distribution<uint32_t> dist(DVM_RAND_MIN, DVM_RAND_MAX);
+        uint32_t rnd = dist(m_p25->m_random);
+        SET_UINT32(rnd, RC, 0U);
 
-    rnd = dist(m_p25->m_random);
-    RC[4U] = (uint8_t)(rnd & 0xFFU);
+        rnd = dist(m_p25->m_random);
+        RC[4U] = (uint8_t)(rnd & 0xFFU);
 
-    ulong64_t challenge = GET_UINT32(RC, 0U);
-    challenge = (challenge << 8) + RC[4U];
+        ulong64_t challenge = GET_UINT32(RC, 0U);
+        challenge = (challenge << 8) + RC[4U];
 
-    osp->setAuthRC(RC);
+        osp->setAuthRC(RC);
 
-    m_llaDemandTable[srcId] = challenge;
+        m_llaDemandTable[srcId] = challenge;
 
-    if (m_verbose) {
-        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, RC = %X", osp->toString().c_str(), srcId, challenge);
+        if (m_verbose) {
+            LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, srcId = %u, RC = %X", osp->toString().c_str(), srcId, challenge);
+        }
+
+        writeRF_TSDU_AMBT(osp.get(), true);
+    } else {
+        if (m_verbose) {
+            LogInfoEx(LOG_P25, "P25, silencing subscriber and deferring auth demand, rsi = %u", srcId);
+        }
+
+        writeRF_TSDU_ACK_FNE(srcId, TSBKO::IOSP_U_REG, true, true);
+        m_llaDeferredAuthList.push_back(srcId);
     }
-
-    writeRF_TSDU_AMBT(osp.get(), true);
 }
 
 /* Helper to write a call termination packet. */
@@ -3133,7 +3394,7 @@ void ControlSignaling::writeNet_TSDU_From_RF(lc::TSBK* tsbk, uint8_t* data)
     tsbk->encode(data);
 
     // add status bits
-    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BYTES, false, false);
+    P25Utils::addStatusBits(data, P25_TSDU_FRAME_LENGTH_BITS, false, false);
     P25Utils::setStatusBitsStartIdle(data);
 }
 

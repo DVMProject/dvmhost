@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2002 by Robert H. Morelos-Zaragoza., All rights reserved.
  *  Copyright (C) 2010,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -1082,7 +1082,7 @@ bool Golay24128::decode24128(uint32_t code, uint32_t& out)
 
     out = code ^ error_pattern;
 
-    bool valid = (Utils::countBits32(syndrome) < 3U) || !(Utils::countBits32(out) & 1);
+    bool valid = !(Utils::countBits32(out) & 1U) || (Utils::countBits32(error_pattern) <= 2U);
     out >>= 12;
 
     return valid;

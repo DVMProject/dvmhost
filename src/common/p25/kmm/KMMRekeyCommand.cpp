@@ -164,8 +164,6 @@ void KMMRekeyCommand::encode(uint8_t* data)
             DECLARE_UINT8_ARRAY(keyPayload, keysetItem.keyLength());
             key.getKey(keyPayload);
 
-            Utils::dump(2U, "keyPayload", keyPayload, keysetItem.keyLength());
-
             ::memcpy(data + (25U + (m_bodyOffset + offset)), keyPayload, keysetItem.keyLength());
 
             offset += 5U + keyNameLen + keysetItem.keyLength();

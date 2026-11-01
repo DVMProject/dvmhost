@@ -33,7 +33,7 @@ namespace nxdn
              * @brief Implements SRV_INFO - Service Information
              * @ingroup nxdn_rcch
              */
-            class HOST_SW_API MESSAGE_TYPE_SRV_INFO : public RCCH {
+            class DVM_COMMON_API MESSAGE_TYPE_SRV_INFO : public RCCH {
             public:
                 /**
                  * @brief Initializes a new instance of the MESSAGE_TYPE_SRV_INFO class.

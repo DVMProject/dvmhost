@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements P_GRANT - Payload Channel Talkgroup Voice Channel Grant
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_P_GRANT : public CSBK {
+            class DVM_COMMON_API CSBK_P_GRANT : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_P_GRANT class.

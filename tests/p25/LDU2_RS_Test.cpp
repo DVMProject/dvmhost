@@ -58,12 +58,15 @@ TEST_CASE("P25 LDU2 Reed-Soloman 24,16,9 Test", "[p25][ldu2_rs24169]") {
 
     // decode RS (24,16,9) FEC
     try {
-        bool ret = m_rs.decode24169(rs);
+        int8_t errs = -1;
+        bool ret = m_rs.decode24169(rs, &errs);
         if (!ret) {
             ::LogError("T", "LC::decodeLDU2(), failed to decode RS (24,16,9) FEC");
             failed = true;
             goto cleanup;
         }
+        REQUIRE(errs > 0);
+        REQUIRE(errs <= 4);
     }
     catch (...) {
         Utils::dump(2U, "P25, RS excepted with input data", rs, P25_LDU_LC_FEC_LENGTH_BYTES);

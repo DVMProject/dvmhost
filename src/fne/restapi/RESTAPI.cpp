@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2024 Patrick McDonnell, W3AXL
  *
  */
@@ -24,6 +24,7 @@ using namespace network;
 using namespace restapi;
 using namespace restapi::http;
 using namespace lookups;
+using namespace fne_restapi;
 
 #include <cstdio>
 #include <cstdlib>
@@ -41,8 +42,32 @@ using namespace lookups;
 #define REST_API_BIND(funcAddr, classInstance) std::bind(&funcAddr, classInstance, std::placeholders::_1,  std::placeholders::_2, std::placeholders::_3)
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+#define HEALTH_INIT                                     "INITIALIZING"
+#define HEALTH_IDLE                                     "IDLE"
+#define HEALTH_DEGRADED                                 "DEGRADED"
+#define HEALTH_FAILED                                   "FAILED"
+#define HEALTH_PARTITIONED                              "PARTITIONED"
+#define HEALTH_HEALTHY                                  "HEALTHY"
+#define HEALTH_FAILED                                   "FAILED"
+#define HEALTH_UNAVAILABLE                              "UNAVAILABLE"
+
+#define HEALTH_REASON_ALL_UPSTREAMS_DISCONNECTED        "ALL_UPSTREAMS_DISCONNECTED"
+#define HEALTH_REASON_TRAFFIC_DATA_PLANE_STALLED        "TRAFFIC_DATA_PLANE_STALLED"
+#define HEALTH_REASON_METADATA_NETWORK_UNAVAILABLE      "METADATA_NETWORK_UNAVAILABLE"
+#define HEALTH_REASON_METADATA_DATA_PLANE_STALLED       "METADATA_DATA_PLANE_STALLED"
+#define HEALTH_REASON_TRAFFIC_INBOUND_QUEUE_STALLED     "TRAFFIC_INBOUND_QUEUE_STALLED"
+#define HEALTH_REASON_METADATA_INBOUND_QUEUE_STALLED    "METADATA_INBOUND_QUEUE_STALLED"
+#define HEALTH_REASON_UPSTREAM_CONNECTIVITY_DEGRADED    "UPSTREAM_CONNECTIVITY_DEGRADED"
+#define HEALTH_REASON_METADATA_UPDATES_MISSED           "METADATA_UPDATES_MISSED"
+#define HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE       "TRAFFIC_NETWORK_UNAVAILABLE"
+
+// ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+namespace fne_restapi {
 
 /**
  * @brief Helper to format string.
@@ -164,6 +189,8 @@ json::object tgToJson(const TalkgroupRuleGroupVoice& groupVoice)
         config["affiliated"].set<bool>(affiliated);
         bool parrot = groupVoice.config().parrot();
         config["parrot"].set<bool>(parrot);
+        uint8_t strapping = groupVoice.config().strapping();
+        config["strapping"].set<uint8_t>(strapping);
 
         json::array inclusions = json::array();
         std::vector<uint32_t> inclusion = groupVoice.config().inclusion();
@@ -320,10 +347,16 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
             return TalkgroupRuleGroupVoice();
         }
 
+        uint8_t strapping = TG_STRAPPING_SELECTABLE;
+        if (configObj["strapping"].is<uint8_t>()) {
+            strapping = configObj["strapping"].get<uint8_t>();
+        }
+
         TalkgroupRuleConfig config = groupVoice.config();
         config.active(configObj["active"].get<bool>());
         config.affiliated(configObj["affiliated"].get<bool>());
         config.parrot(configObj["parrot"].get<bool>());
+        config.strapping(strapping);
 
         if (!configObj["inclusion"].is<json::array>()) {
             errorPayload(reply, "TG configuration \"inclusion\" was not a valid JSON array");
@@ -482,6 +515,8 @@ TalkgroupRuleGroupVoice jsonToTG(json::object& req, HTTPPayload& reply)
     return groupVoice;
 }
 
+} // namespace fne_restapi
+
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
@@ -503,6 +538,7 @@ RESTAPI::RESTAPI(const std::string& address, uint16_t port, const std::string& p
     m_host(host),
     m_network(nullptr),
     m_ridLookup(nullptr),
+    m_ridAliasLookup(nullptr),
     m_tidLookup(nullptr),
     m_peerListLookup(nullptr),
     m_adjSiteMapLookup(nullptr),
@@ -556,11 +592,12 @@ RESTAPI::~RESTAPI()
 
 /* Sets the instances of the Radio ID and Talkgroup ID lookup tables. */
 
-void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, 
+void RESTAPI::setLookups(lookups::RadioIdLookup* ridLookup, lookups::RadioAliasLookup* ridAliasLookup, lookups::TalkgroupRulesLookup* tidLookup, 
     ::lookups::PeerListLookup* peerListLookup, ::lookups::AdjSiteMapLookup* adjMapLookup,
     CryptoContainer* cryptoLookup)
 {
     m_ridLookup = ridLookup;
+    m_ridAliasLookup = ridAliasLookup;
     m_tidLookup = tidLookup;
     m_peerListLookup = peerListLookup;
     m_adjSiteMapLookup = adjMapLookup;
@@ -643,22 +680,26 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_PUT_PEER_RESET).put(REST_API_BIND(RESTAPI::restAPI_PutPeerReset, this));
     m_dispatcher.match(FNE_PUT_PEER_RESET_CONN).put(REST_API_BIND(RESTAPI::restAPI_PutPeerResetConn, this));
 
-    m_dispatcher.match(FNE_GET_RID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRIDQuery, this));
-    m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
-    m_dispatcher.match(FNE_PUT_RID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutRIDDelete, this));
-    m_dispatcher.match(FNE_GET_RID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetRIDCommit, this));
-
-    m_dispatcher.match(FNE_GET_TGID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetTGQuery, this));
-    m_dispatcher.match(FNE_PUT_TGID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutTGAdd, this));
-    m_dispatcher.match(FNE_PUT_TGID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutTGDelete, this));
-    m_dispatcher.match(FNE_GET_TGID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetTGCommit, this));
-
     m_dispatcher.match(FNE_GET_PEER_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetPeerList, this));
     m_dispatcher.match(FNE_PUT_PEER_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutPeerAdd, this));
     m_dispatcher.match(FNE_PUT_PEER_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutPeerDelete, this));
     m_dispatcher.match(FNE_GET_PEER_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetPeerCommit, this));
     m_dispatcher.match(FNE_PUT_PEER_NAK_PEERID).put(REST_API_BIND(RESTAPI::restAPI_PutPeerNAKByPeerId, this));
     m_dispatcher.match(FNE_PUT_PEER_NAK_ADDRESS).put(REST_API_BIND(RESTAPI::restAPI_PutPeerNAKByAddress, this));
+
+    m_dispatcher.match(FNE_GET_RID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRIDQuery, this));
+    m_dispatcher.match(FNE_PUT_RID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRIDAdd, this));
+    m_dispatcher.match(FNE_PUT_RID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutRIDDelete, this));
+    m_dispatcher.match(FNE_GET_RID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetRIDCommit, this));
+    m_dispatcher.match(FNE_GET_RID_ALIAS_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetRAQuery, this));
+    m_dispatcher.match(FNE_PUT_RID_ALIAS_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutRAAdd, this));
+    m_dispatcher.match(FNE_PUT_RID_ALIAS_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutRADelete, this));
+    m_dispatcher.match(FNE_GET_RID_ALIAS_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetRACommit, this));
+
+    m_dispatcher.match(FNE_GET_TGID_QUERY).get(REST_API_BIND(RESTAPI::restAPI_GetTGQuery, this));
+    m_dispatcher.match(FNE_PUT_TGID_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutTGAdd, this));
+    m_dispatcher.match(FNE_PUT_TGID_DELETE).put(REST_API_BIND(RESTAPI::restAPI_PutTGDelete, this));
+    m_dispatcher.match(FNE_GET_TGID_COMMIT).get(REST_API_BIND(RESTAPI::restAPI_GetTGCommit, this));
 
     m_dispatcher.match(FNE_GET_ADJ_MAP_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAdjMapList, this));
     m_dispatcher.match(FNE_PUT_ADJ_MAP_ADD).put(REST_API_BIND(RESTAPI::restAPI_PutAdjMapAdd, this));
@@ -673,10 +714,14 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_RELOAD_CRYPTO).get(REST_API_BIND(RESTAPI::restAPI_GetReloadCrypto, this));
 
     m_dispatcher.match(FNE_GET_STATS).get(REST_API_BIND(RESTAPI::restAPI_GetStats, this));
+    m_dispatcher.match(FNE_GET_HEALTH).get(REST_API_BIND(RESTAPI::restAPI_GetHealth, this));
     m_dispatcher.match(FNE_GET_RESET_TOTAL_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetTotalCalls, this));
     m_dispatcher.match(FNE_GET_RESET_ACTIVE_CALLS).get(REST_API_BIND(RESTAPI::restAPI_GetResetActiveCalls, this));
     m_dispatcher.match(FNE_GET_RESET_CALL_COLLISIONS).get(REST_API_BIND(RESTAPI::restAPI_GetResetCallCollisions, this));
+    m_dispatcher.match(FNE_GET_RESET_CALL_SWITCHES).get(REST_API_BIND(RESTAPI::restAPI_GetResetCallSwitches, this));
+    m_dispatcher.match(FNE_GET_UNIT_REG_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetUnitRegList, this));
     m_dispatcher.match(FNE_GET_AFF_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetAffList, this));
+    m_dispatcher.match(FNE_GET_GRANT_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetGrantList, this));
 
     m_dispatcher.match(FNE_GET_SPANNING_TREE).get(REST_API_BIND(RESTAPI::restAPI_GetSpanningTree, this));
 
@@ -768,9 +813,9 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         return;
     }
 
-    if (auth.size() > 64) {
+    if (auth.size() != 64) {
         invalidateHostToken(host);
-        errorPayload(reply, "auth cannot be longer than 64 characters");
+        errorPayload(reply, "auth must be 64 characters");
         return;
     }
 
@@ -803,6 +848,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         invalidateHostToken(host);
         errorPayload(reply, "invalid password");
         LogError(LOG_REST, "failed authentication attempt from host %s", host.c_str());
+        delete[] passwordHash;
         return;
     }
 
@@ -859,6 +905,10 @@ void RESTAPI::restAPI_GetStatus(const HTTPPayload& request, HTTPPayload& reply, 
     reply.payload(response);
 }
 
+/*
+** Peer Operations
+*/
+
 /* REST API endpoint; implements get peer query request. */
 
 void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
@@ -872,16 +922,16 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
 
     json::array peers = json::array();
     if (m_network != nullptr) {
-        if (m_network->m_peers.size() > 0) {
-            for (auto entry : m_network->m_peers) {
+        if (m_network->peerCount() > 0U) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     if (m_debug) {
-                        LogDebug(LOG_REST, "preparing Peer %u (%s) for REST API query", peerId, peer->address().c_str());
+                        LogDebug(LOG_REST, "preparing PEER %u (%s) for REST API query", peerId, peer->address().c_str());
                     }
 
-                    json::object peerObj = m_network->fneConnObject(peerId, peer);
+                    json::object peerObj = m_network->fneConnObject(peerId, peer.get());
                     peers.push_back(json::value(peerObj));
                 }
             }
@@ -891,8 +941,9 @@ void RESTAPI::restAPI_GetPeerQuery(const HTTPPayload& request, HTTPPayload& repl
         }
 
         // report any peers from replica peers
-        if (m_network->m_peerReplicaPeers.size() > 0) {
-            for (auto entry : m_network->m_peerReplicaPeers) {
+        std::unordered_map<uint32_t, json::array> replicatedPeers = m_network->replicatedPeersSnapshot();
+        if (!replicatedPeers.empty()) {
+            for (const auto& entry : replicatedPeers) {
                 json::array peerObjs = entry.second;
                 if (entry.second.size() > 0) {
                     for (auto linkEntry : entry.second) {
@@ -925,7 +976,7 @@ void RESTAPI::restAPI_GetPeerCount(const HTTPPayload& request, HTTPPayload& repl
 
     json::array peers = json::array();
     if (m_network != nullptr) {
-        uint32_t count = m_network->m_peers.size();
+        uint32_t count = static_cast<uint32_t>(m_network->peerCount());
         response["peerCount"].set<uint32_t>(count);
     }
 
@@ -997,276 +1048,6 @@ void RESTAPI::restAPI_PutPeerResetConn(const HTTPPayload& request, HTTPPayload& 
     }
 }
 
-/* REST API endpoint; implements get radio ID query request. */
-
-void RESTAPI::restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object response = json::object();
-    setResponseDefaultStatus(response);
-
-    json::array rids = json::array();
-    if (m_ridLookup != nullptr) {
-        if (m_ridLookup->table().size() > 0) {
-            for (auto entry : m_ridLookup->table()) {
-                json::object ridObj = json::object();
-
-                uint32_t rid = entry.first;
-                ridObj["id"].set<uint32_t>(rid);
-                bool enabled = entry.second.radioEnabled();
-                ridObj["enabled"].set<bool>(enabled);
-                std::string alias = entry.second.radioAlias();
-                ridObj["alias"].set<std::string>(alias);
-
-                rids.push_back(json::value(ridObj));
-            }
-        }
-    }
-
-    response["rids"].set<json::array>(rids);
-    reply.payload(response);
-}
-
-/* REST API endpoint; implements put radio ID add request. */
-
-void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object req = json::object();
-    if (!parseRequestBody(request, reply, req)) {
-        return;
-    }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
-
-    if (!req["rid"].is<uint32_t>()) {
-        errorPayload(reply, "rid was not a valid integer");
-        return;
-    }
-
-    uint32_t rid = req["rid"].get<uint32_t>();
-
-    if (!req["enabled"].is<bool>()) {
-        errorPayload(reply, "enabled was not a valid boolean");
-        return;
-    }
-
-    bool enabled = req["enabled"].get<bool>();
-
-    std::string alias = "";
-    // Check if we were provided an alias in the request
-    if (req.find("alias") != req.end()) {
-        alias = req["alias"].get<std::string>();
-    }
-
-    LogInfoEx(LOG_REST, "request to add RID ACL, rid = %u", rid);
-
-    // The addEntry function will automatically update an existing entry, so no need to check for an exisitng one here
-    m_ridLookup->addEntry(rid, enabled, alias);
-/*    
-    if (m_network != nullptr) {
-        m_network->m_forceListUpdate = true;
-    }
-*/    
-}
-
-/* REST API endpoint; implements put radio ID delete request. */
-
-void RESTAPI::restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object req = json::object();
-    if (!parseRequestBody(request, reply, req)) {
-        return;
-    }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
-
-    if (!req["rid"].is<uint32_t>()) {
-        errorPayload(reply, "rid was not a valid integer");
-        return;
-    }
-
-    uint32_t rid = req["rid"].get<uint32_t>();
-
-    RadioId radioId = m_ridLookup->find(rid);
-    if (radioId.radioDefault()) {
-        errorPayload(reply, "failed to find specified RID to delete");
-        return;
-    }
-
-    LogInfoEx(LOG_REST, "request to delete RID ACL, rid = %u", rid);
-
-    m_ridLookup->eraseEntry(rid);
-/*    
-    if (m_network != nullptr) {
-        m_network->m_forceListUpdate = true;
-    }
-*/    
-}
-
-/* REST API endpoint; implements put radio ID commit request. */
-
-void RESTAPI::restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object response = json::object();
-    setResponseDefaultStatus(response);
-
-    LogInfoEx(LOG_REST, "request to commit and save RID ACLs");
-    m_ridLookup->commit();
-
-    reply.payload(response);
-}
-
-/* REST API endpoint; implements get talkgroup ID query request. */
-
-void RESTAPI::restAPI_GetTGQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object response = json::object();
-    setResponseDefaultStatus(response);
-
-    json::array tgs = json::array();
-    if (m_tidLookup != nullptr) {
-        if (m_tidLookup->groupVoice().size() > 0) {
-            for (auto entry : m_tidLookup->groupVoice()) {
-                json::object tg = tgToJson(entry);
-                tgs.push_back(json::value(tg));
-            }
-        }
-    }
-
-    response["tgs"].set<json::array>(tgs);
-    reply.payload(response);
-}
-
-/* REST API endpoint; implements put talkgroup ID add request. */
-
-void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object req = json::object();
-    if (!parseRequestBody(request, reply, req)) {
-        return;
-    }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
-
-    TalkgroupRuleGroupVoice groupVoice = jsonToTG(req, reply);
-    if (groupVoice.isInvalid()) {
-        ::LogError(LOG_REST, "Unable to parse TG JSON from REST TgAdd");
-        return;
-    }
-
-    std::string groupName = groupVoice.name();
-    uint32_t tgId = groupVoice.source().tgId();
-    uint8_t tgSlot = groupVoice.source().tgSlot();
-    bool active = groupVoice.config().active();
-    bool parrot = groupVoice.config().parrot();
-
-    uint32_t incCount = groupVoice.config().inclusion().size();
-    uint32_t excCount = groupVoice.config().exclusion().size();
-    uint32_t rewrCount = groupVoice.config().rewrite().size();
-    uint32_t prefCount = groupVoice.config().preferred().size();
-
-    if (incCount > 0 && excCount > 0) {
-        ::LogWarning(LOG_REST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
-    }
-
-    ::LogInfoEx(LOG_REST, "request to add TGID ACL");
-    ::LogInfoEx(LOG_REST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u PREFERRED: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount, prefCount);
-
-    m_tidLookup->addEntry(groupVoice);
-/*    
-    if (m_network != nullptr) {
-        m_network->m_forceListUpdate = true;
-    }
-*/    
-}
-
-/* REST API endpoint; implements put talkgroup ID delete request. */
-
-void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object req = json::object();
-    if (!parseRequestBody(request, reply, req)) {
-        return;
-    }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
-
-    // validate state is a string within the JSON blob
-    if (!req["tgid"].is<uint32_t>()) {
-        errorPayload(reply, "tgid was not a valid integer");
-        return;
-    }
-
-    // Validate slot
-    if (!req["slot"].is<uint8_t>()) {
-        errorPayload(reply, "slot was not a valid char");
-    }
-
-    uint32_t tgid = req["tgid"].get<uint32_t>();
-    uint8_t slot = req["slot"].get<uint8_t>();
-
-    TalkgroupRuleGroupVoice groupVoice = m_tidLookup->find(tgid, slot);
-    if (groupVoice.isInvalid()) {
-        errorPayload(reply, "failed to find specified TGID to delete");
-        return;
-    }
-
-    ::LogInfoEx(LOG_REST, "request to delete TGID ACL, tgid = %u, slot = %u", tgid, slot);
-    m_tidLookup->eraseEntry(groupVoice.source().tgId(), groupVoice.source().tgSlot());
-/*    
-    if (m_network != nullptr) {
-        m_network->m_forceListUpdate = true;
-    }
-*/    
-}
-
-/* REST API endpoint; implements put talkgroup ID commit request. */
-
-void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object response = json::object();
-    setResponseDefaultStatus(response);
-
-    LogInfoEx(LOG_REST, "request to commit and save TGID ACLs");
-    if(!m_tidLookup->commit()) {
-        errorPayload(reply, "failed to write new TGID file");
-        return;
-    }
-
-    reply.payload(response);
-}
-
 /* REST API endpoint; implements get peer list query request. */
 
 void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
@@ -1291,6 +1072,7 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
                 bool canRequestKeys = entry.second.canRequestKeys();
                 bool canIssueInhibit = entry.second.canIssueInhibit();
                 bool hasCallPriority = entry.second.hasCallPriority();
+                bool telephoneInterconnect = entry.second.telephoneInterconnect();
                 peerObj["peerId"].set<uint32_t>(peerId);
                 peerObj["peerAlias"].set<std::string>(peerAlias);
                 peerObj["peerPassword"].set<bool>(peerPassword);
@@ -1298,6 +1080,7 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
                 peerObj["canRequestKeys"].set<bool>(canRequestKeys);
                 peerObj["canIssueInhibit"].set<bool>(canIssueInhibit);
                 peerObj["hasCallPriority"].set<bool>(hasCallPriority);
+                peerObj["telephoneInterconnect"].set<bool>(telephoneInterconnect);
                 peers.push_back(json::value(peerObj));
             }
         }
@@ -1402,6 +1185,18 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
         hasCallPriority = req["hasCallPriority"].get<bool>();
     }
 
+    // Get telephoneInterconnect
+    bool telephoneInterconnect = false;
+    if (req.find("telephoneInterconnect") != req.end()) {
+        // Validate
+        if (!req["telephoneInterconnect"].is<bool>()) {
+            errorPayload(reply, "telephoneInterconnect was not a valid boolean");
+            return;
+        }
+        // Get
+        telephoneInterconnect = req["telephoneInterconnect"].get<bool>();
+    }
+
     PeerId entry = PeerId(peerId, peerAlias, peerPassword, false);
 
     // Set additional values
@@ -1409,6 +1204,7 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
     entry.canRequestKeys(canRequestKeys);
     entry.canIssueInhibit(canIssueInhibit);
     entry.hasCallPriority(hasCallPriority);
+    entry.telephoneInterconnect(telephoneInterconnect);
 
     LogInfoEx(LOG_REST, "request to add peer ACL, peerId = %u", peerId);
 
@@ -1558,6 +1354,461 @@ void RESTAPI::restAPI_PutPeerNAKByAddress(const HTTPPayload& request, HTTPPayloa
     m_network->writePeerNAK(peerId, tag.c_str(), (NET_CONN_NAK_REASON)reasonCode, addr, addrLen);
 }
 
+/*
+** Radio ID Operations
+*/
+
+/* REST API endpoint; implements get radio ID query request. */
+
+void RESTAPI::restAPI_GetRIDQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array rids = json::array();
+    if (m_ridLookup != nullptr) {
+        if (m_ridLookup->table().size() > 0) {
+            for (auto entry : m_ridLookup->table()) {
+                json::object ridObj = json::object();
+
+                uint32_t rid = entry.first;
+                ridObj["id"].set<uint32_t>(rid);
+                bool enabled = entry.second.radioEnabled();
+                ridObj["enabled"].set<bool>(enabled);
+                std::string alias = entry.second.radioAlias();
+                ridObj["alias"].set<std::string>(alias);
+                bool canRequestKeys = entry.second.canRequestKeys();
+                ridObj["canRequestKeys"].set<bool>(canRequestKeys);
+                bool canRekey = entry.second.canRekey();
+                ridObj["canRekey"].set<bool>(canRekey);
+                json::array allowedKIds = json::array();
+                std::vector<uint16_t> kIds = entry.second.allowedKIds();
+                for (uint16_t kId : kIds) {
+                    allowedKIds.push_back(json::value((double)kId));
+                }
+                ridObj["allowedKIds"].set<json::array>(allowedKIds);
+
+                rids.push_back(json::value(ridObj));
+            }
+        }
+    }
+
+    response["rids"].set<json::array>(rids);
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements put radio ID add request. */
+
+void RESTAPI::restAPI_PutRIDAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+
+    if (!req["enabled"].is<bool>()) {
+        errorPayload(reply, "enabled was not a valid boolean");
+        return;
+    }
+
+    bool enabled = req["enabled"].get<bool>();
+
+    std::string alias = "";
+    // Check if we were provided an alias in the request
+    if (req.find("alias") != req.end()) {
+        alias = req["alias"].get<std::string>();
+    }
+
+    bool canRequestKeys = false;
+    if (req.find("canRequestKeys") != req.end()) {
+        if (!req["canRequestKeys"].is<bool>()) {
+            errorPayload(reply, "canRequestKeys was not a valid boolean");
+            return;
+        }
+
+        canRequestKeys = req["canRequestKeys"].get<bool>();
+    }
+
+    bool canRekey = false;
+    if (req.find("canRekey") != req.end()) {
+        if (!req["canRekey"].is<bool>()) {
+            errorPayload(reply, "canRekey was not a valid boolean");
+            return;
+        }
+
+        canRekey = req["canRekey"].get<bool>();
+    }
+
+    std::vector<uint16_t> allowedKIds;
+    if (req.find("allowedKIds") != req.end()) {
+        if (!req["allowedKIds"].is<json::array>()) {
+            errorPayload(reply, "allowedKIds was not a valid JSON array");
+            return;
+        }
+
+        json::array kIdArray = req["allowedKIds"].get<json::array>();
+        for (auto entry : kIdArray) {
+            if (!entry.is<uint32_t>()) {
+                errorPayload(reply, "allowedKIds entry was not a valid number");
+                return;
+            }
+
+            uint32_t value = entry.get<uint32_t>();
+            if (value > 0xFFFFU) {
+                errorPayload(reply, "allowedKIds entry exceeded 16-bit key id range");
+                return;
+            }
+
+            allowedKIds.push_back((uint16_t)value);
+        }
+    }
+
+    LogInfoEx(LOG_REST, "request to add RID ACL, rid = %u", rid);
+
+    // The addEntry function will automatically update an existing entry, so no need to check for an exisitng one here
+    m_ridLookup->addEntry(rid, enabled, alias, "", canRequestKeys, canRekey, allowedKIds);
+/*    
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+*/    
+}
+
+/* REST API endpoint; implements put radio ID delete request. */
+
+void RESTAPI::restAPI_PutRIDDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+
+    RadioId radioId = m_ridLookup->find(rid);
+    if (radioId.radioDefault()) {
+        errorPayload(reply, "failed to find specified RID to delete");
+        return;
+    }
+
+    LogInfoEx(LOG_REST, "request to delete RID ACL, rid = %u", rid);
+
+    m_ridLookup->eraseEntry(rid);
+/*    
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+*/    
+}
+
+/* REST API endpoint; implements put radio ID commit request. */
+
+void RESTAPI::restAPI_GetRIDCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to commit and save RID ACLs");
+    m_ridLookup->commit();
+
+    reply.payload(response);
+}
+
+/*
+** Radio Alias Operations
+*/
+
+/* REST API endpoint; implements get radio alias query request. */
+
+void RESTAPI::restAPI_GetRAQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array rids = json::array();
+    if (m_ridAliasLookup != nullptr) {
+        if (m_ridAliasLookup->table().size() > 0) {
+            for (auto entry : m_ridAliasLookup->table()) {
+                json::object ridObj = json::object();
+
+                uint32_t rid = entry.first;
+                ridObj["id"].set<uint32_t>(rid);
+                std::string alias = entry.second;
+                ridObj["alias"].set<std::string>(alias);
+
+                rids.push_back(json::value(ridObj));
+            }
+        }
+    }
+
+    response["rids"].set<json::array>(rids);
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements put radio alias add request. */
+
+void RESTAPI::restAPI_PutRAAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    if (!req["alias"].is<std::string>()) {
+        errorPayload(reply, "alias was not a valid string");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+    std::string alias = req["alias"].get<std::string>();
+
+    LogInfoEx(LOG_REST, "request to add RID alias, rid = %u, alias= %s", rid, alias.c_str());
+
+    // The addEntry function will automatically update an existing entry, so no need to check for an exisitng one here
+    m_ridAliasLookup->addEntry(rid, alias);
+}
+
+/* REST API endpoint; implements put radio alias delete request. */
+
+void RESTAPI::restAPI_PutRADelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    if (!req["rid"].is<uint32_t>()) {
+        errorPayload(reply, "rid was not a valid integer");
+        return;
+    }
+
+    uint32_t rid = req["rid"].get<uint32_t>();
+
+    std::string alias = m_ridAliasLookup->find(rid);
+    if (alias == "SYSTEM" || alias == "UNKNOWN") {
+        errorPayload(reply, "failed to find specified RID alias to delete");
+        return;
+    }
+
+    LogInfoEx(LOG_REST, "request to delete RID alias, rid = %u", rid);
+
+    m_ridAliasLookup->eraseEntry(rid);
+}
+
+/* REST API endpoint; implements put radio alias commit request. */
+
+void RESTAPI::restAPI_GetRACommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to commit and save RID aliases");
+    m_ridAliasLookup->commit();
+
+    reply.payload(response);
+}
+
+/*
+** Talkgroup Operations
+*/
+
+/* REST API endpoint; implements get talkgroup ID query request. */
+
+void RESTAPI::restAPI_GetTGQuery(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array tgs = json::array();
+    if (m_tidLookup != nullptr) {
+        if (m_tidLookup->groupVoice().size() > 0) {
+            for (auto entry : m_tidLookup->groupVoice()) {
+                json::object tg = tgToJson(entry);
+                tgs.push_back(json::value(tg));
+            }
+        }
+    }
+
+    response["tgs"].set<json::array>(tgs);
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements put talkgroup ID add request. */
+
+void RESTAPI::restAPI_PutTGAdd(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    TalkgroupRuleGroupVoice groupVoice = jsonToTG(req, reply);
+    if (groupVoice.isInvalid()) {
+        ::LogError(LOG_REST, "Unable to parse TG JSON from REST TgAdd");
+        return;
+    }
+
+    std::string groupName = groupVoice.name();
+    uint32_t tgId = groupVoice.source().tgId();
+    uint8_t tgSlot = groupVoice.source().tgSlot();
+    bool active = groupVoice.config().active();
+    bool parrot = groupVoice.config().parrot();
+
+    uint32_t incCount = groupVoice.config().inclusion().size();
+    uint32_t excCount = groupVoice.config().exclusion().size();
+    uint32_t rewrCount = groupVoice.config().rewrite().size();
+    uint32_t prefCount = groupVoice.config().preferred().size();
+
+    if (incCount > 0 && excCount > 0) {
+        ::LogWarning(LOG_REST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusions take precedence and exclusions will be ignored.", groupName.c_str());
+    }
+
+    ::LogInfoEx(LOG_REST, "request to add TGID ACL");
+    ::LogInfoEx(LOG_REST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u PREFERRED: %u", groupName.c_str(), tgId, tgSlot, active, parrot, incCount, excCount, rewrCount, prefCount);
+
+    m_tidLookup->addEntry(groupVoice);
+/*    
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+*/    
+}
+
+/* REST API endpoint; implements put talkgroup ID delete request. */
+
+void RESTAPI::restAPI_PutTGDelete(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object req = json::object();
+    if (!parseRequestBody(request, reply, req)) {
+        return;
+    }
+
+    errorPayload(reply, "OK", HTTPPayload::OK);
+
+    // validate state is a string within the JSON blob
+    if (!req["tgid"].is<uint32_t>()) {
+        errorPayload(reply, "tgid was not a valid integer");
+        return;
+    }
+
+    // Validate slot
+    if (!req["slot"].is<uint8_t>()) {
+        errorPayload(reply, "slot was not a valid char");
+    }
+
+    uint32_t tgid = req["tgid"].get<uint32_t>();
+    uint8_t slot = req["slot"].get<uint8_t>();
+
+    TalkgroupRuleGroupVoice groupVoice = m_tidLookup->find(tgid, slot);
+    if (groupVoice.isInvalid()) {
+        errorPayload(reply, "failed to find specified TGID to delete");
+        return;
+    }
+
+    ::LogInfoEx(LOG_REST, "request to delete TGID ACL, tgid = %u, slot = %u", tgid, slot);
+    m_tidLookup->eraseEntry(groupVoice.source().tgId(), groupVoice.source().tgSlot());
+/*    
+    if (m_network != nullptr) {
+        m_network->m_forceListUpdate = true;
+    }
+*/    
+}
+
+/* REST API endpoint; implements put talkgroup ID commit request. */
+
+void RESTAPI::restAPI_GetTGCommit(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to commit and save TGID ACLs");
+    if(!m_tidLookup->commit()) {
+        errorPayload(reply, "failed to write new TGID file");
+        return;
+    }
+
+    reply.payload(response);
+}
+
+/*
+** Adjacent Site Map Operations
+*/
+
 /* REST API endpoint; implements get adjacent site map query request. */
 
 void RESTAPI::restAPI_GetAdjMapList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
@@ -1690,6 +1941,10 @@ void RESTAPI::restAPI_GetAdjMapCommit(const HTTPPayload& request, HTTPPayload& r
     reply.payload(response);
 }
 
+/*
+** Refresh and Statistics/Metadata Operations
+*/
+
 /* */
 
 void RESTAPI::restAPI_GetForceUpdate(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
@@ -1720,8 +1975,8 @@ void RESTAPI::restAPI_GetReloadTGs(const HTTPPayload& request, HTTPPayload& repl
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
-    if (m_network != nullptr) {
-        m_network->m_tidLookup->reload();
+    if (m_tidLookup != nullptr) {
+        m_tidLookup->reload();
     }
 
     reply.payload(response);
@@ -1738,8 +1993,8 @@ void RESTAPI::restAPI_GetReloadRIDs(const HTTPPayload& request, HTTPPayload& rep
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
-    if (m_network != nullptr) {
-        m_network->m_ridLookup->reload();
+    if (m_ridLookup != nullptr) {
+        m_ridLookup->reload();
     }
 
     reply.payload(response);
@@ -1756,8 +2011,8 @@ void RESTAPI::restAPI_GetReloadPeerList(const HTTPPayload& request, HTTPPayload&
     json::object response = json::object();
     setResponseDefaultStatus(response);
 
-    if (m_network != nullptr) {
-        m_network->m_peerListLookup->reload();
+    if (m_peerListLookup != nullptr) {
+        m_peerListLookup->reload();
     }
 
     reply.payload(response);
@@ -1795,10 +2050,10 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
     if (m_network != nullptr) {
         // peer statistics (right now this is just a list of connected peers)
         json::array peerStats = json::array();
-        if (m_network->m_peers.size() > 0) {
-            for (auto entry : m_network->m_peers) {
+        if (m_network->peerCount() > 0U) {
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
                     json::object peerObj = json::object();
                     peerObj["peerId"].set<uint32_t>(peerId);
@@ -1833,8 +2088,12 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
                     uint32_t missedMetadataUpdates = peer->missedMetadataUpdates();
                     peerObj["missedMetadataUpdates"].set<uint32_t>(missedMetadataUpdates);
 
-                    bool isNeighbor = peer->isNeighborFNEPeer();
+                    bool isNeighbor = (peer->peerClass() == PEER_CONN_CLASS_NEIGHBOR);
                     bool isReplica = peer->isReplica();
+                    bool isSysView = (peer->peerClass() == PEER_CONN_CLASS_SYSVIEW);
+                    bool isConsole = (peer->peerClass() == PEER_CONN_CLASS_CONSOLE);
+                    peerObj["isConsole"].set<bool>(isConsole);
+                    peerObj["isSysView"].set<bool>(isSysView);
                     peerObj["isNeighbor"].set<bool>(isNeighbor);
                     peerObj["isReplica"].set<bool>(isReplica);
 
@@ -1949,11 +2208,13 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
         response["tableLastLoad"].set<json::object>(tableLastLoad);
 
         // total calls processed
-        uint32_t totalCallsProcessed = m_network->m_totalCallsProcessed;
+        uint32_t totalCallsProcessed = (uint32_t)TrafficNetwork::MetricsLogging::getTotalCallsProcessed();
         response["totalCallsProcessed"].set<uint32_t>(totalCallsProcessed);
-        uint32_t totalCallCollisions = m_network->m_totalCallCollisions;
+        uint32_t totalCallCollisions = (uint32_t)TrafficNetwork::MetricsLogging::getTotalCallCollisions();
         response["totalCallCollisions"].set<uint32_t>(totalCallCollisions);
-        int32_t totalActiveCalls = m_network->m_totalActiveCalls;
+        uint32_t totalCallSwitches = (uint32_t)TrafficNetwork::MetricsLogging::getTotalCallSwitches();
+        response["totalCallSwitches"].set<uint32_t>(totalCallSwitches);
+        int32_t totalActiveCalls = TrafficNetwork::MetricsLogging::getTotalActiveCalls();
         response["totalActiveCalls"].set<int32_t>(totalActiveCalls);
 
         // table totals
@@ -1972,6 +2233,288 @@ void RESTAPI::restAPI_GetStats(const HTTPPayload& request, HTTPPayload& reply, c
     reply.payload(response);
 }
 
+/* REST API endpoint; reports passive FNE health information. */
+
+void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::object health = json::object();
+    json::array reasonCodes = json::array();
+    json::array reasons = json::array();
+
+    const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto ageMs = [now](uint64_t timestamp) -> uint64_t {
+        return timestamp == 0U || timestamp > now ? 0U : now - timestamp;
+    };
+
+    const uint32_t localFneId = m_network != nullptr ? m_network->m_peerId : 0U;
+    health["fneId"].set<uint32_t>(localFneId);
+    health["observedAtMs"].set<uint64_t>(now);
+
+    json::object process = json::object();
+    process["status"].set<std::string>(HEALTH_HEALTHY);
+    const bool restApiResponsive = true;
+    process["restApiResponsive"].set<bool>(restApiResponsive);
+    health["process"].set<json::object>(process);
+
+    // check if the traffic network is available and healthy
+    if (m_network == nullptr) {
+        health["overall"].set<std::string>(HEALTH_FAILED);
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE));
+        reasons.push_back(json::value("traffic network is not initialized"));
+
+        health["reasonCodes"].set<json::array>(reasonCodes);
+        health["reasons"].set<json::array>(reasons);
+        response["health"].set<json::object>(health);
+        reply.payload(response);
+
+        return;
+    }
+
+    const uint64_t loopStallThreshold = 5000U;
+    const uint64_t trafficEpoch = m_network->m_healthDataPlaneEpoch.load(std::memory_order_relaxed);
+    const uint64_t trafficLastTick = m_network->m_healthLastDataPlaneTick.load(std::memory_order_relaxed);
+    const uint64_t trafficTickAge = ageMs(trafficLastTick);
+    const bool trafficPlaneInitializing = trafficLastTick == 0U;
+    const bool trafficPlaneStalled = !trafficPlaneInitializing && trafficTickAge > loopStallThreshold;
+
+    network::MetadataNetwork* mdNetwork = m_host->m_mdNetwork;
+    const bool metadataUnavailable = mdNetwork == nullptr;
+    const uint64_t metadataEpoch = metadataUnavailable ? 0U : mdNetwork->m_healthDataPlaneEpoch.load(std::memory_order_relaxed);
+    const uint64_t metadataLastTick = metadataUnavailable ? 0U : mdNetwork->m_healthLastDataPlaneTick.load(std::memory_order_relaxed);
+    const uint64_t metadataTickAge = ageMs(metadataLastTick);
+    const bool metadataPlaneInitializing = !metadataUnavailable && metadataLastTick == 0U;
+    const bool metadataPlaneStalled = metadataUnavailable || (!metadataPlaneInitializing && metadataTickAge > loopStallThreshold);
+    const bool dataPlaneInitializing = trafficPlaneInitializing || metadataPlaneInitializing;
+    const bool dataPlaneStalled = trafficPlaneStalled || metadataPlaneStalled;
+
+    // construct JSON objects representing the status of the traffic, metadata, and overall data planes
+    json::object trafficPlane = json::object();
+    trafficPlane["status"].set<std::string>(trafficPlaneInitializing ? HEALTH_INIT : (trafficPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY));
+    trafficPlane["epoch"].set<uint64_t>(trafficEpoch);
+    trafficPlane["lastTickAgeMs"].set<uint64_t>(trafficTickAge);
+
+    json::object metadataPlane = json::object();
+    metadataPlane["status"].set<std::string>(metadataUnavailable ? HEALTH_UNAVAILABLE : (metadataPlaneInitializing ? HEALTH_INIT : (metadataPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY)));
+    metadataPlane["epoch"].set<uint64_t>(metadataEpoch);
+    metadataPlane["lastTickAgeMs"].set<uint64_t>(metadataTickAge);
+
+    json::object dataPlane = json::object();
+    dataPlane["status"].set<std::string>(dataPlaneInitializing ? HEALTH_INIT : (dataPlaneStalled ? HEALTH_FAILED : HEALTH_HEALTHY));
+    dataPlane["loopStallThresholdMs"].set<uint64_t>(loopStallThreshold);
+    dataPlane["traffic"].set<json::object>(trafficPlane);
+    dataPlane["metadata"].set<json::object>(metadataPlane);
+    health["dataPlane"].set<json::object>(dataPlane);
+
+    const uint64_t submitted = m_network->m_healthTasksSubmitted.load(std::memory_order_relaxed);
+    const uint64_t completed = m_network->m_healthTasksCompleted.load(std::memory_order_relaxed);
+    const uint64_t inFlight = submitted >= completed ? submitted - completed : 0U;
+    const uint64_t lastTaskProgress = m_network->m_healthLastTaskProgress.load(std::memory_order_relaxed);
+    const uint64_t taskProgressAge = inFlight > 0U ? ageMs(lastTaskProgress) : 0U;
+    const uint64_t queueStallThreshold = 5000U;
+    const bool trafficQueueStalled = inFlight > 0U && taskProgressAge > queueStallThreshold;
+
+    // construct JSON object representing the status of the traffic inbound worker queue
+    json::object inboundQueue = json::object();
+    inboundQueue["submittedTotal"].set<uint64_t>(submitted);
+    inboundQueue["completedTotal"].set<uint64_t>(completed);
+    inboundQueue["inFlight"].set<uint64_t>(inFlight);
+    inboundQueue["lastProgressAgeMs"].set<uint64_t>(taskProgressAge);
+    const uint64_t trafficEnqueueFailures = m_network->m_healthTaskEnqueueFailures.load(std::memory_order_relaxed);
+    const bool trafficQueueProgressing = !trafficQueueStalled;
+    inboundQueue["enqueueFailures"].set<uint64_t>(trafficEnqueueFailures);
+    inboundQueue["progressing"].set<bool>(trafficQueueProgressing);
+
+    const uint64_t metadataSubmitted = metadataUnavailable ? 0U : mdNetwork->m_healthTasksSubmitted.load(std::memory_order_relaxed);
+    const uint64_t metadataCompleted = metadataUnavailable ? 0U : mdNetwork->m_healthTasksCompleted.load(std::memory_order_relaxed);
+    const uint64_t metadataInFlight = metadataSubmitted >= metadataCompleted ? metadataSubmitted - metadataCompleted : 0U;
+    const uint64_t metadataLastTaskProgress = metadataUnavailable ? 0U : mdNetwork->m_healthLastTaskProgress.load(std::memory_order_relaxed);
+    const uint64_t metadataTaskProgressAge = metadataInFlight > 0U ? ageMs(metadataLastTaskProgress) : 0U;
+    const bool metadataQueueStalled = !metadataUnavailable && metadataInFlight > 0U && metadataTaskProgressAge > queueStallThreshold;
+    const bool queueStalled = trafficQueueStalled || metadataQueueStalled;
+
+    // construct JSON object representing the status of the metadata inbound worker queue
+    json::object metadataQueue = json::object();
+    metadataQueue["submittedTotal"].set<uint64_t>(metadataSubmitted);
+    metadataQueue["completedTotal"].set<uint64_t>(metadataCompleted);
+    metadataQueue["inFlight"].set<uint64_t>(metadataInFlight);
+    metadataQueue["lastProgressAgeMs"].set<uint64_t>(metadataTaskProgressAge);
+    const uint64_t metadataEnqueueFailures = metadataUnavailable ? 0U : mdNetwork->m_healthTaskEnqueueFailures.load(std::memory_order_relaxed);
+    const bool metadataQueueProgressing = !metadataQueueStalled && !metadataUnavailable;
+    metadataQueue["enqueueFailures"].set<uint64_t>(metadataEnqueueFailures);
+    metadataQueue["progressing"].set<bool>(metadataQueueProgressing);
+
+    // construct JSON object representing the status of all inbound worker queues
+    json::object queues = json::object();
+    queues["status"].set<std::string>(queueStalled ? HEALTH_FAILED : HEALTH_HEALTHY);
+    queues["stallThresholdMs"].set<uint64_t>(queueStallThreshold);
+    queues["trafficInboundWorkerQueue"].set<json::object>(inboundQueue);
+    queues["metadataInboundWorkerQueue"].set<json::object>(metadataQueue);
+    health["queues"].set<json::object>(queues);
+
+    // construct JSON array representing the status of upstream peer networks
+    json::array upstreams = json::array();
+    uint32_t configuredUpstreams = 0U;
+    uint32_t connectedUpstreams = 0U;
+    for (const auto& entry : m_host->m_peerNetworks) {
+        network::PeerNetwork* upstream = entry.second;
+        if (upstream == nullptr)
+            continue;
+
+        json::object obj = json::object();
+        const bool enabled = upstream->isEnabled();
+        const bool connected = upstream->getStatus() == NET_STAT_RUNNING;
+        if (enabled)
+            configuredUpstreams++;
+        if (enabled && connected)
+            connectedUpstreams++;
+
+        obj["peerId"].set<uint32_t>(entry.first);
+        const uint32_t remotePeerId = upstream->getRemotePeerId();
+        obj["remotePeerId"].set<uint32_t>(remotePeerId);
+        obj["enabled"].set<bool>(enabled);
+        obj["connected"].set<bool>(connected);
+        upstreams.push_back(json::value(obj));
+    }
+
+    // construct JSON array representing the status of child peer connections
+    json::array children = json::array();
+    uint32_t connectedPeers = 0U;
+    uint32_t connectedChildren = 0U;
+    bool metadataDegraded = false;
+    for (const auto& entry : m_network->peersSnapshot()) {
+        TrafficNetwork::PeerConnectionPtr peer = entry.second;
+        if (peer == nullptr)
+            continue;
+        if (peer->connected())
+            connectedPeers++;
+        if (peer->peerClass() != PEER_CONN_CLASS_NEIGHBOR)
+            continue;
+
+        if (peer->connected())
+            connectedChildren++;
+        if (peer->missedMetadataUpdates() > 0U)
+            metadataDegraded = true;
+
+        json::object obj = json::object();
+        obj["peerId"].set<uint32_t>(entry.first);
+        obj["identity"].set<std::string>(peer->identity());
+        const bool peerConnected = peer->connected();
+        const uint64_t lastPingAge = ageMs(peer->lastPing());
+        const uint32_t pingsReceived = peer->pingsReceived();
+        const uint32_t missedMetadataUpdates = peer->missedMetadataUpdates();
+        obj["connected"].set<bool>(peerConnected);
+        obj["lastPingAgeMs"].set<uint64_t>(lastPingAge);
+        obj["pingsReceived"].set<uint32_t>(pingsReceived);
+        obj["missedMetadataUpdates"].set<uint32_t>(missedMetadataUpdates);
+        children.push_back(json::value(obj));
+    }
+
+    // construct JSON object representing the connectivity status of the network
+    const bool partitioned = configuredUpstreams > 0U && connectedUpstreams == 0U;
+    const bool upstreamDegraded = configuredUpstreams > connectedUpstreams && connectedUpstreams > 0U;
+    json::object connectivity = json::object();
+    connectivity["status"].set<std::string>(partitioned ? HEALTH_PARTITIONED : ((upstreamDegraded || metadataDegraded) ? HEALTH_DEGRADED : HEALTH_HEALTHY));
+    connectivity["configuredUpstreams"].set<uint32_t>(configuredUpstreams);
+    connectivity["connectedUpstreams"].set<uint32_t>(connectedUpstreams);
+    connectivity["connectedPeers"].set<uint32_t>(connectedPeers);
+    connectivity["connectedChildren"].set<uint32_t>(connectedChildren);
+    connectivity["upstreams"].set<json::array>(upstreams);
+    connectivity["children"].set<json::array>(children);
+    health["connectivity"].set<json::object>(connectivity);
+
+    // construct JSON object representing the status of network traffic
+    const uint64_t lastPacket = m_network->m_healthLastPacketReceived.load(std::memory_order_relaxed);
+    const uint64_t lastProtocolPacket = m_network->m_healthLastProtocolPacketReceived.load(std::memory_order_relaxed);
+    const uint64_t trafficIdleThreshold = 60000U;
+    const bool trafficSeen = lastProtocolPacket != 0U;
+    const bool trafficIdle = !trafficSeen || ageMs(lastProtocolPacket) > trafficIdleThreshold;
+    json::object traffic = json::object();
+    traffic["status"].set<std::string>(trafficIdle ? HEALTH_IDLE : HEALTH_HEALTHY);
+    const uint64_t packetsReceived = m_network->m_healthPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t protocolPacketsReceived = m_network->m_healthProtocolPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t lastPacketAge = ageMs(lastPacket);
+    const uint64_t lastProtocolPacketAge = ageMs(lastProtocolPacket);
+    const uint64_t metadataPacketsReceived = metadataUnavailable ? 0U : mdNetwork->m_healthPacketsReceived.load(std::memory_order_relaxed);
+    const uint64_t lastMetadataPacketAge = metadataUnavailable ? 0U : ageMs(mdNetwork->m_healthLastPacketReceived.load(std::memory_order_relaxed));
+    const int32_t activeCalls = network::TrafficNetwork::MetricsLogging::getTotalActiveCalls();
+    traffic["packetsReceived"].set<uint64_t>(packetsReceived);
+    traffic["protocolPacketsReceived"].set<uint64_t>(protocolPacketsReceived);
+    traffic["lastPacketAgeMs"].set<uint64_t>(lastPacketAge);
+    traffic["lastProtocolPacketAgeMs"].set<uint64_t>(lastProtocolPacketAge);
+    traffic["metadataPacketsReceived"].set<uint64_t>(metadataPacketsReceived);
+    traffic["lastMetadataPacketAgeMs"].set<uint64_t>(lastMetadataPacketAge);
+    traffic["idleThresholdMs"].set<uint64_t>(trafficIdleThreshold);
+    traffic["activeCalls"].set<int32_t>(activeCalls);
+    health["traffic"].set<json::object>(traffic);
+
+    // determine the overall health status of the network based on individual components
+    std::string overall = HEALTH_HEALTHY;
+    if (dataPlaneInitializing) {
+        overall = HEALTH_INIT;
+    }
+
+    if (trafficIdle && overall == HEALTH_HEALTHY) {
+        overall = HEALTH_IDLE;
+    }
+
+    if (upstreamDegraded || metadataDegraded) {
+        overall = HEALTH_DEGRADED;
+    }
+
+    if (partitioned) {
+        overall = HEALTH_PARTITIONED;
+        reasonCodes.push_back(json::value(HEALTH_REASON_ALL_UPSTREAMS_DISCONNECTED));
+        reasons.push_back(json::value("all configured upstream FNE connections are disconnected"));
+    }
+
+    if (dataPlaneStalled || queueStalled) {
+        overall = HEALTH_FAILED;
+    }
+
+    if (trafficPlaneStalled) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_DATA_PLANE_STALLED));
+        reasons.push_back(json::value("traffic processing loop is not progressing"));
+    }
+
+    if (metadataPlaneStalled) {
+        reasonCodes.push_back(json::value(metadataUnavailable ? HEALTH_REASON_METADATA_NETWORK_UNAVAILABLE : HEALTH_REASON_METADATA_DATA_PLANE_STALLED));
+        reasons.push_back(json::value(metadataUnavailable ? "metadata network is not initialized" : "metadata processing loop is not progressing"));
+    }
+
+    if (trafficQueueStalled) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_TRAFFIC_INBOUND_QUEUE_STALLED));
+        reasons.push_back(json::value("traffic inbound worker queue contains stale work"));
+    }
+
+    if (metadataQueueStalled) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_METADATA_INBOUND_QUEUE_STALLED));
+        reasons.push_back(json::value("metadata inbound worker queue contains stale work"));
+    }
+
+    if (upstreamDegraded) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_UPSTREAM_CONNECTIVITY_DEGRADED));
+        reasons.push_back(json::value("one or more configured upstream FNE connections are disconnected"));
+    }
+
+    if (metadataDegraded) {
+        reasonCodes.push_back(json::value(HEALTH_REASON_METADATA_UPDATES_MISSED));
+        reasons.push_back(json::value("one or more child FNEs have missed metadata updates"));
+    }
+
+    health["overall"].set<std::string>(overall);
+    health["reasonCodes"].set<json::array>(reasonCodes);
+    health["reasons"].set<json::array>(reasons);
+    response["health"].set<json::object>(health);
+    reply.payload(response);
+}
+
 /* REST API endpoint; implements get reset total calls request. */
 
 void RESTAPI::restAPI_GetResetTotalCalls(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
@@ -1985,7 +2528,7 @@ void RESTAPI::restAPI_GetResetTotalCalls(const HTTPPayload& request, HTTPPayload
 
     LogInfoEx(LOG_REST, "request to reset total calls processed");
     if (m_network != nullptr) {
-        m_network->m_totalCallsProcessed = 0U;
+        TrafficNetwork::MetricsLogging::resetCallsProcessed(m_network);
     }
 
     reply.payload(response);
@@ -2004,7 +2547,7 @@ void RESTAPI::restAPI_GetResetActiveCalls(const HTTPPayload& request, HTTPPayloa
 
     LogInfoEx(LOG_REST, "request to reset total active calls");
     if (m_network != nullptr) {
-        m_network->m_totalActiveCalls = 0U;
+        TrafficNetwork::MetricsLogging::resetActiveCalls();
     }
 
     reply.payload(response);
@@ -2023,9 +2566,56 @@ void RESTAPI::restAPI_GetResetCallCollisions(const HTTPPayload& request, HTTPPay
 
     LogInfoEx(LOG_REST, "request to reset total call collisions");
     if (m_network != nullptr) {
-        m_network->m_totalCallCollisions = 0U;
+        TrafficNetwork::MetricsLogging::resetCallCollisions(m_network);
     }
 
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get reset call switches request. */
+
+void RESTAPI::restAPI_GetResetCallSwitches(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    LogInfoEx(LOG_REST, "request to reset total call switches");
+    if (m_network != nullptr) {
+        TrafficNetwork::MetricsLogging::resetCallSwitches(m_network);
+    }
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get unit registration list request. */
+
+void RESTAPI::restAPI_GetUnitRegList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array units = json::array();
+    if (m_network != nullptr) {
+        std::vector<uint32_t> unitRegTable = m_network->m_globalAff->unitRegTable();
+
+        for (auto entry : unitRegTable) {
+            uint32_t srcId = entry;
+            units.push_back(json::value((double)srcId));
+        }
+
+        uint32_t totalUnits = unitRegTable.size();
+        response["totalUnits"].set<uint32_t>(totalUnits);
+    }
+
+    response["units"].set<json::array>(units);
     reply.payload(response);
 }
 
@@ -2042,40 +2632,89 @@ void RESTAPI::restAPI_GetAffList(const HTTPPayload& request, HTTPPayload& reply,
 
     json::array affs = json::array();
     if (m_network != nullptr) {
-        if (m_network->m_peers.size() > 0) {
-            for (auto entry : m_network->m_peers) {
+        uint32_t totalAffiliations = 0U;
+        if (m_network->peerCount() > 0U) {
+            std::vector<uint32_t> peerIds = std::vector<uint32_t>();
+
+            for (const auto& entry : m_network->peersSnapshot()) {
                 uint32_t peerId = entry.first;
-                network::FNEPeerConnection* peer = entry.second;
+                TrafficNetwork::PeerConnectionPtr peer = entry.second;
                 if (peer != nullptr) {
-                    lookups::AffiliationLookup* affLookup = m_network->m_peerAffiliations[peerId];
-                    if (affLookup != nullptr) {
-                        std::unordered_map<uint32_t, uint32_t> affTable = affLookup->grpAffTable();
+                    peerIds.push_back(peerId);
+                }
+            }
 
-                        json::object peerObj = json::object();
-                        peerObj["peerId"].set<uint32_t>(peerId);
+            for (uint32_t peerId : peerIds) {
+                std::shared_ptr<fne_lookups::AffiliationLookup> affLookup = m_network->getPeerAffiliations(peerId);
+                if (affLookup != nullptr) {
+                    std::unordered_map<uint32_t, uint32_t> affTable = affLookup->grpAffTable();
 
-                        json::array peerAffs = json::array();
-                        if (affLookup->grpAffSize() > 0U) {
-                            for (auto entry : affTable) {
-                                uint32_t srcId = entry.first;
-                                uint32_t dstId = entry.second;
+                    json::object peerObj = json::object();
+                    peerObj["peerId"].set<uint32_t>(peerId);
 
-                                json::object affObj = json::object();
-                                affObj["srcId"].set<uint32_t>(srcId);
-                                affObj["dstId"].set<uint32_t>(dstId);
-                                peerAffs.push_back(json::value(affObj));
-                            }
+                    json::array peerAffs = json::array();
+                    if (affLookup->grpAffSize() > 0U) {
+                        for (auto entry : affTable) {
+                            uint32_t srcId = entry.first;
+                            uint32_t dstId = entry.second;
+
+                            json::object affObj = json::object();
+                            affObj["srcId"].set<uint32_t>(srcId);
+                            affObj["dstId"].set<uint32_t>(dstId);
+                            peerAffs.push_back(json::value(affObj));
                         }
-
-                        peerObj["affiliations"].set<json::array>(peerAffs);
-                        affs.push_back(json::value(peerObj));
                     }
+
+                    peerObj["affiliations"].set<json::array>(peerAffs);
+                    affs.push_back(json::value(peerObj));
+                    ++totalAffiliations;
                 }
             }
         }
+
+        response["totalAffiliations"].set<uint32_t>(totalAffiliations);
     }
 
     response["affiliations"].set<json::array>(affs);
+    reply.payload(response);
+}
+
+/* REST API endpoint; implements get talkgroup grant list request. */
+
+void RESTAPI::restAPI_GetGrantList(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+
+    json::array grants = json::array();
+    if (m_network != nullptr) {
+        std::unordered_map<uint32_t, uint32_t> grantSrcIdTable = m_network->m_globalAff->grantSrcIdTable();
+        std::unordered_map<uint32_t, uint32_t> grantSSRCTable = m_network->m_globalAff->grantSSRCTable();
+
+        for (auto entry : grantSrcIdTable) {
+            uint32_t dstId = entry.first;
+            uint32_t srcId = entry.second;
+
+            json::object grantObj = json::object();
+            grantObj["srcId"].set<uint32_t>(srcId);
+            grantObj["dstId"].set<uint32_t>(dstId);
+
+            uint32_t ssrc = 0U;
+            grantSSRCTable.find(dstId) != grantSSRCTable.end() ? ssrc = grantSSRCTable[dstId] : ssrc = 0U;
+            grantObj["ssrc"].set<uint32_t>(ssrc);
+
+            grants.push_back(json::value(grantObj));
+        }
+
+        uint32_t totalGrants = grantSrcIdTable.size();
+        response["totalGrants"].set<uint32_t>(totalGrants);
+    }
+
+    response["grants"].set<json::array>(grants);
     reply.payload(response);
 }
 

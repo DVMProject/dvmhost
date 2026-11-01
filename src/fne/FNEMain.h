@@ -16,7 +16,7 @@
 #if !defined(__FNE_MAIN_H__)
 #define __FNE_MAIN_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
 
 #include <string>
 

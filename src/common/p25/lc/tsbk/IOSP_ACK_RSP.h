@@ -34,7 +34,7 @@ namespace p25
              *  ACK RSP FNE - Acknowledge Response - FNE (OSP)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API IOSP_ACK_RSP : public TSBK {
+            class DVM_COMMON_API IOSP_ACK_RSP : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the IOSP_ACK_RSP class.

@@ -464,7 +464,7 @@ namespace edac
      *  correction.
      * @ingroup edac
      */
-    class HOST_SW_API AMBEFEC {
+    class DVM_COMMON_API AMBEFEC {
     public:
         /**
          * @brief Initializes a new instance of the AMBEFEC class.
@@ -516,10 +516,10 @@ namespace edac
 
     private:
         /**
-         * @brief 
-         * @param a 
-         * @param b 
-         * @param c 
+         * @brief Regenerates the AMBE FEC for the input bytes.
+         * @param a Reference to the A word.
+         * @param b Reference to the B word.
+         * @param c Reference to the C word.
          * @returns uint32_t Count of errors.
          */
         uint32_t regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const;

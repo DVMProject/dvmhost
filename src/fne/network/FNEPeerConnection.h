@@ -24,6 +24,14 @@
 #include <map>
 #include <shared_mutex>
 
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 namespace network
 {
     // ---------------------------------------------------------------------------
@@ -59,10 +67,9 @@ namespace network
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
             m_hasCallPriority(false),
-            m_isNeighborFNEPeer(false),
+            m_peerClass(PEER_CONN_CLASS_UNKNOWN),
             m_isReplica(false),
-            m_isConventionalPeer(false),
-            m_isSysView(false),
+            m_isConventional(false),
             m_config(),
             m_peerLockMtx(),
             m_jitterBuffers(),
@@ -95,10 +102,9 @@ namespace network
             m_lastPing(0U),
             m_missedMetadataUpdates(0U),
             m_hasCallPriority(false),
-            m_isNeighborFNEPeer(false),
+            m_peerClass(PEER_CONN_CLASS_UNKNOWN),
             m_isReplica(false),
-            m_isConventionalPeer(false),
-            m_isSysView(false),
+            m_isConventional(false),
             m_config(),
             m_peerLockMtx(),
             m_jitterBuffers(),
@@ -119,11 +125,13 @@ namespace network
          */
         std::string identWithQualifier() const 
         {
-            if (isSysView())
+            if (m_peerClass == PEER_CONN_CLASS_CONSOLE)
+                return "!" + identity();
+            if (m_peerClass == PEER_CONN_CLASS_SYSVIEW)
                 return "@" + identity();
             if (isReplica())
                 return "%" + identity();
-            if (isNeighborFNEPeer())
+            if (m_peerClass == PEER_CONN_CLASS_NEIGHBOR)
                 return "+" + identity();
 
             return " " + m_identity;
@@ -144,6 +152,18 @@ namespace network
          * @returns AdaptiveJitterBuffer* Jitter buffer instance.
          */
         AdaptiveJitterBuffer* getOrCreateJitterBuffer(uint64_t streamId);
+
+        /**
+         * @brief Processes a frame through the jitter buffer for the specified stream.
+         * @param streamId Stream ID.
+         * @param seq RTP sequence number.
+         * @param data Frame data buffer.
+         * @param length Frame length.
+         * @param[out] readyFrames Vector of frames ready for delivery.
+         * @returns bool True if frame was processed successfully, otherwise false.
+         */
+        bool processJitterFrame(uint64_t streamId, uint16_t seq, const uint8_t* data, uint32_t length,
+            std::vector<BufferedFrame*>& readyFrames);
 
         /**
          * @brief Cleans up jitter buffer for the specified stream.
@@ -245,22 +265,17 @@ namespace network
         DECLARE_PROPERTY_PLAIN(bool, hasCallPriority);
 
         /**
-         * @brief Flag indicating this connection is from an downstream neighbor FNE peer.
+         * @brief Peer class for this connection.
          */
-        DECLARE_PROPERTY_PLAIN(bool, isNeighborFNEPeer);
+        DECLARE_PROPERTY_PLAIN(PEER_CONN_CLASS, peerClass);
         /**
          * @brief Flag indicating this connection is from a neighbor FNE peer that is replica enabled.
          */
         DECLARE_PROPERTY_PLAIN(bool, isReplica);
-
         /**
          * @brief Flag indicating this connection is from an conventional peer.
          */
-        DECLARE_PROPERTY_PLAIN(bool, isConventionalPeer);
-        /**
-         * @brief Flag indicating this connection is from an SysView peer.
-         */
-        DECLARE_PROPERTY_PLAIN(bool, isSysView);
+        DECLARE_PROPERTY_PLAIN(bool, isConventional);
 
         /**
          * @brief JSON objecting containing peer configuration information.
@@ -268,6 +283,9 @@ namespace network
         DECLARE_PROPERTY_PLAIN(json::object, config);
 
     private:
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::FNETestHooks;
+#endif
         mutable std::mutex m_peerLockMtx;
 
         std::map<uint64_t, AdaptiveJitterBuffer*> m_jitterBuffers;

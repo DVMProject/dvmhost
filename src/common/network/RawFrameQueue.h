@@ -28,7 +28,7 @@ namespace network
     //  Constants
     // ---------------------------------------------------------------------------
 
-    const uint32_t DATA_PACKET_LENGTH = 8192U;
+    const uint32_t DATA_PACKET_LENGTH = 16384U;
     const uint32_t OVERSIZED_PACKET_WARN = 1536U;
     const uint8_t MAX_FAILED_READ_CNT_LOGGING = 5U;
 
@@ -40,7 +40,7 @@ namespace network
      * @brief Implements the network frame queuing logic.
      * @ingroup network_core
      */
-    class HOST_SW_API RawFrameQueue {
+    class DVM_COMMON_API RawFrameQueue {
     public:
         auto operator=(RawFrameQueue&) -> RawFrameQueue& = delete;
         auto operator=(RawFrameQueue&&) -> RawFrameQueue& = delete;

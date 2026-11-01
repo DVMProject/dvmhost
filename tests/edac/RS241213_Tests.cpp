@@ -25,7 +25,9 @@ TEST_CASE("RS241213 preserves all-zero payload", "[edac][rs241213]") {
     RS634717 rs;
     rs.encode241213(data);
 
-    REQUIRE(rs.decode241213(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode241213(data, &errs));
+    REQUIRE(errs == 0);
 
     for (size_t i = 0; i < 9U; i++) {
         REQUIRE(data[i] == 0x00U);
@@ -40,7 +42,9 @@ TEST_CASE("RS241213 preserves all-ones payload", "[edac][rs241213]") {
     rs.encode241213(data);
     Utils::dump(2U, "encode241213()", data, 24U);
 
-    REQUIRE(rs.decode241213(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode241213(data, &errs));
+    REQUIRE(errs == 0);
 
     for (size_t i = 0; i < 9U; i++) {
         REQUIRE(data[i] == 0xFFU);
@@ -61,7 +65,9 @@ TEST_CASE("RS241213 preserves alternating pattern", "[edac][rs241213]") {
     rs.encode241213(data);
     Utils::dump(2U, "encode241213()", data, 24U);
 
-    REQUIRE(rs.decode241213(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode241213(data, &errs));
+    REQUIRE(errs == 0);
 
     // Verify data portion matches original
     REQUIRE(::memcmp(data, original, 9U) == 0);
@@ -81,7 +87,9 @@ TEST_CASE("RS241213 preserves incrementing pattern", "[edac][rs241213]") {
     rs.encode241213(data);
     Utils::dump(2U, "encode241213()", data, 24U);
 
-    REQUIRE(rs.decode241213(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode241213(data, &errs));
+    REQUIRE(errs == 0);
 
     REQUIRE(::memcmp(data, original, 9U) == 0);
 }
@@ -108,12 +116,13 @@ TEST_CASE("RS241213 corrects single-byte errors", "[edac][rs241213]") {
         corrupted[pos] ^= 0xFFU; // Flip all bits in one byte
 
         RS634717 rsDec;
-        bool decoded = rsDec.decode241213(corrupted);
+        int8_t errs = -1;
+        bool decoded = rsDec.decode241213(corrupted, &errs);
 
         // RS(24,12,13) can correct up to 6 symbol errors
-        if (decoded) {
-            REQUIRE(::memcmp(corrupted, original, 9U) == 0);
-        }
+        REQUIRE(decoded);
+        REQUIRE(errs >= 0);
+        REQUIRE(::memcmp(corrupted, original, 9U) == 0);
     }
 }
 
@@ -137,6 +146,8 @@ TEST_CASE("RS241213 detects uncorrectable errors", "[edac][rs241213]") {
     }
 
     // Should fail to decode
-    bool result = rs.decode241213(data);
-    REQUIRE(!result);
+    int8_t errs = -1;
+    bool result = rs.decode241213(data, &errs);
+    REQUIRE_FALSE(result);
+    REQUIRE(errs == -1);
 }

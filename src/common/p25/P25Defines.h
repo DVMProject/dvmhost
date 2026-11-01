@@ -70,6 +70,11 @@ namespace p25
         // TIA-102.BBAC-A Section 4
         const uint32_t  P25_P2_FRAME_LENGTH_BYTES = 40U;
         const uint32_t  P25_P2_FRAME_LENGTH_BITS = P25_P2_FRAME_LENGTH_BYTES * 8U;
+        // Host/modem frames carry a modem tag and explicit DUID followed by the
+        // 40-byte logical burst. The DUID is transport metadata and is not aired.
+        const uint32_t  P25_P2_HOST_FRAME_LENGTH_BYTES = P25_P2_FRAME_LENGTH_BYTES + 2U;
+        const uint32_t  P25_P2_BURST_LENGTH_BITS = 360U;
+        const uint32_t  P25_P2_SCRAMBLER_SEQUENCE_BITS = 4320U;
 
         const uint32_t  P25_P2_IEMI_LENGTH_BITS = 312U;
         const uint32_t  P25_P2_IEMI_LENGTH_BYTES = (P25_P2_IEMI_LENGTH_BITS / 8U) + 1U;
@@ -170,6 +175,10 @@ namespace p25
         const uint8_t   AUTH_KEY_LENGTH_BYTES = 16U;
 
         const uint8_t   MAX_ENC_KEY_LENGTH_BYTES = 32U;
+        const uint8_t   AES_256_ENC_KEY_LENGTH_BYTES = 32U;
+        const uint8_t   AES_128_ENC_KEY_LENGTH_BYTES = 16U;
+        const uint8_t   DES_ENC_KEY_LENGTH_BYTES = 8U;
+        const uint8_t   ARC4_ENC_KEY_LENGTH_BYTES = 5U;
         const uint8_t   MAX_WRAPPED_ENC_KEY_LENGTH_BYTES = 40U;
         const uint8_t   KMM_AES_MAC_LENGTH = 8U;
         const uint8_t   KMM_DES_MAC_LENGTH = 4U;
@@ -180,6 +189,10 @@ namespace p25
         const uint32_t  DEFAULT_SILENCE_THRESHOLD = 124U;
         /** @brief Default Frame Loss Threshold */
         const uint32_t  DEFAULT_FRAME_LOSS_THRESHOLD = 6U;
+        /** @brief Default Phase 2 Silence Threshold */
+        const uint32_t  P2_DEFAULT_SILENCE_THRESHOLD = 21U;
+        /** @brief Default Phase 2 Frame Loss Threshold */
+        const uint32_t  P2_DEFAULT_FRAME_LOSS_THRESHOLD = 2U;
         /** @brief Maximum P25 voice frame errors */
         const uint32_t  MAX_P25_VOICE_ERRORS = 1233U;
         /** @} */
@@ -205,6 +218,8 @@ namespace p25
         const uint8_t   ALGO_DES = 0x81U;
         /** @brief AES-256 */
         const uint8_t   ALGO_AES_256 = 0x84U;
+        /** @brief AES-128 */
+        const uint8_t   ALGO_AES_128 = 0x85U;
         /** @brief ARC4 */
         const uint8_t   ALGO_ARC4 = 0xAAU;
         /** @} */
@@ -235,6 +250,9 @@ namespace p25
         const uint32_t  WUID_REG = 0xFFFFFEU;
         /** @brief All-call Working Unit ID */
         const uint32_t  WUID_ALL = 0xFFFFFFU;
+
+        /** @brief Default KMF RSI */
+        const uint32_t KMF_DEFAULT_RSI = 9999999U;
 
         /** @brief All-call Talkgroup ID */
         const uint32_t  TGID_ALL = 0xFFFFU;
@@ -389,6 +407,9 @@ namespace p25
                 DYN_REGRP_CANCEL_ACK = 0x0281U,         //!< MFID $90 (Motorola) Dynamic Regroup IR Cancellation Ack
                 DYN_REGRP_LOCK_ACK = 0x0282U,           //!< MFID $90 (Motorola) Lock Selector Ack
                 DYN_REGRP_UNLOCK_ACK = 0x0283U,         //!< MFID $90 (Motorola) Unlock Selector Ack
+
+                HARRIS_UNINHIBIT = 0x0084U,             //!< MFID $A4 (Harris) Radio Uninhibit
+                HARRIS_INHIBIT = 0xFF84U                //!< MFID $A4 (Harris) Radio Inhibit
             };
         }
 
@@ -499,6 +520,7 @@ namespace p25
 
                 REKEY_ACK = 0x1DU,                      //!< Rekey Ack
                 REKEY_CMD = 0x1EU,                      //!< Rekey Command
+                WARM_START_CMD = 0x20U,                 //!< Warm-Start Command
 
                 ZEROIZE_CMD = 0x21U,                    //!< Zeroize Command
                 ZEROIZE_RSP = 0x22U,                    //!< Zeroize Response
@@ -587,15 +609,20 @@ namespace p25
         /** @brief KMM MAC Format - CMAC */
         const uint8_t   KMM_MAC_FORMAT_CMAC = 0x41U;
 
-        /** @brief KMM Keyset Format - KEKs */
-        const uint8_t  KEYSET_FORMAT_KEK = 0x80U;
+        /** @brief AACA-D Table 64 Body Format - reverse-warm-start TEK segment included. */
+        const uint8_t   KMM_BODY_FORMAT_TEK_INCLUDED = 0x80U;
+        /** @brief AACA-D Table 64 Body Format - KEK does not exist. */
+        const uint8_t   KMM_BODY_FORMAT_KEK_MISSING = 0x40U;
 
-        /** @brief KMM Body/Key Format - TEK Included */
-        const uint8_t   KEY_FORMAT_TEK = 0x80U;
-        /** @brief KMM Body/Key Format - KEK Exists */
-        const uint8_t   KEY_FORMAT_KEK_EXISTS = 0x40U;
-        /** @brief KMM Key Format - Delete Key */
-        const uint8_t   KEY_FORMAT_DELETE = 0x20U;
+        /** @brief AACA-D Table 70 Key Format - item is a TEK (T bit clear). */
+        const uint8_t   KMM_KEY_FORMAT_TEK = 0x00U;
+        /** @brief AACA-D Table 70 Key Format - item is a KEK (T bit set). */
+        const uint8_t   KMM_KEY_FORMAT_KEK = 0x80U;
+        /** @brief AACA-D Table 70 Key Format - delete/revoke item. */
+        const uint8_t   KMM_KEY_FORMAT_DELETE = 0x20U;
+
+        /** @brief AACA-D Table 71 Keyset Format - keyset contains KEKs. */
+        const uint8_t   KMM_KEYSET_FORMAT_KEK = 0x80U;
 
         /** @brief SNDCP version 1 */
         const uint8_t   SNDCP_VERSION_1 = 0x01U;
@@ -764,19 +791,19 @@ namespace p25
             // LDUx/TDULC Motorola Link Control Opcode(s)
                 FAILSOFT = 0x02U,                       //!< FAILSOFT - Failsoft
 
-                MOT_PTT_LOC_HEADER = 0x29U,            //!< MOT PTT LOC HEADER - Motorola PTT Location Header
-                MOT_PTT_LOC_PAYLOAD = 0x2AU,           //!< MOT PTT LOC PAYLOAD - Motorola PTT Location Payload
+                MOT_PTT_LOC_HEADER = 0x29U,             //!< MOT PTT LOC HEADER - Motorola PTT Location Header
+                MOT_PTT_LOC_PAYLOAD = 0x2AU,            //!< MOT PTT LOC PAYLOAD - Motorola PTT Location Payload
 
             // LDUx/TDULC Harris Link Control Opcode(s)
-                HARRIS_PTT_PA_ODD = 0x2AU,            //!< HARRIS PTT PA ODD - Harris PTT Position and Altitude Odd
-                HARRIS_PTT_PB_ODD = 0x2BU,            //!< HARRIS PTT PB ODD - Harris PTT Position and Bearing Odd
-                HARRIS_PTT_PA_EVEN = 0x2CU,           //!< HARRIS PTT PA EVEN - Harris PTT Position and Altitude Even
-                HARRIS_PTT_PB_EVEN = 0x2DU,           //!< HARRIS PTT PB EVEN - Harris PTT Position and Bearing Even
+                HARRIS_PTT_A_ODD = 0x2AU,               //!< HARRIS PTT PA ODD - Harris PTT Position and Altitude Odd
+                HARRIS_PTT_B_ODD = 0x2BU,               //!< HARRIS PTT PB ODD - Harris PTT Position and Bearing Odd
+                HARRIS_PTT_A_EVEN = 0x2CU,              //!< HARRIS PTT PA EVEN - Harris PTT Position and Altitude Even
+                HARRIS_PTT_B_EVEN = 0x2DU,              //!< HARRIS PTT PB EVEN - Harris PTT Position and Bearing Even
 
-                HARRIS_USER_ALIAS_PA_ODD = 0x32U,      //!< HARRIS USER ALIAS PA ODD - Harris User Alias Position and Altitude Odd
-                HARRIS_USER_ALIAS_PB_ODD = 0x33U,      //!< HARRIS USER ALIAS PB ODD - Harris User Alias Position and Bearing Odd
-                HARRIS_USER_ALIAS_PA_EVEN = 0x34U,     //!< HARRIS USER ALIAS PA EVEN - Harris User Alias Position and Altitude Even
-                HARRIS_USER_ALIAS_PB_EVEN = 0x35U,     //!< HARRIS USER ALIAS PB EVEN - Harris User Alias Position and Bearing Even
+                HARRIS_USER_ALIAS_A_ODD = 0x32U,        //!< U_ALIAS_A_ODD - User Alias Part A, odd-numbered conveyance
+                HARRIS_USER_ALIAS_B_ODD = 0x33U,        //!< U_ALIAS_B_ODD - User Alias Part B, odd-numbered conveyance
+                HARRIS_USER_ALIAS_A_EVEN = 0x34U,       //!< U_ALIAS_A_EVEN - User Alias Part A, even-numbered conveyance
+                HARRIS_USER_ALIAS_B_EVEN = 0x35U,       //!< U_ALIAS_B_EVEN - User Alias Part B, even-numbered conveyance
             };
         }
 
@@ -855,7 +882,7 @@ namespace p25
             };
         }
 
-        // TIA-102.BBAD-D Section 4.1
+        // TIA-102.BBAD-A Section 2.3.3
         /** @brief Phase 2 MAC PDU Opcode(s) */
         namespace P2_MAC_HEADER_OPCODE {
             /** @brief Phase 2 MAC PDU Opcode(s) */
@@ -870,7 +897,7 @@ namespace p25
             };
         }
 
-        // TIA-102.BBAD-D Section 4.2
+        // TIA-102.BBAD-A Section 2.3.3
         /** @brief Phase 2 MAC 4V/SACCH Offset(s) */
         namespace P2_MAC_HEADER_OFFSET {
             /** @brief Phase 2 MAC 4V/SACCH Offset(s) */
@@ -888,7 +915,7 @@ namespace p25
             };
         }
 
-        // TIA-102.BBAD-D Section 3
+        // TIA-102.BBAD-A Section 3
         /** @brief Phase 2 MAC MCO Partitioning */
         namespace P2_MAC_MCO_PARTITION {
             /** @brief Phase 2 MAC MCO Partitioning */
@@ -901,7 +928,7 @@ namespace p25
             };
         }
 
-        // TIA-102.BBAD-D Section 3
+        // TIA-102.BBAD-A Section 3
         /** @brief Phase 2 MAC PDU Opcode(s) */
         namespace P2_MAC_MCO {
             /** @brief Phase 2 MAC PDU Opcode(s) */
@@ -913,7 +940,7 @@ namespace p25
                 PRIVATE = 0x02U,                        //!< UU VCH USER - Unit-to-Unit Voice Channel User
                 TEL_INT_VCH_USER = 0x03U,               //!< TEL INT VCH USER - Telephone Interconnect Voice Channel User
 
-                MAC_RELEASE = 0x61U,                    //!< MAC RELEASE - MAC Release
+                MAC_RELEASE = 0x31U,                    //!< MAC RELEASE - MAC Release
 
             /* Any abbreviated or explicit partition opcodes are essentially just TSBKO's. */
             };
@@ -943,9 +970,11 @@ namespace p25
             enum E : uint8_t {
                 VTCH_4V = 0x00U,                        //!< Inbound/Outbound 4V
                 SACCH_SCRAMBLED = 0x03U,                //!< SACCH Scrambled
+                LCCH_SCRAMBLED = 0x04U,                 //!< Inbound LCCH Scrambled
                 VTCH_2V = 0x06U,                        //!< Inbound/Outbound 2V
                 FACCH_SCRAMBLED = 0x09U,                //!< FACCH Scrambled
                 SACCH_UNSCRAMBLED = 0x0CU,              //!< SACCH Unscrambled
+                LCCH_UNSCRAMBLED = 0x0DU,               //!< Inbound/Outbound LCCH Unscrambled
                 FACCH_UNSCRAMBLED = 0x0FU               //!< FACCH Unscrambled
             };
         }

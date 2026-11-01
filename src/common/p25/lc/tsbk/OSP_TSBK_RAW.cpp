@@ -34,7 +34,7 @@ OSP_TSBK_RAW::OSP_TSBK_RAW() : TSBK(),
 OSP_TSBK_RAW::~OSP_TSBK_RAW()
 {
     if (m_tsbk != nullptr) {
-        delete m_tsbk;
+        delete[] m_tsbk;
     }
 }
 

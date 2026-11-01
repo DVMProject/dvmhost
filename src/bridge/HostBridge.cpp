@@ -16,6 +16,13 @@
 #include "common/network/udp/Socket.h"
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/data/EMB.h"
+#include "common/nxdn/NXDNDefines.h"
+#include "common/nxdn/NXDNUtils.h"
+#include "common/nxdn/Audio.h"
+#include "common/nxdn/Sync.h"
+#include "common/nxdn/channel/FACCH1.h"
+#include "common/nxdn/channel/LICH.h"
+#include "common/nxdn/channel/SACCH.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/dfsi/DFSIDefines.h"
@@ -63,6 +70,7 @@ const int NUMBER_OF_BUFFERS = 32;
 #define TEK_DES "des"
 #define TEK_AES "aes"
 #define TEK_ARC4 "arc4"
+#define TEK_EHR "ehr"
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -175,6 +183,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_sysId(P25DEF::SID_STD_DEFAULT),
     m_grantDemand(false),
     m_txMode(1U),
+    m_duplicateToAnalog(false),
     m_rxAudioGain(1.0f),
     m_vocoderDecoderAudioGain(3.0f),
     m_vocoderDecoderAutoGain(false),
@@ -186,6 +195,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_tekKeyId(0U),
     m_requestedTek(false),
     m_p25Crypto(nullptr),
+    m_nxdnCrypto(nullptr),
+    m_nxdnCipherType(NXDDEF::CIPHER_TYPE_NONE),
     m_localAudio(false),
     m_voxSampleLevel(30.0f),
     m_dropTimeMS(180U),
@@ -231,6 +242,14 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_netLDU2(nullptr),
     m_p25SeqNo(0U),
     m_p25N(0U),
+    m_rxNXDNLC(),
+    m_rxNXDNSACCHLC(),
+    m_rxNXDNSACCHMask(0U),
+    m_rxNXDNPendingMI(false),
+    m_rxNXDNNextMI(),
+    m_nxdnAMBE(nullptr),
+    m_nxdnSeqNo(0U),
+    m_nxdnN(0U),
     m_analogN(0U),
     m_rtsPttEnable(false),
     m_rtsPttPort(),
@@ -287,6 +306,9 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_ambeBuffer = new uint8_t[27U];
     ::memset(m_ambeBuffer, 0x00U, 27U);
 
+    m_nxdnAMBE = new uint8_t[36U];
+    ::memset(m_nxdnAMBE, 0x00U, 36U);
+
     m_netLDU1 = new uint8_t[9U * 25U];
     m_netLDU2 = new uint8_t[9U * 25U];
 
@@ -294,6 +316,8 @@ HostBridge::HostBridge(const std::string& confFile) :
     ::memset(m_netLDU2, 0x00U, 9U * 25U);
 
     m_p25Crypto = new p25::crypto::P25Crypto();
+    m_nxdnCrypto = new nxdn::crypto::NXDNCrypto();
+    ::memset(m_rxNXDNNextMI, 0x00U, sizeof(m_rxNXDNNextMI));
 
     // initialize RTS PTT timing
     m_lastAudioOut = system_clock::hrc::now();
@@ -317,9 +341,11 @@ HostBridge::~HostBridge()
     }
 
     delete[] m_ambeBuffer;
+    delete[] m_nxdnAMBE;
     delete[] m_netLDU1;
     delete[] m_netLDU2;
     delete m_p25Crypto;
+    delete m_nxdnCrypto;
 }
 
 /* Executes the main FNE processing loop. */
@@ -491,7 +517,7 @@ int HostBridge::run()
     mdc_decoder_set_callback(m_mdcDecoder, mdcPacketDetected, this);
 
     // initialize vocoders
-    if (m_txMode == TX_MODE_DMR) {
+    if (m_txMode == TX_MODE_DMR || m_txMode == TX_MODE_NXDN) {
         // initialize DMR vocoders
         m_decoder = new vocoder::MBEDecoder(vocoder::DECODE_DMR_AMBE);
         m_encoder = new vocoder::MBEEncoder(vocoder::ENCODE_DMR_AMBE);
@@ -545,6 +571,11 @@ int HostBridge::run()
 
         if (m_txMode == TX_MODE_P25) {
             m_network->setP25ICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId, 
+                uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId, 0U); });
+        }
+
+        if (m_txMode == TX_MODE_NXDN) {
+            m_network->setNXDNICCCallback([=](network::NET_ICC::ENUM command, uint32_t dstId,
                 uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId, 0U); });
         }
 
@@ -649,6 +680,7 @@ int HostBridge::run()
                     m_rxDMRLC = dmr::lc::LC();
                     m_rxDMRPILC = dmr::lc::PrivacyLC();
                     m_rxP25LC = p25::lc::LC();
+                    m_rxNXDNLC = nxdn::lc::RTCH();
                     m_rxStartTime = 0U;
                     m_rxStreamId = 0U;
 
@@ -669,6 +701,8 @@ int HostBridge::run()
                     m_dmrN = 0U;
                     m_p25SeqNo = 0U;
                     m_p25N = 0U;
+                    m_nxdnSeqNo = 0U;
+                    m_nxdnN = 0U;
                     m_analogN = 0U;
 
                     if (!m_udpRTPContinuousSeq) {
@@ -680,10 +714,18 @@ int HostBridge::run()
                     m_p25Crypto->clearMI();
                     m_p25Crypto->resetKeystream();
 
+                    m_nxdnCrypto->resetKeystream();
+                    m_rxNXDNSACCHLC = nxdn::lc::RTCH();
+                    m_rxNXDNSACCHMask = 0U;
+                    m_rxNXDNPendingMI = false;
+                    ::memset(m_rxNXDNNextMI, 0x00U, sizeof(m_rxNXDNNextMI));
+
                     m_network->resetDMR(1U);
                     m_network->resetDMR(2U);
 
                     m_network->resetP25();
+
+                    m_network->resetNXDN();
 
                     m_network->resetAnalog();
                 }
@@ -825,7 +867,7 @@ int HostBridge::ambeDecode(const uint8_t* codeword, uint32_t codewordLength, sho
     ::memcpy(cw.get(), codeword, codewordLength);
 
     // is this a DMR codeword?
-    if (codewordLength > m_frameLengthInBytes && m_txMode == TX_MODE_DMR &&
+    if (codewordLength > m_frameLengthInBytes && (m_txMode == TX_MODE_DMR || m_txMode == TX_MODE_NXDN) &&
         codewordLength == 9)
     {
         // use the vocoder to retrieve the un-ECC'ed and uninterleaved AMBE bits
@@ -950,7 +992,7 @@ void HostBridge::ambeEncode(const short* samples, uint32_t sampleLength, uint8_t
     ambe_voice_enc(codewordBits.get(), NO_BIT_STEAL, n1.get(), AUDIO_SAMPLES_LENGTH / 2, m_ecMode, 1, 8192, m_encoderState);
 
     // is this to be a DMR codeword?
-    if (m_txMode == TX_MODE_DMR) {
+    if (m_txMode == TX_MODE_DMR || m_txMode == TX_MODE_NXDN) {
         UInt8Array bits = std::make_unique<uint8_t[]>(49);
         for (int i = 0; i < 49; i++)
             bits[i] = (uint8_t)codewordBits[i];
@@ -1002,8 +1044,10 @@ bool HostBridge::readParams()
     m_txMode = (uint8_t)systemConf["txMode"].as<uint32_t>(1U);
     if (m_txMode < TX_MODE_DMR)
         m_txMode = TX_MODE_DMR;
-    if (m_txMode > TX_MODE_ANALOG)
-        m_txMode = TX_MODE_ANALOG;
+    if (m_txMode > TX_MODE_NXDN)
+        m_txMode = TX_MODE_NXDN;
+
+    m_duplicateToAnalog = systemConf["duplicateToAnalog"].as<bool>(false);
 
     m_voxSampleLevel = systemConf["voxSampleLevel"].as<float>(30.0f);
     m_dropTimeMS = (uint16_t)systemConf["dropTimeMs"].as<uint32_t>(180U);
@@ -1022,7 +1066,10 @@ bool HostBridge::readParams()
             }
         }
         break;
+    case TX_MODE_NXDN:
+        break;
     case TX_MODE_ANALOG:
+        m_duplicateToAnalog = false;
         break;
     }
 
@@ -1079,17 +1126,44 @@ bool HostBridge::readParams()
     std::string tekAlgo = tekConf["tekAlgo"].as<std::string>();
     std::transform(tekAlgo.begin(), tekAlgo.end(), tekAlgo.begin(), ::tolower);
     m_tekKeyId = (uint32_t)::strtoul(tekConf["tekKeyId"].as<std::string>("0").c_str(), NULL, 16);
+    m_nxdnCipherType = NXDDEF::CIPHER_TYPE_NONE;
     if (tekEnable && m_tekKeyId > 0U) {
-        if (tekAlgo == TEK_AES)
-            m_tekAlgoId = P25DEF::ALGO_AES_256;
-        else if (tekAlgo == TEK_ARC4)
-            m_tekAlgoId = P25DEF::ALGO_ARC4;
-        else if (tekAlgo == TEK_DES)
-            m_tekAlgoId = P25DEF::ALGO_DES;
-        else {
-            ::LogError(LOG_HOST, "Invalid TEK algorithm specified, must be \"aes\" or \"adp\".");
-            m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
-            m_tekKeyId = 0U;
+        if (m_txMode == TX_MODE_P25) {
+            if (tekAlgo == TEK_AES)
+                m_tekAlgoId = P25DEF::ALGO_AES_256;
+            else if (tekAlgo == TEK_ARC4)
+                m_tekAlgoId = P25DEF::ALGO_ARC4;
+            else if (tekAlgo == TEK_DES)
+                m_tekAlgoId = P25DEF::ALGO_DES;
+            else {
+                ::LogError(LOG_HOST, "Invalid P25 TEK algorithm specified, must be \"aes\", \"des\", or \"arc4\".");
+                m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
+                m_tekKeyId = 0U;
+            }
+        }
+        else if (m_txMode == TX_MODE_NXDN) {
+            if (m_tekKeyId > 63U) {
+                ::LogError(LOG_HOST, "Invalid NXDN TEK key ID, valid range is 0-63.");
+                m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
+                m_tekKeyId = 0U;
+            }
+            else if (tekAlgo == TEK_EHR) {
+                m_tekAlgoId = NXDDEF::CIPHER_TYPE_EHR;
+                m_nxdnCipherType = NXDDEF::CIPHER_TYPE_EHR;
+            }
+            else if (tekAlgo == TEK_DES) {
+                m_tekAlgoId = P25DEF::ALGO_DES;
+                m_nxdnCipherType = NXDDEF::CIPHER_TYPE_DES;
+            }
+            else if (tekAlgo == TEK_AES) {
+                m_tekAlgoId = P25DEF::ALGO_AES_256;
+                m_nxdnCipherType = NXDDEF::CIPHER_TYPE_AES;
+            }
+            else {
+                ::LogError(LOG_HOST, "Invalid NXDN TEK algorithm specified, must be \"ehr\", \"des\", or \"aes\".");
+                m_tekAlgoId = P25DEF::ALGO_UNENCRYPT;
+                m_tekKeyId = 0U;
+            }
         }
     }
 
@@ -1126,6 +1200,8 @@ bool HostBridge::readParams()
     std::string txModeStr = "DMR";
     if (m_txMode == TX_MODE_P25)
         txModeStr = "P25";
+    if (m_txMode == TX_MODE_NXDN)
+        txModeStr = "NXDN";
     if (m_txMode == TX_MODE_ANALOG)
         txModeStr = "Analog";
 
@@ -1138,6 +1214,8 @@ bool HostBridge::readParams()
     LogInfo("    Tx Audio Gain: %.1f", m_txAudioGain);
     LogInfo("    Vocoder Encoder Audio Gain: %.1f", m_vocoderEncoderAudioGain);
     LogInfo("    Transmit Mode: %s", txModeStr.c_str());
+    if (m_txMode != TX_MODE_ANALOG)
+        LogInfo("    Duplicate to Analog: %s", m_duplicateToAnalog ? "yes" : "no");
     LogInfo("    VOX Sample Level: %.1f", m_voxSampleLevel);
     LogInfo("    Drop Time: %ums", m_dropTimeMS);
     LogInfo("    Detect Analog MDC1200: %s", m_detectAnalogMDC1200 ? "yes" : "no");
@@ -1232,6 +1310,7 @@ bool HostBridge::createNetwork()
         }
         break;
     case TX_MODE_P25:
+    case TX_MODE_NXDN:
     case TX_MODE_ANALOG:
         {
             if (m_dstId > 65535) {
@@ -1279,6 +1358,44 @@ bool HostBridge::createNetwork()
         }
     }
 
+    bool kmfEncrypted = false;
+    uint8_t kmfPresharedKey[AES_WRAPPED_PCKT_KEY_LEN];
+    ::memset(kmfPresharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+
+    // scope is intentional
+    {
+        std::string key = networkConf["kmfPresharedKey"].as<std::string>();
+        if (!key.empty()) {
+            if (key.size() == 32) {
+                // bryanb: shhhhhhh....dirty nasty hacks
+                key = key.append(key); // since the key is 32 characters (16 hex pairs), double it on itself for 64 characters (32 hex pairs)
+                LogWarning(LOG_HOST, "Half-length KMF preshared encryption key detected, doubling key on itself.");
+            }
+
+            if (key.size() == 64) {
+                if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+                    const char* keyPtr = key.c_str();
+
+                    for (uint8_t i = 0; i < AES_WRAPPED_PCKT_KEY_LEN; i++) {
+                        char t[4] = {keyPtr[0], keyPtr[1], 0};
+                        kmfPresharedKey[i] = (uint8_t)::strtoul(t, NULL, 16);
+                        keyPtr += 2 * sizeof(char);
+                    }
+
+                    kmfEncrypted = true;
+                }
+                else {
+                    LogWarning(LOG_HOST, "Invalid characters in the KMF preshared encryption key. Encryption disabled.");
+                    kmfEncrypted = false;
+                }
+            }
+            else {
+                LogWarning(LOG_HOST, "Invalid KMF preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
+                kmfEncrypted = false;
+            }
+        }
+    }
+
     if (id > 999999999U) {
         ::LogError(LOG_HOST, "Network Peer ID cannot be greater then 999999999.");
         return false;
@@ -1294,6 +1411,8 @@ bool HostBridge::createNetwork()
         LogInfo("    Local: random");
 
     LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
+    LogInfo("    KMF Encrypted: %s", kmfEncrypted ? "yes" : "no");
+
     LogInfo("    Source ID: %u", m_srcId);
     LogInfo("    Destination ID: %u", m_dstId);
     LogInfo("    DMR Slot: %u", m_slot);
@@ -1311,7 +1430,7 @@ bool HostBridge::createNetwork()
         LogInfo("    Debug: yes");
     }
 
-    bool dmr = false, p25 = false, analog = false;
+    bool dmr = false, p25 = false, nxdnMode = false, analog = false;
     switch (m_txMode) {
     case TX_MODE_DMR:
         dmr = true;
@@ -1319,13 +1438,16 @@ bool HostBridge::createNetwork()
     case TX_MODE_P25:
         p25 = true;
         break;
+    case TX_MODE_NXDN:
+        nxdnMode = true;
+        break;
     case TX_MODE_ANALOG:
         analog = true;
         break;
     }
 
     // initialize networking
-    m_network = new PeerNetwork(address, port, local, id, password, true, debug, dmr, p25, false, analog, true, true, true, allowDiagnosticTransfer, true, false);
+    m_network = new PeerNetwork(address, port, local, id, password, true, debug, dmr, p25, nxdnMode, analog, true, true, true, allowDiagnosticTransfer, true, false);
 
     m_network->setPacketDump(packetDump);
     m_network->setMetadata(m_identity, 0U, 0U, 0.0F, 0.0F, 0, 0, 0, 0.0F, 0.0F, 0, "");
@@ -1336,6 +1458,10 @@ bool HostBridge::createNetwork()
 
     if (encrypted) {
         m_network->setPresharedKey(presharedKey);
+    }
+
+    if (kmfEncrypted) {
+        m_network->setKMFPresharedKey(kmfPresharedKey);
     }
 
     m_network->enable(true);
@@ -1761,12 +1887,55 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
                 m_network->writeP25TDU(lc, lsd, controlByte);
             }
             break;
+        case TX_MODE_NXDN:
+            {
+                using namespace nxdn;
+                using namespace nxdn::defines;
+
+                ::nxdn::lc::RTCH lc = ::nxdn::lc::RTCH();
+                lc.setMessageType(NXDDEF::MessageType::RTCH_TX_REL);
+                lc.setCallType(NXDDEF::CallType::UNSPECIFIED);
+                lc.setGroup(true);
+                lc.setSrcId((uint16_t)srcId);
+                lc.setDstId((uint16_t)dstId);
+                lc.setTransmissionMode(NXDDEF::TransmissionMode::MODE_4800);
+
+                uint8_t data[NXDN_FRAME_LENGTH_BYTES];
+                ::memset(data, 0x00U, sizeof(data));
+                Sync::addNXDNSync(data);
+
+                channel::LICH lich;
+                lich.setRFCT(RFChannelType::RDCH);
+                lich.setFCT(FuncChannelType::USC_SACCH_NS);
+                lich.setOption(ChOption::STEAL_FACCH);
+                lich.setOutbound(true);
+                lich.encode(data);
+
+                channel::SACCH sacch;
+                sacch.setData(SACCH_IDLE);
+                sacch.setRAN(0U);
+                sacch.setStructure(ChStructure::SR_SINGLE);
+                sacch.encode(data);
+
+                uint8_t lcData[NXDN_RTCH_LC_LENGTH_BYTES];
+                ::memset(lcData, 0x00U, sizeof(lcData));
+                lc.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+
+                channel::FACCH1 facch;
+                facch.setData(lcData);
+                facch.encode(data, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS);
+                facch.encode(data, NXDN_FSW_LENGTH_BITS + NXDN_LICH_LENGTH_BITS + NXDN_SACCH_FEC_LENGTH_BITS + NXDN_FACCH1_FEC_LENGTH_BITS);
+
+                NXDNUtils::scrambler(data);
+
+                LogInfoEx(LOG_HOST, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", srcId = %u, dstId = %u", srcId, dstId);
+                m_network->writeNXDN(lc, data, NXDN_FRAME_LENGTH_BYTES, true);
+            }
+            break;
         case TX_MODE_ANALOG:
             {
                 LogInfoEx(LOG_HOST, ANO_TERMINATOR);
 
-                uint8_t controlByte = 0x00U;
-                
                 data::NetData analogData;
                 analogData.setSeqNo(m_analogN);
                 analogData.setSrcId(srcId);
@@ -1781,6 +1950,22 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
             }
             break;
         }
+    }
+
+    if (m_duplicateToAnalog) {
+        LogInfoEx(LOG_HOST, ANO_TERMINATOR);
+
+        data::NetData analogData;
+        analogData.setSeqNo(m_analogN);
+        analogData.setSrcId(srcId);
+        analogData.setDstId(dstId);
+        analogData.setFrameType(AudioFrameType::TERMINATOR);
+
+        uint8_t pcm[AUDIO_SAMPLES_LENGTH * 2U];
+        ::memset(pcm, 0x00U, AUDIO_SAMPLES_LENGTH * 2U);
+        analogData.setAudio(pcm);
+
+        m_network->writeAnalog(analogData, true);
     }
 
     LogInfoEx(LOG_HOST, "%s, call end, srcId = %u, dstId = %u", trafficType.c_str(), srcId, dstId);
@@ -1802,6 +1987,8 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_dmrN = 0U;
     m_p25SeqNo = 0U;
     m_p25N = 0U;
+    m_nxdnSeqNo = 0U;
+    m_nxdnN = 0U;
     m_analogN = 0U;
 
     if (!m_udpRTPContinuousSeq) {
@@ -1813,8 +2000,15 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_p25Crypto->clearMI();
     m_p25Crypto->resetKeystream();
 
+    m_nxdnCrypto->resetKeystream();
+    m_rxNXDNSACCHLC = nxdn::lc::RTCH();
+    m_rxNXDNSACCHMask = 0U;
+    m_rxNXDNPendingMI = false;
+    ::memset(m_rxNXDNNextMI, 0x00U, sizeof(m_rxNXDNNextMI));
+
     m_network->resetDMR(m_slot);
     m_network->resetP25();
+    m_network->resetNXDN();
     m_network->resetAnalog();
 }
 
@@ -1830,14 +2024,28 @@ void HostBridge::processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_
         UInt8Array tek = std::make_unique<uint8_t[]>(keyLength);
         ki->getKey(tek.get());
 
-        m_p25Crypto->setTEKAlgoId(algId);
-        m_p25Crypto->setTEKKeyId(ki->kId());
-        m_p25Crypto->setKey(tek.get(), keyLength);
+        if (m_txMode == TX_MODE_NXDN) {
+            m_nxdnCrypto->setTEKCipherType(m_nxdnCipherType);
+            m_nxdnCrypto->setTEKKeyId((uint8_t)ki->kId());
+            m_nxdnCrypto->setKey(tek.get(), keyLength);
+        }
+        else {
+            m_p25Crypto->setTEKAlgoId(algId);
+            m_p25Crypto->setTEKKeyId(ki->kId());
+            m_p25Crypto->setKey(tek.get(), keyLength);
+        }
     }
     else {
-        m_p25Crypto->setTEKAlgoId(P25DEF::ALGO_UNENCRYPT);
-        m_p25Crypto->setTEKKeyId(0U);
-        m_p25Crypto->clearKey();
+        if (m_txMode == TX_MODE_NXDN) {
+            m_nxdnCrypto->setTEKCipherType(NXDDEF::CIPHER_TYPE_NONE);
+            m_nxdnCrypto->setTEKKeyId(0U);
+            m_nxdnCrypto->clearKey();
+        }
+        else {
+            m_p25Crypto->setTEKAlgoId(P25DEF::ALGO_UNENCRYPT);
+            m_p25Crypto->setTEKKeyId(0U);
+            m_p25Crypto->clearKey();
+        }
     }
 }
 
@@ -2011,6 +2219,9 @@ void* HostBridge::threadAudioProcess(void* arg)
                             case TX_MODE_P25:
                                 bridge->encodeP25AudioFrame(pcm);
                                 break;
+                            case TX_MODE_NXDN:
+                                bridge->encodeNXDNAudioFrame(pcm);
+                                break;
                             case TX_MODE_ANALOG:
                                 bridge->encodeAnalogAudioFrame(pcm);
                                 break;
@@ -2035,6 +2246,9 @@ void* HostBridge::threadAudioProcess(void* arg)
                                     break;
                                 case TX_MODE_P25:
                                     bridge->encodeP25AudioFrame(pcm);
+                                    break;
+                                case TX_MODE_NXDN:
+                                    bridge->encodeNXDNAudioFrame(pcm);
                                     break;
                                 case TX_MODE_ANALOG:
                                     bridge->encodeAnalogAudioFrame(pcm);
@@ -2469,6 +2683,9 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                 case TX_MODE_P25:
                     bridge->encodeP25AudioFrame(pcm, bridge->m_udpSrcId);
                     break;
+                case TX_MODE_NXDN:
+                    bridge->encodeNXDNAudioFrame(pcm, bridge->m_udpSrcId);
+                    break;
                 case TX_MODE_ANALOG:
                     bridge->encodeAnalogAudioFrame(pcm, bridge->m_udpSrcId);
                     break;
@@ -2525,11 +2742,15 @@ void* HostBridge::threadNetworkProcess(void* arg)
             }
 
             if (bridge->m_network->getStatus() == NET_STAT_RUNNING) {
-                if (bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U) {
-                    if (bridge->m_p25Crypto->getTEKLength() == 0U && !bridge->m_requestedTek) {
+                bool encryptionEnabled = bridge->m_txMode == TX_MODE_NXDN ?
+                    bridge->m_nxdnCipherType != NXDDEF::CIPHER_TYPE_NONE :
+                    bridge->m_tekAlgoId != P25DEF::ALGO_UNENCRYPT && bridge->m_tekKeyId > 0U;
+                if (encryptionEnabled) {
+                    uint8_t tekLength = bridge->m_txMode == TX_MODE_NXDN ? bridge->m_nxdnCrypto->getTEKKeyLength() : bridge->m_p25Crypto->getTEKLength();
+                    if (tekLength == 0U && !bridge->m_requestedTek) {
                         bridge->m_requestedTek = true;
                         LogInfoEx(LOG_HOST, "Bridge encryption enabled, requesting TEK from network.");
-                        bridge->m_network->writeKeyReq(bridge->m_tekKeyId, bridge->m_tekAlgoId);
+                        bridge->m_network->writeKeyReq(bridge->m_tekKeyId, bridge->m_tekAlgoId, bridge->m_srcId);
                     }
                 }
             }
@@ -2563,6 +2784,21 @@ void* HostBridge::threadNetworkProcess(void* arg)
 
                 if (netReadRet && p25Buffer != nullptr) {
                     bridge->processP25Network(p25Buffer.get(), length);
+                }
+            }
+
+            // is the bridge in NXDN mode?
+            if (bridge->m_txMode == TX_MODE_NXDN) {
+                UInt8Array nxdnBuffer = nullptr;
+
+                // scope is intentional to limit lock duration
+                {
+                    std::lock_guard<std::mutex> lock(HostBridge::s_networkMutex);
+                    nxdnBuffer = bridge->m_network->readNXDN(netReadRet, length);
+                }
+
+                if (netReadRet && nxdnBuffer != nullptr) {
+                    bridge->processNXDNNetwork(nxdnBuffer.get(), length);
                 }
             }
 
@@ -2630,7 +2866,7 @@ void HostBridge::resetWithNullAudio(uint8_t* data, bool encrypted)
     }
 }
 
-/* */
+/* Helper to send silence audio frames. */
 
 void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
 {
@@ -2833,6 +3069,94 @@ void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
                 m_network->writeP25LDU2(lc, lsd, m_netLDU2);
                 m_p25N = 0U;
                 break;
+            }
+        }
+        break;
+    case TX_MODE_NXDN:
+        {
+            using namespace nxdn;
+            using namespace nxdn::defines;
+
+            if (m_nxdnN > 0U && m_nxdnN < 4U) {
+                // m_nxdnAMBE stores packed raw 49-bit payloads.  Pad the
+                // incomplete frame with the raw payload represented by the
+                // standard NXDN null codeword.
+                nxdn::Audio nxdnAudio;
+                uint8_t nullPair[18U];
+                ::memcpy(nullPair + 0U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+                ::memcpy(nullPair + 9U, NULL_AMBE, RAW_AMBE_LENGTH_BYTES);
+                uint8_t nullBits[13U];
+                ::memset(nullBits, 0x00U, sizeof(nullBits));
+                nxdnAudio.decode(nullPair, nullBits);
+
+                for (uint8_t n = m_nxdnN; n < 4U; n++) {
+                    uint8_t* packedAMBE = m_nxdnAMBE + (n * RAW_AMBE_LENGTH_BYTES);
+                    ::memset(packedAMBE, 0x00U, RAW_AMBE_LENGTH_BYTES);
+                    for (uint32_t bit = 0U; bit < 49U; bit++)
+                        WRITE_BIT(packedAMBE, bit, READ_BIT(nullBits, bit));
+                }
+
+                ::nxdn::lc::RTCH lc = ::nxdn::lc::RTCH();
+                lc.setMessageType(NXDDEF::MessageType::RTCH_VCALL);
+                lc.setCallType(NXDDEF::CallType::UNSPECIFIED);
+                lc.setGroup(true);
+                lc.setSrcId((uint16_t)srcId);
+                lc.setDstId((uint16_t)dstId);
+                lc.setTransmissionMode(NXDDEF::TransmissionMode::MODE_4800);
+
+                LogInfoEx(LOG_HOST, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL ", audio (silence), srcId = %u, dstId = %u", srcId, dstId);
+
+                uint8_t frame[NXDN_FRAME_LENGTH_BYTES];
+                ::memset(frame, 0x00U, sizeof(frame));
+                Sync::addNXDNSync(frame);
+
+                channel::LICH lich;
+                lich.setRFCT(RFChannelType::RDCH);
+                lich.setFCT(FuncChannelType::USC_SACCH_SS);
+                lich.setOption(ChOption::STEAL_NONE);
+                lich.setOutbound(true);
+                lich.encode(frame);
+
+                uint8_t lcData[NXDN_RTCH_LC_LENGTH_BYTES];
+                ::memset(lcData, 0x00U, sizeof(lcData));
+                lc.encode(lcData, NXDN_RTCH_LC_LENGTH_BITS);
+
+                const ChStructure::E structures[] = {
+                    ChStructure::SR_1_4, ChStructure::SR_2_4,
+                    ChStructure::SR_3_4, ChStructure::SR_4_4
+                };
+                const uint8_t superframeIndex = m_nxdnSeqNo % 4U;
+                uint8_t sacchData[3U];
+                ::memset(sacchData, 0x00U, sizeof(sacchData));
+                for (uint32_t bit = 0U; bit < 18U; bit++) {
+                    WRITE_BIT(sacchData, bit, READ_BIT(lcData, superframeIndex * 18U + bit));
+                }
+
+                channel::SACCH sacch;
+                sacch.setData(sacchData);
+                sacch.setRAN(0U);
+                sacch.setStructure(structures[superframeIndex]);
+                sacch.encode(frame);
+
+                uint8_t nxdnAudioPayload[36U];
+                ::memset(nxdnAudioPayload, 0x00U, sizeof(nxdnAudioPayload));
+                for (uint8_t pair = 0U; pair < 2U; pair++) {
+                    uint8_t packedBits[13U];
+                    ::memset(packedBits, 0x00U, sizeof(packedBits));
+                    for (uint8_t half = 0U; half < 2U; half++) {
+                        const uint8_t* ambe = m_nxdnAMBE + ((pair * 2U + half) * RAW_AMBE_LENGTH_BYTES);
+                        for (uint32_t bit = 0U; bit < 49U; bit++)
+                            WRITE_BIT(packedBits, (half * 49U) + bit, READ_BIT(ambe, bit));
+                    }
+                    nxdnAudio.encode(packedBits, nxdnAudioPayload + (pair * 18U));
+                }
+
+                ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES, nxdnAudioPayload, sizeof(nxdnAudioPayload));
+                NXDNUtils::scrambler(frame);
+
+                m_network->writeNXDN(lc, frame, NXDN_FRAME_LENGTH_BYTES);
+                m_nxdnSeqNo++;
+                m_nxdnN = 1U;
             }
         }
         break;

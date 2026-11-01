@@ -47,6 +47,14 @@
 #include <string>
 #include <mutex>
 
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
+
 namespace nxdn
 {
     // ---------------------------------------------------------------------------
@@ -260,6 +268,9 @@ namespace nxdn
 
     private:
         friend class packet::Voice;
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::HostTestHooks;
+#endif
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
@@ -315,10 +326,10 @@ namespace nxdn
         bool m_ccPrevRunning;
         bool m_ccHalted;
 
-        Timer m_rfTimeout;
+        Timer m_rfTimeoutTimer;
         Timer m_rfTGHang;
         Timer m_rfLossWatchdog;
-        Timer m_netTimeout;
+        Timer m_netTimeoutTimer;
         Timer m_netTGHang;
         Timer m_networkWatchdog;
 
@@ -343,6 +354,9 @@ namespace nxdn
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
+        bool m_rfTimeout;
+        bool m_netTimeout;
+
         bool m_dumpRCCH;
 
         bool m_notifyCC;
@@ -366,8 +380,9 @@ namespace nxdn
         void processNetwork();
         /**
          * @brief Helper to process loss of frame stream from modem.
+         * @param type Type of RF frame loss.
          */
-        void processFrameLoss();
+        void processFrameLoss(RPT_RF_LOSS_TYPE type);
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.

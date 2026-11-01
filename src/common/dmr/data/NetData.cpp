@@ -38,8 +38,8 @@ NetData::NetData(const NetData& data) :
     m_rssi(data.m_rssi),
     m_data(nullptr)
 {
-    m_data = new uint8_t[2U * DMR_FRAME_LENGTH_BYTES];
-    ::memcpy(m_data, data.m_data, 2U * DMR_FRAME_LENGTH_BYTES);
+    m_data = new uint8_t[DMR_FRAME_LENGTH_BYTES];
+    ::memcpy(m_data, data.m_data, DMR_FRAME_LENGTH_BYTES);
 }
 
 /* Initializes a new instance of the NetData class. */
@@ -57,7 +57,7 @@ NetData::NetData() :
     m_rssi(0U),
     m_data(nullptr)
 {
-    m_data = new uint8_t[2U * DMR_FRAME_LENGTH_BYTES];
+    m_data = new uint8_t[DMR_FRAME_LENGTH_BYTES]();
 }
 
 /* Finalizes a instance of the NetData class. */

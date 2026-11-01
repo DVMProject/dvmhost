@@ -55,8 +55,8 @@ Assembler::Assembler() :
     m_pduUserData = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
     ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
 
-    m_rawPDU = new uint8_t[P25_PDU_FRAME_LENGTH_BYTES + 2U];
-    ::memset(m_rawPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+    m_rawPDU = new uint8_t[P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES];
+    ::memset(m_rawPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES);
 }
 
 /* Finalizes a instance of the Assembler class. */
@@ -67,6 +67,8 @@ Assembler::~Assembler()
         delete[] dataBlocks;
     if (m_pduUserData != nullptr)
         delete[] m_pduUserData;
+    if (m_rawPDU != nullptr)
+        delete[] m_rawPDU;
 }
 
 /* Helper to disassemble a P25 PDU frame into user data. */
@@ -74,6 +76,13 @@ Assembler::~Assembler()
 bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool resetState)
 {
     assert(pduBlock != nullptr);
+
+    if (blockLength != P25_PDU_FEC_LENGTH_BYTES) {
+        LogError(LOG_P25, P25_PDU_STR ", invalid encoded block length, %u != %u",
+            blockLength, P25_PDU_FEC_LENGTH_BYTES);
+        resetDisassemblyState();
+        return false;
+    }
 
     if (resetState) {
         resetDisassemblyState();
@@ -125,7 +134,17 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
         return true;
     }
     else {
-        ::memcpy(m_rawPDU + ((m_blockCount - 1U) * blockLength), pduBlock, blockLength);
+        const uint32_t rawOffset = (m_blockCount - 1U) * blockLength;
+        const uint32_t rawCapacity = P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES;
+        if (rawOffset > rawCapacity || blockLength > rawCapacity - rawOffset) {
+            LogError(LOG_P25, P25_PDU_STR ", encoded PDU exceeds assembler capacity, offset/length/capacity = %u/%u/%u",
+                rawOffset, blockLength, rawCapacity);
+            resetDisassemblyState();
+            return false;
+        }
+
+        ::memcpy(m_rawPDU + rawOffset, pduBlock, blockLength);
+
         m_dataOffset += blockLength;
         m_blockCount++;
 
@@ -199,9 +218,9 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
 
                             dataHeader.decodeAuxES(secondHeader);
                             if (s_verbose) {
-                                LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, algoId = $%02X, kId = $%04X",
-                                    dataBlocks[i].getSerialNo(), dataBlocks[i].getFormat(), dataBlocks[i].getLastBlock(), dataHeader.getEXSAP(),
-                                    dataHeader.getAlgId(), dataHeader.getKId());
+                                LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, block %u, fmt = $%02X, lastBlock = %u, sap = $%02X, exSAP = $%02X, algoId = $%02X, kId = $%04X",
+                                    dataBlocks[i].getSerialNo(), dataBlocks[i].getFormat(), dataBlocks[i].getLastBlock(), dataHeader.getSAP(),
+                                    dataHeader.getEXSAP(), dataHeader.getAlgId(), dataHeader.getKId());
 
                                 if (dataHeader.getAlgId() != ALGO_UNENCRYPT) {
                                     uint8_t mi[MI_LENGTH_BYTES];
@@ -230,12 +249,6 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
                     }
 
                     dataBlocks[i].getData(m_pduUserData + dataOffset);
-
-                    // is this the first unconfirmed data block after a auxiliary ES header?
-                    if (i == 0U && dataHeader.getFormat() == PDUFormatType::UNCONFIRMED && m_auxiliaryES) {
-                        uint8_t exSAP = m_pduUserData[0U]; // first byte of the first data block after an aux ES header is the extended SAP
-                        dataHeader.setEXSAP(exSAP);
-                    }
 
                     dataOffset += (dataHeader.getFormat() == PDUFormatType::CONFIRMED) ? P25_PDU_CONFIRMED_DATA_LENGTH_BYTES : P25_PDU_UNCONFIRMED_LENGTH_BYTES;
                     m_dataBlockCnt++;
@@ -274,28 +287,42 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
                 offset += P25_PDU_FEC_LENGTH_BYTES;
             }
 
+            // an unconfirmed Auxiliary ES header is 13 octets and crosses the
+            // first 12-octet block boundary -- resolve EXSAP after all blocks
+            // have been copied into the contiguous PDU buffer
+            if (dataHeader.getFormat() == PDUFormatType::UNCONFIRMED && m_auxiliaryES && blocksToFollow > 1U)
+                dataHeader.setEXSAP(m_pduUserData[P25_PDU_HEADER_LENGTH_BYTES] & 0x3FU);
+
 #if DEBUG_P25_PDU_DATA
             LogDebugEx(LOG_P25, "Assembler::disassemble()", "packetLength = %u, secondHeaderOffset = %u, padLength = %u, pduLength = %u", packetLength, secondHeaderOffset, padLength, dataHeader.getPDULength());
 #endif
             if (dataHeader.getBlocksToFollow() > 0U) {
-                if (padLength > 0U) {
-                    // move CRC-32 properly before padding to check CRC of user data
-                    uint8_t crcBytes[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
-                    ::memset(crcBytes, 0x00U, packetLength);
-                    ::memcpy(crcBytes, m_pduUserData, packetLength);
-                    ::memcpy(crcBytes + packetLength, m_pduUserData + packetLength + padLength, 4U);
+                // BUGFIX (verified against a real captured RF frame via brute-force range
+                // search against the actual received CRC bytes -- see tools/verify_crc/):
+                // CRC-32 covers the ENTIRE PDU content stream -- second header (if any) +
+                // payload + padding -- everything except its own trailing 4 bytes. It is
+                // NOT scoped to payload-only (my first attempted fix was wrong), and padding
+                // is NOT excluded from it either (the original stock code was also wrong, in
+                // the other direction). Because the CRC bytes already sit immediately after
+                // the padding in m_pduUserData, no buffer rearrangement is needed at all --
+                // the old padded/non-padded branching collapses into one direct check.
+                uint32_t crcCoveredLength = packetLength + padLength;
 
-                    bool crcRet = edac::CRC::checkCRC32(crcBytes, packetLength + 4U);
-                    if (!crcRet) {
-                        LogWarning(LOG_P25, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", dataHeader.getBlocksToFollow(), m_pduUserDataLength);
-                        m_packetCRCFailed = true;
-                    }
-                } else {
-                    bool crcRet = edac::CRC::checkCRC32(m_pduUserData, packetLength + 4U);
-                    if (!crcRet) {
-                        LogWarning(LOG_P25, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u", dataHeader.getBlocksToFollow(), m_pduUserDataLength);
-                        m_packetCRCFailed = true;
-                    }
+                bool crcRet = edac::CRC::checkCRC32(m_pduUserData, crcCoveredLength + 4U);
+                if (!crcRet) {
+                    // DIAGNOSTIC: log the received CRC bytes next to what we'd compute over
+                    // this range, to distinguish a real algorithm/scope mismatch from RF
+                    // corruption on any future failure.
+                    uint8_t recompute[P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U];
+                    ::memcpy(recompute, m_pduUserData, crcCoveredLength + 4U);
+                    edac::CRC::addCRC32(recompute, crcCoveredLength + 4U);
+
+                    LogWarning(LOG_P25, P25_PDU_STR ", failed CRC-32 check, blocks %u, len %u, "
+                        "received = $%02X%02X%02X%02X, computed = $%02X%02X%02X%02X",
+                        dataHeader.getBlocksToFollow(), crcCoveredLength,
+                        m_pduUserData[crcCoveredLength], m_pduUserData[crcCoveredLength + 1U], m_pduUserData[crcCoveredLength + 2U], m_pduUserData[crcCoveredLength + 3U],
+                        recompute[crcCoveredLength], recompute[crcCoveredLength + 1U], recompute[crcCoveredLength + 2U], recompute[crcCoveredLength + 3U]);
+                    m_packetCRCFailed = true;
                 }
             }
 
@@ -338,9 +365,9 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
     if (assembledBitLength != nullptr)
         *assembledBitLength = 0U;
 
+    // padding is already contained in the payload capacity of the blocks
+    // declared by BTF; it does not extend the CAI frame
     uint32_t bitLength = ((dataHeader.getBlocksToFollow() + 1U) * P25_PDU_FEC_LENGTH_BITS) + P25_PREAMBLE_LENGTH_BITS;
-    if (dataHeader.getPadLength() > 0U)
-        bitLength += (dataHeader.getPadLength() * 8U);
 
     uint32_t offset = P25_PREAMBLE_LENGTH_BITS;
 
@@ -405,8 +432,8 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
             dataHeader.encodeAuxES(packetData);
 
             if (s_verbose) {
-                LogInfoEx(LOG_P25, P25_PDU_STR ", OSP, auxiliary ES, algId = $%02X, kId = $%04X",
-                    dataHeader.getAlgId(), dataHeader.getKId());
+                LogInfoEx(LOG_P25, P25_PDU_STR ", OSP, auxiliary ES, exSAP = $%02X, algId = $%02X, kId = $%04X",
+                    dataHeader.getEXSAP(), dataHeader.getAlgId(), dataHeader.getKId());
 
                 if (dataHeader.getAlgId() != ALGO_UNENCRYPT) {
                     uint8_t mi[MI_LENGTH_BYTES];
@@ -426,16 +453,17 @@ UInt8Array Assembler::assemble(data::DataHeader& dataHeader, bool extendedAddres
         LogDebugEx(LOG_P25, "Assembler::assemble()", "packetLength = %u, secondHeaderOffset = %u, padLength = %u, pduLength = %u", packetLength, secondHeaderOffset, padLength, pduLength);
 #endif
         if (dataHeader.getFormat() != PDUFormatType::AMBT) {
-            ::memcpy(packetData + secondHeaderOffset, pduUserData, packetLength);
-            edac::CRC::addCRC32(packetData, packetLength + 4U);
-
-            if (padLength > 0U) {
-                // move the CRC-32 to the end of the packet data after the padding
-                uint8_t crcBytes[4U];
-                ::memcpy(crcBytes, packetData + packetLength, 4U);
-                ::memset(packetData + packetLength, 0x00U, 4U);
-                ::memcpy(packetData + (packetLength + padLength), crcBytes, 4U);
-            }
+            // BUGFIX (verified against a real captured RF frame -- see disassemble() above
+            // for the brute-force verification detail): pduUserData is netPayloadLength bytes
+            // (packetLength - secondHeaderOffset), not the gross packetLength, so copy only
+            // that much into its correct position after the second header. CRC-32 then covers
+            // the ENTIRE stream -- second header + payload + padding (already zero from
+            // DECLARE_UINT8_ARRAY's zero-init) -- everything except its own 4 bytes.
+            // addCRC32 writes those bytes directly to their final position, so the old
+            // separate "move the CRC after padding" step is no longer needed at all.
+            uint32_t netPayloadLength = packetLength - secondHeaderOffset;
+            ::memcpy(packetData + secondHeaderOffset, pduUserData, netPayloadLength);
+            edac::CRC::addCRC32(packetData, packetLength + padLength + 4U);
         } else {
             // our AMBTs have a pre-calculated CRC-32 -- we don't need to do it ourselves
             ::memcpy(packetData + secondHeaderOffset, pduUserData, pduLength);
@@ -536,7 +564,7 @@ void Assembler::resetDisassemblyState()
     m_dataOffset = 0U;
 
     ::memset(m_pduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES + 2U);
-    ::memset(m_rawPDU, 0x00U, P25_PDU_FRAME_LENGTH_BYTES + 2U);
+    ::memset(m_rawPDU, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_FEC_LENGTH_BYTES);
 
     m_packetCRCFailed = false;
     m_complete = false;

@@ -558,6 +558,10 @@ public:
                 m_adjSymLevel.setEnable();
                 m_adjHSBandwidth.setDisable();
                 m_adjHSGain.setDisable();
+
+                if (m_setup->m_isPTY) {
+                    m_adjHSGain.setEnable();
+                }
             }
         }
     }
@@ -626,7 +630,7 @@ private:
     FMenu m_engineeringMenu{"&Engineering", &m_menuBar};
     FMenuItem m_adjSymLevel{"&Symbol Level Adjustment", &m_engineeringMenu};
     FMenuItem m_adjHSBandwidth{"Hotspot &Bandwidth Adjustment", &m_engineeringMenu};
-    FMenuItem m_adjHSGain{"Hotspot &Gain & AFC", &m_engineeringMenu};
+    FMenuItem m_adjHSGain{"AFC and Hotspot &Gain", &m_engineeringMenu};
     FMenuItem m_engineeringMenuSeparator1{&m_engineeringMenu};
     FMenuItem m_adjFifoBuffers{"&FIFO Buffers", &m_engineeringMenu};
     FMenuItem m_engineeringMenuSeparator3{&m_engineeringMenu};
@@ -733,12 +737,17 @@ private:
             m_setup->writeRFParams();
 
             m_setup->getStatus();
-            uint8_t timeout = 0U;
+            uint32_t timeout = 0U;
+            uint32_t maxTimeout = 75U; // ~375ms
+            if (m_setup->m_isPTY) {
+                maxTimeout = 2000U; // ~10s for PTY which can be slower to respond depending on SDR startup
+            }
+
             while (!m_setup->m_hasFetchedStatus) {
                 m_setup->m_modem->clock(0U);
 
                 timeout++;
-                if (timeout >= 75U) {
+                if (timeout >= maxTimeout) {
                     break;
                 }
 

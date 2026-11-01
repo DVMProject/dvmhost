@@ -25,20 +25,21 @@ TEST_CASE("CRC 6-bit Test", "[crc][6bit]") {
 
     srand((unsigned int)time(NULL));
 
-    const uint32_t len = 32U;
-    const uint32_t lenBits = len * 8U;
-    uint8_t* random = (uint8_t*)malloc(len);
+    const uint32_t payloadLen = 32U;
+    const uint32_t lenBits = payloadLen * 8U;
+    const uint32_t totalLen = payloadLen + 1U; // spare byte stores 6-bit CRC at bit offset lenBits
+    uint8_t* random = (uint8_t*)calloc(totalLen, sizeof(uint8_t));
 
-    for (size_t i = 0; i < len - 1U; i++) {
+    for (size_t i = 0; i < payloadLen; i++) {
         random[i] = rand();
     }
 
     CRC::addCRC6(random, lenBits);
 
-    uint32_t inCrc = (random[len - 1U] << 0);
+    uint32_t inCrc = (random[totalLen - 1U] << 0);
     ::LogInfoEx("T", "CRC::checkCRC6(), crc = $%02X", inCrc);
 
-    Utils::dump(2U, "6_Sanity_Test CRC", random, len);
+    Utils::dump(2U, "6_Sanity_Test CRC", random, totalLen);
 
     bool ret = CRC::checkCRC6(random, lenBits);
     if (!ret) {
@@ -47,8 +48,8 @@ TEST_CASE("CRC 6-bit Test", "[crc][6bit]") {
         goto cleanup;
     }
 
-    random[10U] >>= 8;
-    random[11U] >>= 8;
+    random[10U] ^= 0x01U;
+    random[11U] ^= 0x01U;
 
     ret = CRC::checkCRC6(random, lenBits);
     if (ret) {

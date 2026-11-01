@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -24,6 +24,14 @@
 #include "common/nxdn/lc/RTCH.h"
 #include "common/nxdn/lc/RCCH.h"
 #include "network/TrafficNetwork.h"
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
 
 namespace network
 {
@@ -122,6 +130,9 @@ namespace network
             uint32_t lastParrotDstId() const { return m_lastParrotDstId; }
 
         private:
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::FNETestHooks;
+#endif
             TrafficNetwork* m_network;
 
             /**
@@ -218,6 +229,7 @@ namespace network
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             concurrent::unordered_map<uint32_t, RxStatus> m_status;
             concurrent::unordered_map<uint32_t, RxStatus> m_statusPVCall;
+            concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_rejectedCallStreams;
 
             bool m_debug;
 

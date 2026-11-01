@@ -31,7 +31,7 @@ namespace nxdn
          * @brief Implements NXDN Common Access Channel.
          * @ingroup nxdn_ch
          */
-        class HOST_SW_API CAC {
+        class DVM_COMMON_API CAC {
         public:
             /**
              * @brief Initializes a new instance of the CAC class.

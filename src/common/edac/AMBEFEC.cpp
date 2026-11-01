@@ -559,7 +559,7 @@ uint32_t AMBEFEC::measureNXDNBER(uint8_t* bytes) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Regenerates the AMBE FEC for the input words. */
 
 uint32_t AMBEFEC::regenerate(uint32_t& a, uint32_t& b, uint32_t& c) const
 {

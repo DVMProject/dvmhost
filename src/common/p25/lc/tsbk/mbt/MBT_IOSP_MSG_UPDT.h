@@ -35,7 +35,7 @@ namespace p25
              *  MSG UPDT - Message Update (OSP)
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_IOSP_MSG_UPDT : public AMBT {
+            class DVM_COMMON_API MBT_IOSP_MSG_UPDT : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_IOSP_MSG_UPDT class.

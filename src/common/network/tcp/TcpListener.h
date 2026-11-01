@@ -31,7 +31,7 @@ namespace network
          * @brief Implements a TCP server listener.
          * @ingroup tcp_socket
          */
-        class HOST_SW_API TcpListener : public Socket
+        class DVM_COMMON_API TcpListener : public Socket
         {
         public:
 

@@ -51,7 +51,7 @@ int gettimeofday(struct timeval* tv, struct timezone* tzp)
 }
 #endif // defined(_WIN32)
 
-/* */
+/* Calculates the difference between two NTP timestamps in milliseconds. */
 
 static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
 {

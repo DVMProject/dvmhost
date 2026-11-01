@@ -39,7 +39,7 @@ namespace restapi
         /**
          * @brief This class implements the lexer for incoming payloads.
          */
-        class HTTPLexer {
+        class DVM_COMMON_API HTTPLexer {
         public:
             /**
              * @brief Lexing result.

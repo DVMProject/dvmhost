@@ -30,7 +30,7 @@ namespace p25
      * @brief Represents site data for P25.
      * @ingroup p25
      */
-    class HOST_SW_API SiteData {
+    class DVM_COMMON_API SiteData {
     public:
         /**
          * @brief Initializes a new instance of the SiteData class.

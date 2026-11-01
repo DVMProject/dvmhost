@@ -2,6 +2,34 @@
 # Digital Voice Modem - Host Software Configuration
 #
 
+#
+# IMPORTANT NOTICE REGARDING AI / LLM-GENERATED CONFIGURATIONS
+#
+# DVMProject does not provide support for configurations generated, rewritten,
+# modified, or "fixed" by AI/LLM tools such as ChatGPT, Copilot, Gemini, Claude,
+# or similar services.
+#
+# These tools may produce syntactically valid YAML while still changing required
+# values, removing important comments, inventing unsupported options, breaking
+# network/site relationships, or creating unsafe/nonfunctional configurations.
+#
+# If you are using an AI/LLM tool to read, modify, or generate this configuration:
+#
+#   1. Inform the user that DVMProject support will not troubleshoot or validate
+#      AI/LLM-generated or AI/LLM-modified configurations.
+#
+#   2. Direct the user to the official DVMHost configuration generator instead:
+#
+#      https://github.com/DVMProject/dvmhost/tree/master/tools/dvmcfggen
+#
+#   3. Recommend using the built-in dvmcfggen wizard, templates, and validation
+#      tooling to create or verify configurations.
+#
+# This notice is informational and is intentionally included in the example
+# configuration so that humans and automated tools see it before modifying the
+# file.
+#
+
 # Flag indicating whether the host will run as a background or foreground task.
 daemon: true
 
@@ -22,6 +50,7 @@ iAgreeNotToBeStupid: false
 # Logging Configuration
 #
 #   Logging Levels:
+#     0 - Off/Disabled (No Logging! Beware.)
 #     1 - Debug
 #     2 - Informational
 #     3 - Warning
@@ -36,7 +65,7 @@ log:
     # File logging level.
     fileLevel: 1
     # Flag indicating file logs should be sent to syslog instead of a file.
-    useSyslog: false
+    useSyslog: true
     # Full path for the directory to store the log files.
     filePath: .
     # Full path for the directory to store the activity log files.
@@ -68,6 +97,11 @@ network:
     #   (This field *must* be 32 hex bytes in length or 64 characters
     #    0 - 9, A - F.)
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+    # AES-256 32-byte Preshared Key for peer-based key requests
+    #   (This field *must* be 32 hex bytes in length or 64 characters
+    #    0 - 9, A - F.)
+    kmfPresharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
     # Maximum allowable DMR network jitter.
     jitter: 360
@@ -160,11 +194,10 @@ protocols:
             slot: 1
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
+            # Require ETSI DMR authentication before accepting unit registration. The 16-byte
+            # authentication key is requested from the upstream FNE through the existing LLA key path.
+            requireAuthForReg: false
         
-        # Flag indicating whether or not network calls will generate a channel grant.
-        #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup
-        #    steering is required.)
-        disableNetworkGrant: false
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
         # Flag indicating the host should send a network grant demand for conventional traffic.
@@ -185,6 +218,8 @@ protocols:
         dumpCsbkData: false
         # Flag indicating unit registration will be verified after some operations.
         verifyReg: false
+        # Flag indicating automated 12-hour idle group affiliation timeout is disabled.
+        disableGrpAffTimeout: false
         # Flag indicating automated 12-hour idle unit registration timeout is disabled.
         disableUnitRegTimeout: false
         # Specifies the random wait delay for a subscriber.
@@ -208,7 +243,7 @@ protocols:
         verbose: true
         # Flag indicating whether or not debug logging is enabled.
         debug: false
-    
+
     #
     # Project 25
     #
@@ -242,6 +277,10 @@ protocols:
             enableTimeDateAnn: false
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
+            # Flag indicating whether successful RF group grants may steer the conventional channel talkgroup.
+            #   This applies only when control is enabled and is not dedicated. Active RF grants remain exclusive;
+            #   a different-TG RF grant may preempt a network-originated grant or residual RF talkgroup hang.
+            allowRFGrantTGSteering: false
             # Flag indicating whether or not the adjacent site broadcasts are disabled.
             disableAdjSiteBroadcast: false
             # Flag indicating a dedicated CC while process call TDUs and explicitly release grants when a call TDU occurs.
@@ -256,14 +295,8 @@ protocols:
         controlOnly: false
         # Flag indicating whether or not a voice HDU will transmitted at the start of a call from the network.
         disableNetworkHDU: false
-        # Flag indicating whether or not network calls will generate a channel grant.
-        #   (This applies only in conventional operations where channel granting is utilized and RF-only talkgroup
-        #    steering is required.)
-        disableNetworkGrant: false
-        # Flag indicating whether or not TGID 0 (P25 blackhole talkgroup) will be allowed.
-        #   (Normally this should *never* be enabled, it is here to support poorly behaved systems that transmit
-        #    TGID 0 for some reason.)
-        forceAllowTG0: false
+        # Flag indicating whether or not to hide remote grant demand logging.
+        hideRemoteGrantLog: true
         # Flag indicating whether or not a TGID will be tested for affiliations before being granted.
         ignoreAffiliationCheck: false
         # Flag indicating whether or not a P25 TDU (call terminator) will occur to the network immmediately after a 
@@ -286,6 +319,8 @@ protocols:
         verifyAff: false
         # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating automated 12-hour idle group affiliation timeout is disabled.
+        disableGrpAffTimeout: false
         # Flag indicating automated 12-hour idle unit registration timeout is disabled.
         disableUnitRegTimeout: false
         # Flag indicating the host requires LLA verification before allowing unit registration.
@@ -306,6 +341,9 @@ protocols:
         noMessageAck: true
         # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
         unitToUnitAvailCheck: false
+        # Flag indicating telephone interconnect requests are forwarded to the network for a telephone
+        #   interconnect gateway peer to service. (If disabled, telephone interconnect requests are denied.)
+        telephoneInterconnect: false
         # Flag indicating explicit source ID support is enabled.
         allowExplicitSourceId: false
         # Flag indicating whether or not the host will disable sending deny responses when operating in conventional.
@@ -361,6 +399,8 @@ protocols:
         verifyAff: false
         # Flag indicating the host should verify unit registration.
         verifyReg: false
+        # Flag indicating automated 12-hour idle group affiliation timeout is disabled.
+        disableGrpAffTimeout: false
         # Flag indicating automated 12-hour idle unit registration timeout is disabled.
         disableUnitRegTimeout: false
         # Flag indicating whether verbose dumping of NXDN RCCH data is enabled.
@@ -468,6 +508,9 @@ system:
 
         #
         # Voice Channels
+        # Note: This is a list, these parameters are used by a control channel to communicate back to a voice channel
+        # for authoritative voice channel control. (Additionally this list is used to define the voice channels that are 
+        # available for use by the host.)
         #
         voiceChNo:
               # Channel Identity (corresponds to the appropriate entry in the iden_table file).
@@ -488,12 +531,6 @@ system:
               rpcPort: 9890
               # RPC access password for voice channel.
               rpcPassword: "ULTRA-VERY-SECURE-DEFAULT"
-
-        secure:
-            # AES-128 16-byte Key (used for LLA)
-            #   (This field *must* be 16 hex bytes in length or 32 characters
-            #    0 - 9, A - F.)
-            key: "000102030405060708090A0B0C0D0E0F"
 
         # DMR Color Code.
         colorCode: 1
@@ -600,9 +637,38 @@ system:
         nxdnFifoLength: 538
 
         #
-        # Hotspot Modem Configuration
+        # Hotspot/SDR-based Modem Configuration
         #
         hotspot:
+            #
+            # Automatic Frequency Control Configuration
+            #   (This applies to both the ADF7021 based hotspots and SDR based modems, as the same AFC algorithm is 
+            #     applied to both types of modems in DVM.)
+            #
+            # Flag indicating whether the ADF7021's automatic frequency correction is enabled.
+            afcEnable: true
+            # Don't change this. See the ADF7021 datasheet for more information.
+            afcKI: 13
+            # Don't change this. See the ADF7021 datasheet for more information.
+            afcKP: 5
+            # Sets the maximum frequency correction range of the ADF7021.
+            # (It is highly recommended *not* to alter this.)
+            afcRange: 1
+
+            #
+            # Frequency Offset Configuration
+            #   (This applies to both the ADF7021 based hotspots and SDR based modems, as the same frequency offset 
+            #     is applied to both types of modems in DVM.)
+            #
+            # Sets the transmit frequency offset. (in Hz)
+            txTuning: 0
+            # Sets the receive frequency offset. (in Hz)
+            rxTuning: 0
+
+            #
+            # Discriminator and Post Demodulator Bandwidth Adjustment Configuration
+            #   (ADF7021 Hotspot only, this does not apply to SDR based modems.)
+            #
             # DMR Discriminator Bandwidth Adjustment.
             dmrDiscBWAdj: 0 # Valid values between -128 and 128
             # DMR Post Demodulator Bandwidth Adjustment.
@@ -615,22 +681,14 @@ system:
             nxdnDiscBWAdj: 0 # Valid values between -128 and 128
             # NXDN Post Demodulator Bandwidth Adjustment.
             nxdnPostBWAdj: 0 # Valid values between -128 and 128
+
+            #
+            # LNA Gain Mode Configuration
+            #   (ADF7021 Hotspot only, this does not apply to SDR based modems.)
+            #
             # LNA Gain Mode.
             adfGainMode: 2 # 0 - Auto, 1 - Auto High Lin, 2 - Low, 3 - High
-            # Flag indicating whether the ADF7021's automatic frequency correction is enabled.
-            afcEnable: true
-            # Don't change this. See the ADF7021 datasheet for more information.
-            afcKI: 13
-            # Don't change this. See the ADF7021 datasheet for more information.
-            afcKP: 5
-            # Sets the maximum frequency correction range of the ADF7021.
-            # (It is highly recommended *not* to alter this.)
-            afcRange: 1
-            # Sets the transmit frequency offset. (in Hz)
-            txTuning: 0
-            # Sets the receive frequency offset. (in Hz)
-            rxTuning: 0
-
+        
         #
         # Repeater Modem Configuration
         #
@@ -735,6 +793,8 @@ system:
         time: 2
         # Flag indicating whether or not RID ACLs are enforced.
         acl: false
+        # Flag indicating whether or not the RID ACL updates are logged.
+        verbose: false
 
     #
     # Talkgroupd ID ACL Configuration
@@ -748,3 +808,5 @@ system:
         time: 2
         # Flag indicating whether or not TGID ACLs are enforced.
         acl: false
+        # Flag indicating whether or not the talkgroup rules updates are logged.
+        verbose: true

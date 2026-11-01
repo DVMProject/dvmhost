@@ -44,7 +44,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMInventoryResponseHeader : public KMMFrame {
+        /**
+         * @brief Represents a KMM inventory response header.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMInventoryResponseHeader : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMInventoryResponseHeader class.

@@ -44,7 +44,7 @@ namespace dmr
          * @brief Represents a DMR embedded data.
          * @ingroup dmr
          */
-        class HOST_SW_API EmbeddedData {
+        class DVM_COMMON_API EmbeddedData {
         public:
             /**
              * @brief Initializes a new instance of the EmbeddedData class.

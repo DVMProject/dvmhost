@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements MAINT - Call Maintainence
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_MAINT : public CSBK {
+            class DVM_COMMON_API CSBK_MAINT : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_MAINT class.

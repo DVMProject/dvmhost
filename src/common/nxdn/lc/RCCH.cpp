@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *   Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *   Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "nxdn/NXDNDefines.h"
@@ -49,7 +49,8 @@ RCCH::RCCH() :
     m_group(true),
     m_duplex(false),
     m_transmissionMode(TransmissionMode::MODE_4800),
-    m_siteIdenEntry()
+    m_siteIdenEntry(),
+    m_raw(nullptr)
 {
     if (s_siteCallsign == nullptr) {
         s_siteCallsign = new uint8_t[CALLSIGN_LENGTH_BYTES];
@@ -68,7 +69,8 @@ RCCH::RCCH(const RCCH& data) : RCCH()
 
 RCCH::~RCCH()
 {
-    /* stub */
+    if (m_raw != nullptr)
+        delete[] m_raw;
 }
 
 /* Returns a string that represents the current RCCH. */
@@ -76,6 +78,13 @@ RCCH::~RCCH()
 std::string RCCH::toString(bool isp)
 {
     return std::string("MESSAGE_TYPE_UNKWN (Unknown RCCH)");
+}
+
+/* Returns a copy of the raw decoded RCCH bytes. */
+
+uint8_t* RCCH::getDecodedRaw() const
+{
+    return m_raw;
 }
 
 /* Sets the callsign. */
@@ -117,6 +126,11 @@ void RCCH::decode(const uint8_t* data, uint8_t* rcch, uint32_t length, uint32_t 
     if (s_verbose) {
         Utils::dump(2U, "NXDN, RCCH::decode(), Decoded RCCH Data", rcch, NXDN_RCCH_LC_LENGTH_BYTES);
     }
+
+    if (m_raw != nullptr)
+        delete[] m_raw;
+    m_raw = new uint8_t[NXDN_RCCH_LC_LENGTH_BYTES];
+    ::memcpy(m_raw, rcch, NXDN_RCCH_LC_LENGTH_BYTES);
 
     m_messageType = data[0U] & 0x3FU;                                               // Message Type
 }

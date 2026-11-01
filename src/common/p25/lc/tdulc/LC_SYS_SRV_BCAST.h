@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SYS SRV BCAST - System Service Broadcast
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_SYS_SRV_BCAST : public TDULC {
+            class DVM_COMMON_API LC_SYS_SRV_BCAST : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_SYS_SRV_BCAST class.

@@ -34,7 +34,7 @@ LC_TDULC_RAW::LC_TDULC_RAW() : TDULC(),
 LC_TDULC_RAW::~LC_TDULC_RAW()
 {
     if (m_tdulc != nullptr) {
-        delete m_tdulc;
+        delete[] m_tdulc;
     }
 }
 

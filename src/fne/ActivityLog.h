@@ -16,7 +16,7 @@
 #if !defined(__ACTIVITY_LOG_H__)
 #define __ACTIVITY_LOG_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
 
 #include <string>
 

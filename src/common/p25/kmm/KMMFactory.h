@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,6 +21,8 @@
 #include "common/p25/kmm/KeysetItem.h"
 
 #include "common/p25/kmm/KMMFrame.h"
+#include "common/p25/kmm/KMMChangeRSI.h"
+#include "common/p25/kmm/KMMChangeover.h"
 #include "common/p25/kmm/KMMDeregistrationCommand.h"
 #include "common/p25/kmm/KMMDeregistrationResponse.h"
 #include "common/p25/kmm/KMMHello.h"
@@ -36,6 +38,7 @@
 #include "common/p25/kmm/KMMRekeyAck.h"
 #include "common/p25/kmm/KMMRekeyCommand.h"
 #include "common/p25/kmm/KMMUnableToDecrypt.h"
+#include "common/p25/kmm/KMMWarmStartCommand.h"
 #include "common/p25/kmm/KMMZeroize.h"
 
 namespace p25
@@ -50,7 +53,7 @@ namespace p25
          * @brief Helper class to instantiate an instance of a KMM frame packet.
          * @ingroup p25_kmm
          */
-        class HOST_SW_API KMMFactory {
+        class DVM_COMMON_API KMMFactory {
         public:
             /**
              * @brief Initializes a new instance of the KMMFactory class.
@@ -67,6 +70,13 @@ namespace p25
              * @returns KMMFrame* Instance of a KMMFrame representing the decoded data.
              */
             static std::unique_ptr<KMMFrame> create(const uint8_t* data);
+            /**
+             * @brief Create an instance of a KMMFrame with a specified length.
+             * @param[in] data Buffer containing KMM frame packet data to decode.
+             * @param[in] len Length of the buffer.
+             * @returns KMMFrame* Instance of a KMMFrame representing the decoded data.
+             */
+            static std::unique_ptr<KMMFrame> create(const uint8_t* data, uint32_t len);
 
         private:
             /**

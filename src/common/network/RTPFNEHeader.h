@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -62,11 +62,19 @@ namespace network
 
             GRANT_REQ = 0x7AU,                      //!< Grant Request
             INCALL_CTRL = 0x7BU,                    //!< In-Call Control
-            KEY_REQ = 0x7CU,                        //!< Encryption Key Request
-            KEY_RSP = 0x7DU,                        //!< Encryption Key Response
+            KEY_REQ = 0x7CU,                        //!< Encryption Key TEK Request
+            KEY_RSP = 0x7DU,                        //!< Encryption Key TEK Response
 
             ACK = 0x7EU,                            //!< Packet Acknowledge
             NAK = 0x7FU,                            //!< Packet Negative Acknowledge
+
+            KEY_KEK_REQ = 0x80U,                    //!< Encryption Key LLA/UKEK Request
+            KEY_KEK_RSP = 0x81U,                    //!< Encryption Key LLA/UKEK Response
+
+            RADIO_ALIAS_SYNC = 0x85U,               //!< Radio Alias List Sync
+
+            KEYS_INVENTORY = 0x8EU,                 //!< Encryption Key Container Inventory
+            KEYS_UPDATE = 0x8FU,                    //!< Encryption Key Container Update
 
             TRANSFER = 0x90U,                       //!< Network Transfer Function
 
@@ -97,23 +105,29 @@ namespace network
             MASTER_SUBFUNC_DEACTIVE_TGS = 0x03U,    //!< Deactive TGIDs
             MASTER_HA_PARAMS = 0xA3U,               //!< HA Parameters
 
+            KEYS_UPDATE_STATUS = 0x04U,             //!< Key Update Status Response
+
             TRANSFER_SUBFUNC_ACTIVITY = 0x01U,      //!< Activity Log Transfer
             TRANSFER_SUBFUNC_DIAG = 0x02U,          //!< Diagnostic Log Transfer
             TRANSFER_SUBFUNC_STATUS = 0x03U,        //!< Status Transfer
+            TRANSFER_SUBFUNC_PATCH_STATUS = 0x04U,  //!< Console Patch Status Transfer
 
             ANNC_SUBFUNC_GRP_AFFIL = 0x00U,         //!< Announce Group Affiliation
             ANNC_SUBFUNC_UNIT_REG = 0x01U,          //!< Announce Unit Registration
             ANNC_SUBFUNC_UNIT_DEREG = 0x02U,        //!< Announce Unit Deregistration
             ANNC_SUBFUNC_GRP_UNAFFIL = 0x03U,       //!< Announce Group Affiliation Removal
             ANNC_SUBFUNC_AFFILS = 0x90U,            //!< Update All Affiliations
+            ANNC_SUBFUNC_UNIT_REGS = 0x91U,         //!< Update All Unit Registrations
             ANNC_SUBFUNC_SITE_VC = 0x9AU,           //!< Announce Site VCs
 
             REPL_TALKGROUP_LIST = 0x00U,            //!< FNE Replication Talkgroup Transfer
             REPL_RID_LIST = 0x01U,                  //!< FNE Replication Radio ID Transfer
             REPL_PEER_LIST = 0x02U,                 //!< FNE Replication Peer List Transfer
+            REPL_RID_ALIAS_LIST = 0x03U,            //!< FNE Replication Radio Alias Transfer
 
             REPL_ACT_PEER_LIST = 0xA2U,             //!< FNE Replication Active Peer List Transfer
             REPL_HA_PARAMS = 0xA3U,                 //!< FNE Replication HA Parameters
+            REPL_PATCH_STATUS = 0xA4U,              //!< FNE Replication Patch Status Transfer
 
             NET_TREE_LIST = 0x00U,                  //!< FNE Network Tree List
             NET_TREE_DISC = 0x01U                   //!< FNE Network Tree Disconnect
@@ -130,6 +144,14 @@ namespace network
 
             BUSY_DENY = 0x00U,                      //!< Busy Deny
             REJECT_TRAFFIC = 0x01U,                 //!< Reject Active Traffic
+
+            // DMR Reverse Channel Commands
+            DMR_RC_CEASE_TRANSMIT = 0xD2U,          //!< DMR Reverse Channel: Cease Transmission
+            DMR_RC_REQUEST_CEASE_TRANSMIT = 0xD3U,  //!< DMR Reverse Channel: Request Cease Transmission
+            DMR_RC_MAXIMUM_POWER = 0xD4U,           //!< DMR Reverse Channel: Maximum Power
+            DMR_RC_MINIMUM_POWER = 0xD5U,           //!< DMR Reverse Channel: Minimum Power
+            DMR_RC_POWER_INCREASE_ONE_STEP = 0xD6U, //!< DMR Reverse Channel: Increase Power One Step
+            DMR_RC_POWER_DECREASE_ONE_STEP = 0xD7U, //!< DMR Reverse Channel: Decrease Power One Step
         };
     };
 
@@ -164,7 +186,7 @@ namespace network
          * 20 bytes (16 bytes without RTP Extension Header)
          * \endcode
          */
-        class HOST_SW_API RTPFNEHeader : public RTPExtensionHeader {
+        class DVM_COMMON_API RTPFNEHeader : public RTPExtensionHeader {
         public:
             /**
              * @brief Initializes a new instance of the RTPFNEHeader class.

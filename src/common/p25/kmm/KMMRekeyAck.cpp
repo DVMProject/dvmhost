@@ -25,7 +25,7 @@ using namespace p25::kmm;
 /* Initializes a new instance of the KMMRekeyAck class. */
 
 KMMRekeyAck::KMMRekeyAck() : KMMFrame(),
-    m_messageId(0U),
+    m_ackMessageId(0U),
     m_numberOfKeyStatus(0U),
     m_keystatus()
 {
@@ -55,7 +55,7 @@ bool KMMRekeyAck::decode(const uint8_t* data)
 
     KMMFrame::decodeHeader(data);
 
-    m_messageId = data[10U + m_bodyOffset];                     // Message ID
+    m_ackMessageId = data[10U + m_bodyOffset];                  // Message ID
     m_numberOfKeyStatus = data[11U + m_bodyOffset];             // Number of Key Status
 
     uint16_t offset = 0U;
@@ -85,7 +85,7 @@ void KMMRekeyAck::encode(uint8_t* data)
 
     KMMFrame::encodeHeader(data);
 
-    data[10U + m_bodyOffset] = m_messageId;                     // Message ID
+    data[10U + m_bodyOffset] = m_ackMessageId;                  // Message ID
     data[11U + m_bodyOffset] = m_numberOfKeyStatus;             // Number of Key Status
 
     uint16_t offset = 0U;
@@ -115,7 +115,7 @@ void KMMRekeyAck::copy(const KMMRekeyAck& data)
 {
     KMMFrame::copy(data);
 
-    m_messageId = data.m_messageId;
+    m_ackMessageId = data.m_ackMessageId;
     m_numberOfKeyStatus = data.m_numberOfKeyStatus;
 
     m_keystatus = data.m_keystatus;

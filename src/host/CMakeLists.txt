@@ -22,12 +22,16 @@ file(GLOB dvmhost_SRC
     # P25 module
     "src/host/p25/*.h"
     "src/host/p25/*.cpp"
+    "src/host/p25/phase2/*.h"
+    "src/host/p25/phase2/*.cpp"
     "src/host/p25/lc/tsbk/*.h"
     "src/host/p25/lc/tsbk/*.cpp"
     "src/host/p25/lookups/*.h"
     "src/host/p25/lookups/*.cpp"
     "src/host/p25/packet/*.h"
     "src/host/p25/packet/*.cpp"
+    "src/host/p25/packet/phase2/*.h"
+    "src/host/p25/packet/phase2/*.cpp"
 
     # NXDN module
     "src/host/nxdn/*.h"

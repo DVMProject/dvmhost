@@ -35,7 +35,7 @@ namespace dmr
          * @brief Represents DMR control signalling block data.
          * @ingroup dmr_lc
          */
-        class HOST_SW_API CSBK {
+        class DVM_COMMON_API CSBK {
         public:
             /**
              * @brief Initializes a copy instance of the CSBK class.
@@ -94,6 +94,12 @@ namespace dmr
              * @param verbose Flag indicating verbose log output.
              */
             static void setVerbose(bool verbose) { s_verbose = verbose; }
+
+            /**
+             * @brief Sets whether CRC errors warn and allow decoding to continue.
+             * @param warnCRC Flag indicating CRC errors should be warnings.
+             */
+            static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
 
             /** @name Local Site data */
             /**
@@ -227,6 +233,7 @@ namespace dmr
 
         protected:
             static bool s_verbose;
+            static bool s_warnCRC;
 
             // Local Site data
             static SiteData s_siteData;

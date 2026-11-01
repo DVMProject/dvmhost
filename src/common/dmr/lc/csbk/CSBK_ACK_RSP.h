@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements ACK RSP - Acknowledge Response
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_ACK_RSP : public CSBK {
+            class DVM_COMMON_API CSBK_ACK_RSP : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_ACK_RSP class.

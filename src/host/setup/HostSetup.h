@@ -156,6 +156,7 @@ protected:
     bool m_nxdnEnabled;
 
     bool m_isHotspot;
+    bool m_isPTY;
 
     bool m_isConnected;
     bool m_debug;
@@ -324,7 +325,7 @@ protected:
     bool writeFlash();
 
     /**
-     * @brief 
+     * @brief Reboots the modem into ST bootloader mode.
      */
     void writeBootload();
 

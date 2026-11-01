@@ -140,6 +140,15 @@ namespace dmr
              */
             void writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint8_t responseInfo);
             /**
+             * @brief Helper to write an AHOY packet.
+             * @param dstId Destination ID.
+             * @param serviceKind Service Kind.
+             * @param sourceOrChallenge Source or Challenge ID.
+             * @param gi Flag indicating whether the GI bit is set.
+             * @param appendedBlocks Number of appended blocks.
+             */
+            void writeRF_CSBK_AHOY(uint32_t dstId, uint8_t serviceKind, uint32_t sourceOrChallenge, bool gi, uint8_t appendedBlocks);
+            /**
              * @brief Helper to write a NACK RSP packet.
              * @param dstId Destination ID.
              * @param reason Denial Reason.
@@ -156,7 +165,8 @@ namespace dmr
              * @param skip Flag indicating normal grant checking is skipped.
              * @param chNo Channel Number.
              */
-            bool writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
+            bool writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false,
+                uint32_t chNo = 0U, uint8_t preferredSlot = 0U);
             /**
              * @brief Helper to write a data grant packet.
              * @param srcId Source Radio ID.

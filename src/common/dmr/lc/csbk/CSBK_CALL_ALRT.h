@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements CALL ALRT - Call Alert
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_CALL_ALRT : public CSBK {
+            class DVM_COMMON_API CSBK_CALL_ALRT : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_CALL_ALRT class.

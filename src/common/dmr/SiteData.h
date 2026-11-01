@@ -28,7 +28,7 @@ namespace dmr
      * @brief Represents site data for DMR.
      * @ingroup dmr
      */
-    class HOST_SW_API SiteData {
+    class DVM_COMMON_API SiteData {
     public:
         /**
          * @brief Initializes a new instance of the SiteData class.

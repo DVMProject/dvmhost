@@ -5,7 +5,8 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 #include "Defines.h"
@@ -75,9 +76,11 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_enableControl(false),
     m_dedicatedControl(false),
     m_voiceOnControl(false),
+    m_controlOnly(false),
     m_ackTSBKRequests(true),
-    m_disableNetworkGrant(false),
+    m_allowRFGrantTGSteering(false),
     m_disableNetworkHDU(false),
+    m_hideRemoteGrantLog(false),
     m_allowExplicitSourceId(false),
     m_convNetGrantDemand(false),
     m_sndcpSupport(false),
@@ -105,14 +108,15 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netLastDstId(0U),
     m_netLastSrcId(0U),
     m_permittedDstId(0U),
+    m_permittedTelInt(false),
     m_tailOnIdle(false),
     m_ccRunning(false),
     m_ccPrevRunning(false),
     m_ccHalted(false),
-    m_rfTimeout(1000U, timeout),
+    m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
     m_rfLossWatchdog(1000U, 0U, 1500U),
-    m_netTimeout(1000U, timeout),
+    m_netTimeoutTimer(1000U, timeout),
     m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_adjSiteUpdate(1000U, 75U),
@@ -127,10 +131,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ccFrameCnt(0U),
     m_ccSeq(0U),
     m_random(),
-    m_llaK(nullptr),
-    m_llaRS(nullptr),
-    m_llaCRS(nullptr),
-    m_llaKS(nullptr),
+    m_llaRID(),
     m_nid(nac),
     m_siteData(),
     m_rssiMapper(rssiMapper),
@@ -139,6 +140,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_rfTimeout(false),
+    m_netTimeout(false),
     m_ccNotifyActiveTG(false),
     m_disableAdjSiteBroadcast(false),
     m_notifyCC(true),
@@ -173,11 +176,6 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     std::mt19937 mt(rd());
     m_random = mt;
 
-    m_llaK = nullptr;
-    m_llaRS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
-    m_llaCRS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
-    m_llaKS = new uint8_t[AUTH_KEY_LENGTH_BYTES];
-
     // register RPC handlers
     g_RPC->registerHandler(RPC_PERMIT_P25_TG, RPC_FUNC_BIND(Control::RPC_permittedTG, this));
     g_RPC->registerHandler(RPC_ACTIVE_P25_TG, RPC_FUNC_BIND(Control::RPC_activeTG, this));
@@ -205,13 +203,6 @@ Control::~Control()
     if (m_data != nullptr) {
         delete m_data;
     }
-
-    if (m_llaK != nullptr) {
-        delete[] m_llaK;
-    }
-    delete[] m_llaRS;
-    delete[] m_llaCRS;
-    delete[] m_llaKS;
 }
 
 /* Resets the data states for the RF interface. */
@@ -256,34 +247,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_control->m_announcementGroup = (uint32_t)::strtoul(rfssConfig["announcementGroup"].as<std::string>("FFFE").c_str(), NULL, 16);
     m_defaultNetIdleTalkgroup = (uint32_t)rfssConfig["defaultNetIdleTalkgroup"].as<uint32_t>(0U);
 
-    yaml::Node secureConfig = rfssConfig["secure"];
-    std::string key = secureConfig["key"].as<std::string>();
-    if (!key.empty()) {
-        if (key.size() == 32) {
-            if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
-                const char* keyPtr = key.c_str();
-                m_llaK = new uint8_t[AUTH_KEY_LENGTH_BYTES];
-                ::memset(m_llaK, 0x00U, AUTH_KEY_LENGTH_BYTES);
-
-                for (uint8_t i = 0; i < AUTH_KEY_LENGTH_BYTES; i++) {
-                    char t[4] = {keyPtr[0], keyPtr[1], 0};
-                    m_llaK[i] = (uint8_t)::strtoul(t, NULL, 16);
-                    keyPtr += 2 * sizeof(char);
-                }
-            }
-            else {
-                LogWarning(LOG_P25, "Invalid characters in the secure key. LLA disabled.");
-            }
-        }
-        else {
-            LogWarning(LOG_P25, "Invalid secure key length, key should be 16 hex pairs, or 32 characters. LLA disabled.");
-        }
-    }
-
-    if (m_llaK != nullptr) {
-        generateLLA_AM1_Parameters();
-    }
-
     m_ignorePDUCRC = p25Protocol["ignoreDataCRC"].as<bool>(false);
 
     m_inhibitUnauth = p25Protocol["inhibitUnauthorized"].as<bool>(false);
@@ -295,13 +258,23 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_control->m_requireLLAForReg = p25Protocol["requireLLAForReg"].as<bool>(false);
 
-    if (m_llaK == nullptr) {
-        m_control->m_requireLLAForReg = false;
+    if (m_control->m_requireLLAForReg) {
+        if (m_network != nullptr) {
+            m_network->setKEKKeyResponseCallback([=](uint32_t srcId, p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength) {
+                (void)algId;
+                processLLAResponse(srcId, &ki, keyLength);
+            });
+        }
+
+        if (m_network == nullptr) {
+            m_control->m_requireLLAForReg = false;
+        }
     }
 
     m_control->m_noStatusAck = p25Protocol["noStatusAck"].as<bool>(false);
     m_control->m_noMessageAck = p25Protocol["noMessageAck"].as<bool>(true);
     m_control->m_unitToUnitAvailCheck = p25Protocol["unitToUnitAvailCheck"].as<bool>(true);
+    m_control->m_telephoneInterconnect = p25Protocol["telephoneInterconnect"].as<bool>(false);
 
     m_sndcpSupport = p25Protocol["sndcpSupport"].as<bool>(false);
 
@@ -337,6 +310,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_ackTSBKRequests = control["ackRequests"].as<bool>(true);
+    m_allowRFGrantTGSteering = control["allowRFGrantTGSteering"].as<bool>(false);
+    if (m_allowRFGrantTGSteering && (!m_enableControl || m_dedicatedControl)) {
+        LogWarning(LOG_P25, "RF grant talkgroup steering requires non-dedicated control; disabling it.");
+        m_allowRFGrantTGSteering = false;
+    }
     m_control->m_ctrlTSDUMBF = !control["disableTSDUMBF"].as<bool>(false);
     if (m_isModemDFSI)
         m_control->m_ctrlTSDUMBF = false; // force single block TSDUs for DFSI mode
@@ -397,26 +375,8 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogWarning(LOG_P25, "Frame loss threshold may be excessive, default is %u, configured is %u", DEFAULT_FRAME_LOSS_THRESHOLD, m_frameLossThreshold);
     }
 
-    /*
-    ** Network HDU and Grant Disables
-    */
-    m_disableNetworkGrant = p25Protocol["disableNetworkGrant"].as<bool>(false);
     m_disableNetworkHDU = p25Protocol["disableNetworkHDU"].as<bool>(false);
-
-    if (m_disableNetworkGrant && m_enableControl && m_dedicatedControl) {
-        LogWarning(LOG_P25, "Cannot disable network traffic grants for dedicated control configuration.");
-        m_disableNetworkGrant = false;
-    }
-
-    if (m_disableNetworkGrant && m_controlOnly) {
-        LogWarning(LOG_P25, "Cannot disable network traffic grants for control-only configuration.");
-        m_disableNetworkGrant = false;
-    }
-
-    if (m_disableNetworkGrant && m_voiceOnControl) {
-        LogWarning(LOG_P25, "Cannot disable network traffic grants for voice on control configuration.");
-        m_disableNetworkGrant = false;
-    }
+    m_hideRemoteGrantLog = p25Protocol["hideRemoteGrantLog"].as<bool>(false);
 
     /*
     ** CC Service Class
@@ -458,11 +418,15 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_controlChData = controlChData;
 
+    bool disableGrpAffTimeout = p25Protocol["disableGrpAffTimeout"].as<bool>(false);
+    m_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
     bool disableUnitRegTimeout = p25Protocol["disableUnitRegTimeout"].as<bool>(false);
     m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
 
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
+        m_control->m_telIntGrants.erase(dstId);
+
         // callback REST API to clear TG permit for the granted TG on the specified voice channel
         if (m_authoritative && m_supervisor) {
             ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
@@ -538,17 +502,16 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         if (m_disableNetworkHDU) {
             LogInfo("    Disable Network HDUs: yes");
         }
-        if (m_disableNetworkGrant) {
-            LogInfo("    Disable Network Grants: yes");
+        if (m_hideRemoteGrantLog) {
+            LogInfo("    Hide Remote Grant Demand Logging: yes");
         }
         if (!m_control->m_ctrlTSDUMBF) {
             LogInfo("    Disable Multi-Block TSDUs: yes");
         }
-        LogInfo("    Time/Date Announcement TSBK: %s", m_control->m_ctrlTimeDateAnn ? "yes" : "no");
-
-        if (m_llaK != nullptr) {
-            LogInfo("    Link Layer Authentication: yes");
+        if (m_allowRFGrantTGSteering) {
+            LogInfo("    RF Grant Talkgroup Steering: yes");
         }
+        LogInfo("    Time/Date Announcement TSBK: %s", m_control->m_ctrlTimeDateAnn ? "yes" : "no");
 
         LogInfo("    Inhibit Unauthorized: %s", m_inhibitUnauth ? "yes" : "no");
         LogInfo("    Legacy Group Grant: %s", m_legacyGroupGrnt ? "yes" : "no");
@@ -564,6 +527,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    No Status ACK: %s", m_control->m_noStatusAck ? "yes" : "no");
         LogInfo("    No Message ACK: %s", m_control->m_noMessageAck ? "yes" : "no");
         LogInfo("    Unit-to-Unit Availability Check: %s", m_control->m_unitToUnitAvailCheck ? "yes" : "no");
+        LogInfo("    Telephone Interconnect: %s", m_control->m_telephoneInterconnect ? "yes" : "no");
         LogInfo("    Explicit Source ID Support: %s", m_allowExplicitSourceId ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", m_convNetGrantDemand ? "yes" : "no");
         LogInfo("    Demand Unit Registration for Refused Affiliation: %s", m_demandUnitRegForRefusedAff ? "yes" : "no");
@@ -572,6 +536,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Explicit TDU Grant Release: %s", m_explicitTDUGrantRelease ? "yes" : "no");
 
         LogInfo("    Notify VCs of Active TGs: %s", m_ccNotifyActiveTG ? "yes" : "no");
+
+        if (disableGrpAffTimeout) {
+            LogInfo("    Disable Group Affiliation Timeout: yes");
+        }
 
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
@@ -621,7 +589,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         if (m_frameLossCnt > m_frameLossThreshold) {
             m_frameLossCnt = 0U;
 
-            processFrameLoss();
+            processFrameLoss(RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD);
 
             return false;
         }
@@ -645,7 +613,9 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     }
 
     if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
-        if (m_rfLossWatchdog.isRunning()) {
+        // if RF TG hang is disabled, keep the loss watchdog alive from inbound
+        // RF frames so abrupt stream loss can still recover state.
+        if (m_rfTGHang.getTimeout() == 0U || m_rfLossWatchdog.isRunning()) {
             m_rfLossWatchdog.start();
         }
     }
@@ -689,28 +659,36 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
 
     DUID::E duid = m_nid.getDUID();
 
-    // Have we got RSSI bytes on the end of a P25 LDU?
-    if (len == (P25_LDU_FRAME_LENGTH_BYTES + 4U)) {
-        uint16_t raw = 0U;
-        raw |= (data[218U] << 8) & 0xFF00U;
-        raw |= (data[219U] << 0) & 0x00FFU;
+    // have we got RSSI bytes (or error count for DFSI) on the end of a P25 LDU?
+    if ((duid == DUID::LDU1 || duid == DUID::LDU2) && len == (P25_LDU_FRAME_LENGTH_BYTES + 4U)) {
+        if (m_isModemDFSI) {
+            uint16_t raw = 0U;
+            raw |= (data[218U] << 8) & 0xFF00U;
+            raw |= (data[219U] << 0) & 0x00FFU;
 
-        // Convert the raw RSSI to dBm
-        int rssi = m_rssiMapper->interpolate(raw);
-        if (m_verbose) {
-            LogInfoEx(LOG_RF, "P25, raw RSSI = %u, reported RSSI = %d dBm", raw, rssi);
+            m_voice->m_dfsiReportedErrs = raw;
+        } else {
+            uint16_t raw = 0U;
+            raw |= (data[218U] << 8) & 0xFF00U;
+            raw |= (data[219U] << 0) & 0x00FFU;
+
+            // Convert the raw RSSI to dBm
+            int rssi = m_rssiMapper->interpolate(raw);
+            if (m_verbose) {
+                LogInfoEx(LOG_RF, "P25, raw RSSI = %u, reported RSSI = %d dBm", raw, rssi);
+            }
+
+            // RSSI is always reported as positive
+            m_rssi = (rssi >= 0) ? rssi : -rssi;
+
+            if (m_rssi > m_minRSSI)
+                m_minRSSI = m_rssi;
+            if (m_rssi < m_maxRSSI)
+                m_maxRSSI = m_rssi;
+
+            m_aveRSSI += m_rssi;
+            m_rssiCount++;
         }
-
-        // RSSI is always reported as positive
-        m_rssi = (rssi >= 0) ? rssi : -rssi;
-
-        if (m_rssi > m_minRSSI)
-            m_minRSSI = m_rssi;
-        if (m_rssi < m_maxRSSI)
-            m_maxRSSI = m_rssi;
-
-        m_aveRSSI += m_rssi;
-        m_rssiCount++;
     }
 
     if (m_debug) {
@@ -947,9 +925,16 @@ void Control::clock()
     }
 
     // handle timeouts and hang timers
-    m_rfTimeout.clock(ms);
-    m_netTimeout.clock(ms);
+    m_rfTimeoutTimer.clock(ms);
+    m_netTimeoutTimer.clock(ms);
     m_rfVoiceCallTermTimeout.clock(ms);
+
+    if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired()) {
+        if (!m_rfTimeout) {
+            LogInfoEx(LOG_RF, "traffic timeout timer has expired, traffic will not transmit");
+            m_rfTimeout = true;
+        }
+    }
 
     if (m_rfTGHang.isRunning()) {
         m_rfTGHang.clock(ms);
@@ -962,14 +947,15 @@ void Control::clock()
             m_rfLastDstId = 0U;
             m_rfLastSrcId = 0U;
 
-            // reset permitted ID and clear permission state
-            if (!m_authoritative && m_permittedDstId != 0U) {
+            // reset permitted ID and clear permission state (a telephone interconnect permit is held for the
+            // whole call and only cleared by the control channel)
+            if (!m_authoritative && m_permittedDstId != 0U && !m_permittedTelInt) {
                 m_permittedDstId = 0U;
             }
 
             // has the talkgroup hang timer expired while the modem is in a non-listening state?
             if (m_rfState != RS_RF_LISTENING) {
-                processFrameLoss();
+                processFrameLoss(RF_LOSS_TYPE_TG_HANG_NOT_LISTENING);
             }
         }
     }
@@ -981,8 +967,15 @@ void Control::clock()
             if (m_rfLossWatchdog.hasExpired()) {
                 m_rfLossWatchdog.stop();
 
-                processFrameLoss();
+                processFrameLoss(RF_LOSS_TYPE_LOSS_WATCHDOG);
             }
+        }
+    }
+
+    if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired()) {
+        if (!m_netTimeout) {
+            LogInfoEx(LOG_NET, "timeout timer has expired, traffic will not transmit");
+            m_netTimeout = true;
         }
     }
 
@@ -1000,9 +993,23 @@ void Control::clock()
                 if (m_affiliations->isGranted(m_netLastDstId)) {
                     if (!m_dedicatedControl) {
                         m_affiliations->releaseGrant(m_netLastDstId, false);
-                        m_network->resetP25();
+                        if (m_network != nullptr)
+                            m_network->resetP25();
                     }
                 }
+
+                if (m_network != nullptr)
+                    m_network->resetP25();
+
+                m_netState = RS_NET_IDLE;
+                m_tailOnIdle = true;
+
+                m_voice->resetNet();
+                m_data->resetReceivedBlocks();
+
+                m_netTimeoutTimer.stop();
+                m_netTimeout = false;
+                m_networkWatchdog.stop();
 
                 m_netLastDstId = 0U;
                 m_netLastSrcId = 0U;
@@ -1031,34 +1038,37 @@ void Control::clock()
         m_rfCallTermSrcId = 0U;
     }
 
-    if (m_netState == RS_NET_AUDIO || m_netState == RS_NET_DATA) {
+    if (m_networkWatchdog.isRunning()) {
         m_networkWatchdog.clock(ms);
 
-        if (m_networkWatchdog.isRunning() && m_networkWatchdog.hasExpired()) {
+        if (m_networkWatchdog.hasExpired() && !(m_netState == RS_NET_IDLE && m_rfState != RS_RF_LISTENING)) {
             if (m_netState == RS_NET_AUDIO) {
                 if (m_voice->m_netFrames > 0.0F) {
+                    ::LogWarning(LOG_NET, "network watchdog has expired, %.1f seconds, %u%% packet loss",
+                        float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
                     ::ActivityLog("P25", false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
                         float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
                 }
             }
             else {
+                ::LogWarning(LOG_NET, "network watchdog has expired");
                 ::ActivityLog("P25", false, "network watchdog has expired");
             }
 
             m_networkWatchdog.stop();
             m_affiliations->releaseGrant(m_voice->m_netLC.getDstId(), false);
 
-            if (m_dedicatedControl) {
-                if (m_network != nullptr)
-                    m_network->resetP25();
-            }
+            if (m_network != nullptr)
+                m_network->resetP25();
 
             m_netState = RS_NET_IDLE;
             m_tailOnIdle = true;
 
             m_voice->resetNet();
+            m_data->resetReceivedBlocks();
 
-            m_netTimeout.stop();
+            m_netTimeoutTimer.stop();
+            m_netTimeout = false;
         }
     }
 
@@ -1070,7 +1080,7 @@ void Control::clock()
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
         m_frameLossCnt = 0U;
     if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
-        processFrameLoss();
+        processFrameLoss(RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD);
     }
 
     // clock data and trunking
@@ -1100,6 +1110,13 @@ void Control::clockSiteData(uint32_t ms)
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 m_control->writeAdjSSNetwork();
                 if (m_network != nullptr) {
+                    // network announce our unit registration table if we have one
+                    if (m_affiliations->unitRegSize() > 0) {
+                        auto regs = m_affiliations->unitRegTable();
+                        m_network->announceUnitRegUpdate(regs);
+                    }
+
+                    // network announce our affiliation table if we have one
                     if (m_affiliations->grpAffSize() > 0) {
                         auto affs = m_affiliations->grpAffTable();
                         m_network->announceAffiliationUpdate(affs);
@@ -1245,7 +1262,7 @@ void Control::clockSiteData(uint32_t ms)
 
 /* Permits a TGID on a non-authoritative host. */
 
-void Control::permittedTG(uint32_t dstId, bool dataPermit)
+void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt)
 {
     if (m_authoritative) {
         return;
@@ -1255,16 +1272,22 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit)
         if (dstId == 0U)
             LogInfoEx(LOG_P25, "non-authoritative TG unpermit");
         else
-            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u", dstId);
+            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u, telInt = %u", dstId, telInt);
     }
 
     // if this a unpermit ensure we write TDUs
     if (m_permittedDstId != 0U && dstId == 0U) {
         for (uint8_t i = 0; i < 2; i++)
             writeRF_TDU(true);
+
+        m_networkWatchdog.stop();
+        m_voice->resetNet();
+        m_data->resetReceivedBlocks();
+        m_netState = RS_NET_IDLE;
     }
 
     m_permittedDstId = dstId;
+    m_permittedTelInt = (dstId != 0U) && telInt;
 
     // is this a data permit?
     if (dataPermit && m_sndcpSupport) {
@@ -1357,18 +1380,18 @@ uint32_t Control::getLastSrcId() const
 
 /* Add data frame to the data ring buffer. */
 
-void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
+bool Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
 {
     assert(data != nullptr);
 
     std::lock_guard<std::mutex> lock(s_queueLock);
 
     if (!net) {
-        if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())
-            return;
+        if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired())
+            return false;
     } else {
-        if (m_netTimeout.isRunning() && m_netTimeout.hasExpired())
-            return;
+        if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired())
+            return false;
     }
 
     if (m_debug) {
@@ -1383,16 +1406,16 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
     if (imm) {
         // resize immediate queue if necessary (this shouldn't really ever happen)
         uint32_t space = m_txImmQueue.freeSpace();
-        if (space < (length + 1U)) {
+        if (space < (length + 2U)) {
             if (!net) {
                 uint32_t queueLen = m_txImmQueue.length();
                 m_txImmQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
                 LogError(LOG_P25, "overflow in the P25 queue while writing imm data; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", space, length, queueLen, m_txImmQueue.length(), fifoSpace);
-                return;
+                return false;
             }
             else {
                 LogError(LOG_P25, "overflow in the P25 queue while writing imm network data; queue free is %u, needed %u, fifoSpace = %u", space, length, fifoSpace);
-                return;
+                return false;
             }
         }
 
@@ -1402,24 +1425,22 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
         else
             lenBuffer[0U] = 0x00U;
         lenBuffer[1U] = length & 0xFFU;
-        m_txImmQueue.addData(lenBuffer, 2U);
 
-        m_txImmQueue.addData(data, length);
-        return;
+        return m_txImmQueue.addData(lenBuffer, 2U) && m_txImmQueue.addData(data, length);
     }
 
     // resize queue if necessary (this shouldn't really ever happen)
     uint32_t space = m_txQueue.freeSpace();
-    if (space < (length + 1U)) {
+    if (space < (length + 2U)) {
         if (!net) {
             uint32_t queueLen = m_txQueue.length();
             m_txQueue.resize(queueLen + P25_LDU_FRAME_LENGTH_BYTES);
             LogError(LOG_P25, "overflow in the P25 queue while writing data; queue free is %u, needed %u; resized was %u is %u, fifoSpace = %u", space, length, queueLen, m_txQueue.length(), fifoSpace);
-            return;
+            return false;
         }
         else {
             LogError(LOG_P25, "overflow in the P25 queue while writing network data; queue free is %u, needed %u, fifoSpace = %u", space, length, fifoSpace);
-            return;
+            return false;
         }
     }
 
@@ -1429,9 +1450,8 @@ void Control::addFrame(const uint8_t* data, uint32_t length, bool net, bool imm)
     else
         lenBuffer[0U] = 0x00U;
     lenBuffer[1U] = length & 0xFFU;
-    m_txQueue.addData(lenBuffer, 2U);
 
-    m_txQueue.addData(data, length);
+    return m_txQueue.addData(lenBuffer, 2U) && m_txQueue.addData(data, length);
 }
 
 /* Process a data frames from the network. */
@@ -1453,6 +1473,7 @@ void Control::processNetwork()
     if (m_netState != RS_NET_DATA) {
         // don't process network frames if the RF modem isn't in a listening state
         if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
+            m_networkWatchdog.start();
             return;
         }
     }
@@ -1502,6 +1523,8 @@ void Control::processNetwork()
 
             return;
         }
+
+        m_networkWatchdog.start();
 
         uint32_t blockLength = GET_UINT24(buffer, 8U);
         uint8_t totalBlocks = data[20U] + 1U;
@@ -1589,8 +1612,6 @@ void Control::processNetwork()
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);
 
-    m_networkWatchdog.start();
-
     if (m_debug) {
         Utils::dump(2U, "* !!! P25 Network Frame", data.get(), frameLength);
     }
@@ -1609,6 +1630,8 @@ void Control::processNetwork()
                 break;
             }
 
+            m_networkWatchdog.start();
+
             m_voice->processNetwork(data.get(), frameLength, control, lsd, duid, frameType);
             break;
 
@@ -1616,14 +1639,21 @@ void Control::processNetwork()
         case DUID::TDULC:
             // is this an TDU with a grant demand?
             if (duid == DUID::TDU && m_enableControl && grantDemand) {
-                if (m_disableNetworkGrant) {
-                    return;
-                }
-
                 // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
                 // demands
                 if (!m_dedicatedControl && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
                     return;
+                }
+
+                // if we're non-dedicated control, and if either of the talkgroup hang timers are running, ignore the grant demand
+                if (!m_dedicatedControl) {
+                    if (m_rfTGHang.isRunning() && !m_rfTGHang.hasExpired()) {
+                        return;
+                    }
+
+                    if (m_netTGHang.isRunning() && !m_netTGHang.hasExpired()) {
+                        return;
+                    }
                 }
 
                 // validate source RID
@@ -1631,9 +1661,23 @@ void Control::processNetwork()
                     return;
                 }
 
-                // validate the target ID, if the target is a talkgroup
-                if (!acl::AccessControl::validateTGId(dstId)) {
-                    return;
+                // a telephone interconnect grant demand targets the subscriber unit in dstId
+                bool telInt = (lco == LCO::TEL_INT_VCH_USER) && control.isStandardMFId();
+                if (telInt) {
+                    if (!m_control->m_telephoneInterconnect) {
+                        return;
+                    }
+
+                    // validate the target RID
+                    if (!acl::AccessControl::validateSrcId(dstId)) {
+                        return;
+                    }
+                }
+                else {
+                    // validate the target ID, if the target is a talkgroup
+                    if (!acl::AccessControl::validateTGId(dstId)) {
+                        return;
+                    }
                 }
 
                 if (grantEncrypt)
@@ -1643,30 +1687,49 @@ void Control::processNetwork()
                     (control.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                     (control.getPriority() & 0x07U);                                    // Priority
 
-                if (m_verbose) {
-                    LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, encrypted = %u", srcId, dstId, unitToUnit, grantEncrypt);
+                if (m_verbose && !m_hideRemoteGrantLog) {
+                    LogInfoEx(LOG_NET, P25_TSDU_STR " remote grant demand, srcId = %u, dstId = %u, unitToUnit = %u, telInt = %u, encrypted = %u", srcId, dstId, unitToUnit, telInt, grantEncrypt);
                 }
 
                 // are we denying the grant?
                 if (grantDenial) {
-                    m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (!unitToUnit) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH);
+                    if (telInt) {
+                        // the telephone interconnect gateway could not complete the call for the unit
+                        m_control->writeRF_TSDU_Deny(dstId, WUID_FNE, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_TELE_INT_DIAL);
+                    }
+                    else {
+                        m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_PTT_COLLIDE, (!unitToUnit) ? TSBKO::IOSP_GRP_VCH : TSBKO::IOSP_UU_VCH);
+                    }
                     return;
                 }
 
-                // perform grant response logic
-                m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit, true);
-/*
-                if (!m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit, true))
-                {
-                    LogError(LOG_NET, P25_TSDU_STR " call rejected, network call not granted, dstId = %u", dstId);
-                    return;
+                if (!m_affiliations->isGranted(dstId)) {
+                    // perform grant response logic
+                    if (m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, !unitToUnit && !telInt, true, false, 0U, telInt)) {
+                        m_netLastSrcId = srcId;
+                        m_netLastDstId = dstId;
+                    }
                 }
-*/
+                else if (telInt) {
+                    // repeated telephone interconnect grant demands keep the call's grant alive
+                    m_affiliations->touchGrant(dstId);
+                }
+
                 return;
             }
 
+            // telephone interconnect grants are held for the whole call and only released by the TDULC that ends it
+            if (m_enableControl && m_dedicatedControl && m_control->m_telIntGrants.find(dstId) != m_control->m_telIntGrants.end()) {
+                if (duid == DUID::TDULC) {
+                    if (m_verbose) {
+                        LogInfoEx(LOG_NET, P25_TDULC_STR ", telephone interconnect call end, srcId = %u, dstId = %u", srcId, dstId);
+                    }
+
+                    m_affiliations->releaseGrant(dstId, false);
+                }
+            }
             // if we're a control channel and this is a TDU trying to terminate a call release the channel
-            if (duid == DUID::TDU && m_enableControl && m_dedicatedControl && m_explicitTDUGrantRelease) {
+            else if (duid == DUID::TDU && m_enableControl && m_dedicatedControl && m_explicitTDUGrantRelease) {
                 if (srcId == 0U && dstId == 0U) {
                     LogError(LOG_NET, "P25, invalid call, srcId = %u, dstId = %u", srcId, dstId);
                     return;
@@ -1705,20 +1768,40 @@ void Control::processNetwork()
 
 /* Helper to process loss of frame stream from modem. */
 
-void Control::processFrameLoss()
+void Control::processFrameLoss(RPT_RF_LOSS_TYPE type)
 {
+    // resolve the type of RF frame loss into a human-readable string
+    std::string typeStr;
+    switch (type) {
+    case RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD:
+        typeStr = "exceeded frame loss threshold";
+        break;
+    case RF_LOSS_TYPE_LOSS_WATCHDOG:
+        typeStr = "loss watchdog timeout";
+        break;
+    case RF_LOSS_TYPE_IN_CALL_CONTROL:
+        typeStr = "in-call control request";
+        break;
+    case RF_LOSS_TYPE_TG_HANG_NOT_LISTENING:
+        typeStr = "TG hang RF not listening";
+        break;
+    default:
+        typeStr = "no loss type set BUGBUG";
+        break;
+    }
+
     if (m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
-                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
+            ::ActivityLog("P25", true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
+                typeStr.c_str(), float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
         }
         else {
-            ::ActivityLog("P25", true, "transmission lost, %.1f seconds, BER: %.1f%%, loss count: %u",
-                float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
+            ::ActivityLog("P25", true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, loss count: %u",
+                typeStr.c_str(), float(m_voice->m_rfFrames) / 5.56F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
         }
 
-        LogInfoEx(LOG_RF, P25_TDU_STR ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
-            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+        LogInfoEx(LOG_RF, P25_TDU_STR ", transmission lost, %s, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%", 
+            typeStr.c_str(), m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         m_affiliations->releaseGrant(m_voice->m_rfLC.getDstId(), false);
         if (!m_enableControl) {
@@ -1734,6 +1817,7 @@ void Control::processFrameLoss()
         m_rfLastDstId = 0U;
         m_rfLastSrcId = 0U;
         m_rfTGHang.stop();
+        m_rfLossWatchdog.stop();
 
         m_rfVoiceCallTermTimeout.stop();
         m_rfCallTermSrcId = 0U;
@@ -1741,7 +1825,8 @@ void Control::processFrameLoss()
 
         m_tailOnIdle = true;
 
-        m_rfTimeout.stop();
+        m_rfTimeoutTimer.stop();
+        m_rfTimeout = false;
         m_txQueue.clear();
 
         if (m_network != nullptr)
@@ -1753,12 +1838,14 @@ void Control::processFrameLoss()
         m_rfLastDstId = 0U;
         m_rfLastSrcId = 0U;
         m_rfTGHang.stop();
+        m_rfLossWatchdog.stop();
 
         m_tailOnIdle = true;
 
         m_data->resetRF();
 
-        m_rfTimeout.stop();
+        m_rfTimeoutTimer.stop();
+        m_rfTimeout = false;
         m_txQueue.clear();
     }
 
@@ -1794,7 +1881,7 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
                     m_voice->m_rfLC.setDstId(dstId);
                 }
 
-                processFrameLoss();
+                processFrameLoss(RF_LOSS_TYPE_IN_CALL_CONTROL);
 
                 m_rfLastDstId = 0U;
                 m_rfLastSrcId = 0U;
@@ -2056,9 +2143,14 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
         dataPermit = (bool)req["dataPermit"].get<bool>();
     }
 
+    bool telInt = false;
+    if (req["telInt"].is<bool>()) {
+        telInt = (bool)req["telInt"].get<bool>();
+    }
+
     // LogDebugEx(LOG_P25, "Control::RPC_permittedTG()", "callback, dstId = %u, dataPermit = %u", dstId, dataPermit);
 
-    permittedTG(dstId, dataPermit);
+    permittedTG(dstId, dataPermit, telInt);
 }
 
 /* (RPC Handler) Active TGID list from the authoritative CC host. */
@@ -2186,17 +2278,82 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
     }
 }
 
-/* Helper to setup and generate LLA AM1 parameters. */
+/* Helper to retrieve LLA AM1 parameters for a given source ID. */
 
-void Control::generateLLA_AM1_Parameters()
+bool Control::getLLA_AM1_Parameters(uint32_t srcId, uint8_t* rs, uint8_t* crs, uint8_t* ks)
 {
-    ::memset(m_llaRS, 0x00U, AUTH_KEY_LENGTH_BYTES);
-    ::memset(m_llaCRS, 0x00U, AUTH_KEY_LENGTH_BYTES);
-    ::memset(m_llaKS, 0x00U, AUTH_KEY_LENGTH_BYTES);
-
-    if (m_llaK == nullptr) {
-        return;
+    auto it = m_llaRID.find(srcId);
+    if (it != m_llaRID.end()) {
+        LLAParams* params = it->second;
+        if (params != nullptr) {
+            if (rs != nullptr)
+                ::memcpy(rs, params->rs, AUTH_KEY_LENGTH_BYTES);
+            if (crs != nullptr)
+                ::memcpy(crs, params->crs, AUTH_KEY_LENGTH_BYTES);
+            if (ks != nullptr)
+                ::memcpy(ks, params->ks, AUTH_KEY_LENGTH_BYTES);
+            return true;
+        }
+    } else {
+        LogWarning(LOG_P25, "P25, LLA key not found requesting from FNE, rsi = %u", srcId);
+        m_network->writeLLAKeyReq(srcId);
     }
+
+    return false;
+}
+
+/* Helper to clear LLA AM1 parameters for a given source ID. */
+
+void Control::clearLLA_AM1_Parameters(uint32_t srcId)
+{
+    auto it = m_llaRID.find(srcId);
+    if (it != m_llaRID.end()) {
+        LLAParams* params = it->second;
+        if (params != nullptr) {
+            if (params->k != nullptr) {
+                delete[] params->k;
+            }
+
+            delete[] params->rs;
+            delete[] params->crs;
+            delete[] params->ks;
+
+            delete params;
+        }
+        m_llaRID.erase(it);
+
+        if (m_verbose) {
+            LogInfoEx(LOG_P25, "P25, cleared LLA AM1 parameters, rsi = %u", srcId);
+        }
+    }
+}
+
+/* Helper to process a FNE KMM LLA response. */
+
+void Control::processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* rspKi, uint8_t keyLength)
+{
+    using namespace p25::kmm;
+
+    if (rspKi == nullptr)
+        return;
+
+    LogInfoEx(LOG_P25, "P25, upstream master LLA enc. key, rsi = %u", srcId);
+
+    // initialize LLAParams structure
+    LLAParams* params = new LLAParams();
+    params->k = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+    ::memset(params->k, 0x00U, AUTH_KEY_LENGTH_BYTES);
+
+    uint8_t keyData[P25DEF::MAX_ENC_KEY_LENGTH_BYTES];
+    rspKi->getKey(keyData);
+    ::memcpy(params->k, keyData, AUTH_KEY_LENGTH_BYTES);
+
+    params->rs = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+    ::memset(params->rs, 0x00U, AUTH_KEY_LENGTH_BYTES);
+    params->crs = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+    ::memset(params->crs, 0x00U, AUTH_KEY_LENGTH_BYTES);
+    params->ks = new uint8_t[AUTH_KEY_LENGTH_BYTES];
+    ::memset(params->ks, 0x00U, AUTH_KEY_LENGTH_BYTES);
 
     crypto::AES* aes = new crypto::AES(crypto::AESKeyLength::AES_128);
 
@@ -2214,21 +2371,42 @@ void Control::generateLLA_AM1_Parameters()
 
     // expand RS to 16 bytes
     for (uint32_t i = 0; i < AUTH_RAND_SEED_LENGTH_BYTES; i++)
-        m_llaRS[i] = RS[i];
+        params->rs[i] = RS[i];
 
     // complement RS
     for (uint32_t i = 0; i < AUTH_KEY_LENGTH_BYTES; i++)
-        m_llaCRS[i] = ~m_llaRS[i];
+        params->crs[i] = ~params->rs[i];
 
     // perform crypto
-    uint8_t* KS = aes->encryptECB(m_llaRS, AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), m_llaK);
-    ::memcpy(m_llaKS, KS, AUTH_KEY_LENGTH_BYTES);
+    uint8_t* KS = aes->encryptECB(params->rs, AUTH_KEY_LENGTH_BYTES * sizeof(uint8_t), params->k);
+    ::memcpy(params->ks, KS, AUTH_KEY_LENGTH_BYTES);
 
     if (m_verbose) {
-        LogInfoEx(LOG_P25, "P25, generated LLA AM1 parameters");
+        LogInfoEx(LOG_P25, "P25, generated LLA AM1 parameters, rsi = %u", srcId);
     }
 
     // cleanup
     delete[] KS;
     delete aes;
+
+    // store the parameters
+    auto it = m_llaRID.find(srcId);
+    if (it == m_llaRID.end()) {
+        m_llaRID[srcId] = params;
+    }
+    else {
+        clearLLA_AM1_Parameters(srcId);
+        m_llaRID[srcId] = params;
+    }
+
+    // check if the source ID is currently awaiting registration, if so re-issue the auth demand which
+    // likely deferred earlier due to missing LLA parameters
+    if (std::find(m_control->m_llaDeferredAuthList.begin(), m_control->m_llaDeferredAuthList.end(), srcId) != m_control->m_llaDeferredAuthList.end()) {
+        if (m_verbose) {
+            LogInfoEx(LOG_P25, "P25, re-issuing deferred auth demand for rsi = %u", srcId);
+        }
+        
+        m_control->writeRF_TSDU_Auth_Dmd(srcId);
+        m_control->m_llaDeferredAuthList.erase(std::remove(m_control->m_llaDeferredAuthList.begin(), m_control->m_llaDeferredAuthList.end(), srcId), m_control->m_llaDeferredAuthList.end());
+    }
 }

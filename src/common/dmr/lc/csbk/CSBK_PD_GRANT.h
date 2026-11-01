@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements PD_GRANT - Private Data Channel Grant
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_PD_GRANT : public CSBK {
+            class DVM_COMMON_API CSBK_PD_GRANT : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_PD_GRANT class.

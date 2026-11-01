@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -16,8 +16,10 @@
 #if !defined(__HOST_FNE_H__)
 #define __HOST_FNE_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
+#include "common/json/json.h"
 #include "common/lookups/RadioIdLookup.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/lookups/AdjSiteMapLookup.h"
@@ -27,7 +29,7 @@
 #include "network/TrafficNetwork.h"
 #include "network/MetadataNetwork.h"
 #include "network/PeerNetwork.h"
-#include "restapi/RESTAPI.h"
+#include "fne/restapi/RESTAPI.h"
 #include "CryptoContainer.h"
 
 #include <string>
@@ -38,10 +40,15 @@
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API DMRPacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
+namespace network { namespace callhandler { class HOST_SW_API TagP25P2Data; } }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
 
@@ -80,6 +87,9 @@ public:
     int run();
 
 private:
+#if defined(CATCH2_TEST_COMPILATION)
+    friend class FNETestHooks;
+#endif
     const std::string& m_confFile;
     yaml::Node m_conf;
 
@@ -89,6 +99,7 @@ private:
     friend class network::callhandler::packetdata::DMRPacketData;
     friend class network::callhandler::TagP25Data;
     friend class network::callhandler::packetdata::P25PacketData;
+    friend class network::callhandler::TagP25P2Data;
     friend class network::callhandler::TagNXDNData;
     friend class network::callhandler::TagAnalogData;
     network::TrafficNetwork* m_network;
@@ -102,10 +113,12 @@ private:
 
     bool m_dmrEnabled;
     bool m_p25Enabled;
+    bool m_p25P2Enabled;
     bool m_nxdnEnabled;
     bool m_analogEnabled;
 
     lookups::RadioIdLookup* m_ridLookup;
+    lookups::RadioAliasLookup* m_ridAliasLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
     lookups::PeerListLookup* m_peerListLookup;
     lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
@@ -123,8 +136,8 @@ private:
     bool m_allowActivityTransfer;
     bool m_allowDiagnosticTransfer;
 
-    friend class RESTAPI;
-    RESTAPI* m_RESTAPI;
+    friend class fne_restapi::RESTAPI;
+    fne_restapi::RESTAPI* m_RESTAPI;
 
     /**
      * @brief Reads basic configuration parameters from the INI.
@@ -214,6 +227,27 @@ private:
     void processPeerP25InCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, 
         uint32_t peerId, uint32_t ssrc, uint32_t streamId);
     /**
+     * @brief Processes P25 Phase 2 peer network traffic.
+     * @param data Buffer containing P25 data.
+     * @param length Length of the buffer.
+     * @param streamId Stream ID.
+     * @param fneHeader FNE header for the packet.
+     * @param rtpHeader RTP header for the packet.
+     */
+    void processPeerP25P2(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t streamId, 
+        const network::frame::RTPFNEHeader& fneHeader, const network::frame::RTPHeader& rtpHeader);
+    /**
+     * @brief Helper to process an P25 Phase 2 In-Call Control message.
+     * @param command In-Call Control Command.
+     * @param dstId Destination ID.
+     * @param slot Slot Number.
+     * @param peerId Peer ID.
+     * @param ssrc Synchronization Source.
+     * @param streamId Stream ID.
+     */
+    void processPeerP25P2InCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slot,
+        uint32_t peerId, uint32_t ssrc, uint32_t streamId);
+    /**
      * @brief Processes NXDN peer network traffic.
      * @param data Buffer containing NXDN data.
      * @param length Length of the buffer.
@@ -265,6 +299,12 @@ private:
      * @param peerNetwork Peer network instance.
      */
     void processPeerReplicaNotify(network::PeerNetwork* peerNetwork);
+    /**
+     * @brief Processes peer patch status replication.
+     * @param peerNetwork Peer network instance.
+     * @param obj Patch status JSON payload.
+     */
+    void processPeerPatchStatus(network::PeerNetwork* peerNetwork, json::object obj);
 };
 
 #endif // __HOST_FNE_H__

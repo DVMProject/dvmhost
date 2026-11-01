@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -38,6 +38,7 @@
 #include "common/p25/lc/tsbk/IOSP_MSG_UPDT.h"
 #include "common/p25/lc/tsbk/IOSP_RAD_MON.h"
 #include "common/p25/lc/tsbk/IOSP_STS_UPDT.h"
+#include "common/p25/lc/tsbk/IOSP_TELE_INT_ANS.h"
 #include "common/p25/lc/tsbk/IOSP_U_REG.h"
 #include "common/p25/lc/tsbk/IOSP_UU_ANS.h"
 #include "common/p25/lc/tsbk/IOSP_UU_VCH.h"
@@ -50,6 +51,7 @@
 #include "common/p25/lc/tsbk/ISP_LOC_REG_REQ.h"
 #include "common/p25/lc/tsbk/ISP_SNDCP_CH_REQ.h"
 #include "common/p25/lc/tsbk/ISP_SNDCP_REC_REQ.h"
+#include "common/p25/lc/tsbk/ISP_TELE_INT_PSTN_REQ.h"
 #include "common/p25/lc/tsbk/ISP_U_DEREG_REQ.h"
 #include "common/p25/lc/tsbk/OSP_ADJ_STS_BCAST.h"
 #include "common/p25/lc/tsbk/OSP_AUTH_FNE_RESP.h"
@@ -75,6 +77,7 @@
 #include "common/p25/lc/tsbk/OSP_SNDCP_CH_GNT.h"
 #include "common/p25/lc/tsbk/OSP_SYNC_BCAST.h"
 #include "common/p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
+#include "common/p25/lc/tsbk/OSP_TELE_INT_VCH_GRANT.h"
 #include "common/p25/lc/tsbk/OSP_TIME_DATE_ANN.h"
 #include "common/p25/lc/tsbk/OSP_TSBK_RAW.h"
 #include "common/p25/lc/tsbk/OSP_U_DEREG_ACK.h"
@@ -93,11 +96,13 @@
 #include "common/p25/lc/tsbk/mbt/MBT_ISP_AUTH_SU_DMD.h"
 #include "common/p25/lc/tsbk/mbt/MBT_ISP_CAN_SRV_REQ.h"
 #include "common/p25/lc/tsbk/mbt/MBT_ISP_GRP_AFF_Q_RSP.h"
+#include "common/p25/lc/tsbk/mbt/MBT_ISP_TELE_INT_DIAL_REQ.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_ADJ_STS_BCAST.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_AUTH_DMD.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_GRP_VCH_GRANT.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_NET_STS_BCAST.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_RFSS_STS_BCAST.h"
+#include "common/p25/lc/tsbk/mbt/MBT_OSP_TELE_INT_VCH_GRANT.h"
 #include "common/p25/lc/tsbk/mbt/MBT_OSP_UU_VCH_GRANT.h"
 
 namespace p25
@@ -114,7 +119,7 @@ namespace p25
              * @brief Helper class to instantiate an instance of a TSBK.
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API TSBKFactory {
+            class DVM_COMMON_API TSBKFactory {
             public:
                 /**
                  * @brief Initializes a new instance of the TSBKFactory class.
@@ -133,10 +138,10 @@ namespace p25
                  */
                 static std::unique_ptr<TSBK> createTSBK(const uint8_t* data, bool rawTSBK = false);
                 /**
-                 * @brief Create an instance of a AMBT.
+                 * @brief Create an instance of a SMBT/AMBT.
                  * @param[in] dataHeader P25 PDU data header
                  * @param[in] blocks P25 PDU data blocks
-                 * @returns AMBT* Instance of a AMBT representing the decoded data.
+                 * @returns AMBT* Instance of a SMBT/AMBT representing the decoded data.
                  */
                 static std::unique_ptr<AMBT> createAMBT(const data::DataHeader& dataHeader, const data::DataBlock* blocks);
 

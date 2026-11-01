@@ -30,7 +30,7 @@ namespace dmr
      * @brief Represents DMR slot type.
      * @ingroup dmr
      */
-    class HOST_SW_API SlotType {
+    class DVM_COMMON_API SlotType {
     public:
         /**
          * @brief Initializes a new instance of the SlotType class.

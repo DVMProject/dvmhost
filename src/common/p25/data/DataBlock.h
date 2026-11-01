@@ -34,7 +34,7 @@ namespace p25
          * @brief Represents a data block for PDU P25 packets.
          * @ingroup p25_pdu
          */
-        class HOST_SW_API DataBlock {
+        class DVM_COMMON_API DataBlock {
         public:
             /**
              * @brief Initializes a copy instance of the DataBlock class.

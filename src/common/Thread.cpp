@@ -41,7 +41,6 @@ bool Thread::run()
     if (m_started)
         return m_started;
 
-    m_started = true;
 #if defined(_WIN32)
     m_thread = ::CreateThread(NULL, 0, &helper, this, 0, NULL);
     if (m_thread == NULL) {
@@ -55,6 +54,7 @@ bool Thread::run()
         return false;
     }
 #endif // defined(_WIN32)
+    m_started = true;
 
     return true;
 }

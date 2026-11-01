@@ -34,7 +34,7 @@ namespace p25
          * @brief Represents a SNDCP PDU context deactivation.
          * @ingroup p25_sndcp
          */
-        class HOST_SW_API SNDCPCtxDeactivation : public SNDCPPacket {
+        class DVM_COMMON_API SNDCPCtxDeactivation : public SNDCPPacket {
         public:
             /**
              * @brief Initializes a new instance of the SNDCPCtxDeactivation class.

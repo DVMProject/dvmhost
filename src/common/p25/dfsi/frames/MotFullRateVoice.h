@@ -53,7 +53,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotFullRateVoice {
+            class DVM_COMMON_API MotFullRateVoice {
             public:
                 static const uint8_t LENGTH = 17U;
                 static const uint8_t SHORTENED_LENGTH = 14U;
@@ -74,7 +74,8 @@ namespace p25
                 ~MotFullRateVoice();
 
                 /**
-                 * @brief 
+                 * @brief Gets the size of the full rate voice frame.
+                 * @returns uint32_t Size of the full rate voice frame.
                  */
                 uint32_t size();
                 /**

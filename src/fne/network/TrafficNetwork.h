@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -15,6 +15,10 @@
  * @defgroup fne_callhandler Call Handlers
  * @brief Implementation for the FNE call handlers.
  * @ingroup fne_network
+ *
+ * @defgroup fne_packetdata Packet Data Handlers
+ * @brief Implementation for the FNE packet data handlers.
+ * @ingroup fne_callhandler
  *
  * @file TrafficNetwork.h
  * @ingroup fne_network
@@ -29,6 +33,7 @@
 #include "common/concurrent/shared_unordered_map.h"
 #include "common/json/json.h"
 #include "common/lookups/RadioIdLookup.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/lookups/AdjSiteMapLookup.h"
@@ -41,23 +46,38 @@
 #include "fne/network/FNEPeerConnection.h"
 #include "fne/network/SpanningTree.h"
 #include "fne/network/HAParameters.h"
+#include "fne/PatchStatusRegistry.h"
 #include "fne/CryptoContainer.h"
+
+#include "fne/sqlite3/sqlite3.h"
 
 #include <string>
 #include <cstdint>
 #include <unordered_map>
+#include <memory>
 #include <mutex>
+#include <shared_mutex>
+#include <atomic>
+#include <array>
+#if defined(CATCH2_TEST_COMPILATION)
+#include <functional>
+#endif
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 class HOST_SW_API HostFNE;
-class HOST_SW_API RESTAPI;
+namespace fne_restapi { class HOST_SW_API RESTAPI; }
 namespace network { namespace callhandler { class HOST_SW_API TagDMRData; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API DMRPacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
+namespace network { namespace callhandler { class HOST_SW_API TagP25P2Data; } }
 namespace network { class HOST_SW_API P25OTARService; }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
@@ -83,13 +103,23 @@ namespace network
         STATE_NXDN = 3U,        //!< NXDN
     };
 
-    #define INFLUXDB_ERRSTR_DISABLED_SRC_RID "disabled source RID"
-    #define INFLUXDB_ERRSTR_DISABLED_DST_RID "disabled destination RID"
-    #define INFLUXDB_ERRSTR_INV_TALKGROUP "illegal/invalid talkgroup"
-    #define INFLUXDB_ERRSTR_DISABLED_TALKGROUP "disabled talkgroup"
-    #define INFLUXDB_ERRSTR_INV_SLOT "invalid slot for talkgroup"
-    #define INFLUXDB_ERRSTR_RID_NOT_PERMITTED "RID not permitted for talkgroup"
-    #define INFLUXDB_ERRSTR_ILLEGAL_RID_ACCESS "illegal/unknown RID attempted access"
+    #define DB_ERRSTR_DISABLED_SRC_RID "disabled source RID"
+    #define DB_ERRSTR_DISABLED_DST_RID "disabled destination RID"
+    #define DB_ERRSTR_INV_TALKGROUP "illegal/invalid talkgroup"
+    #define DB_ERRSTR_DISABLED_TALKGROUP "disabled talkgroup"
+    #define DB_ERRSTR_ENC_TALKGROUP_CLR "encrypted talkgroup with clear traffic"
+    #define DB_ERRSTR_CLR_TALKGROUP_ENC "clear talkgroup with encrypted traffic"
+    #define DB_ERRSTR_INV_SLOT "invalid slot for talkgroup"
+    #define DB_ERRSTR_RID_NOT_PERMITTED "RID not permitted for talkgroup"
+    #define DB_ERRSTR_ILLEGAL_RID_ACCESS "illegal/unknown RID attempted access"
+    #define DB_ERRSTR_CALL_NOT_PERMITTED "call not permitted for talkgroup"
+
+    const uint32_t MAX_HARD_CONN_CAP = 250U;
+    const size_t PEER_STATE_LOCK_STRIPES = 256U;
+
+    const int32_t REPEATER_PCKT_HDR_LEN = 8;
+    const int32_t REPEATER_AUTH_HASH_LEN = 32;
+    const int32_t TRANSFER_PCKT_HDR_LEN = 11;
 
     // ---------------------------------------------------------------------------
     //  Class Prototypes
@@ -130,6 +160,7 @@ namespace network
         uint8_t* buffer = nullptr;          //!< Raw data buffer
 
         uint64_t pktRxTime;                 //!< Packet receive time
+        bool healthMetadataTracked = false; //!< Health task originated on metadata port.
     };
 
     // ---------------------------------------------------------------------------
@@ -156,6 +187,7 @@ namespace network
          * @param reportPeerPing Flag indicating whether peer pinging is reported.
          * @param dmr Flag indicating whether DMR is enabled.
          * @param p25 Flag indicating whether P25 is enabled.
+         * @param p25P2 Flag indicating whether P25 Phase 2 is enabled.
          * @param nxdn Flag indicating whether NXDN is enabled.
          * @param analog Flag indicating whether analog is enabled.
          * @param parrotDelay Delay for end of call to parrot TG playback.
@@ -168,7 +200,7 @@ namespace network
          */
         TrafficNetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
             std::string identity, bool debug, bool kmfDebug, bool verbose, bool reportPeerPing,
-            bool dmr, bool p25, bool nxdn, bool analog,
+            bool dmr, bool p25, bool p25P2, bool nxdn, bool analog,
             uint32_t parrotDelay, bool parrotGrantDemand, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
             uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
         /**
@@ -182,6 +214,11 @@ namespace network
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
         void setOptions(yaml::Node& conf, bool printOptions);
+        /**
+         * @brief Sets packet-data options from the top-level VTUN configuration.
+         * @param conf VTUN configuration node.
+         */
+        void setPacketDataOptions(yaml::Node& conf);
 
         /**
          * @brief Gets the current status of the network.
@@ -200,6 +237,10 @@ namespace network
          */
         callhandler::TagP25Data* p25TrafficHandler() const { return m_tagP25; }
         /**
+         * @brief Gets the instance of the P25 Phase 2 call handler.
+         */
+        callhandler::TagP25P2Data* p25P2TrafficHandler() const { return m_tagP25P2; }
+        /**
          * @brief Gets the instance of the NXDN call handler.
          * @returns callhandler::TagNXDNData* Instance of the TagNXDNData call handler.
          */
@@ -211,15 +252,16 @@ namespace network
         callhandler::TagAnalogData* analogTrafficHandler() const { return m_tagAnalog; }
 
         /**
-         * @brief Sets the instances of the Radio ID, Talkgroup ID Peer List, and Crypto lookup tables.
+         * @brief Sets the instances of the Radio ID, Radio Alias, Talkgroup ID, Peer List, and Crypto lookup tables.
          * @param ridLookup Radio ID Lookup Table Instance
+         * @param ridAliasLookup Radio Alias Lookup Table Instance
          * @param tidLookup Talkgroup Rules Lookup Table Instance
          * @param peerListLookup Peer List Lookup Table Instance
          * @param cryptoLookup Crypto Container Lookup Table Instance
          * @param adjSiteMapLookup Adjacent Site Map Lookup Table Instance
          */
-        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup, lookups::PeerListLookup* peerListLookup,
-            CryptoContainer* cryptoLookup, lookups::AdjSiteMapLookup* adjSiteMapLookup);
+        void setLookups(lookups::RadioIdLookup* ridLookup, lookups::RadioAliasLookup* ridAliasLookup, lookups::TalkgroupRulesLookup* tidLookup, 
+            lookups::PeerListLookup* peerListLookup, CryptoContainer* cryptoLookup, lookups::AdjSiteMapLookup* adjSiteMapLookup);
         /**
          * @brief Sets endpoint preshared encryption key.
          * @param presharedKey Encryption preshared key for networking.
@@ -236,6 +278,12 @@ namespace network
          * @param offendingPeerId Offending Peer ID.
          */
         void processNetworkTreeDisconnect(uint32_t peerId, uint32_t offendingPeerId);
+        /**
+         * @brief Processes a replicated console patch status update.
+         * @param peerId Peer ID that delivered the replication update.
+         * @param obj Patch status JSON payload.
+         */
+        void processReplicatedPatchStatus(uint32_t peerId, json::object obj);
 
         /**
          * @brief Helper to process an downstream peer In-Call Control message.
@@ -289,6 +337,10 @@ namespace network
         void setPeerReplica(bool replica);
 
     private:
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::FNETestHooks;
+        std::function<void(uint32_t, FrameQueue::OpcodePair)> m_testPeerWriteHandler;
+#endif
         friend class MetadataNetwork;
         friend class callhandler::TagDMRData;
         friend class callhandler::packetdata::DMRPacketData;
@@ -296,6 +348,8 @@ namespace network
         friend class callhandler::TagP25Data;
         friend class callhandler::packetdata::P25PacketData;
         callhandler::TagP25Data* m_tagP25;
+        friend class callhandler::TagP25P2Data;
+        callhandler::TagP25P2Data* m_tagP25P2;
         friend class callhandler::TagNXDNData;
         callhandler::TagNXDNData* m_tagNXDN;
         friend class callhandler::TagAnalogData;
@@ -304,7 +358,7 @@ namespace network
         friend class P25OTARService;
         P25OTARService* m_p25OTARService;
 
-        friend class ::RESTAPI;
+        friend class ::fne_restapi::RESTAPI;
         HostFNE* m_host;
 
         std::string m_address;
@@ -312,10 +366,13 @@ namespace network
 
         std::string m_password;
 
+        bool m_encryptedTrafficConn;
+
         bool m_isReplica;
 
         bool m_dmrEnabled;
         bool m_p25Enabled;
+        bool m_p25P2Enabled;
         bool m_nxdnEnabled;
         bool m_analogEnabled;
 
@@ -326,8 +383,17 @@ namespace network
         uint32_t m_parrotOverrideSrcId;
 
         bool m_kmfServicesEnabled;
+        uint32_t m_kmfRsi;
+        bool m_kmfAllowRID0;
+        bool m_kmfForgeSrcLLId;
+        bool m_kmfEncKeyRequest;
+        uint8_t* m_kmfPresharedKey;
+        bool m_kmfWarmStart;
+        bool m_kmfChangeoverAfterRekey;
+        bool m_kmfDebug;
 
         lookups::RadioIdLookup* m_ridLookup;
+        lookups::RadioAliasLookup* m_ridAliasLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::PeerListLookup* m_peerListLookup;
         lookups::AdjSiteMapLookup* m_adjSiteMapLookup;
@@ -336,14 +402,23 @@ namespace network
 
         NET_CONN_STATUS m_status;
 
-        typedef std::pair<const uint32_t, network::FNEPeerConnection*> PeerMapPair;
-        concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-        concurrent::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
-        typedef std::pair<const uint32_t, lookups::AffiliationLookup*> PeerAffiliationMapPair;
-        concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
+        using PeerConnectionPtr = std::shared_ptr<network::FNEPeerConnection>;
+        using PeerMapPair = std::pair<uint32_t, PeerConnectionPtr>;
+        std::unordered_map<uint32_t, PeerConnectionPtr> m_peers;
+        mutable std::shared_timed_mutex m_peersMutex;
+        std::unordered_map<uint32_t, json::array> m_peerReplicaPeers;
+        mutable std::mutex m_peerReplicaPeersMutex;
+        typedef std::pair<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> PeerAffiliationMapPair;
+        concurrent::unordered_map<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> m_peerAffiliations;
+        mutable std::mutex m_peerAffiliationsMutex;
+        mutable std::mutex m_affiliationUpdateMutex;
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
+        static std::timed_mutex s_kekKeyQueueMutex;
+        std::unordered_map<uint32_t, uint32_t> m_peerReplicaKEKKeyQueue; // value packs algId in high byte, and RSI in low 24 bits
+
+        fne_lookups::AffiliationLookup* m_globalAff;
 
         SpanningTree* m_treeRoot;
         std::mutex m_treeLock;
@@ -357,6 +432,9 @@ namespace network
         Timer m_updateLookupTimer;
         Timer m_haUpdateTimer;
 
+        PatchStatusRegistry m_patchStatusRegistry;
+        bool m_patchStatusEnabled;
+
         uint32_t m_softConnLimit;
 
         bool m_enableSpanningTree;
@@ -367,6 +445,7 @@ namespace network
 
         bool m_disallowAdjStsBcast;
         bool m_disallowExtAdjStsBcast;
+        bool m_disallowRadioMonitor;
         bool m_allowConvSiteAffOverride;
         bool m_disallowCallTerm;
         bool m_restrictGrantToAffOnly;
@@ -385,36 +464,130 @@ namespace network
         bool m_disallowU2U;
         std::vector<uint32_t> m_dropU2UPeerTable;
 
+        bool m_enableMetrics;
+        bool m_metricsLogRawData;
+
         bool m_enableInfluxDB;
         std::string m_influxServerAddress;
         uint16_t m_influxServerPort;
         std::string m_influxServerToken;
         std::string m_influxOrg;
         std::string m_influxBucket;
-        bool m_influxLogRawData;
         influxdb::ServerInfo m_influxServer;
+
+        bool m_enableSQLite;
+        std::string m_sqliteDBFile;
+        sqlite3* m_sqliteDB;
+        uint32_t m_sqlitePruneAfterDays;
+        uint32_t m_sqlitePruneIntervalMinutes;
 
         bool m_jitterBufferEnabled;
         uint16_t m_jitterMaxSize;
         uint32_t m_jitterMaxWait;
 
         ThreadPool m_threadPool;
+        ThreadPool m_metadataUpdateThreadPool;
 
+        // passive health telemetry -- these counters are intentionally lock-free so
+        // the REST thread can diagnose a stalled worker without waiting
+        // for a lock held by that worker
+        std::atomic<uint64_t> m_healthDataPlaneEpoch;
+        std::atomic<uint64_t> m_healthLastDataPlaneTick;
+        std::atomic<uint64_t> m_healthPacketsReceived;
+        std::atomic<uint64_t> m_healthProtocolPacketsReceived;
+        std::atomic<uint64_t> m_healthLastPacketReceived;
+        std::atomic<uint64_t> m_healthLastProtocolPacketReceived;
+        std::atomic<uint64_t> m_healthTasksSubmitted;
+        std::atomic<uint64_t> m_healthTasksCompleted;
+        std::atomic<uint64_t> m_healthLastTaskProgress;
+        std::atomic<uint64_t> m_healthTaskEnqueueFailures;
+
+        /**
+         * @brief Represents the state of a metadata update for a given peer ID.
+         * @ingroup fne_network
+         */
+        struct MetadataUpdateState {
+            /**
+             * @brief Flag indicating whether a metadata update is currently in flight for this peer ID.
+             */
+            bool inFlight = false;
+            /**
+             * @brief Flag indicating whether a metadata update is pending for this peer ID.
+             */
+            bool pending = false;
+        };
+        std::mutex m_metadataUpdateMutex;
+        std::unordered_map<uint32_t, MetadataUpdateState> m_metadataUpdateState;
+
+        bool m_packetDataBroadcast;
+        uint32_t m_sndcpStartAddr;
+        uint32_t m_sndcpEndAddr;
         bool m_disablePacketData;
         bool m_dumpPacketData;
         bool m_verbosePacketData;
 
-        uint32_t m_sndcpStartAddr;
-        uint32_t m_sndcpEndAddr;
-
-        int32_t m_totalActiveCalls;
-        uint64_t m_totalCallsProcessed;
-        uint64_t m_totalCallCollisions;
+        uint32_t m_vtunQueueMaxFrames;
+        uint32_t m_vtunQueueMaxBytes;
 
         bool m_logDenials;
         bool m_logUpstreamCallStartEnd;
         bool m_reportPeerPing;
         bool m_verbose;
+
+        static std::array<std::mutex, PEER_STATE_LOCK_STRIPES> s_peerStateLocks;
+
+        /**
+         * @brief Gets the mutex for a specific peer ID.
+         * @param peerId The ID of the peer.
+         * @return A reference to the mutex associated with the peer ID.
+         */
+        static std::mutex& getPeerStateLock(uint32_t peerId) { return s_peerStateLocks[peerId % PEER_STATE_LOCK_STRIPES]; }
+
+        /**
+         * @brief Finds a peer while retaining its lifetime for the caller.
+         * @param peerId Peer ID to find.
+         * @return Shared peer connection, or nullptr when the peer is absent.
+         */
+        PeerConnectionPtr findPeer(uint32_t peerId) const;
+        /**
+         * @brief Gets the current number of registered peers.
+         * @return Number of registered peers.
+         */
+        size_t peerCount() const;
+        /**
+         * @brief Creates a stable snapshot of the registered peers.
+         * @return Peer IDs and shared peer connections.
+         */
+        std::vector<PeerMapPair> peersSnapshot() const;
+        /**
+         * @brief Adds or replaces a peer connection.
+         * @param peerId Peer ID to store.
+         * @param connection Shared peer connection.
+         */
+        void storePeer(uint32_t peerId, const PeerConnectionPtr& connection);
+        /**
+         * @brief Removes a peer connection from the registry.
+         * @param peerId Peer ID to remove.
+         * @return Removed shared peer connection, or nullptr when absent.
+         */
+        PeerConnectionPtr removePeer(uint32_t peerId);
+
+        /**
+         * @brief Replaces the active peer list received from a replica peer.
+         * @param peerId Peer ID that supplied the active peer list.
+         * @param peers Active peer list reported by the replica peer.
+         */
+        void updateReplicatedPeers(uint32_t peerId, const json::array& peers);
+        /**
+         * @brief Removes the active peer list associated with a replica peer.
+         * @param peerId Peer ID whose replicated active peer list should be removed.
+         */
+        void eraseReplicatedPeers(uint32_t peerId);
+        /**
+         * @brief Creates a stable snapshot of all replicated active peer lists.
+         * @return Map of replica peer IDs to their reported active peer lists.
+         */
+        std::unordered_map<uint32_t, json::array> replicatedPeersSnapshot() const;
 
         /**
          * @brief Entry point to parrot handler thread.
@@ -422,11 +595,148 @@ namespace network
          * @returns void* (Ignore)
          */
         static void* threadParrotHandler(void* arg);
+
+        /*
+        ** Packet Processing
+        */
+
+        using PacketHandlerFunc = void (*)(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+
+        /**
+         * @brief Implements the packet handler functions for the TrafficNetwork class.
+         */
+        class PacketHandler {
+        public:
+            /**
+             * @brief Handles NET_FUNC::PROTOCOL packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void protocol(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+
+            /**
+             * @brief Handles NET_FUNC::RPTL packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void repeaterLogin(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+            /**
+             * @brief Handles NET_FUNC::RPTK packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void repeaterAuth(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+            /**
+             * @brief Handles NET_FUNC::RPTC packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void repeaterConfig(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+            /**
+             * @brief Handles NET_FUNC::RPT_DISC packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void repeaterDisconnect(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+
+            /**
+             * @brief Handles NET_FUNC::PING packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void ping(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+
+            /**
+             * @brief Handles NET_FUNC::GRANT_REQ packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void grantRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+
+            /**
+             * @brief Handles NET_FUNC::INCALL_CTRL packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void inCallControl(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+
+            /**
+             * @brief Handles NET_FUNC::KEY_REQ packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void keyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+            /**
+             * @brief Handles NET_FUNC::KEY_KEK_REQ packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void kekKeyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+        };
+
         /**
          * @brief Entry point to process a given network packet.
          * @param req Instance of the NetPacketRequest structure.
          */
         static void taskNetworkRx(NetPacketRequest* req);
+
+        /*
+        ** General Helper Functions
+        */
+
+        /**
+         * @brief Checks if the passed length is valid for a repeater authentication packet.
+         * @param length Length of the packet.
+         * @returns bool True, if the length is valid for a repeater authentication packet, otherwise false.
+         */
+        static constexpr bool validRepeaterAuthLength(int length) { return length == REPEATER_PCKT_HDR_LEN + REPEATER_AUTH_HASH_LEN; }
+
+        /**
+         * @brief Checks if the passed length is valid for a repeater configuration packet.
+         * @param length Length of the packet.
+         * @returns bool True, if the length is valid for a repeater configuration packet, otherwise false.
+         */
+        static constexpr bool validRepeaterConfigLength(int length) { return length > REPEATER_PCKT_HDR_LEN && length <= (int)(DATA_PACKET_LENGTH); }
 
         /**
          * @brief Checks if the passed peer ID is blocked from unit-to-unit traffic.
@@ -468,16 +778,93 @@ namespace network
          */
         bool erasePeerAffiliations(uint32_t peerId);
         /**
+         * @brief Helper to get the peer affiliations entry for a peer.
+         * @param peerId Peer ID.
+         * @returns std::shared_ptr<fne_lookups::AffiliationLookup> Shared affiliations lookup instance.
+         */
+        std::shared_ptr<fne_lookups::AffiliationLookup> getPeerAffiliations(uint32_t peerId) const;
+        /**
+         * @brief Helper to create a snapshot of all peer affiliation entries.
+         * @returns std::vector<PeerAffiliationMapPair> Snapshot of peer affiliation entries.
+         */
+        std::vector<PeerAffiliationMapPair> peerAffiliationsSnapshot() const;
+        /**
+         * @brief Adds or updates one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param dstId Talkgroup ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint32_t dstId);
+        /**
+         * @brief Removes one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerAffiliation(uint32_t peerId, uint32_t srcId);
+        /**
+         * @brief Replaces one peer's affiliations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param affiliations Complete source-to-talkgroup affiliation snapshot.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerAffiliations(uint32_t peerId, const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Rebuilds the aggregate downstream affiliation snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::unordered_map<uint32_t, uint32_t> Aggregate affiliation snapshot.
+         */
+        std::unordered_map<uint32_t, uint32_t> buildAggregatedAffiliations();
+        /**
+         * @brief Publishes an aggregate downstream affiliation snapshot upstream.
+         * @param affiliations Complete aggregate source-to-talkgroup affiliation snapshot.
+         */
+        void publishAggregatedAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Adds one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param ssrc Originating peer ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc);
+        /**
+         * @brief Removes one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerUnitRegistration(uint32_t peerId, uint32_t srcId);
+        /**
+         * @brief Replaces one peer's unit registrations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param registrations Complete source ID registration snapshot.
+         * @param ssrc Originating peer ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerUnitRegistrations(uint32_t peerId, const std::vector<uint32_t>& registrations, uint32_t ssrc);
+        /**
+         * @brief Rebuilds the aggregate downstream unit registration snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::vector<uint32_t> Aggregate unit registration snapshot.
+         */
+        std::vector<uint32_t> buildAggregatedUnitRegistrations();
+        /**
+         * @brief Publishes an aggregate downstream unit registration snapshot upstream.
+         * @param registrations Complete aggregate source ID registration snapshot.
+         */
+        void publishAggregatedUnitRegistrations(const std::vector<uint32_t>& registrations);
+        /**
          * @brief Helper to disconnect a downstream peer.
          * @param peerId Peer ID.
          * @param connection Instance of the FNEPeerConnection class.
          */
-        void disconnectPeer(uint32_t peerId, FNEPeerConnection* connection);
+        void disconnectPeer(uint32_t peerId, const PeerConnectionPtr& connection);
         /**
          * @brief Helper to erase the peer from the peers list.
-         * @note This does not delete or otherwise free the FNEConnection instance!
+         * @note The connection remains alive while any worker retains a shared reference.
          * @param peerId Peer ID.
-         * @returns bool True, if peer was deleted, otherwise false.
          */
         void erasePeer(uint32_t peerId);
         /**
@@ -507,7 +894,7 @@ namespace network
          * @param streamId Stream ID for the login sequence.
          * @param connection Instance of the FNEPeerConnection class.
          */
-        void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, FNEPeerConnection* connection);
+        void setupRepeaterLogin(uint32_t peerId, uint32_t streamId, const PeerConnectionPtr& connection);
 
         /**
          * @brief Helper to process an In-Call Control message.
@@ -532,6 +919,55 @@ namespace network
          * @param req Instance of the MetadataUpdateRequest structure.
          */
         static void taskMetadataUpdate(MetadataUpdateRequest* req);
+
+        /*
+        ** Console Patch Registry
+        */
+
+        /**
+         * @brief Gets the console patch status registry.
+         * @return PatchStatusRegistry& Patch status registry.
+         */
+        PatchStatusRegistry& patchStatusRegistry() { return m_patchStatusRegistry; }
+        /**
+         * @brief Flag indicating whether console patch status handling is enabled.
+         * @returns bool True, if enabled.
+         */
+        bool patchStatusEnabled() const { return m_patchStatusEnabled; }
+        /**
+         * @brief Sends patch status registry state to one console peer.
+         * @param peerId Destination peer ID.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if the message was queued, otherwise false.
+         */
+        bool writePatchStatusToPeer(uint32_t peerId, json::object obj);
+        /**
+         * @brief Broadcasts patch status registry state to connected console peers.
+         * @param obj Patch status JSON payload.
+         * @param exceptPeerId Optional peer ID to skip.
+         */
+        void writePatchStatusToConsoles(json::object obj, uint32_t exceptPeerId = 0U);
+        /**
+         * @brief Replicates patch status state to neighboring FNE peers.
+         * @param obj Patch status JSON payload.
+         * @param exceptPeerId Optional peer ID to skip.
+         */
+        void replicatePatchStatus(json::object obj, uint32_t exceptPeerId = 0U);
+
+        /**
+         * @brief Serializes and queues a patch status transfer payload.
+         * @param connection Destination connection.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if message was queued, otherwise false.
+         */
+        bool writePatchStatusPayload(FNEPeerConnection* connection, json::object obj);
+        /**
+         * @brief Serializes and queues a patch status replication payload.
+         * @param connection Destination neighbor connection.
+         * @param obj Patch status JSON payload.
+         * @returns bool True, if message was queued, otherwise false.
+         */
+        bool writePatchStatusReplicationPayload(FNEPeerConnection* connection, json::object obj);
 
         /*
         ** ACL Message Writing
@@ -629,6 +1065,13 @@ namespace network
          * @param streamId Stream ID for this message.
          */
         void writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId);
+        /**
+         * @brief Helper to send the list of radio aliases to the specified peer.
+         * @note This doesn't have a data layout document because it is *only* sent as a packet buffered message.
+         * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
+         */
+        void writeRadioAliasList(uint32_t peerId, uint32_t streamId);
         /**
          * @brief Helper to send the list of peers to the specified peer.
          * @note This doesn't have a data layout document because it is *only* sent as a packet buffered message.
@@ -791,6 +1234,23 @@ namespace network
         bool writePeerNAK(uint32_t peerId, const char* tag, NET_CONN_NAK_REASON reason, sockaddr_storage& addr, uint32_t addrLen);
 
         /*
+        ** Key Request
+        */
+
+        /** 
+         * @brief Sends a TEK query to each enabled upstream replica master. 
+         * @param kid Key ID for the TEK query.
+         * @param algId Algorithm ID for the TEK query.
+         * @param requestingRSI RSI of the requesting entity.
+         */
+        bool requestUpstreamTEK(uint16_t kid, uint8_t algId, uint32_t requestingRSI);
+        /** 
+         * @brief Sends a UKEK query to each enabled upstream replica master. 
+         * @param rsi RSI of the requesting entity.
+         */
+        bool requestUpstreamUKEK(uint32_t rsi);
+
+        /*
         ** Internal KMM Callback.
         */
 
@@ -798,9 +1258,242 @@ namespace network
          * @brief Helper to process a FNE KMM TEK response.
          * @param ki Key Item.
          * @param algId Algorithm ID.
+         * @param algId Algorithm ID.
          * @param keyLength Length of key in bytes.
          */
         void processTEKResponse(p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
+
+        /**
+         * @brief Helper to process a FNE KMM UKEK/LLA response.
+         * @param srcId Source Radio ID for the UKEK/LLA response.
+         * @param ki Key Item.
+         * @param keyLength Length of key in bytes.
+         */
+        void processKEKResponse(uint32_t srcId, p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
+
+        /*
+        ** Metrics Helpers
+        */
+
+        /**
+         * @brief Implements the packet handler functions for the TrafficNetwork class.
+         */
+        class MetricsLogging {
+        public:
+            /**
+             * @brief Initializes metric sinks for the specified TrafficNetwork instance.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void initialize(TrafficNetwork* network);
+            /**
+             * @brief Finalizes metric sinks for the specified TrafficNetwork instance.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void finalize(TrafficNetwork* network);
+
+            /**
+             * @brief Increments the active call counter.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void incrementActiveCalls(TrafficNetwork* network);
+            /**
+             * @brief Decrements the active call counter with floor at zero.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void decrementActiveCalls(TrafficNetwork* network);
+            /**
+             * @brief Resets the active call counter to zero.
+             */
+            static void resetActiveCalls();
+            /**
+             * @brief Increments the total processed calls counter.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void incrementCallsProcessed(TrafficNetwork* network);
+            /**
+             * @brief Increments the total call collisions counter.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void incrementCallCollisions(TrafficNetwork* network);
+            /**
+             * @brief Increments the total call switches counter.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void incrementCallSwitches(TrafficNetwork* network);
+            /**
+             * @brief Resets the total processed calls counter to zero.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void resetCallsProcessed(TrafficNetwork* network);
+            /**
+             * @brief Resets the total call collisions counter to zero.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void resetCallCollisions(TrafficNetwork* network);
+            /**
+             * @brief Resets the total call switches counter to zero.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void resetCallSwitches(TrafficNetwork* network);
+            /**
+             * @brief Gets the active call counter.
+             * @return Active call counter value.
+             */
+            static int32_t getTotalActiveCalls();
+            /**
+             * @brief Gets the total processed calls counter.
+             * @return Total processed calls counter value.
+             */
+            static uint64_t getTotalCallsProcessed();
+            /**
+             * @brief Gets the total call collisions counter.
+             * @return Total call collisions counter value.
+             */
+            static uint64_t getTotalCallCollisions();
+            /**
+             * @brief Gets the total call switches counter.
+             * @return Total call switches counter value.
+             */
+            static uint64_t getTotalCallSwitches();
+
+            /**
+             * @brief Logs a activity transfer event.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param peerId Peer ID.
+             * @param identity Peer identity string.
+             * @param msg Activity payload.
+             */
+            static void logActivity(TrafficNetwork* network, uint32_t peerId, const std::string& identity, const std::string& msg);
+
+            /**
+             * @brief Logs a activity transfer event.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param peerId Peer ID.
+             * @param identity Peer identity string.
+             * @param msg Activity payload.
+             */
+            static void logDiag(TrafficNetwork* network, uint32_t peerId, const std::string& identity, const std::string& msg);
+            /**
+             * @brief Logs a call event.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param mode Call mode.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @param durationMs Call duration in milliseconds.
+             */
+            static void logCallEvent(TrafficNetwork* network, const char* mode, uint32_t peerId, uint32_t streamId, uint32_t srcId, uint32_t dstId, uint64_t durationMs);
+            /**
+             * @brief Logs a call event with slot number.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param mode Call mode.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @param durationMs Call duration in milliseconds.
+             * @param slotNo Slot number.
+             */
+            static void logCallEvent(TrafficNetwork* network, const char* mode, uint32_t peerId, uint32_t streamId, uint32_t srcId, uint32_t dstId, uint64_t durationMs, uint8_t slotNo);
+            /**
+             * @brief Logs a call error event.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @param message Error message.
+             */
+            static void logCallErrorEvent(TrafficNetwork* network, uint32_t peerId, uint32_t streamId, uint32_t srcId, uint32_t dstId, const std::string& message);
+            /**
+             * @brief Logs a call error event with slot number.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @param message Error message.
+             * @param slotNo Slot number.
+             */
+            static void logCallErrorEvent(TrafficNetwork* network, uint32_t peerId, uint32_t streamId, uint32_t srcId, uint32_t dstId, const std::string& message, uint8_t slotNo);
+            /**
+             * @brief Logs a call collision event with slot number.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param srcId Source ID.
+             * @param dstId Destination ID.
+             * @param slotNo Slot number.
+             * @param rxPeerId Received peer ID.
+             * @param rxStreamId Received stream ID.
+             * @param rxSrcId Received source ID.
+             * @param rxDstId Received destination ID.
+             * @param rxSlot Received slot number.
+             */
+            static void logCallCollisionEvent(TrafficNetwork* network, uint32_t peerId, uint32_t streamId, uint32_t srcId, uint32_t dstId, uint8_t slotNo,
+                uint32_t rxPeerId, uint32_t rxStreamId, uint32_t rxSrcId, uint32_t rxDstId, uint8_t rxSlot);
+            /**
+             * @brief Logs a P25 TSBK raw event.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param peerId Peer ID.
+             * @param lco LCO tag value.
+             * @param tsbk TSBK description.
+             * @param raw Raw payload string.
+             */
+            static void logTSBKEvent(TrafficNetwork* network, uint32_t peerId, const std::string& lco, const std::string& tsbk, const std::string& raw);
+            /**
+             * @brief Logs a DMR CSBK raw event.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param peerId Peer ID.
+             * @param lco LCO tag value.
+             * @param csbk CSBK description.
+             * @param raw Raw payload string.
+             */
+            static void logCSBKEvent(TrafficNetwork* network, uint32_t peerId, const std::string& lco, const std::string& csbk, const std::string& raw);
+
+        private:
+            static std::atomic<int32_t> s_totalActiveCalls;
+            static std::atomic<uint64_t> s_totalCallsProcessed;
+            static std::atomic<uint64_t> s_totalCallCollisions;
+            static std::atomic<uint64_t> s_totalCallSwitches;
+
+            /**
+             * @brief Checks if the SQLite database for the specified TrafficNetwork instance is blank.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @return True if the SQLite database is blank, false otherwise.
+             */
+            static bool isSQLiteBlank(TrafficNetwork* network);
+            /**
+             * @brief Initializes the SQLite database for the specified TrafficNetwork instance.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void initializeSQLite(TrafficNetwork* network);
+            /**
+             * @brief Ensures SQLite tables required for persisted metrics counters exist.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @return True if the table exists (or was created), false on error.
+             */
+            static bool ensureSQLiteCounterTable(TrafficNetwork* network);
+            /**
+             * @brief Ensures all SQLite metrics tables and indexes exist.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @return True if all schema objects exist (or were created), false on error.
+             */
+            static bool ensureSQLiteMetricTables(TrafficNetwork* network);
+            /**
+             * @brief Loads persisted metrics counters from SQLite.
+             * @param network Pointer to the TrafficNetwork instance.
+             */
+            static void loadSQLiteCounters(TrafficNetwork* network);
+            /**
+             * @brief Persists a single metrics counter to SQLite.
+             * @param network Pointer to the TrafficNetwork instance.
+             * @param key Counter key.
+             * @param value Counter value.
+             */
+            static void persistSQLiteCounter(TrafficNetwork* network, const char* key, uint64_t value);
+        };
     };
 } // namespace network
 

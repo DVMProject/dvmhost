@@ -1,0 +1,11 @@
+#
+# Digital Voice Modem - Radio Alias List
+#
+# This file sets the radio aliases. This file should always end with an empty line!
+#
+#   * RID               [REQUIRED] - Unique Radio ID.
+#   * ALIAS             [REQUIRED] - Textual string representing an alias for this radio ID entry.
+#
+# Entry Format: "RID,Alias,<newline>"
+# Example:
+#1234,RID Alias,
