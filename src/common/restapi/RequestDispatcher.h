@@ -518,6 +518,77 @@ namespace restapi
             reply = http::HTTPPayload::statusPayload(http::HTTPPayload::BAD_REQUEST, "application/json");
         }
 
+        /**
+         * @brief Handles an HTTP request asynchronously on the handler executor.
+         * @tparam CompletionHandler Type invoked with the completed reply.
+         * @param request HTTP request.
+         * @param completionHandler Handler invoked with the completed reply.
+         */
+        template<typename CompletionHandler>
+        void handleRequestAsync(const Request& request, CompletionHandler completionHandler)
+        {
+            for (const auto& matcher : m_matchers) {
+                std::smatch what;
+                bool matched = false;
+
+                if (!matcher.second->regex()) {
+                    matched = request.uri.find(matcher.first) != std::string::npos;
+                }
+                else {
+                    matched = std::regex_match(request.uri, what, std::regex(matcher.first));
+                }
+
+                if (!matched)
+                    continue;
+
+                const std::string expression = matcher.first;
+                MatcherTypePtr matchedHandler = matcher.second;
+                Request requestCopy = request;
+                std::smatch whatCopy = what;
+                const uint32_t warnSec = (m_warnSec > 0U) ? m_warnSec : 30U;
+
+                m_executor->submit([matchedHandler, requestCopy, whatCopy, expression, warnSec, completionHandler]() mutable {
+                    Reply workerReply;
+                    const auto started = std::chrono::steady_clock::now();
+
+                    workerReply.headers.add("Access-Control-Allow-Origin", "*");
+                    workerReply.headers.add("Access-Control-Allow-Methods", "*");
+                    workerReply.headers.add("Access-Control-Allow-Headers", "*");
+                    if (requestCopy.method == HTTP_OPTIONS) {
+                        workerReply.status = http::HTTPPayload::OK;
+                    }
+
+                    try {
+                        matchedHandler->handleRequest(requestCopy, workerReply, whatCopy);
+                    }
+                    catch (const std::exception& e) {
+                        ::LogError(LOG_REST, "REST handler exception, method = %s, uri = %s, expression = %s, error = %s",
+                            requestCopy.method.c_str(), requestCopy.uri.c_str(), expression.c_str(), e.what());
+                        workerReply = http::HTTPPayload::statusPayload(http::HTTPPayload::INTERNAL_SERVER_ERROR, "application/json");
+                    }
+                    catch (...) {
+                        ::LogError(LOG_REST, "REST handler exception, method = %s, uri = %s, expression = %s",
+                            requestCopy.method.c_str(), requestCopy.uri.c_str(), expression.c_str());
+                        workerReply = http::HTTPPayload::statusPayload(http::HTTPPayload::INTERNAL_SERVER_ERROR, "application/json");
+                    }
+
+                    const uint64_t elapsed = (uint64_t)std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::steady_clock::now() - started).count();
+                    if (elapsed >= warnSec) {
+                        ::LogWarning(LOG_REST, "slow REST handler completed, method = %s, uri = %s, expression = %s, elapsed = %us",
+                            requestCopy.method.c_str(), requestCopy.uri.c_str(), expression.c_str(), (uint32_t)elapsed);
+                    }
+
+                    completionHandler(std::move(workerReply));
+                });
+                return;
+            }
+
+            ::LogError(LOG_REST, "unknown endpoint, uri = %s", request.uri.c_str());
+            Reply reply = http::HTTPPayload::statusPayload(http::HTTPPayload::BAD_REQUEST, "application/json");
+            completionHandler(std::move(reply));
+        }
+
     private:
         typedef std::shared_ptr<MatcherType> MatcherTypePtr;
 

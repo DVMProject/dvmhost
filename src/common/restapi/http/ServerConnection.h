@@ -22,6 +22,7 @@
 #include "common/Utils.h"
 
 #include <array>
+#include <chrono>
 #include <memory>
 #include <limits>
 #include <utility>
@@ -71,10 +72,13 @@ namespace restapi
                 m_socket(std::move(socket)),
                 m_connectionManager(manager),
                 m_requestHandler(handler),
+                m_deadline(m_socket.get_executor()),
                 m_lexer(HTTPLexer(false)),
                 m_continue(false),
                 m_contResult(HTTPLexer::INDETERMINATE),
                 m_headerBytes(0U),
+                m_stopped(false),
+                m_waitingForHandler(false),
                 m_persistent(persistent),
                 m_debug(debug)
             {
@@ -84,12 +88,20 @@ namespace restapi
             /**
              * @brief Start the first asynchronous operation for the connection.
              */
-            void start() { read(); }
+            void start()
+            {
+                armDeadline(REQUEST_TIMEOUT_SECONDS, "request");
+                read();
+            }
             /**
              * @brief Stop all asynchronous operations associated with the connection.
              */
             void stop()
             {
+                m_stopped = true;
+                m_waitingForHandler = false;
+                asio::error_code ignoredError;
+                m_deadline.cancel(ignoredError);
                 try
                 {
                     if (m_socket.is_open()) {
@@ -179,13 +191,23 @@ namespace restapi
                                 m_continue = false;
                                 m_contResult = HTTPLexer::INDETERMINATE;
                                 m_headerBytes = 0U;
-                                m_requestHandler.handleRequest(m_request, m_reply);
+                                armDeadline(HANDLER_TIMEOUT_SECONDS, "handler");
+                                m_waitingForHandler = true;
+                                dispatchRequest(m_requestHandler, m_request,
+                                    [this, self](HTTPPayload reply) mutable {
+                                        asio::post(m_socket.get_executor(), [this, self, reply]() mutable {
+                                            if (m_stopped || !m_waitingForHandler || !m_socket.is_open())
+                                                return;
 
-                                if (m_debug) {
-                                    Utils::dump(1U, "ServerConnection::read(), HTTP Reply Content", (uint8_t*)m_reply.content.c_str(), m_reply.content.length());
-                                }
-
-                                write();
+                                            m_waitingForHandler = false;
+                                            cancelDeadline();
+                                            m_reply = std::move(reply);
+                                            if (m_debug) {
+                                                Utils::dump(1U, "ServerConnection::read(), HTTP Reply Content", (uint8_t*)m_reply.content.c_str(), m_reply.content.length());
+                                            }
+                                            write();
+                                        });
+                                    }, 0);
                             }
                             else if (result == HTTPLexer::BAD) {
                                 m_continue = false;
@@ -227,12 +249,15 @@ namespace restapi
             {
                 auto self = this->shared_from_this();
 
+                armDeadline(WRITE_TIMEOUT_SECONDS, "write");
+
                 if (m_persistent) {
                     m_reply.headers.add("Connection", "keep-alive");
                 }
 
                 auto buffers = m_reply.toBuffers();
                 asio::async_write(m_socket, buffers, [this, self](asio::error_code ec, std::size_t) {
+                    cancelDeadline();
                     if (m_persistent) {
                         m_lexer.reset();
                         m_reply.headers = HTTPHeaders();
@@ -240,6 +265,7 @@ namespace restapi
                         m_reply.content = "";
                         m_request = HTTPPayload();
                         m_headerBytes = 0U;
+                        armDeadline(REQUEST_TIMEOUT_SECONDS, "request");
                         read();
                     }
                     else {
@@ -261,6 +287,72 @@ namespace restapi
                         }
                     }
                 });
+            }
+
+            /**
+             * @brief Dispatches through an asynchronous request-handler interface when available.
+             * @tparam Handler Request-handler type.
+             * @tparam CompletionHandler Completion-handler type.
+             * @param handler Request handler.
+             * @param request HTTP request.
+             * @param completionHandler Handler invoked with the completed reply.
+             * @param priority Overload priority selector.
+             */
+            template<typename Handler, typename CompletionHandler>
+            static auto dispatchRequest(Handler& handler, const HTTPPayload& request, CompletionHandler completionHandler, int priority)
+                -> decltype(handler.handleRequestAsync(request, completionHandler), void())
+            {
+                (void)priority;
+                handler.handleRequestAsync(request, completionHandler);
+            }
+
+            /**
+             * @brief Dispatches through the legacy synchronous request-handler interface.
+             * @tparam Handler Request-handler type.
+             * @tparam CompletionHandler Completion-handler type.
+             * @param handler Request handler.
+             * @param request HTTP request.
+             * @param completionHandler Handler invoked with the completed reply.
+             */
+            template<typename Handler, typename CompletionHandler>
+            static void dispatchRequest(Handler& handler, const HTTPPayload& request, CompletionHandler completionHandler, long)
+            {
+                HTTPPayload reply;
+                handler.handleRequest(request, reply);
+                completionHandler(std::move(reply));
+            }
+
+            /**
+             * @brief Arms the connection deadline for the current operation.
+             * @param timeoutSeconds Deadline duration in seconds.
+             * @param operation Operation name used for diagnostics.
+             */
+            void armDeadline(uint32_t timeoutSeconds, const char* operation)
+            {
+                auto self = this->shared_from_this();
+                m_deadline.expires_from_now(std::chrono::seconds(timeoutSeconds));
+                m_deadline.async_wait([this, self, operation](asio::error_code ec) {
+                    if (!ec && !m_stopped) {
+                        ::LogError(LOG_REST, "HTTP connection timed out during %s", operation);
+                        if (m_waitingForHandler) {
+                            m_waitingForHandler = false;
+                            m_reply = HTTPPayload::statusPayload(HTTPPayload::SERVICE_UNAVAILABLE, "application/json");
+                            write();
+                        }
+                        else {
+                            m_connectionManager.stop(self);
+                        }
+                    }
+                });
+            }
+
+            /**
+             * @brief Cancels the active connection deadline.
+             */
+            void cancelDeadline()
+            {
+                asio::error_code ignoredError;
+                m_deadline.cancel(ignoredError);
             }
 
             /**
@@ -295,6 +387,7 @@ namespace restapi
 
             ConnectionManagerType& m_connectionManager;
             RequestHandlerType& m_requestHandler;
+            asio::steady_timer m_deadline;
 
             std::array<char, 8192> m_buffer;
 
@@ -305,9 +398,14 @@ namespace restapi
             bool m_continue;
             HTTPLexer::ResultType m_contResult;
             size_t m_headerBytes;
+            bool m_stopped;
+            bool m_waitingForHandler;
 
             static constexpr size_t MAX_HTTP_HEADER_LENGTH = 32768U;
             static constexpr size_t MAX_HTTP_CONTENT_LENGTH = 1048576U;
+            static constexpr uint32_t REQUEST_TIMEOUT_SECONDS = 30U;
+            static constexpr uint32_t HANDLER_TIMEOUT_SECONDS = 60U;
+            static constexpr uint32_t WRITE_TIMEOUT_SECONDS = 30U;
 
             bool m_persistent;
             bool m_debug;

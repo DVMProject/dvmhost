@@ -14,6 +14,7 @@
 #include "common/restapi/http/HTTPClient.h"
 #include "common/restapi/http/HTTPPayload.h"
 #include "common/restapi/http/HTTPServer.h"
+#include "common/restapi/RequestDispatcher.h"
 
 #include <asio.hpp>
 #include <array>
@@ -78,6 +79,35 @@ namespace {
         } while (!ec);
 
         REQUIRE(ec == asio::error::eof);
+        return response;
+    }
+
+    /**
+     * @brief Sends a raw HTTP request without using test assertions in the calling thread.
+     * @param port The port to which the HTTP request should be sent.
+     * @param request Complete HTTP request.
+     * @return The raw HTTP response received from the server.
+     */
+    std::string sendRawRequestUnchecked(uint16_t port, const std::string& request)
+    {
+        asio::io_service ioService;
+        asio::ip::tcp::socket socket(ioService);
+        asio::error_code ec;
+        socket.connect(asio::ip::tcp::endpoint(asio::ip::address_v4::loopback(), port), ec);
+        if (ec)
+            return std::string();
+
+        asio::write(socket, asio::buffer(request), ec);
+        if (ec)
+            return std::string();
+
+        std::string response;
+        std::array<char, 4096U> buffer {};
+        do {
+            const size_t length = socket.read_some(asio::buffer(buffer), ec);
+            response.append(buffer.data(), length);
+        } while (!ec);
+
         return response;
     }
 
@@ -401,4 +431,51 @@ TEST_CASE("HTTP server rejects bytes beyond the declared body", "[restapi][http]
 
     REQUIRE(response.find("HTTP/1.0 400 Bad Request\r\n") == 0U);
     REQUIRE(fixture.state->calls == 0U);
+}
+
+TEST_CASE("HTTP server services another connection while a REST handler is running", "[restapi][http][dispatcher][e2e]")
+{
+    std::atomic<bool> slowStarted { false };
+    restapi::DefaultRequestDispatcher dispatcher;
+    dispatcher.match("/slow").get([&slowStarted](const HTTPPayload&, HTTPPayload& reply, const restapi::RequestMatch&) {
+        slowStarted = true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::string content = "slow";
+        reply.payload(content, HTTPPayload::OK, "text/plain");
+    });
+    dispatcher.match("/fast").get([](const HTTPPayload&, HTTPPayload& reply, const restapi::RequestMatch&) {
+        std::string content = "fast";
+        reply.payload(content, HTTPPayload::OK, "text/plain");
+    });
+
+    HTTPServer<restapi::DefaultRequestDispatcher> server("127.0.0.1", 0U, false);
+    server.setHandler(dispatcher);
+    server.open();
+    const uint16_t port = server.localPort();
+    std::thread serverThread([&server]() { server.run(); });
+
+    const std::string slowRequest = "GET /slow HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
+    const std::string fastRequest = "GET /fast HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
+    std::string slowResponse;
+    std::thread slowThread([&]() { slowResponse = sendRawRequestUnchecked(port, slowRequest); });
+
+    const auto startDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (!slowStarted && std::chrono::steady_clock::now() < startDeadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    const bool slowObserved = slowStarted;
+
+    const auto fastStarted = std::chrono::steady_clock::now();
+    const std::string fastResponse = sendRawRequestUnchecked(port, fastRequest);
+    const auto fastElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - fastStarted);
+
+    slowThread.join();
+    server.stop();
+    serverThread.join();
+
+    REQUIRE(slowObserved);
+    REQUIRE(fastResponse.find("HTTP/1.0 200 OK\r\n") == 0U);
+    REQUIRE(responseBody(fastResponse) == "fast");
+    REQUIRE(fastElapsed < std::chrono::milliseconds(400));
+    REQUIRE(responseBody(slowResponse) == "slow");
 }
