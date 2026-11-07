@@ -327,19 +327,45 @@ private:
     static std::mutex s_audioMutex;
     static std::mutex s_networkMutex;
 
-#if defined(_WIN32)
     void* m_decoderState;
     uint16_t m_dcMode;
     void* m_encoderState;
     uint16_t m_ecMode;
 
-    HINSTANCE m_ambeDLL;
     bool m_useExternalVocoder;
 
     int m_frameLengthInBits;
     int m_frameLengthInBytes;
 
+#if defined(_WIN32)
+    HINSTANCE m_ambeDLL;
+
     typedef void(__cdecl* Tambe_init_dec)(void* state, short mode);
+    typedef short(__cdecl* Tambe_get_dec_mode)(void* state);
+    typedef uint32_t(__cdecl* Tambe_voice_dec)(short* samples, short sampleLength, short* packedCodeword, short bitSteal, uint16_t cmode, short n, void* state);
+    typedef void(__cdecl* Tambe_init_enc)(void* state, short mode, short initialize);
+    typedef short(__cdecl* Tambe_get_enc_mode)(void* state);
+    typedef uint32_t(__cdecl* Tambe_voice_enc)(short* packedCodeword, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short, void* state);
+
+    /**
+     * @brief Helper to initialize the use of the external AMBE.DLL binary for DVSI USB-3000.
+     */
+    void initializeAMBEDLL();
+#else
+    void* m_ambeHandle;
+
+    typedef void(*Tambe_init_dec)(void* state, short mode);
+    typedef short(*Tambe_get_dec_mode)(void* state);
+    typedef uint32_t(*Tambe_voice_dec)(short* samples, short sampleLength, short* packedCodeword, short bitSteal, uint16_t cmode, short n, void* state);
+    typedef void(*Tambe_init_enc)(void* state, short mode, short initialize);
+    typedef short(*Tambe_get_enc_mode)(void* state);
+    typedef uint32_t(*Tambe_voice_enc)(short* packedCodeword, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short, void* state);
+
+    /**
+     * @brief Helper to initialize the use of the external AMBE binary for DVSI USB-3000.
+     */
+    void initializeAMBELib();
+#endif // defined(_WIN32)
     /**
      * @brief Initialize the AMBE decoder.
      * @param[out] state Buffer containing the decoder state to initialize.
@@ -347,7 +373,6 @@ private:
      */
     Tambe_init_dec ambe_init_dec;
 
-    typedef short(__cdecl* Tambe_get_dec_mode)(void* state);
     /**
      * @brief Get the current operating state of the AMBE decoder.
      * @param[out] state Buffer containing the decoder state.
@@ -355,7 +380,6 @@ private:
      */
     Tambe_get_dec_mode ambe_get_dec_mode;
 
-    typedef uint32_t(__cdecl* Tambe_voice_dec)(short* samples, short sampleLength, short* packedCodeword, short bitSteal, uint16_t cmode, short n, void* state);
     /**
      * @brief Decode AMBE codeword into PCM samples.
      * @param[out] samples Audio Output (in short samples)
@@ -369,7 +393,6 @@ private:
      */
     Tambe_voice_dec ambe_voice_dec;
 
-    typedef void(__cdecl* Tambe_init_enc)(void* state, short mode, short initialize);
     /**
      * @brief Initialize the AMBE decoder.
      * @param[out] state Buffer containing the ebncoder state to initialize.
@@ -378,7 +401,6 @@ private:
      */
     Tambe_init_enc ambe_init_enc;
 
-    typedef short(__cdecl* Tambe_get_enc_mode)(void* state);
     /**
      * @brief Get the current operating state of the AMBE encoder.
      * @param[out] state Buffer containing the decoder state.
@@ -386,7 +408,6 @@ private:
      */
     Tambe_get_enc_mode ambe_get_enc_mode;
 
-    typedef uint32_t(__cdecl* Tambe_voice_enc)(short* packedCodeword, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short, void* state);
     /**
      * @brief Decode AMBE codeword into PCM samples.
      * @param[out] packedCodeword AMBE codewords.
@@ -400,11 +421,6 @@ private:
      * @returns uint32_t
      */
     Tambe_voice_enc ambe_voice_enc;
-
-    /**
-     * @brief Helper to initialize the use of the external AMBE.DLL binary for DVSI USB-3000.
-     */
-    void initializeAMBEDLL();
 
     /**
      * @brief Helper to unpack the codeword bytes into codeword bits for use with the AMBE decoder.
@@ -455,7 +471,6 @@ private:
      * @returns int
      */
     void ambeEncode(const short* samples, uint32_t sampleLength, uint8_t* codeword);
-#endif // defined(_WIN32)
 
     /**
      * @brief Reads basic configuration parameters from the INI.

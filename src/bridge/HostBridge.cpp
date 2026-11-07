@@ -53,6 +53,7 @@ using namespace network::udp;
 #if !defined(_WIN32)
 #include <unistd.h>
 #include <pwd.h>
+#include <dlfcn.h>
 #endif // !defined(_WIN32)
 
 // ---------------------------------------------------------------------------
@@ -283,20 +284,20 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_rtpTimestamp(INVALID_TS),
     m_udpNetPktSeq(0U),
     m_udpNetLastPktSeq(0U),
-    m_usrpSeqNo(0U)
-#if defined(_WIN32)
-    ,
+    m_usrpSeqNo(0U),
     m_decoderState(nullptr),
     m_dcMode(0U),
     m_encoderState(nullptr),
     m_ecMode(0U),
-    m_ambeDLL(nullptr),
     m_useExternalVocoder(false),
     m_frameLengthInBits(0),
-    m_frameLengthInBytes(0)
+    m_frameLengthInBytes(0),
+#if defined(_WIN32)
+    m_ambeDLL(nullptr)
+#else
+    m_ambeHandle(nullptr)
 #endif // defined(_WIN32)
 {
-#if defined(_WIN32)
     ambe_init_dec = nullptr;
     ambe_get_dec_mode = nullptr;
     ambe_voice_dec = nullptr;
@@ -304,7 +305,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     ambe_init_enc = nullptr;
     ambe_get_enc_mode = nullptr;
     ambe_voice_enc = nullptr;
-#endif // defined(_WIN32)
+
     m_ambeBuffer = new uint8_t[27U];
     ::memset(m_ambeBuffer, 0x00U, 27U);
 
@@ -538,6 +539,9 @@ int HostBridge::run()
 
 #if defined(_WIN32)
     initializeAMBEDLL();
+#else
+    initializeAMBELib();
+#endif // defined(_WIN32)
     if (m_useExternalVocoder) {
         m_decoderState = ::malloc(DECSTATE_SIZE);
         ::memset(m_decoderState, 0x00U, DECSTATE_SIZE);
@@ -562,7 +566,6 @@ int HostBridge::run()
             ambe_init_enc(m_encoderState, HALF_RATE_MODE, 1);
         }
     }
-#endif // defined(_WIN32)
 
     // set the In-Call Control function callback
     if (m_network != nullptr) {
@@ -762,13 +765,20 @@ int HostBridge::run()
 
     delete m_mdcDecoder;
 
+    if (m_encoderState != nullptr) {
+        free(m_encoderState);
+        m_encoderState = nullptr;
+    }
+    if (m_decoderState != nullptr) {
+        free(m_decoderState);
+        m_decoderState = nullptr;
+    }
 #if defined(_WIN32)
-    if (m_encoderState != nullptr)
-        delete m_encoderState;
-    if (m_decoderState != nullptr)
-        delete m_decoderState;
     if (m_ambeDLL != nullptr)
         ::FreeLibrary(m_ambeDLL);
+#else
+    if (m_ambeHandle != nullptr)
+        dlclose(m_ambeHandle);
 #endif // defined(_WIN32)
 
     if (m_localAudio) {
@@ -793,6 +803,9 @@ void HostBridge::initializeAMBEDLL()
 
     // get a handle to the DLL module.
     m_ambeDLL = LoadLibrary(TEXT("AMBE.dll"));
+    if (m_ambeDLL == nullptr)
+        m_ambeDLL = LoadLibrary(TEXT("ambe_native.dll"));
+
     if (m_ambeDLL != nullptr)
     {
         ambe_init_dec = (Tambe_init_dec)GetProcAddress(m_ambeDLL, "ambe_init_dec");
@@ -807,6 +820,36 @@ void HostBridge::initializeAMBEDLL()
         m_useExternalVocoder = true;
     }
 }
+#else
+/* Helper to initialize the use of the external AMBE binary for DVSI USB-3000. */
+
+void HostBridge::initializeAMBELib()
+{
+    m_useExternalVocoder = false;
+
+    m_ambeHandle = dlopen("libambe.so", RTLD_LAZY);
+    if (m_ambeHandle == nullptr)
+        m_ambeHandle = dlopen("./libambe.so", RTLD_LAZY);
+    if (m_ambeHandle == nullptr)
+        m_ambeHandle = dlopen("libambe_native.so", RTLD_LAZY);
+    if (m_ambeHandle == nullptr)
+        m_ambeHandle = dlopen("./libambe_native.so", RTLD_LAZY);
+
+    if (m_ambeHandle != nullptr)
+    {
+        ambe_init_dec = (Tambe_init_dec)dlsym(m_ambeHandle, "ambe_init_dec");
+        ambe_get_dec_mode = (Tambe_get_dec_mode)dlsym(m_ambeHandle, "ambe_get_dec_mode");
+        ambe_voice_dec = (Tambe_voice_dec)dlsym(m_ambeHandle, "ambe_voice_dec");
+
+        ambe_init_enc = (Tambe_init_enc)dlsym(m_ambeHandle, "ambe_init_enc");
+        ambe_get_enc_mode = (Tambe_get_enc_mode)dlsym(m_ambeHandle, "ambe_get_enc_mode");
+        ambe_voice_enc = (Tambe_voice_enc)dlsym(m_ambeHandle, "ambe_voice_enc");
+
+        ::LogInfoEx(LOG_HOST, "Using external USB vocoder.");
+        m_useExternalVocoder = true;
+    }
+}
+#endif // defined(_WIN32)
 
 /* Helper to unpack the codeword bytes into codeword bits for use with the AMBE decoder. */
 
@@ -869,7 +912,7 @@ int HostBridge::ambeDecode(const uint8_t* codeword, uint32_t codewordLength, sho
     ::memcpy(cw.get(), codeword, codewordLength);
 
     // is this a DMR codeword?
-    if (codewordLength > m_frameLengthInBytes && (m_txMode == TX_MODE_DMR || m_txMode == TX_MODE_NXDN) &&
+    if (codewordLength > (uint32_t)m_frameLengthInBytes && (m_txMode == TX_MODE_DMR || m_txMode == TX_MODE_NXDN) &&
         codewordLength == 9)
     {
         // use the vocoder to retrieve the un-ECC'ed and uninterleaved AMBE bits
@@ -881,13 +924,13 @@ int HostBridge::ambeDecode(const uint8_t* codeword, uint32_t codewordLength, sho
         codewordLength = m_frameLengthInBytes;
     }
 
-    if (codewordLength > m_frameLengthInBytes) {
-        ::LogError(LOG_HOST, "Codeword length is > %u", m_frameLengthInBytes);
+    if (codewordLength > (uint32_t)m_frameLengthInBytes) {
+        ::LogError(LOG_HOST, "Codeword length is > %u", (uint32_t)m_frameLengthInBytes);
         return -1;
     }
 
-    if (codewordLength < m_frameLengthInBytes) {
-        ::LogError(LOG_HOST, "Codeword length is < %u", m_frameLengthInBytes);
+    if (codewordLength < (uint32_t)m_frameLengthInBytes) {
+        ::LogError(LOG_HOST, "Codeword length is < %u", (uint32_t)m_frameLengthInBytes);
         return -1;
     }
 
@@ -902,9 +945,9 @@ int HostBridge::ambeDecode(const uint8_t* codeword, uint32_t codewordLength, sho
     ambe_voice_dec(n1.get(), AUDIO_SAMPLES_LENGTH / 2, codewordBits.get(), NO_BIT_STEAL, m_dcMode, 1, m_decoderState);
 
     // combine sample segments into contiguous samples
-    for (int i = 0; i < AUDIO_SAMPLES_LENGTH / 2; i++)
+    for (int i = 0; i < (int)AUDIO_SAMPLES_LENGTH / 2; i++)
         samples[i] = n0[i];
-    for (int i = 0; i < AUDIO_SAMPLES_LENGTH / 2; i++)
+    for (int i = 0; i < (int)AUDIO_SAMPLES_LENGTH / 2; i++)
         samples[i + (AUDIO_SAMPLES_LENGTH / 2)] = n1[i];
 
     return 0; // this always just returns no errors?
@@ -982,13 +1025,13 @@ void HostBridge::ambeEncode(const short* samples, uint32_t sampleLength, uint8_t
 
     // split samples into 2 segments
     std::unique_ptr<short[]> n0 = std::make_unique<short[]>(AUDIO_SAMPLES_LENGTH / 2);
-    for (int i = 0; i < AUDIO_SAMPLES_LENGTH / 2; i++)
+    for (int i = 0; i < (int)AUDIO_SAMPLES_LENGTH / 2; i++)
         n0[i] = samples[i];
 
     ambe_voice_enc(codewordBits.get(), NO_BIT_STEAL, n0.get(), AUDIO_SAMPLES_LENGTH / 2, m_ecMode, 0, 8192, m_encoderState);
 
     std::unique_ptr<short[]> n1 = std::make_unique<short[]>(AUDIO_SAMPLES_LENGTH / 2);
-    for (int i = 0; i < AUDIO_SAMPLES_LENGTH / 2; i++)
+    for (int i = 0; i < (int)AUDIO_SAMPLES_LENGTH / 2; i++)
         n1[i] = samples[i + (AUDIO_SAMPLES_LENGTH / 2)];
 
     ambe_voice_enc(codewordBits.get(), NO_BIT_STEAL, n1.get(), AUDIO_SAMPLES_LENGTH / 2, m_ecMode, 1, 8192, m_encoderState);
@@ -1007,7 +1050,6 @@ void HostBridge::ambeEncode(const short* samples, uint32_t sampleLength, uint8_t
         packBitsToBytes(codewordBits.get(), codeword, m_frameLengthInBytes, m_frameLengthInBits);
     }
 }
-#endif // defined(_WIN32)
 
 /* Reads basic configuration parameters from the YAML configuration file. */
 
