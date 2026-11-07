@@ -43,6 +43,7 @@ if (SHARED_LIBS)
     target_link_libraries(vocoder PRIVATE common)
 else ()
     target_compile_definitions(vocoder PUBLIC VOCODER_STATIC)
+    target_link_libraries(vocoder PRIVATE common)
 endif (SHARED_LIBS)
 target_include_directories(vocoder PRIVATE src src/vocoder)
 

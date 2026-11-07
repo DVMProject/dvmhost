@@ -292,7 +292,7 @@ if (ENABLE_TESTS)
     list(FILTER dvmfnetest_SRC EXCLUDE REGEX "/HostFNE\\.cpp$")
     add_executable(dvmtests ${common_INCLUDE} ${dvmhost_SRC} ${dvmfnetest_SRC} ${dvmtests_SRC} src/remote/RESTClient.cpp)
     target_compile_definitions(dvmtests PUBLIC -DCATCH2_TEST_COMPILATION)
-    target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
+    target_link_libraries(dvmtests PRIVATE Catch2::Catch2WithMain common vocoder ${OPENSSL_LIBRARIES} asio::asio Threads::Threads util)
     target_include_directories(dvmtests PRIVATE ${OPENSSL_INCLUDE_DIR} src src/host src/fne tests)
     if (SHARED_LIBS AND NOT COMPILE_WIN32)
         set_target_properties(dvmtests PROPERTIES

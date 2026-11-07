@@ -810,7 +810,7 @@ void P25PacketData::dispatch(uint32_t peerId)
         ReceiveSequenceResult sequenceResult =
             m_dataLinkManager.acceptReceiveSequence(srcLlId, receivedNs, synchronize,
                 packetFingerprint, expectedNs);
-        if (sequenceResult == ReceiveSequenceResult::DUPLICATE) {
+        if (sequenceResult == ReceiveSequenceResult::DUPLICATE_FRAME) {
             // re-ACK a duplicate, but never deliver the IP datagram twice
             if (status->assembler.getExtendedAddress()) {
                 write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, receivedNs,

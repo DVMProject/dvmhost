@@ -162,7 +162,7 @@ TEST_CASE("P25 LLC state is isolated by LLID", "[p25][packet-data][llc]")
 
     uint8_t expected = 0U;
     CHECK(links.acceptReceiveSequence(1001U, 0U, true, 11U, expected) == ReceiveSequenceResult::ACCEPTED);
-    CHECK(links.acceptReceiveSequence(1001U, 0U, false, 11U, expected) == ReceiveSequenceResult::DUPLICATE);
+    CHECK(links.acceptReceiveSequence(1001U, 0U, false, 11U, expected) == ReceiveSequenceResult::DUPLICATE_FRAME);
     CHECK(links.acceptReceiveSequence(1001U, 1U, false, 12U, expected) == ReceiveSequenceResult::ACCEPTED);
     CHECK(links.acceptReceiveSequence(1001U, 7U, false, 13U, expected) == ReceiveSequenceResult::ACCEPTED);
     CHECK(expected == 2U);
@@ -181,7 +181,7 @@ TEST_CASE("P25 LLC receive sequence wraps and suppresses duplicates", "[p25][pac
 
     REQUIRE(links.acceptReceiveSequence(77U, 7U, false, 21U, expected) == ReceiveSequenceResult::ACCEPTED);
     CHECK(links.acceptReceiveSequence(77U, 0U, false, 22U, expected) == ReceiveSequenceResult::ACCEPTED);
-    CHECK(links.acceptReceiveSequence(77U, 0U, false, 22U, expected) == ReceiveSequenceResult::DUPLICATE);
+    CHECK(links.acceptReceiveSequence(77U, 0U, false, 22U, expected) == ReceiveSequenceResult::DUPLICATE_FRAME);
     CHECK(links.acceptReceiveSequence(77U, 2U, false, 23U, expected) == ReceiveSequenceResult::ACCEPTED);
     CHECK(expected == 1U);
 

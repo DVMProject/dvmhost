@@ -71,7 +71,7 @@ namespace network
                  */
                 enum class ReceiveSequenceResult : uint8_t {
                     ACCEPTED,                   //!< Accepted receive sequence result
-                    DUPLICATE,                  //!< Duplicate receive sequence result
+                    DUPLICATE_FRAME,            //!< Duplicate receive sequence result
                     OUT_OF_SEQUENCE             //!< Out of sequence receive sequence result
                 };
                 /* @} */

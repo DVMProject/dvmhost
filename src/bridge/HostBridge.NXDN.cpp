@@ -198,6 +198,7 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
 
                 m_nxdnCrypto->resetKeystream();
                 m_rxNXDNSACCHLC = lc::RTCH();
+                ::memset(m_rxNXDNSACCHData, 0x00U, sizeof(m_rxNXDNSACCHData));
                 m_rxNXDNSACCHMask = 0U;
                 m_rxNXDNPendingMI = false;
 
@@ -230,13 +231,17 @@ void HostBridge::processNXDNNetwork(uint8_t* buffer, uint32_t length)
         uint8_t quarter = 3U - (uint8_t)voiceSACCH.getStructure();
         if (quarter == 0U) {
             m_rxNXDNSACCHLC = lc::RTCH();
+            ::memset(m_rxNXDNSACCHData, 0x00U, sizeof(m_rxNXDNSACCHData));
             m_rxNXDNSACCHMask = 0U;
         }
 
-        m_rxNXDNSACCHLC.decode(fragment, 18U, quarter * 18U);
+        // RTCH::decode's offset addresses its input; assemble the fragments first.
+        for (uint32_t bit = 0U; bit < 18U; bit++)
+            WRITE_BIT(m_rxNXDNSACCHData, quarter * 18U + bit, READ_BIT(fragment, bit));
         m_rxNXDNSACCHMask |= (uint8_t)(1U << quarter);
 
         if (quarter == 3U && m_rxNXDNSACCHMask == 0x0FU) {
+            m_rxNXDNSACCHLC.decode(m_rxNXDNSACCHData, 72U);
             uint8_t sacchType = m_rxNXDNSACCHLC.getMessageType();
             if (sacchType == MessageType::RTCH_VCALL) {
                 m_rxNXDNLC = m_rxNXDNSACCHLC;
@@ -559,8 +564,8 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
         m_nxdnN = 0U;
     }
 
-    uint8_t* packedAMBE = m_nxdnAMBE + (m_nxdnN * dmr::defines::DMR_AMBE_LENGTH_BYTES);
-    ::memset(packedAMBE, 0x00U, dmr::defines::DMR_AMBE_LENGTH_BYTES);
+    uint8_t* packedAMBE = m_nxdnAMBE + (m_nxdnN * dmr::defines::RAW_AMBE_LENGTH_BYTES);
+    ::memset(packedAMBE, 0x00U, dmr::defines::RAW_AMBE_LENGTH_BYTES);
     for (uint32_t b = 0U; b < 49U; b++)
         WRITE_BIT(packedAMBE, b, rawBits[b] != 0U);
     m_nxdnN++;
@@ -579,7 +584,7 @@ void HostBridge::encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32
         ::memset(packedBits, 0x00U, 13U);
 
         for (uint8_t half = 0U; half < 2U; half++) {
-            uint8_t* ambe = m_nxdnAMBE + ((pair * 2U + half) * dmr::defines::DMR_AMBE_LENGTH_BYTES);
+            uint8_t* ambe = m_nxdnAMBE + ((pair * 2U + half) * dmr::defines::RAW_AMBE_LENGTH_BYTES);
             for (uint32_t b = 0U; b < 49U; b++) {
                 WRITE_BIT(packedBits, (half * 49U) + b, READ_BIT(ambe, b));
             }

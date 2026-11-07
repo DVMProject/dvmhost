@@ -17,6 +17,7 @@
 #include "common/dmr/data/NetData.h"
 #include "common/dmr/lc/FullLC.h"
 #include "common/dmr/SlotType.h"
+#include "common/dmr/Sync.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "bridge/ActivityLog.h"
@@ -348,12 +349,13 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         srcId = m_srcId;
 
     uint8_t* data = nullptr;
-    m_dmrN = (uint8_t)(m_dmrSeqNo % 6);
     if (m_ambeCount == AMBE_PER_SLOT) {
         // is this the intitial sequence?
         if (m_dmrSeqNo == 0) {
             // send DMR voice header
             data = new uint8_t[DMR_FRAME_LENGTH_BYTES];
+            ::memset(data, 0x00U, DMR_FRAME_LENGTH_BYTES);
+            Sync::addDMRDataSync(data, true);
 
             // generate DMR LC
             lc::LC dmrLC = lc::LC();
@@ -408,6 +410,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
         // send DMR voice
         data = new uint8_t[DMR_FRAME_LENGTH_BYTES];
+        ::memset(data, 0x00U, DMR_FRAME_LENGTH_BYTES);
 
         ::memcpy(data, m_ambeBuffer, 13U);
         data[13U] = (uint8_t)(m_ambeBuffer[13U] & 0xF0);
@@ -415,8 +418,10 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         ::memcpy(data + 20U, m_ambeBuffer + 14U, 13U);
 
         DataType::E dataType = DataType::VOICE_SYNC;
-        if (m_dmrN == 0)
+        if (m_dmrN == 0) {
             dataType = DataType::VOICE_SYNC;
+            Sync::addDMRAudioSync(data, true);
+        }
         else {
             dataType = DataType::VOICE;
 
@@ -446,9 +451,11 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         dmrData.setData(data);
 
         m_network->writeDMR(dmrData, false);
+        delete[] data;
         m_txStreamId = m_network->getDMRStreamId(m_slot);
 
         m_dmrSeqNo++;
+        m_dmrN = (m_dmrN + 1U) % 6U;
         ::memset(m_ambeBuffer, 0x00U, 27U);
         m_ambeCount = 0U;
     }

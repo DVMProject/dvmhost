@@ -11,6 +11,7 @@
 #include "common/dmr/data/EMB.h"
 #include "common/dmr/lc/FullLC.h"
 #include "common/dmr/SlotType.h"
+#include "common/dmr/Sync.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
 #include "common/json/json.h"
@@ -89,36 +90,27 @@ void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, 
     using namespace dmr;
     using namespace dmr::defines;
 
-    uint8_t n = (uint8_t)((*seqNo - 3U) % 6U);
-    uint32_t fill = 6U - n;
+    // Complete the current six-burst superframe before sending the terminator.
+    uint8_t buffer[DMR_FRAME_LENGTH_BYTES];
+    while (*dmrN != 0U) {
+        ::memcpy(buffer, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES);
+        uint8_t lcss = embeddedData.getData(buffer, *dmrN);
+        data::EMB emb = data::EMB();
+        emb.setColorCode(0U);
+        emb.setLCSS(lcss);
+        emb.encode(buffer);
 
-    uint8_t* buffer = nullptr;
-    if (n > 0U) {
-        for (uint32_t i = 0U; i < fill; i++) {
-            // generate DMR AMBE data
-            buffer = new uint8_t[DMR_FRAME_LENGTH_BYTES];
-            ::memcpy(buffer, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES);
-
-            uint8_t lcss = embeddedData.getData(buffer, n);
-
-            // generated embedded signalling
-            data::EMB emb = data::EMB();
-            emb.setColorCode(0U);
-            emb.setLCSS(lcss);
-            emb.encode(buffer);
-
-            // generate DMR network frame
-            data.setData(buffer);
-
-            writeDMR(data);
-
-            seqNo++;
-            dmrN++;
-            delete[] buffer;
-        }
+        data.setDataType(DataType::VOICE);
+        data.setN(*dmrN);
+        data.setSeqNo(*seqNo);
+        data.setData(buffer);
+        writeDMR(data);
+        (*seqNo)++;
+        *dmrN = (*dmrN + 1U) % 6U;
     }
 
-    buffer = new uint8_t[DMR_FRAME_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, DMR_FRAME_LENGTH_BYTES);
+    Sync::addDMRDataSync(buffer, true);
 
     // generate DMR LC
     lc::LC dmrLC = lc::LC();
@@ -134,13 +126,14 @@ void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, 
     lc::FullLC fullLC = lc::FullLC();
     fullLC.encode(dmrLC, buffer, DataType::TERMINATOR_WITH_LC);
 
-    // generate DMR network frame
+    data.setDataType(DataType::TERMINATOR_WITH_LC);
+    data.setN(0U);
+    data.setSeqNo(*seqNo);
     data.setData(buffer);
-
     writeDMR(data);
 
-    seqNo = 0;
-    dmrN = 0;
+    *seqNo = 0U;
+    *dmrN = 0U;
 }
 
 // ---------------------------------------------------------------------------

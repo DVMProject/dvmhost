@@ -103,7 +103,7 @@ ReceiveSequenceResult DataLinkManager::acceptReceiveSequence(uint32_t llId, uint
     }
 
     if (sequence == state.receiveSequence && packetFingerprint == state.receiveFingerprint)
-        return ReceiveSequenceResult::DUPLICATE;
+        return ReceiveSequenceResult::DUPLICATE_FRAME;
 
     // BAED permits gaps: record the newly received N(S), allowing the upper
     // layer to observe that intervening logical packets were lost

@@ -106,7 +106,7 @@ bool FACCH1::decode(const uint8_t* data, uint32_t offset)
     uint8_t puncture[210U];
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_LENGTH_BITS; i++) {
-        if (n == PUNCTURE_LIST[index]) {
+        if (index < (sizeof(PUNCTURE_LIST) / sizeof(PUNCTURE_LIST[0U])) && n == PUNCTURE_LIST[index]) {
             puncture[n++] = 1U;
             index++;
         }
@@ -179,7 +179,7 @@ void FACCH1::encode(uint8_t* data, uint32_t offset) const
 
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_FACCH1_FEC_CONV_LENGTH_BITS; i++) {
-        if (i != PUNCTURE_LIST[index]) {
+        if (index >= (sizeof(PUNCTURE_LIST) / sizeof(PUNCTURE_LIST[0U])) || i != PUNCTURE_LIST[index]) {
             bool b = READ_BIT(convolution, i);
             WRITE_BIT(puncture, n, b);
             n++;

@@ -15,6 +15,7 @@
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
 #include "common/dmr/DMRDefines.h"
+#include "common/dmr/Sync.h"
 #include "common/dmr/data/EMB.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/NXDNUtils.h"
@@ -244,6 +245,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_p25N(0U),
     m_rxNXDNLC(),
     m_rxNXDNSACCHLC(),
+    m_rxNXDNSACCHData{},
     m_rxNXDNSACCHMask(0U),
     m_rxNXDNPendingMI(false),
     m_rxNXDNNextMI(),
@@ -2877,10 +2879,9 @@ void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
             using namespace dmr::defines;
             using namespace dmr::data;
 
-            m_dmrN = (uint8_t)(m_dmrSeqNo % 6);
-
             // send DMR voice
             uint8_t data[DMR_FRAME_LENGTH_BYTES];
+            ::memset(data, 0x00U, DMR_FRAME_LENGTH_BYTES);
 
             m_ambeCount = 0U;
 
@@ -2897,8 +2898,10 @@ void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
             ::memcpy(data + 20U, m_ambeBuffer + 14U, 13U);
 
             DataType::E dataType = DataType::VOICE_SYNC;
-            if (m_dmrN == 0)
+            if (m_dmrN == 0) {
                 dataType = DataType::VOICE_SYNC;
+                Sync::addDMRAudioSync(data, true);
+            }
             else {
                 dataType = DataType::VOICE;
 
@@ -2931,6 +2934,7 @@ void HostBridge::padSilenceAudio(uint32_t srcId, uint32_t dstId)
             m_txStreamId = m_network->getDMRStreamId(m_slot);
 
             m_dmrSeqNo++;
+            m_dmrN = (m_dmrN + 1U) % 6U;
         }
         break;
     case TX_MODE_P25:

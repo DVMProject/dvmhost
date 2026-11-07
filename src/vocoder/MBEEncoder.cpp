@@ -604,10 +604,9 @@ void MBEEncoder::encodeBits(uint8_t* bits, uint8_t* codeword)
         uint8_t rawAmbe[9U];
         ::memset(rawAmbe, 0x00U, 9U);
 
-        for (int i = 0; i < 9; ++i) {
-            for (int j = 0; j < 8; ++j) {
-                rawAmbe[i] |= (bits[(i * 8) + j] << (7 - j));
-            }
+        // Only 49 input entries are provided; the remaining packed bits stay zero.
+        for (uint32_t i = 0U; i < 49U; i++) {
+            WRITE_BIT(rawAmbe, i, (bits[i] & 1U) != 0U);
         }
 
         // build DMR AMBE bytes

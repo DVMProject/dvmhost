@@ -266,6 +266,7 @@ private:
 
     nxdn::lc::RTCH m_rxNXDNLC;
     nxdn::lc::RTCH m_rxNXDNSACCHLC;
+    uint8_t m_rxNXDNSACCHData[9U];
     uint8_t m_rxNXDNSACCHMask;
     bool m_rxNXDNPendingMI;
     uint8_t m_rxNXDNNextMI[nxdn::defines::MI_LENGTH_BYTES];

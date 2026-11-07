@@ -64,6 +64,9 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
         return;
     }
 
+    if (length < 24U)
+        return;
+
     bool grantDemand = (buffer[14U] & network::NET_CTRL_GRANT_DEMAND) == network::NET_CTRL_GRANT_DEMAND;
     bool grantDenial = (buffer[14U] & network::NET_CTRL_GRANT_DENIAL) == network::NET_CTRL_GRANT_DENIAL;
     bool unitToUnit = (buffer[14U] & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
@@ -75,26 +78,14 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
     if (duid == DUID::HDU || duid == DUID::TSDU || duid == DUID::PDU)
         return;
 
-    // process raw P25 data bytes
-    UInt8Array data;
-    uint8_t frameLength = buffer[23U];
-    if (duid == DUID::PDU) {
-        frameLength = length;
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
-        ::memset(data.get(), 0x00U, length);
-        ::memcpy(data.get(), buffer, length);
-    }
-    else {
-        if (frameLength <= 24) {
-            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-        }
-        else {
-            data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-            ::memset(data.get(), 0x00U, frameLength);
-            ::memcpy(data.get(), buffer + 24U, frameLength);
-        }
-    }
+    // LDU counts include the 24-byte network header; terminators need no voice payload.
+    uint32_t frameLength = std::min<uint32_t>(buffer[23U], length);
+    frameLength = frameLength > 24U ? frameLength - 24U : 0U;
+    if ((duid == DUID::LDU1 || duid == DUID::LDU2) && frameLength < 91U)
+        return;
+    UInt8Array data = std::make_unique<uint8_t[]>(frameLength);
+    if (frameLength > 0U)
+        ::memcpy(data.get(), buffer + 24U, frameLength);
 
     // handle LDU, TDU or TSDU frame
     uint8_t lco = buffer[4U];
@@ -159,7 +150,7 @@ void HostBridge::processP25Network(uint8_t* buffer, uint32_t length)
             m_callAlgoId = ALGO_UNENCRYPT;
 
             // if this is the beginning of a call and we have a valid HDU frame, extract the algo ID
-            uint8_t frameType = buffer[180U];
+            uint8_t frameType = length >= (184U + MI_LENGTH_BYTES) ? buffer[180U] : FrameType::DATA_UNIT;
             if (frameType == FrameType::HDU_VALID) {
                 m_callAlgoId = buffer[181U];
                 if (m_callAlgoId != ALGO_UNENCRYPT) {
