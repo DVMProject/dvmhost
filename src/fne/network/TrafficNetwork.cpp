@@ -694,17 +694,17 @@ void TrafficNetwork::processNetwork()
 
         m_healthTasksSubmitted.fetch_add(1U, std::memory_order_relaxed);
 
+        // determine if the protocol requires ordered delivery
         const uint8_t subFunc = fneHeader.getSubFunction();
         const bool orderedProtocol = fneHeader.getFunction() == NET_FUNC::PROTOCOL &&
-            (subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR ||
-             subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 ||
-             subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 ||
-             subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN);
+            (subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR || subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 ||
+             subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 || subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN);
         if (orderedProtocol) {
             processNetworkRx(req);
             return;
         }
 
+        // enqueue the task for unordered protocols
         if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
             m_healthTaskEnqueueFailures.fetch_add(1U, std::memory_order_relaxed);
             m_healthTasksCompleted.fetch_add(1U, std::memory_order_relaxed);

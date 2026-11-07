@@ -4,6 +4,8 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
+ *
  */
 /**
  * @file OrderedFrameQueue.h
@@ -40,8 +42,7 @@ namespace network
             /**
              * @brief Function invoked to process one ordered frame.
              */
-            using FrameHandler = std::function<void(const uint8_t*, uint32_t, uint32_t, uint32_t,
-                uint16_t, uint32_t, bool)>;
+            using FrameHandler = std::function<void(const uint8_t*, uint32_t, uint32_t, uint32_t, uint16_t, uint32_t, bool)>;
             /**
              * @brief Function invoked when ordered work cannot be scheduled.
              */

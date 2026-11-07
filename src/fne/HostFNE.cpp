@@ -1233,8 +1233,7 @@ void HostFNE::processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* 
     // process NXDN data
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
-        m_network->nxdnTrafficHandler()->enqueueFrame(data, length, peerId, rtpHeader.getSSRC(),
-            rtpHeader.getSequence(), streamId, true);
+        m_network->nxdnTrafficHandler()->enqueueFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
     }
 }
 
