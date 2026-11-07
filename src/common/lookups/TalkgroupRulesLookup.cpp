@@ -58,9 +58,9 @@ TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t
     m_acl(acl),
     m_stop(false),
     m_verbose(verbose),
+    m_groupVoice(),
     m_groupHangTime(5U),
-    m_sendTalkgroups(false),
-    m_groupVoice()
+    m_sendTalkgroups(false)
 {
     /* stub */
 }
@@ -306,6 +306,22 @@ bool TalkgroupRulesLookup::commit(bool quiet)
 bool TalkgroupRulesLookup::getACL()
 {
     return m_acl;
+}
+
+/* Gets a snapshot of the group voice rules. */
+
+std::vector<TalkgroupRuleGroupVoice> TalkgroupRulesLookup::groupVoice() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_groupVoice;
+}
+
+/* Replaces the group voice rules. */
+
+void TalkgroupRulesLookup::groupVoice(std::vector<TalkgroupRuleGroupVoice> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_groupVoice = val;
 }
 
 // ---------------------------------------------------------------------------

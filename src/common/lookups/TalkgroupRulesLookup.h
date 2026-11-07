@@ -642,6 +642,17 @@ namespace lookups
         bool getACL();
 
         /**
+         * @brief Gets a snapshot of the group voice rules.
+         * @return List of group voice rules.
+         */
+        std::vector<TalkgroupRuleGroupVoice> groupVoice() const;
+        /**
+         * @brief Replaces the group voice rules.
+         * @param[in] val List of group voice rules.
+         */
+        void groupVoice(std::vector<TalkgroupRuleGroupVoice> val);
+
+        /**
          * @brief Returns the filename used to load this lookup table.
          * @return std::string Full-path to the lookup table file.
          */
@@ -676,6 +687,8 @@ namespace lookups
 
         bool m_verbose;
 
+        std::vector<TalkgroupRuleGroupVoice> m_groupVoice;
+
         static std::mutex s_mutex;  //!< Mutex used for change locking.
         static bool s_locked;       //!< Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
@@ -700,10 +713,6 @@ namespace lookups
          * @brief Flag indicating whether or not the network layer should send the talkgroups to peers.
          */
         DECLARE_PROPERTY_PLAIN(bool, sendTalkgroups);
-        /**
-         * @brief List of group voice rules.
-         */
-        DECLARE_PROPERTY_PLAIN(std::vector<TalkgroupRuleGroupVoice>, groupVoice);
     };
 } // namespace lookups
 
