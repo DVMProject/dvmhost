@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Test Suite
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2026 C. Lovell, Dev_Ranger
+ */
 #include "vocoder/MBEEncoder.h"
 #include "vocoder/MBEDecoder.h"
 

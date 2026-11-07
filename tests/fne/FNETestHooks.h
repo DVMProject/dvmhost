@@ -16,6 +16,7 @@
 #include "common/p25/lc/TSBK.h"
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -40,6 +41,45 @@ public:
         NXDN,   //!< NXDN traffic.
         ANALOG  //!< Analog traffic.
     };
+
+    /**
+     * @brief Starts the shared traffic worker pool for ordered-task tests.
+     * @param network The TrafficNetwork instance.
+     */
+    static void startTrafficWorkerPool(network::TrafficNetwork& network);
+    /**
+     * @brief Stops and joins the shared traffic worker pool after an ordered-task test.
+     * @param network The TrafficNetwork instance.
+     */
+    static void stopTrafficWorkerPool(network::TrafficNetwork& network);
+    /**
+     * @brief Installs a callback invoked for ordered protocol frames instead of decoding them.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param handler Callback receiving the complete ordered frame metadata.
+     */
+    static void setOrderedFrameHandler(network::TrafficNetwork& network, ParrotProtocol protocol,
+        std::function<void(const uint8_t*, uint32_t, uint32_t, uint32_t, uint16_t, uint32_t, bool)> handler);
+    /**
+     * @brief Clears an ordered protocol frame callback.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     */
+    static void clearOrderedFrameHandler(network::TrafficNetwork& network, ParrotProtocol protocol);
+    /**
+     * @brief Enqueues a synthetic ordered protocol frame.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Peer ID identifying the packet origin.
+     * @param ssrc RTP synchronization source ID.
+     * @param streamId Call stream ID.
+     * @param pktSeq RTP packet sequence.
+     * @param fromUpstream Flag indicating traffic is from an upstream master.
+     * @returns bool True if the frame was queued, otherwise false.
+     */
+    static bool enqueueOrderedFrame(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint16_t pktSeq = 1U,
+        bool fromUpstream = false);
 
     /**
      * @brief Tests whether a P25 frame is classified as telephone interconnect traffic.

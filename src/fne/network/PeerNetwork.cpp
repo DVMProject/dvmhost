@@ -319,6 +319,15 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
             req->buffer = new uint8_t[length];
             ::memcpy(req->buffer, data, length);
 
+            const bool orderedProtocol = opcode.second == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR ||
+                opcode.second == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 ||
+                opcode.second == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 ||
+                opcode.second == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN;
+            if (orderedProtocol) {
+                taskNetworkRx(req);
+                break;
+            }
+
             // enqueue the task
             if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
                 LogError(LOG_PEER, "Failed to task enqueue network packet request, peerId = %u", peerId);

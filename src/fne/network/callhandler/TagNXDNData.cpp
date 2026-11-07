@@ -43,6 +43,10 @@ using namespace nxdn::defines;
 
 TagNXDNData::TagNXDNData(TrafficNetwork* network, bool debug) :
     m_network(network),
+    m_orderedFrames(network->m_threadPool,
+        [this](const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream) {
+            processFrame(data, len, peerId, ssrc, pktSeq, streamId, fromUpstream);
+        }, [network]() { network->m_healthTaskEnqueueFailures.fetch_add(1U, std::memory_order_relaxed); }),
     m_parrotFrames(),
     m_parrotFramesReady(false),
     m_parrotPlayback(false),
@@ -60,6 +64,13 @@ TagNXDNData::TagNXDNData(TrafficNetwork* network, bool debug) :
 /* Finalizes a instance of the TagNXDNData class. */
 
 TagNXDNData::~TagNXDNData() = default;
+
+/* Copies and enqueues an NXDN frame in arrival order for its stream. */
+
+bool TagNXDNData::enqueueFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
+{
+    return m_orderedFrames.enqueue(data, len, peerId, ssrc, pktSeq, streamId, fromUpstream);
+}
 
 /* Process a data frame from the network. */
 

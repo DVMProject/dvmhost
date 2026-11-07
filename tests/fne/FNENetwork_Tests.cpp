@@ -20,6 +20,9 @@
 #include "common/lookups/TalkgroupRulesLookup.h"
 
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -64,6 +67,350 @@ public:
     network::TrafficNetwork traffic;
     network::MetadataNetwork metadata;
 };
+
+TEST_CASE("FNE orders each digital protocol stream without blocking independent calls", "[fne][ordering]")
+{
+    FNEHarness harness;
+    FNETestHooks::startTrafficWorkerPool(harness.traffic);
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols{
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::P25P2,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (const FNETestHooks::ParrotProtocol protocol : protocols) {
+        std::mutex mutex;
+        std::condition_variable condition;
+        bool firstStarted = false;
+        bool releaseFirst = false;
+        bool secondStartedEarly = false;
+        bool independentCompleted = false;
+        uint32_t completed = 0U;
+        std::vector<uint32_t> streamOrder;
+
+        FNETestHooks::setOrderedFrameHandler(harness.traffic, protocol,
+            [&](const uint8_t*, uint32_t, uint32_t peerId, uint32_t, uint16_t,
+                uint32_t streamId, bool) {
+                std::unique_lock<std::mutex> lock(mutex);
+                if (peerId == 1002U && streamId == 3002U) {
+                    independentCompleted = true;
+                    completed++;
+                    condition.notify_all();
+                    return;
+                }
+
+                if (streamOrder.empty()) {
+                    firstStarted = true;
+                    condition.notify_all();
+                    condition.wait(lock, [&]() { return releaseFirst; });
+                    streamOrder.push_back(1U);
+                }
+                else {
+                    secondStartedEarly = !releaseFirst;
+                    streamOrder.push_back(2U);
+                }
+                completed++;
+                condition.notify_all();
+            });
+
+        const auto enqueueTime = std::chrono::steady_clock::now();
+        const bool firstQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1001U, 2001U, 3001U);
+
+        bool firstRanPromptly = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            firstRanPromptly = condition.wait_for(lock, std::chrono::milliseconds(250),
+                [&]() { return firstStarted; });
+        }
+        const auto firstDispatchDelay = std::chrono::steady_clock::now() - enqueueTime;
+
+        const bool secondQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1001U, 2001U, 3001U);
+        const bool independentQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1002U, 2002U, 3002U);
+
+        bool independentRanWhileBlocked = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            independentRanWhileBlocked = condition.wait_for(lock, std::chrono::seconds(2),
+                [&]() { return independentCompleted; });
+            releaseFirst = true;
+            condition.notify_all();
+            condition.wait_for(lock, std::chrono::seconds(2), [&]() { return completed == 3U; });
+        }
+
+        FNETestHooks::clearOrderedFrameHandler(harness.traffic, protocol);
+
+        CHECK(firstQueued);
+        CHECK(secondQueued);
+        CHECK(independentQueued);
+        CHECK(firstRanPromptly);
+        CHECK(firstDispatchDelay < std::chrono::milliseconds(250));
+        CHECK(independentRanWhileBlocked);
+        CHECK_FALSE(secondStartedEarly);
+        CHECK(completed == 3U);
+        CHECK(streamOrder == std::vector<uint32_t>{ 1U, 2U });
+    }
+
+    FNETestHooks::stopTrafficWorkerPool(harness.traffic);
+}
+
+TEST_CASE("FNE ordered protocol queues preserve burst FIFO and allow stream reuse", "[fne][ordering][fifo]")
+{
+    constexpr uint16_t BURST_LENGTH = 32U;
+    FNEHarness harness;
+    FNETestHooks::startTrafficWorkerPool(harness.traffic);
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols{
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::P25P2,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (const FNETestHooks::ParrotProtocol protocol : protocols) {
+        std::mutex mutex;
+        std::condition_variable condition;
+        std::vector<uint16_t> sequences;
+
+        FNETestHooks::setOrderedFrameHandler(harness.traffic, protocol,
+            [&](const uint8_t*, uint32_t, uint32_t, uint32_t, uint16_t pktSeq,
+                uint32_t, bool) {
+                std::lock_guard<std::mutex> lock(mutex);
+                sequences.push_back(pktSeq);
+                condition.notify_all();
+            });
+
+        for (uint16_t sequence = 1U; sequence <= BURST_LENGTH; sequence++) {
+            REQUIRE(FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+                1101U, 2101U, 3101U, sequence));
+        }
+
+        bool burstCompleted = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            burstCompleted = condition.wait_for(lock, std::chrono::seconds(2),
+                [&]() { return sequences.size() == BURST_LENGTH; });
+        }
+
+        REQUIRE(burstCompleted);
+        std::vector<uint16_t> expected;
+        for (uint16_t sequence = 1U; sequence <= BURST_LENGTH; sequence++)
+            expected.push_back(sequence);
+        CHECK(sequences == expected);
+
+        // The first burst drains and removes the stream state. Reusing the exact
+        // key must schedule a fresh task instead of leaving the stream stranded.
+        REQUIRE(FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1101U, 2101U, 3101U, BURST_LENGTH + 1U));
+
+        bool reusedStreamCompleted = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            reusedStreamCompleted = condition.wait_for(lock, std::chrono::milliseconds(250),
+                [&]() { return sequences.size() == BURST_LENGTH + 1U; });
+        }
+
+        CHECK(reusedStreamCompleted);
+        REQUIRE(sequences.size() == BURST_LENGTH + 1U);
+        CHECK(sequences.back() == BURST_LENGTH + 1U);
+        FNETestHooks::clearOrderedFrameHandler(harness.traffic, protocol);
+    }
+
+    FNETestHooks::stopTrafficWorkerPool(harness.traffic);
+}
+
+TEST_CASE("FNE ordered protocol queues do not wait for or normalize packet sequences", "[fne][ordering][late-entry]")
+{
+    FNEHarness harness;
+    FNETestHooks::startTrafficWorkerPool(harness.traffic);
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols{
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::P25P2,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+    const std::vector<uint16_t> arrivals{ 25U, 23U, 23U, 24U };
+
+    for (const FNETestHooks::ParrotProtocol protocol : protocols) {
+        std::mutex mutex;
+        std::condition_variable condition;
+        std::vector<uint16_t> delivered;
+
+        FNETestHooks::setOrderedFrameHandler(harness.traffic, protocol,
+            [&](const uint8_t*, uint32_t, uint32_t, uint32_t, uint16_t pktSeq,
+                uint32_t, bool) {
+                std::lock_guard<std::mutex> lock(mutex);
+                delivered.push_back(pktSeq);
+                condition.notify_all();
+            });
+
+        for (const uint16_t sequence : arrivals) {
+            REQUIRE(FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+                1151U, 2151U, 3151U, sequence));
+        }
+
+        bool allDelivered = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            allDelivered = condition.wait_for(lock, std::chrono::milliseconds(250),
+                [&]() { return delivered.size() == arrivals.size(); });
+        }
+
+        CHECK(allDelivered);
+        CHECK(delivered == arrivals);
+        FNETestHooks::clearOrderedFrameHandler(harness.traffic, protocol);
+    }
+
+    FNETestHooks::stopTrafficWorkerPool(harness.traffic);
+}
+
+TEST_CASE("FNE ordered protocol keys isolate every traffic origin dimension", "[fne][ordering][keys]")
+{
+    FNEHarness harness;
+    FNETestHooks::startTrafficWorkerPool(harness.traffic);
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols{
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::P25P2,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (const FNETestHooks::ParrotProtocol protocol : protocols) {
+        std::mutex mutex;
+        std::condition_variable condition;
+        bool blockedFrameStarted = false;
+        bool releaseBlockedFrame = false;
+        uint32_t independentCompleted = 0U;
+        uint32_t totalCompleted = 0U;
+
+        FNETestHooks::setOrderedFrameHandler(harness.traffic, protocol,
+            [&](const uint8_t*, uint32_t, uint32_t, uint32_t, uint16_t pktSeq,
+                uint32_t, bool) {
+                std::unique_lock<std::mutex> lock(mutex);
+                if (pktSeq == 1U) {
+                    blockedFrameStarted = true;
+                    condition.notify_all();
+                    condition.wait(lock, [&]() { return releaseBlockedFrame; });
+                }
+                else {
+                    independentCompleted++;
+                }
+                totalCompleted++;
+                condition.notify_all();
+            });
+
+        const bool blockedQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1201U, 2201U, 3201U, 1U, false);
+        bool blockedRanPromptly = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            blockedRanPromptly = condition.wait_for(lock, std::chrono::milliseconds(250),
+                [&]() { return blockedFrameStarted; });
+        }
+
+        // Each frame differs from the blocked key in exactly one field.
+        const bool peerVariantQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1202U, 2201U, 3201U, 2U, false);
+        const bool ssrcVariantQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1201U, 2202U, 3201U, 3U, false);
+        const bool streamVariantQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1201U, 2201U, 3202U, 4U, false);
+        const bool directionVariantQueued = FNETestHooks::enqueueOrderedFrame(harness.traffic, protocol,
+            1201U, 2201U, 3201U, 5U, true);
+
+        bool keysRanIndependently = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            keysRanIndependently = condition.wait_for(lock, std::chrono::seconds(2),
+                [&]() { return independentCompleted == 4U; });
+            releaseBlockedFrame = true;
+            condition.notify_all();
+            condition.wait_for(lock, std::chrono::seconds(2),
+                [&]() { return totalCompleted == 5U; });
+        }
+
+        CHECK(blockedQueued);
+        CHECK(blockedRanPromptly);
+        CHECK(peerVariantQueued);
+        CHECK(ssrcVariantQueued);
+        CHECK(streamVariantQueued);
+        CHECK(directionVariantQueued);
+        CHECK(keysRanIndependently);
+        CHECK(totalCompleted == 5U);
+        FNETestHooks::clearOrderedFrameHandler(harness.traffic, protocol);
+    }
+
+    FNETestHooks::stopTrafficWorkerPool(harness.traffic);
+}
+
+TEST_CASE("FNE protocol dispatch validates peers before ordered delivery", "[fne][ordering][dispatch]")
+{
+    constexpr uint32_t AUTHORIZED_PEER = 1301U;
+    constexpr uint32_t UNAUTHORIZED_PEER = 1302U;
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, AUTHORIZED_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::startTrafficWorkerPool(harness.traffic);
+
+    struct ProtocolCase {
+        FNETestHooks::ParrotProtocol protocol;
+        network::NET_SUBFUNC::ENUM subFunction;
+    };
+    const std::vector<ProtocolCase> protocols{
+        { FNETestHooks::ParrotProtocol::DMR, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR },
+        { FNETestHooks::ParrotProtocol::P25, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 },
+        { FNETestHooks::ParrotProtocol::P25P2, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 },
+        { FNETestHooks::ParrotProtocol::NXDN, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }
+    };
+
+    for (const ProtocolCase& protocolCase : protocols) {
+        std::mutex mutex;
+        std::condition_variable condition;
+        uint32_t deliveries = 0U;
+        uint32_t deliveredPeerId = 0U;
+
+        FNETestHooks::setOrderedFrameHandler(harness.traffic, protocolCase.protocol,
+            [&](const uint8_t*, uint32_t, uint32_t peerId, uint32_t, uint16_t,
+                uint32_t, bool) {
+                std::lock_guard<std::mutex> lock(mutex);
+                deliveries++;
+                deliveredPeerId = peerId;
+                condition.notify_all();
+            });
+
+        const std::vector<uint8_t> packet{ 0U };
+        FNETestHooks::dispatchTraffic(harness.traffic, network::NET_FUNC::PROTOCOL,
+            protocolCase.subFunction, UNAUTHORIZED_PEER, packet);
+
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            CHECK_FALSE(condition.wait_for(lock, std::chrono::milliseconds(50),
+                [&]() { return deliveries != 0U; }));
+        }
+
+        FNETestHooks::dispatchTraffic(harness.traffic, network::NET_FUNC::PROTOCOL,
+            protocolCase.subFunction, AUTHORIZED_PEER, packet);
+
+        bool authorizedDelivered = false;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            authorizedDelivered = condition.wait_for(lock, std::chrono::milliseconds(250),
+                [&]() { return deliveries == 1U; });
+        }
+
+        CHECK(authorizedDelivered);
+        CHECK(deliveries == 1U);
+        CHECK(deliveredPeerId == AUTHORIZED_PEER);
+        FNETestHooks::clearOrderedFrameHandler(harness.traffic, protocolCase.protocol);
+    }
+
+    FNETestHooks::stopTrafficWorkerPool(harness.traffic);
+}
 
 TEST_CASE("FNE parrot playback honors affiliated-required talkgroups", "[fne][parrot][affiliations]")
 {

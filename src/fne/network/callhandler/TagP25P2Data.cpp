@@ -33,6 +33,10 @@ using namespace system_clock;
 
 TagP25P2Data::TagP25P2Data(TrafficNetwork* network, bool debug) :
     m_network(network),
+    m_orderedFrames(network->m_threadPool,
+        [this](const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream) {
+            processFrame(data, len, peerId, ssrc, pktSeq, streamId, fromUpstream);
+        }, [network]() { network->m_healthTaskEnqueueFailures.fetch_add(1U, std::memory_order_relaxed); }),
     m_parrotFrames(),
     m_parrotFramesReady(false),
     m_parrotPlayback(false),
@@ -45,6 +49,13 @@ TagP25P2Data::TagP25P2Data(TrafficNetwork* network, bool debug) :
     m_debug(debug)
 {
     assert(network != nullptr);
+}
+
+/* Copies and enqueues a P25 Phase 2 frame in arrival order for its stream. */
+
+bool TagP25P2Data::enqueueFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream)
+{
+    return m_orderedFrames.enqueue(data, len, peerId, ssrc, pktSeq, streamId, fromUpstream);
 }
 
 /* Process a data frame from the network. */

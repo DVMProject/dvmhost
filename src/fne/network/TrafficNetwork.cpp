@@ -164,7 +164,6 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_jitterMaxSize(4U),
     m_jitterMaxWait(40000U),
     m_threadPool(workerCnt, "fne"),
-    m_nxdnThreadPool(1U, "fne-nxdn"),
     m_metadataUpdateThreadPool(workerCnt / 2U, "mupdt"),
     m_healthDataPlaneEpoch(0U),
     m_healthLastDataPlaneTick(0U),
@@ -195,10 +194,6 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     assert(!address.empty());
     assert(port > 0U);
     assert(!password.empty());
-
-    // The general pool constructor enforces a minimum of four workers. NXDN
-    // needs one FIFO consumer so header decoding cannot be overtaken by voice.
-    m_nxdnThreadPool.setMaxWorkerCnt(1U);
 
     m_peers.reserve(MAX_HARD_CONN_CAP);
     m_peerReplicaPeers.reserve(MAX_HARD_CONN_CAP);
@@ -698,12 +693,19 @@ void TrafficNetwork::processNetwork()
             m_healthLastTaskProgress.store(healthNow, std::memory_order_relaxed);
 
         m_healthTasksSubmitted.fetch_add(1U, std::memory_order_relaxed);
-        // Serialize local NXDN before sequence verification and call-state updates.
-        // A mutex inside the handler would not preserve receive order.
-        const bool orderedNXDN = fneHeader.getFunction() == NET_FUNC::PROTOCOL &&
-            fneHeader.getSubFunction() == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN;
-        ThreadPool& receivePool = orderedNXDN ? m_nxdnThreadPool : m_threadPool;
-        if (!receivePool.enqueue(new_pooltask(taskNetworkRx, req))) {
+
+        const uint8_t subFunc = fneHeader.getSubFunction();
+        const bool orderedProtocol = fneHeader.getFunction() == NET_FUNC::PROTOCOL &&
+            (subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR ||
+             subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 ||
+             subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 ||
+             subFunc == NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN);
+        if (orderedProtocol) {
+            processNetworkRx(req);
+            return;
+        }
+
+        if (!m_threadPool.enqueue(new_pooltask(taskNetworkRx, req))) {
             m_healthTaskEnqueueFailures.fetch_add(1U, std::memory_order_relaxed);
             m_healthTasksCompleted.fetch_add(1U, std::memory_order_relaxed);
             m_healthLastTaskProgress.store(healthNow, std::memory_order_relaxed);
@@ -1016,7 +1018,6 @@ bool TrafficNetwork::open()
 
     // start thread pool
     m_threadPool.start();
-    m_nxdnThreadPool.start();
 
     // start metadata thread pool
     m_metadataUpdateThreadPool.start();
@@ -1074,8 +1075,6 @@ void TrafficNetwork::close()
     m_updateLookupTimer.stop();
 
     // stop thread pool
-    m_nxdnThreadPool.stop();
-    m_nxdnThreadPool.wait();
     m_threadPool.stop();
     m_threadPool.wait();
 
@@ -1391,6 +1390,24 @@ void* TrafficNetwork::threadParrotHandler(void* arg)
 /* Process a data frames from the network. */
 
 void TrafficNetwork::taskNetworkRx(NetPacketRequest* req)
+{
+    if (req == nullptr)
+        return;
+
+    TrafficNetwork* network = static_cast<TrafficNetwork*>(req->obj);
+    if (network == nullptr) {
+        if (req->buffer != nullptr)
+            delete[] req->buffer;
+        delete req;
+        return;
+    }
+
+    network->processNetworkRx(req);
+}
+
+/* Dispatches a received packet through common validation and packet handling. */
+
+void TrafficNetwork::processNetworkRx(NetPacketRequest* req)
 {
     if (req != nullptr) {
         uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

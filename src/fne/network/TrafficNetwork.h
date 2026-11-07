@@ -486,8 +486,6 @@ namespace network
         uint32_t m_jitterMaxWait;
 
         ThreadPool m_threadPool;
-        /** @brief Serial receive dispatcher preserving local NXDN packet arrival order. */
-        ThreadPool m_nxdnThreadPool;
         ThreadPool m_metadataUpdateThreadPool;
 
         // passive health telemetry -- these counters are intentionally lock-free so
@@ -721,6 +719,12 @@ namespace network
          * @param req Instance of the NetPacketRequest structure.
          */
         static void taskNetworkRx(NetPacketRequest* req);
+
+        /**
+         * @brief Dispatches a received packet through common validation and packet handling.
+         * @param req Instance of the NetPacketRequest structure; consumed by this method.
+         */
+        void processNetworkRx(NetPacketRequest* req);
 
         /*
         ** General Helper Functions

@@ -30,6 +30,7 @@
 #include "common/p25/lc/TSBK.h"
 #include "common/p25/lc/TDULC.h"
 #include "network/TrafficNetwork.h"
+#include "network/callhandler/OrderedFrameQueue.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
 
 // ---------------------------------------------------------------------------
@@ -66,6 +67,19 @@ namespace network
             ~TagP25Data();
 
             /**
+             * @brief Copies and enqueues a P25 Phase 1 frame in arrival order for its stream.
+             * @param data Network data buffer copied before this method returns.
+             * @param len Length of data in bytes.
+             * @param peerId Peer ID identifying the packet origin.
+             * @param ssrc RTP synchronization source ID.
+             * @param pktSeq RTP packet sequence.
+             * @param streamId Call stream ID.
+             * @param fromUpstream Flag indicating traffic is from an upstream master.
+             * @returns bool True if the frame was queued, otherwise false.
+             */
+            bool enqueueFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
+
+            /**
              * @brief Process a data frame from the network.
              * @param data Network data buffer.
              * @param len Length of data.
@@ -77,6 +91,7 @@ namespace network
              * @returns bool True, if frame is processed, otherwise false.
              */
             bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
+
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.
@@ -183,6 +198,7 @@ namespace network
             friend class ::FNETestHooks;
 #endif
             TrafficNetwork* m_network;
+            OrderedFrameQueue m_orderedFrames;
 
             /**
              * @brief Represents a stored parrot frame.

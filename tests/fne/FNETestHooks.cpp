@@ -973,3 +973,56 @@ void FNETestHooks::dispatchMetadata(TrafficNetwork& network, MetadataNetwork& me
 {
     MetadataNetwork::taskNetworkRx(makeRequest(network, &metadata, function, subFunction, peerId, packet));
 }
+
+/* Starts the shared traffic worker pool for ordered-task tests. */
+
+void FNETestHooks::startTrafficWorkerPool(TrafficNetwork& network)
+{
+    network.m_threadPool.start();
+}
+
+/* Stops and joins the shared traffic worker pool after an ordered-task test. */
+
+void FNETestHooks::stopTrafficWorkerPool(TrafficNetwork& network)
+{
+    network.m_threadPool.stop();
+    network.m_threadPool.wait();
+}
+
+/* Installs a callback invoked for ordered protocol frames instead of decoding them. */
+
+void FNETestHooks::setOrderedFrameHandler(TrafficNetwork& network, ParrotProtocol protocol,
+    std::function<void(const uint8_t*, uint32_t, uint32_t, uint32_t, uint16_t, uint32_t, bool)> handler)
+{
+    switch (protocol) {
+    case ParrotProtocol::DMR: network.m_tagDMR->m_orderedFrames.setTestFrameHandler(std::move(handler)); break;
+    case ParrotProtocol::P25: network.m_tagP25->m_orderedFrames.setTestFrameHandler(std::move(handler)); break;
+    case ParrotProtocol::P25P2: network.m_tagP25P2->m_orderedFrames.setTestFrameHandler(std::move(handler)); break;
+    case ParrotProtocol::NXDN: network.m_tagNXDN->m_orderedFrames.setTestFrameHandler(std::move(handler)); break;
+    case ParrotProtocol::ANALOG: break;
+    }
+}
+
+/* Clears an ordered protocol frame callback. */
+
+void FNETestHooks::clearOrderedFrameHandler(TrafficNetwork& network, ParrotProtocol protocol)
+{
+    setOrderedFrameHandler(network, protocol, nullptr);
+}
+
+/* Enqueues a synthetic ordered protocol frame. */
+
+bool FNETestHooks::enqueueOrderedFrame(TrafficNetwork& network, ParrotProtocol protocol,
+    uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint16_t pktSeq, bool fromUpstream)
+{
+    const uint8_t frame[1U] = { 0U };
+    switch (protocol) {
+    case ParrotProtocol::DMR: return network.m_tagDMR->enqueueFrame(frame, sizeof(frame), peerId, ssrc, pktSeq, streamId, fromUpstream);
+    case ParrotProtocol::P25: return network.m_tagP25->enqueueFrame(frame, sizeof(frame), peerId, ssrc, pktSeq, streamId, fromUpstream);
+    case ParrotProtocol::P25P2: return network.m_tagP25P2->enqueueFrame(frame, sizeof(frame), peerId, ssrc, pktSeq, streamId, fromUpstream);
+    case ParrotProtocol::NXDN: return network.m_tagNXDN->enqueueFrame(frame, sizeof(frame), peerId, ssrc, pktSeq, streamId, fromUpstream);
+    case ParrotProtocol::ANALOG: return false;
+    }
+
+    return false;
+}

@@ -51,12 +51,12 @@ void TrafficNetwork::PacketHandler::protocol(TrafficNetwork* network, NetPacketR
 
                                 // process all frames that are now ready (in sequence order)
                                 for (BufferedFrame* frame : readyFrames) {
-                                    network->m_tagDMR->processFrame(frame->data, frame->length, peerId, ssrc, frame->seq, streamId);
+                                    network->m_tagDMR->enqueueFrame(frame->data, frame->length, peerId, ssrc, frame->seq, streamId);
                                     delete frame;
                                 }
                             } else {
                                 // zero-latency fast path: no jitter buffer
-                                network->m_tagDMR->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
+                                network->m_tagDMR->enqueueFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                             }
                         }
                     } else {
@@ -89,12 +89,12 @@ void TrafficNetwork::PacketHandler::protocol(TrafficNetwork* network, NetPacketR
 
                                 // process all frames that are now ready (in sequence order)
                                 for (BufferedFrame* frame : readyFrames) {
-                                    network->m_tagP25->processFrame(frame->data, frame->length, peerId, ssrc, frame->seq, streamId);
+                                    network->m_tagP25->enqueueFrame(frame->data, frame->length, peerId, ssrc, frame->seq, streamId);
                                     delete frame;
                                 }
                             } else {
                                 // zero-latency fast path: no jitter buffer
-                                network->m_tagP25->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
+                                network->m_tagP25->enqueueFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                             }
                         }
                     } else {
@@ -123,13 +123,12 @@ void TrafficNetwork::PacketHandler::protocol(TrafficNetwork* network, NetPacketR
                                 connection->processJitterFrame(streamId, req->rtpHeader.getSequence(),
                                     req->buffer, req->length, readyFrames);
                                 for (BufferedFrame* frame : readyFrames) {
-                                    network->m_tagP25P2->processFrame(frame->data, frame->length,
-                                        peerId, ssrc, frame->seq, streamId);
+                                    network->m_tagP25P2->enqueueFrame(frame->data, frame->length, peerId, ssrc, frame->seq, streamId);
                                     delete frame;
                                 }
                             }
                             else {
-                                network->m_tagP25P2->processFrame(req->buffer, req->length,
+                                network->m_tagP25P2->enqueueFrame(req->buffer, req->length,
                                     peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                             }
                         }
@@ -165,12 +164,12 @@ void TrafficNetwork::PacketHandler::protocol(TrafficNetwork* network, NetPacketR
 
                                 // process all frames that are now ready (in sequence order)
                                 for (BufferedFrame* frame : readyFrames) {
-                                    network->m_tagNXDN->processFrame(frame->data, frame->length, peerId, ssrc, frame->seq, streamId);
+                                    network->m_tagNXDN->enqueueFrame(frame->data, frame->length, peerId, ssrc, frame->seq, streamId);
                                     delete frame;
                                 }
                             } else {
                                 // zero-latency fast path: no jitter buffer
-                                network->m_tagNXDN->processFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
+                                network->m_tagNXDN->enqueueFrame(req->buffer, req->length, peerId, ssrc, req->rtpHeader.getSequence(), streamId);
                             }
                         }
                     } else {

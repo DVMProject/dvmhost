@@ -1098,7 +1098,7 @@ void HostFNE::processPeerDMR(network::PeerNetwork* peerNetwork, const uint8_t* d
     // process DMR data
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
-        m_network->dmrTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
+        m_network->dmrTrafficHandler()->enqueueFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
     }
 }
 
@@ -1147,7 +1147,7 @@ void HostFNE::processPeerP25(network::PeerNetwork* peerNetwork, const uint8_t* d
     // process P25 data
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
-        m_network->p25TrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
+        m_network->p25TrafficHandler()->enqueueFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
     }
 }
 
@@ -1190,7 +1190,7 @@ void HostFNE::processPeerP25P2(network::PeerNetwork* peerNetwork, const uint8_t*
     // process P25 data
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
-        m_network->p25P2TrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
+        m_network->p25P2TrafficHandler()->enqueueFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
     }
 }
 
@@ -1233,7 +1233,8 @@ void HostFNE::processPeerNXDN(network::PeerNetwork* peerNetwork, const uint8_t* 
     // process NXDN data
     if (length > 0U) {
         uint32_t peerId = peerNetwork->getPeerId();
-        m_network->nxdnTrafficHandler()->processFrame(data, length, peerId, rtpHeader.getSSRC(), rtpHeader.getSequence(), streamId, true);
+        m_network->nxdnTrafficHandler()->enqueueFrame(data, length, peerId, rtpHeader.getSSRC(),
+            rtpHeader.getSequence(), streamId, true);
     }
 }
 

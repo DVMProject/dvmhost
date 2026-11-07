@@ -93,8 +93,12 @@ void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, 
     // Complete the current six-burst superframe before sending the terminator.
     uint8_t buffer[DMR_FRAME_LENGTH_BYTES];
     while (*dmrN != 0U) {
+        // generate DMR AMBE data
         ::memcpy(buffer, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES);
+
         uint8_t lcss = embeddedData.getData(buffer, *dmrN);
+
+        // generated embedded signaling data
         data::EMB emb = data::EMB();
         emb.setColorCode(0U);
         emb.setLCSS(lcss);
@@ -104,7 +108,9 @@ void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, 
         data.setN(*dmrN);
         data.setSeqNo(*seqNo);
         data.setData(buffer);
+
         writeDMR(data);
+
         (*seqNo)++;
         *dmrN = (*dmrN + 1U) % 6U;
     }
@@ -126,10 +132,12 @@ void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, 
     lc::FullLC fullLC = lc::FullLC();
     fullLC.encode(dmrLC, buffer, DataType::TERMINATOR_WITH_LC);
 
+    // generate DMR network frame
     data.setDataType(DataType::TERMINATOR_WITH_LC);
     data.setN(0U);
     data.setSeqNo(*seqNo);
     data.setData(buffer);
+
     writeDMR(data);
 
     *seqNo = 0U;
