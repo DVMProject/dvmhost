@@ -486,6 +486,8 @@ namespace network
         uint32_t m_jitterMaxWait;
 
         ThreadPool m_threadPool;
+        /** @brief Serial receive dispatcher preserving local NXDN packet arrival order. */
+        ThreadPool m_nxdnThreadPool;
         ThreadPool m_metadataUpdateThreadPool;
 
         // passive health telemetry -- these counters are intentionally lock-free so
