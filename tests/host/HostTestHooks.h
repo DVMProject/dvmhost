@@ -260,12 +260,68 @@ public:
      */
     static bool p25ProcessRawTSBK(p25::Control& control, const uint8_t* raw);
     /**
+     * @brief Injects an independently encoded raw TSBK through P25 network processing.
+     * @param control P25 control instance.
+     * @param raw Raw 12-byte TSBK including CRC.
+     * @returns bool True if the network TSBK was accepted; otherwise, false.
+     */
+    static bool p25ProcessNetworkRawTSBK(p25::Control& control, const uint8_t* raw);
+    /**
+     * @brief Tests whether one P25 private grant owns the specified RID pair.
+     * @param control P25 control instance.
+     * @param srcId One participant RID.
+     * @param dstId The other participant RID.
+     * @returns bool True if the pair resolves to an active private grant.
+     */
+    static bool p25IsU2UGranted(const p25::Control& control, uint32_t srcId, uint32_t dstId);
+    /**
+     * @brief Gets the current source RID advertised for a P25 private grant.
+     * @param control P25 control instance.
+     * @param srcId One private-call participant.
+     * @param dstId The other private-call participant.
+     * @returns uint32_t Current advertised source RID, or zero.
+     */
+    static uint32_t p25U2UGrantSource(const p25::Control& control, uint32_t srcId, uint32_t dstId);
+    /**
+     * @brief Gets the current target RID advertised for a P25 private grant.
+     * @param control P25 control instance.
+     * @param srcId One private-call participant.
+     * @param dstId The other private-call participant.
+     * @returns uint32_t Current advertised target RID, or zero.
+     */
+    static uint32_t p25U2UGrantTarget(const p25::Control& control, uint32_t srcId, uint32_t dstId);
+    /**
+     * @brief Gets the number of pending P25 U2U availability transactions.
+     * @param control P25 control instance.
+     * @returns size_t Number of pending transactions.
+     */
+    static size_t p25PendingU2UCount(const p25::Control& control);
+    /**
+     * @brief Advances P25 U2U availability transaction timers.
+     * @param control P25 control instance.
+     * @param ms Elapsed milliseconds.
+     */
+    static void p25ClockU2U(p25::Control& control, uint32_t ms);
+    /**
      * @brief Releases a P25 grant for a steering-policy test.
      * @param control P25 control instance.
      * @param dstId Destination ID to release.
      * @returns bool True if the grant was released; otherwise, false.
      */
     static bool p25ReleaseGrant(p25::Control& control, uint32_t dstId);
+    /**
+     * @brief Releases the active P25 private grant involving a radio ID.
+     * @param control P25 control instance.
+     * @param unitId RID of either private-call participant.
+     * @returns bool True if a private grant was released.
+     */
+    static bool p25ReleaseU2UGrant(p25::Control& control, uint32_t unitId);
+    /**
+     * @brief Applies the P25 voice-channel grant-release policy.
+     * @param control P25 control instance.
+     * @param dstId Destination-keyed grant owner reported by the voice channel.
+     */
+    static void p25VoiceChannelReleaseGrant(p25::Control& control, uint32_t dstId);
     /**
      * @brief Gets the last P25 RF destination ID.
      * @param control P25 control instance.

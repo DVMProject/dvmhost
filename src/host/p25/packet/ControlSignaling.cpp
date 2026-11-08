@@ -152,11 +152,13 @@ const uint32_t ADJ_SITE_UPDATE_CNT = 5U;
 const uint32_t TSDU_CTRL_BURST_COUNT = 2U;
 const uint32_t TSBK_MBF_CNT = 3U;
 const uint32_t GRANT_TIMER_TIMEOUT = 15U;
+const uint32_t U2U_AVAILABILITY_TIMER_TIMEOUT = 15U;
 const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
 
 /* Process a data frame from the RF interface. */
 
@@ -257,15 +259,39 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 VERIFY_SRCID_REG(tsbk->toString(true), TSBKO::IOSP_UU_VCH, srcId);
 
                 VERBOSE_LOG_TSBK(tsbk->toString(true), srcId, dstId);
+                const uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +
+                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +
+                    (tsbk->getPriority() & 0x07U);
+
+                if (m_p25->m_affiliations->isU2UGranted(srcId, dstId)) {
+                    // Control-channel continuation of an active message-trunked U2U call;
+                    // address the existing assignment to the requesting SU and do not
+                    // restart target availability checking
+                    m_u2uAvailabilityTransactions.erase(u2uTransactionKey(srcId, dstId));
+                    m_u2uAvailabilityTransactions.erase(u2uTransactionKey(dstId, srcId));
+                    if (m_p25->m_authoritative) {
+                        // TIA-102.AABD-B 4.2.1.2.2 and 7.3.6: the requesting SU
+                        // is first to talk and therefore occupies the grant source field
+                        writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false,
+                            false, false, 0U, false, srcId);
+                    }
+                    else if (m_p25->m_network != nullptr) {
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
+                            srcId, dstId, 0U, true);
+                    }
+                    break;
+                }
+
                 if (m_unitToUnitAvailCheck) {
+                    startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, true, true);
                     writeRF_TSDU_UU_Ans_Req(srcId, dstId);
                 }
                 else {
+                    // some SUs use manual-answer signaling even when the FNE grants an unchecked
+                    // U2U request immediately; retain correlation state so a later PROCEED can
+                    // reissue a grant that expired while the called unit was ringing
+                    startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, true, false);
                     if (m_p25->m_authoritative) {
-                        uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                            (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                            (tsbk->getPriority() & 0x07U);                                  // Priority
-
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
                         if (m_p25->m_network != nullptr)
@@ -291,24 +317,60 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                         tsbk->toString(true).c_str(), iosp->getResponse(), srcId, dstId);
                 }
 
+                // look up the pending unit-to-unit availability transaction for this source and destination ID
+                const uint64_t transactionKey = u2uTransactionKey(dstId, srcId);
+                auto transactionIt = m_u2uAvailabilityTransactions.find(transactionKey);
+                if (transactionIt == m_u2uAvailabilityTransactions.end()) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s ignored, no matching pending request, srcId = %u, dstId = %u",
+                        tsbk->toString(true).c_str(), srcId, dstId);
+                    // preserve the received ISP response layout for a remote originating site
+                    writeNetworkRF(iosp, data + 2U, true);
+                    break;
+                }
+
+                // retrieve the pending transaction for this unit-to-unit request
+                U2UAvailabilityTransaction& transaction = transactionIt->second;
+                if (transaction.responseTimer.hasExpired()) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s ignored, pending request expired, srcId = %u, dstId = %u",
+                        tsbk->toString(true).c_str(), srcId, dstId);
+                    m_u2uAvailabilityTransactions.erase(transactionIt);
+                    writeNetworkRF(iosp, data + 2U, true);
+                    break;
+                }
+
+                // handle the response for the unit-to-unit availability request
                 if (iosp->getResponse() == ResponseCode::ANS_PROCEED) {
                     if (m_p25->m_authoritative) {
-                        uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +   // Emergency Flag
-                            (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
-                            (tsbk->getPriority() & 0x07U);                                  // Priority
-
-                        writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
+                        // select the answering unit as first talker and address the grant
+                        // to the original caller so both subscribers follow the assignment
+                        writeRF_TSDU_Grant(srcId, dstId, transaction.serviceOptions, false, false, false, 0U, false, srcId);
                     } else {
                         if (m_p25->m_network != nullptr)
-                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
+                                srcId, dstId, 0U, true);
                     }
+
+                    m_u2uAvailabilityTransactions.erase(transactionIt);
                 }
                 else if (iosp->getResponse() == ResponseCode::ANS_DENY) {
+                    // handle the denial response for the unit-to-unit availability request
                     writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_UU_ANS);
+                    m_u2uAvailabilityTransactions.erase(transactionIt);
                 }
                 else if (iosp->getResponse() == ResponseCode::ANS_WAIT) {
+                    // handle the wait response for the unit-to-unit availability request
                     writeRF_TSDU_Queue(srcId, dstId, ReasonCode::QUE_TGT_UNIT_QUEUED, TSBKO::IOSP_UU_ANS);
+                    transaction.state = U2UAvailabilityState::WAITING;
+                    transaction.responseTimer.start();
                 }
+                else {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", %s ignored, invalid response = $%02X, srcId = %u, dstId = %u",
+                        tsbk->toString(true).c_str(), iosp->getResponse(), srcId, dstId);
+                }
+
+                // preserve and forward the received ISP response; re-encoding
+                // IOSP_UU_ANS would incorrectly produce the OSP request layout
+                writeNetworkRF(iosp, data + 2U, true);
             }
             break;
             case TSBKO::ISP_TELE_INT_PSTN_REQ:
@@ -532,6 +594,21 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     if (m_telIntGrants.find(srcId) != m_telIntGrants.end()) {
                         m_p25->m_affiliations->releaseGrant(srcId, false);
                     }
+                }
+
+                // a U2U cancellation ends both call setup and an established
+                // message-trunked call involving the requesting subscriber
+                if (service == TSBKO::IOSP_UU_VCH || service == TSBKO::IOSP_UU_ANS) {
+                    for (auto it = m_u2uAvailabilityTransactions.begin(); it != m_u2uAvailabilityTransactions.end(); ) {
+                        if (it->second.callerId == srcId || it->second.calledId == srcId) {
+                            it = m_u2uAvailabilityTransactions.erase(it);
+                        }
+                        else {
+                            ++it;
+                        }
+                    }
+
+                    m_p25->m_affiliations->releaseU2UGrant(srcId);
                 }
 
                 writeRF_TSDU_ACK_FNE(srcId, isp->getService(), false, true);
@@ -925,9 +1002,60 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                 LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, response = $%02X, srcId = %u, dstId = %u",
                                     tsbk->toString(true).c_str(), iosp->getResponse(), srcId, dstId);
                             }
+
+                            // look up the pending U2U availability transaction for this response
+                            const uint64_t transactionKey = u2uTransactionKey(dstId, srcId);
+                            auto transactionIt = m_u2uAvailabilityTransactions.find(transactionKey);
+                            if (transactionIt == m_u2uAvailabilityTransactions.end() ||
+                                transactionIt->second.responseTimer.hasExpired()) {
+                                if (transactionIt != m_u2uAvailabilityTransactions.end()) {
+                                    m_u2uAvailabilityTransactions.erase(transactionIt);
+                                }
+
+                                LogWarning(LOG_NET, P25_TSDU_STR ", %s ignored, no matching pending request, srcId = %u, dstId = %u",
+                                    tsbk->toString(true).c_str(), srcId, dstId);
+                                return true;
+                            }
+
+                            // process the response based on the received ISP code
+                            U2UAvailabilityTransaction& transaction = transactionIt->second;
+
+                            // handle the response based on the ISP code
+                            if (iosp->getResponse() == ResponseCode::ANS_PROCEED) {
+                                if (m_p25->m_authoritative) {
+                                    // select the answering unit as first talker and address the grant
+                                    // to the original caller so both subscribers follow the assignment
+                                    writeRF_TSDU_Grant(srcId, dstId, transaction.serviceOptions, false, false, false, 0U, false, srcId);
+                                }
+                                else if (m_p25->m_network != nullptr) {
+                                    m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
+                                        srcId, dstId, 0U, true);
+                                }
+
+                                m_u2uAvailabilityTransactions.erase(transactionIt);
+                            }
+                            else if (iosp->getResponse() == ResponseCode::ANS_DENY) {
+                                // handle the denial response by sending a deny packet to the source ID
+                                writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_UU_ANS);
+                                m_u2uAvailabilityTransactions.erase(transactionIt);
+                            }
+                            else if (iosp->getResponse() == ResponseCode::ANS_WAIT) {
+                                // handle the wait response by sending a queue packet to the source ID
+                                writeRF_TSDU_Queue(srcId, dstId, ReasonCode::QUE_TGT_UNIT_QUEUED, TSBKO::IOSP_UU_ANS);
+                                transaction.state = U2UAvailabilityState::WAITING;
+                                transaction.responseTimer.start();
+                            }
+
+                            return true;
                         }
                         else {
                             VERBOSE_LOG_TSBK_NET(tsbk->toString(), srcId, dstId);
+                            if (m_p25->m_affiliations->isUnitReg(dstId)) {
+                                const uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +
+                                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +
+                                    (tsbk->getPriority() & 0x07U);
+                                startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, false, true);
+                            }
                         }
                     }
                     break;
@@ -1421,6 +1549,38 @@ ControlSignaling::ControlSignaling(Control* p25, bool dumpTSBKData, bool debug, 
 ControlSignaling::~ControlSignaling()
 {
     delete[] m_rfMBF;
+}
+
+/* Updates and expires pending unit-to-unit availability transactions. */
+
+void ControlSignaling::clock(uint32_t ms)
+{
+    // update and expire pending unit-to-unit availability transactions based on the response timer
+    for (auto it = m_u2uAvailabilityTransactions.begin(); it != m_u2uAvailabilityTransactions.end(); ) {
+        it->second.responseTimer.clock(ms);
+        if (it->second.responseTimer.isRunning() && it->second.responseTimer.hasExpired()) {
+            if (it->second.answerRequired) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", unit-to-unit availability response expired, srcId = %u, dstId = %u", it->second.callerId, it->second.calledId);
+            }
+
+            // if the transaction requires an answer and originated from a site, send a deny response to the called ID
+            if (it->second.answerRequired && it->second.originatingSite) {
+                writeRF_TSDU_Deny(it->second.calledId, it->second.callerId, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_UU_VCH);
+            }
+
+            it = m_u2uAvailabilityTransactions.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+}
+
+/* Clears all pending unit-to-unit availability transactions. */
+
+void ControlSignaling::resetU2UAvailabilityTransactions()
+{
+    m_u2uAvailabilityTransactions.clear();
 }
 
 /* Write data processed from RF to the network. */
@@ -2235,7 +2395,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
 /* Helper to write a grant packet. */
 
 bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo,
-    bool telInt)
+    bool telInt, uint32_t u2uConfirmedUnitId)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
@@ -2346,7 +2506,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
 
-        if (!m_p25->m_affiliations->isGranted(dstId)) {
+        const uint32_t u2uGrantOwner = (!grp) ? m_p25->m_affiliations->getU2UGrantOwner(srcId, dstId) : 0U;
+        const bool alreadyGranted = (grp) ? m_p25->m_affiliations->isGranted(dstId) : u2uGrantOwner != 0U;
+        if (!alreadyGranted) {
             if (grp && !m_p25->m_ignoreAffiliationCheck) {
                 // is this an affiliation required group?
                 ::lookups::TalkgroupRuleGroupVoice tid = m_p25->m_tidLookup->find(dstId);
@@ -2378,10 +2540,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            if (!grp && !m_p25->m_ignoreAffiliationCheck && m_unitToUnitAvailCheck) {
-                // is this the target registered?
+            if (!grp && !m_p25->m_ignoreAffiliationCheck && m_unitToUnitAvailCheck && u2uConfirmedUnitId == 0U) {
                 if (!m_p25->m_affiliations->isUnitReg(dstId)) {
-                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) ignored, no unit registration, dstId = %u", dstId);
+                    LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) ignored, no unit registration, unitId = %u", dstId);
                     return false;
                 }
             }
@@ -2414,7 +2575,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 if (grp) {
                     if (!net) {
                         LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, no channels available, dstId = %u", dstId);
-                        writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_NO_RF_RSRC_AVAIL, TSBKO::IOSP_GRP_VCH, grp, true);
+                        writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_NO_RF_RSRC_AVAIL, TSBKO::IOSP_UU_VCH, grp, true);
 
                         ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
                         m_p25->m_rfState = RS_RF_REJECTED;
@@ -2448,7 +2609,8 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
-            if (!m_disableGrantSrcIdCheck) {
+            const uint32_t grantOwner = (grp) ? dstId : u2uGrantOwner;
+            if (grp && !m_disableGrantSrcIdCheck) {
                 // do collision check between grants to see if a SU is attempting a "grant retry" or if this is a
                 // different source from the original grant
                 uint32_t grantedSrcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
@@ -2468,8 +2630,8 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            chNo = m_p25->m_affiliations->getGrantedCh(dstId);
-            m_p25->m_affiliations->touchGrant(dstId);
+            chNo = m_p25->m_affiliations->getGrantedCh(grantOwner);
+            m_p25->m_affiliations->touchGrant(grantOwner);
         }
     }
     else {
@@ -2489,6 +2651,10 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
     if (chNo > 0U) {
         ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
+
+        if (!grp) {
+            m_p25->m_affiliations->setU2UGrantDirection(srcId, dstId);
+        }
 
         if (grp) {
             // callback RPC to permit the granted TG on the specified voice channel
@@ -2601,6 +2767,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
                     req["dstId"].set<uint32_t>(dstId);
+                    req["srcId"].set<uint32_t>(srcId);
+                    bool unitToUnit = true;
+                    req["unitToUnit"].set<bool>(unitToUnit);
                     if (telInt) {
                         req["telInt"].set<bool>(telInt);
                     }
@@ -2822,15 +2991,21 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
                         m_mbfGrpGrntCnt++;
                         break;
                     } else {
-                        uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
+                        uint32_t srcId = m_p25->m_affiliations->getU2UGrantSource(dstId);
+                        uint32_t targetId = m_p25->m_affiliations->getU2UGrantTarget(dstId);
+                        if (srcId == 0U || targetId == 0U) {
+                            noData = true;
+                            m_mbfGrpGrntCnt++;
+                            break;
+                        }
 
                         osp = std::make_unique<OSP_UU_VCH_GRANT_UPD>();
                         DEBUG_LOG_TSBK(osp->toString());
 
-                        // transmit group voice grant update
+                        // transmit unit-to-unit voice grant update
                         osp->setLCO(TSBKO::OSP_UU_VCH_GRANT_UPD);
                         osp->setSrcId(srcId);
-                        osp->setDstId(dstId);
+                        osp->setDstId(targetId);
                         osp->setGrpVchId(voiceChData.chId());
                         osp->setGrpVchNo(chNo);
 
@@ -3411,4 +3586,34 @@ void ControlSignaling::denialInhibit(uint32_t srcId)
         LogWarning(LOG_P25, P25_TSDU_STR ", denial, system auto-inhibit RID, srcId = %u", srcId);
         writeRF_TSDU_Ext_Func(ExtendedFunctions::INHIBIT, WUID_FNE, srcId);
     }
+}
+
+/* Produces the ordered key for a pending U2U request. */
+
+uint64_t ControlSignaling::u2uTransactionKey(uint32_t callerId, uint32_t calledId)
+{
+    return (static_cast<uint64_t>(callerId & 0xFFFFFFU) << 24) | (calledId & 0xFFFFFFU);
+}
+
+/* Starts or replaces a pending U2U availability transaction. */
+
+void ControlSignaling::startU2UAvailabilityTransaction(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions,
+    bool originatingSite, bool answerRequired)
+{
+    // remove any existing transactions involving either the caller or called ID before starting a new one
+    for (auto it = m_u2uAvailabilityTransactions.begin(); it != m_u2uAvailabilityTransactions.end(); ) {
+        const U2UAvailabilityTransaction& transaction = it->second;
+        if (transaction.callerId == callerId || transaction.callerId == calledId ||
+            transaction.calledId == callerId || transaction.calledId == calledId) {
+            it = m_u2uAvailabilityTransactions.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+
+    // generate the key for the new transaction
+    const uint64_t key = u2uTransactionKey(callerId, calledId);
+    m_u2uAvailabilityTransactions.emplace(key, U2UAvailabilityTransaction(callerId, calledId, serviceOptions,
+        originatingSite, answerRequired, U2U_AVAILABILITY_TIMER_TIMEOUT));
 }

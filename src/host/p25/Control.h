@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -215,7 +215,16 @@ namespace p25
          * @param dataPermit Flag indicating this permit is for data.
          * @param telInt Flag indicating this permit is for a telephone interconnect call to the unit in dstId.
          */
-        void permittedTG(uint32_t dstId, bool dataPermit = false, bool telInt = false);
+        void permittedTG(uint32_t dstId, bool dataPermit = false, bool telInt = false,
+            uint32_t srcId = 0U, bool unitToUnit = false);
+        /**
+         * @brief Tests traffic identities against the current voice-channel permit.
+         * @param srcId Source radio ID.
+         * @param dstId Destination ID.
+         * @param group Flag indicating group traffic.
+         * @returns bool True when the traffic matches the active permit.
+         */
+        bool isPermitted(uint32_t srcId, uint32_t dstId, bool group) const;
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -358,6 +367,8 @@ namespace p25
         uint32_t m_netLastSrcId;
 
         uint32_t m_permittedDstId;
+        uint32_t m_permittedSrcId;
+        bool m_permittedU2U;
         bool m_permittedTelInt;
 
         bool m_tailOnIdle;
@@ -526,6 +537,12 @@ namespace p25
          */
         void RPC_touchGrantTG(json::object& req, json::object& reply);
         /** @} */
+
+        /**
+         * @brief Handles a voice-channel request to release or retain a completed grant.
+         * @param dstId Destination-keyed grant owner reported by the voice channel.
+         */
+        void releaseGrantFromVoiceChannel(uint32_t dstId);
 
         /**
          * @brief Helper to retrieve LLA AM1 parameters for a given source ID.

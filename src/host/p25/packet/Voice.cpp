@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -164,7 +164,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
 
             // don't process RF frames if this modem isn't authoritative
-            if (!m_p25->m_authoritative && m_p25->m_permittedDstId != lc.getDstId()) {
+            if (!m_p25->isPermitted(lc.getSrcId(), lc.getDstId(), lc.getGroup())) {
                 if (!g_disableNonAuthoritativeLogging)
                     LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 resetRF();
@@ -262,7 +262,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             alreadyDecoded = true;
 
-            if (checkRFTrafficCollision(srcId, dstId))
+            if (checkRFTrafficCollision(srcId, dstId, group))
                 return false;
 
             // if this is a late entry call, clear states
@@ -426,7 +426,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             if (m_p25->m_enableControl) {
                 // if the group wasn't granted out -- explicitly grant the group
-                if (!m_p25->m_affiliations->isGranted(dstId)) {
+                const bool callGranted = (group) ? m_p25->m_affiliations->isGranted(dstId) : m_p25->m_affiliations->isU2UGranted(srcId, dstId);
+                if (!callGranted) {
                     if (m_p25->m_legacyGroupGrnt) {
                         // are we auto-registering legacy radios to groups?
                         if (m_p25->m_legacyGroupReg && group) {
@@ -459,15 +460,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // conventional registration or DVRS support?
             if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
-                if (!m_p25->m_affiliations->isGranted(dstId)) {
+                const bool callGranted = (group) ? m_p25->m_affiliations->isGranted(dstId) : m_p25->m_affiliations->isU2UGranted(srcId, dstId);
+                if (!callGranted) {
                     m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, false, true);
                 }
 
                 // if voice on control; insert grant updates before voice traffic
                 if (m_p25->m_voiceOnControl) {
-                    uint32_t chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+                    const uint32_t grantOwner = (group) ? dstId : m_p25->m_affiliations->getU2UGrantOwner(srcId, dstId);
+                    uint32_t chNo = m_p25->m_affiliations->getGrantedCh(grantOwner);
                     ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
-                    bool grp = m_p25->m_affiliations->isGroup(dstId);
+                    bool grp = m_p25->m_affiliations->isGroup(grantOwner);
 
                     std::unique_ptr<lc::TSBK> osp;
 
@@ -481,14 +484,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         osp->setGrpVchNo(chNo);
                     }
                     else {
-                        uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
+                        uint32_t grantedSrcId = m_p25->m_affiliations->getGrantedSrcId(grantOwner);
 
                         osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                         // transmit group voice grant update
                         osp->setLCO(TSBKO::OSP_UU_VCH_GRANT_UPD);
-                        osp->setSrcId(srcId);
-                        osp->setDstId(dstId);
+                        osp->setSrcId(grantedSrcId);
+                        osp->setDstId(grantOwner);
                         osp->setGrpVchId(voiceChData.chId());
                         osp->setGrpVchNo(chNo);
                     }
@@ -568,9 +571,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // if voice on control; insert group voice channel updates directly after HDU but before LDUs
             if (m_p25->m_voiceOnControl) {
-                uint32_t chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+                const uint32_t grantOwner = (group) ? dstId : m_p25->m_affiliations->getU2UGrantOwner(srcId, dstId);
+                uint32_t chNo = m_p25->m_affiliations->getGrantedCh(grantOwner);
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
-                bool grp = m_p25->m_affiliations->isGroup(dstId);
+                bool grp = m_p25->m_affiliations->isGroup(grantOwner);
 
                 std::unique_ptr<lc::TSBK> osp;
 
@@ -584,14 +588,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     osp->setGrpVchNo(chNo);
                 }
                 else {
-                    uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
+                    uint32_t grantedSrcId = m_p25->m_affiliations->getGrantedSrcId(grantOwner);
 
                     osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
                     // transmit group voice grant update
                     osp->setLCO(TSBKO::OSP_UU_VCH_GRANT_UPD);
-                    osp->setSrcId(srcId);
-                    osp->setDstId(dstId);
+                    osp->setSrcId(grantedSrcId);
+                    osp->setDstId(grantOwner);
                     osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
                 }
@@ -621,7 +625,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
         if (m_p25->m_rfState == RS_RF_AUDIO) {
             // don't process RF frames if this modem isn't authoritative
-            if (!m_p25->m_authoritative && m_p25->m_permittedDstId != m_rfLC.getDstId()) {
+            if (!m_p25->isPermitted(m_rfLC.getSrcId(), m_rfLC.getDstId(), m_rfLC.getGroup())) {
                 if (!g_disableNonAuthoritativeLogging)
                     LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
                 resetRF();
@@ -1236,7 +1240,7 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
     uint32_t dstId = control.getDstId();
     uint32_t srcId = control.getSrcId();
 
-    if (checkNetTrafficCollision(srcId, dstId, duid))
+    if (checkNetTrafficCollision(srcId, dstId, control.getGroup(), duid))
         return false;
 
     if (m_p25->m_netState == RS_NET_AUDIO && (duid != DUID::TDU && duid != DUID::TDULC))
@@ -1521,10 +1525,10 @@ void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::Fr
 
 /* Helper to perform RF traffic collision checking. */
 
-bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId)
+bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId, bool group)
 {
     // don't process RF frames if this modem isn't authoritative
-    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+    if (!m_p25->isPermitted(srcId, dstId, group)) {
         if (!g_disableNonAuthoritativeLogging)
             LogWarning(LOG_RF, "[NON-AUTHORITATIVE] Ignoring RF traffic, destination not permitted!");
         resetRF();
@@ -1585,7 +1589,7 @@ bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId)
 
 /* Helper to perform network traffic collision checking. */
 
-bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, defines::DUID::E duid)
+bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, bool group, defines::DUID::E duid)
 {
     // safety check: if the network is marked as not idle, but the last network destination ID is 0 *and* the 
     // network watchdog isn't running, then reset the network state to idle
@@ -1690,7 +1694,7 @@ bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, defines::DU
     }
 
     // don't process network frames if this modem isn't authoritative
-    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+    if (!m_p25->isPermitted(srcId, dstId, group)) {
         if (!g_disableNonAuthoritativeLogging)
             LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted, dstId = %u", dstId);
         resetNet();
@@ -1912,7 +1916,8 @@ void Voice::writeNet_LDU1()
                 (m_netLC.getEncrypted() ? 0x40U : 0x00U) +                          // Encrypted Flag
                 (m_netLC.getPriority() & 0x07U);                                    // Priority
 
-            if (!m_p25->m_affiliations->isGranted(dstId)) {
+            const bool callGranted = (group) ? m_p25->m_affiliations->isGranted(dstId) : m_p25->m_affiliations->isU2UGranted(srcId, dstId);
+            if (!callGranted) {
                 if (!m_p25->m_control->writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true)) {
                     if (!m_p25->m_hideRemoteGrantLog) {
                         LogError(LOG_NET, P25_HDU_STR " call rejected, network call not granted, dstId = %u", dstId);
@@ -1953,9 +1958,10 @@ void Voice::writeNet_LDU1()
 
             // if voice on control; insert grant updates before voice traffic
             if (m_p25->m_voiceOnControl) {
-                uint32_t chNo = m_p25->m_affiliations->getGrantedCh(dstId);
+                const uint32_t grantOwner = (group) ? dstId : m_p25->m_affiliations->getU2UGrantOwner(srcId, dstId);
+                uint32_t chNo = m_p25->m_affiliations->getGrantedCh(grantOwner);
                 ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
-                bool grp = m_p25->m_affiliations->isGroup(dstId);
+                bool grp = m_p25->m_affiliations->isGroup(grantOwner);
 
                 std::unique_ptr<lc::TSBK> osp;
 
@@ -1969,14 +1975,14 @@ void Voice::writeNet_LDU1()
                     osp->setGrpVchNo(chNo);
                 }
                 else {
-                    uint32_t srcId = m_p25->m_affiliations->getGrantedSrcId(dstId);
+                    uint32_t grantedSrcId = m_p25->m_affiliations->getGrantedSrcId(grantOwner);
 
                     osp = std::make_unique<lc::tsbk::OSP_UU_VCH_GRANT_UPD>();
 
-                    // transmit group voice grant update
+                    // transmit unit-to-unit voice grant update
                     osp->setLCO(TSBKO::OSP_UU_VCH_GRANT_UPD);
-                    osp->setSrcId(srcId);
-                    osp->setDstId(dstId);
+                    osp->setSrcId(grantedSrcId);
+                    osp->setDstId(grantOwner);
                     osp->setGrpVchId(voiceChData.chId());
                     osp->setGrpVchNo(chNo);
                 }
@@ -2197,7 +2203,7 @@ void Voice::writeNet_LDU2()
     uint32_t dstId = control.getDstId();
 
     // don't process network frames if this modem isn't authoritative
-    if (!m_p25->m_authoritative && m_p25->m_permittedDstId != dstId) {
+    if (!m_p25->isPermitted(control.getSrcId(), dstId, control.getGroup())) {
         if (!g_disableNonAuthoritativeLogging)
             LogWarning(LOG_NET, "[NON-AUTHORITATIVE] Ignoring network traffic (LDU2), destination not permitted!");
         resetNet();

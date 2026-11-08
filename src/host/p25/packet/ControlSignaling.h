@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -161,8 +161,53 @@ namespace p25
             friend class packet::Voice;
             friend class packet::Data;
             friend class p25::Control;
-            Control* m_p25;
             friend class lookups::P25AffiliationLookup;
+
+            /**
+             * @brief State of a pending unit-to-unit availability transaction.
+             */
+            enum class U2UAvailabilityState : uint8_t
+            {
+                AWAITING, //!< Waiting for the called unit's initial response.
+                WAITING   //!< Called unit responded WAIT; a later final response is allowed.
+            };
+
+            /**
+             * @brief Pending unit-to-unit availability-check transaction.
+             * @ingroup host_p25
+             */
+            struct U2UAvailabilityTransaction {
+                uint32_t callerId;               //!< Original calling-unit RID.
+                uint32_t calledId;               //!< Original called-unit RID.
+                uint8_t serviceOptions;          //!< Service Options from the original UU VCH request.
+                U2UAvailabilityState state;      //!< Current answer-processing state.
+                bool originatingSite;            //!< True when this site received the original UU VCH request.
+                bool answerRequired;             //!< True when the FNE explicitly transmitted a UU ANS REQ.
+                Timer responseTimer;             //!< Response lifetime timer.
+
+                /**
+                 * @brief Initializes a pending availability-check transaction.
+                 * @param caller Original calling-unit RID.
+                 * @param called Original called-unit RID.
+                 * @param options Service Options from the request.
+                 * @param originating Flag indicating this site owns the originating transaction.
+                 * @param required Flag indicating an answer response is required to complete call setup.
+                 * @param timeoutSeconds Response lifetime in seconds.
+                 */
+                U2UAvailabilityTransaction(uint32_t caller, uint32_t called, uint8_t options, bool originating, bool required, uint32_t timeoutSeconds) :
+                    callerId(caller),
+                    calledId(called),
+                    serviceOptions(options),
+                    state(U2UAvailabilityState::AWAITING),
+                    originatingSite(originating),
+                    answerRequired(required),
+                    responseTimer(1000U, timeoutSeconds)
+                {
+                    responseTimer.start();
+                }
+            };
+
+            Control* m_p25;
 
             uint32_t m_patchSuperGroup;
             uint32_t m_announcementGroup;
@@ -195,6 +240,7 @@ namespace p25
             bool m_unitToUnitAvailCheck;
             bool m_telephoneInterconnect;
             std::unordered_set<uint32_t> m_telIntGrants;
+            std::unordered_map<uint64_t, U2UAvailabilityTransaction> m_u2uAvailabilityTransactions;
 
             uint8_t m_convFallbackPacketDelay;
             bool m_convFallback;
@@ -231,6 +277,17 @@ namespace p25
              * @brief Finalizes a instance of the ControlSignaling class.
              */
             virtual ~ControlSignaling();
+
+            /**
+             * @brief Updates and expires pending unit-to-unit availability transactions.
+             * @param ms Elapsed milliseconds.
+             */
+            void clock(uint32_t ms);
+
+            /**
+             * @brief Clears all pending unit-to-unit availability transactions.
+             */
+            void resetU2UAvailabilityTransactions();
 
             /**
              * @brief Write data processed from RF to the network.
@@ -329,10 +386,11 @@ namespace p25
              * @param skip Flag indicating normal grant checking is skipped.
              * @param chNo Channel Number.
              * @param telInt Flag indicating this grant is for a telephone interconnect call to the unit in dstId.
+             * @param u2uConfirmedUnitId Participant whose presence was confirmed by a correlated U2U answer, or zero.
              * @returns True, if granted, otherwise false.
              */
             bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, 
-                bool skip = false, uint32_t chNo = 0U, bool telInt = false);
+                bool skip = false, uint32_t chNo = 0U, bool telInt = false, uint32_t u2uConfirmedUnitId = 0U);
             /**
              * @brief Helper to write a grant update packet.
              */
@@ -430,6 +488,24 @@ namespace p25
              * @param srcId Source Radio ID.
              */
             void denialInhibit(uint32_t srcId);
+
+            /**
+             * @brief Produces the ordered key for a pending U2U request.
+             * @param callerId Original calling-unit RID.
+             * @param calledId Original called-unit RID.
+             * @returns uint64_t Ordered 48-bit request key.
+             */
+            static uint64_t u2uTransactionKey(uint32_t callerId, uint32_t calledId);
+
+            /**
+             * @brief Starts or replaces a pending U2U availability transaction.
+             * @param callerId Original calling-unit RID.
+             * @param calledId Original called-unit RID.
+             * @param serviceOptions Requested Service Options.
+             * @param originatingSite Flag indicating this site received the original request.
+             */
+            void startU2UAvailabilityTransaction(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions,
+                bool originatingSite, bool answerRequired);
         };
     } // namespace packet
 } // namespace p25

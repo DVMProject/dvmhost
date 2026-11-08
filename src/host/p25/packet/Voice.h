@@ -5,7 +5,7 @@
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
-*  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
 *
 */
 /**
@@ -169,17 +169,19 @@ namespace p25
              * @brief Helper to perform RF traffic collision checking.
              * @param srcId Source ID.
              * @param dstId Destination ID.
+             * @param group Flag indicating group traffic.
              * @return bool True, if traffic collision, otherwise false.
              */
-            bool checkRFTrafficCollision(uint32_t srcId, uint32_t dstId);
+            bool checkRFTrafficCollision(uint32_t srcId, uint32_t dstId, bool group);
             /**
              * @brief Helper to perform network traffic collision checking.
              * @param srcId Source ID.
              * @param dstId Destination ID.
+             * @param group Flag indicating group traffic.
              * @param duid DUID.
              * @return bool True, if traffic collision, otherwise false.
              */
-            bool checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, defines::DUID::E duid);
+            bool checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, bool group, defines::DUID::E duid);
 
             /**
              * @brief Helper to write end of voice frame data.

@@ -108,6 +108,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netLastDstId(0U),
     m_netLastSrcId(0U),
     m_permittedDstId(0U),
+    m_permittedSrcId(0U),
+    m_permittedU2U(false),
     m_permittedTelInt(false),
     m_tailOnIdle(false),
     m_ccRunning(false),
@@ -218,6 +220,10 @@ void Control::reset()
 
     if (m_data != nullptr) {
         m_data->resetRF();
+    }
+
+    if (m_control != nullptr) {
+        m_control->resetU2UAvailabilityTransactions();
     }
 
     m_txImmQueue.clear();
@@ -925,6 +931,7 @@ void Control::clock()
     }
 
     // handle timeouts and hang timers
+    m_control->clock(ms);
     m_rfTimeoutTimer.clock(ms);
     m_netTimeoutTimer.clock(ms);
     m_rfVoiceCallTermTimeout.clock(ms);
@@ -947,9 +954,9 @@ void Control::clock()
             m_rfLastDstId = 0U;
             m_rfLastSrcId = 0U;
 
-            // reset permitted ID and clear permission state (a telephone interconnect permit is held for the
-            // whole call and only cleared by the control channel)
-            if (!m_authoritative && m_permittedDstId != 0U && !m_permittedTelInt) {
+            // message-trunked U2U and telephone interconnect permits are held
+            // for the whole call and only cleared by the control channel
+            if (!m_authoritative && m_permittedDstId != 0U && !m_permittedTelInt && !m_permittedU2U) {
                 m_permittedDstId = 0U;
             }
 
@@ -1262,7 +1269,7 @@ void Control::clockSiteData(uint32_t ms)
 
 /* Permits a TGID on a non-authoritative host. */
 
-void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt)
+void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt, uint32_t srcId, bool unitToUnit)
 {
     if (m_authoritative) {
         return;
@@ -1272,7 +1279,8 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt)
         if (dstId == 0U)
             LogInfoEx(LOG_P25, "non-authoritative TG unpermit");
         else
-            LogInfoEx(LOG_P25, "non-authoritative TG permit, dstId = %u, telInt = %u", dstId, telInt);
+            LogInfoEx(LOG_P25, "non-authoritative TG permit, srcId = %u, dstId = %u, u2u = %u, telInt = %u",
+                srcId, dstId, unitToUnit, telInt);
     }
 
     // if this a unpermit ensure we write TDUs
@@ -1287,12 +1295,29 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt)
     }
 
     m_permittedDstId = dstId;
+    m_permittedSrcId = (dstId != 0U && unitToUnit) ? srcId : 0U;
+    m_permittedU2U = (dstId != 0U) && unitToUnit;
     m_permittedTelInt = (dstId != 0U) && telInt;
 
     // is this a data permit?
     if (dataPermit && m_sndcpSupport) {
         m_data->sndcpInitialize(dstId);
     }
+}
+
+/* Tests traffic identities against the current voice-channel permit. */
+
+bool Control::isPermitted(uint32_t srcId, uint32_t dstId, bool group) const
+{
+    if (m_authoritative) {
+        return true;
+    }
+
+    if (m_permittedU2U) {
+        return !group && ((srcId == m_permittedSrcId && dstId == m_permittedDstId) || (srcId == m_permittedDstId && dstId == m_permittedSrcId));
+    }
+
+    return dstId == m_permittedDstId;
 }
 
 /* Grants a TGID on a non-authoritative host. */
@@ -2148,9 +2173,19 @@ void Control::RPC_permittedTG(json::object& req, json::object& reply)
         telInt = (bool)req["telInt"].get<bool>();
     }
 
+    uint32_t srcId = 0U;
+    if (req["srcId"].is<int>()) {
+        srcId = req["srcId"].get<uint32_t>();
+    }
+
+    bool unitToUnit = false;
+    if (req["unitToUnit"].is<bool>()) {
+        unitToUnit = req["unitToUnit"].get<bool>();
+    }
+
     // LogDebugEx(LOG_P25, "Control::RPC_permittedTG()", "callback, dstId = %u, dataPermit = %u", dstId, dataPermit);
 
-    permittedTG(dstId, dataPermit, telInt);
+    permittedTG(dstId, dataPermit, telInt, srcId, unitToUnit);
 }
 
 /* (RPC Handler) Active TGID list from the authoritative CC host. */
@@ -2226,17 +2261,7 @@ void Control::RPC_releaseGrantTG(json::object& req, json::object& reply)
         LogInfoEx(LOG_P25, "VC request, release TG grant, dstId = %u", dstId);
     }
 
-    if (m_affiliations->isGranted(dstId)) {
-        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
-        ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
-
-        if (m_verbose) {
-            LogInfoEx(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
-        }
-
-        m_affiliations->releaseGrant(dstId, false);
-    }
+    releaseGrantFromVoiceChannel(dstId);
 }
 
 /* (RPC Handler) Touches a granted TG to keep a channel grant alive. */
@@ -2265,17 +2290,60 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
 
     // LogDebugEx(LOG_P25, "Control::RPC_touchGrantTG()", "callback, dstId = %u", dstId);
 
-    if (m_affiliations->isGranted(dstId)) {
-        uint32_t chNo = m_affiliations->getGrantedCh(dstId);
-        uint32_t srcId = m_affiliations->getGrantedSrcId(dstId);
+    uint32_t grantOwner = dstId;
+    if (!m_affiliations->isGranted(grantOwner)) {
+        grantOwner = m_affiliations->getU2UGrantOwner(dstId);
+    }
+
+    if (m_affiliations->isGranted(grantOwner)) {
+        uint32_t chNo = m_affiliations->getGrantedCh(grantOwner);
+        uint32_t srcId = m_affiliations->getGrantedSrcId(grantOwner);
         ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
 
         if (m_verbose) {
             LogInfoEx(LOG_P25, "VC %s:%u, call in progress, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
         }
 
-        m_affiliations->touchGrant(dstId);
+        m_affiliations->touchGrant(grantOwner);
     }
+}
+
+/* Handles a voice-channel request to release or retain a completed grant. */
+
+void Control::releaseGrantFromVoiceChannel(uint32_t dstId)
+{
+    uint32_t grantOwner = dstId;
+    if (!m_affiliations->isGranted(grantOwner)) {
+        // the VC reports the current directional target, which may not be the
+        // destination-key owner of the private grant
+        grantOwner = m_affiliations->getU2UGrantOwner(dstId);
+    }
+
+    if (!m_affiliations->isGranted(grantOwner)) {
+        return;
+    }
+
+    uint32_t chNo = m_affiliations->getGrantedCh(grantOwner);
+    uint32_t srcId = m_affiliations->getGrantedSrcId(grantOwner);
+    ::lookups::VoiceChData voiceCh = m_affiliations->rfCh()->getRFChData(chNo);
+
+    if (!m_affiliations->isGroup(grantOwner)) {
+        // U2U calls are message-trunked; retain the assignment for the grant
+        // hang timer so the other participant can continue on the same channel
+        if (m_verbose) {
+            LogInfoEx(LOG_P25, "VC %s:%u, U2U grant retained for call continuation, srcId = %u, dstId = %u, chNo = %u-%u",
+                voiceCh.address().c_str(), voiceCh.port(), srcId, grantOwner, voiceCh.chId(), chNo);
+        }
+
+        m_affiliations->touchGrant(grantOwner);
+        return;
+    }
+
+    if (m_verbose) {
+        LogInfoEx(LOG_P25, "VC %s:%u, TG grant released, srcId = %u, dstId = %u, chNo = %u-%u", voiceCh.address().c_str(), voiceCh.port(), srcId, dstId, voiceCh.chId(), chNo);
+    }
+
+    m_affiliations->releaseGrant(grantOwner, false);
 }
 
 /* Helper to retrieve LLA AM1 parameters for a given source ID. */

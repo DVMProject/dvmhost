@@ -179,6 +179,34 @@ void buildUUAnswerResponse(uint32_t responderId, uint32_t callerId, uint8_t resp
     edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
 }
 
+/**
+ * @brief Builds an independently encoded cancel service request ISP TSBK.
+ * @param srcId RID cancelling the service.
+ * @param serviceType Service opcode being cancelled.
+ * @param raw The buffer to store the constructed TSBK.
+ */
+void buildCancelServiceRequest(uint32_t srcId, uint8_t serviceType, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::ISP_CAN_SRV_REQ;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = serviceType & 0x3FU;
+    SET_UINT24(srcId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+/** Builds an independently encoded UU ANS request OSP TSBK. */
+void buildUUAnswerRequest(uint32_t callerId, uint32_t calledId, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::IOSP_UU_ANS;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = 0x04U;
+    SET_UINT24(calledId, raw, 4U);
+    SET_UINT24(callerId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -644,10 +672,171 @@ TEST_CASE("P25 unit-to-unit grant admits either participant as first talker",
     // availability-check procedure. Voice admission therefore must recognize
     // the same private call when its direction is reversed.
     CHECK(HostTestHooks::p25IsGranted(*harness.m_control, calledUnit));
-    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, callingUnit));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, callingUnit));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, callingUnit, calledUnit));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, calledUnit, callingUnit));
+
+    // A VC terminator ends one talkspurt, not the message-trunked private call.
+    HostTestHooks::p25VoiceChannelReleaseGrant(*harness.m_control, callingUnit);
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, callingUnit, calledUnit));
+
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, callingUnit));
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, callingUnit, calledUnit));
+}
+
+TEST_CASE("P25 non-authoritative unit-to-unit permit admits either participant direction",
+    "[p25][host][control][u2u][permit]")
+{
+    P25HostHarness harness(false);
+    const uint32_t caller = 5519007U;
+    const uint32_t called = 5519001U;
+
+    harness.m_control->permittedTG(called, false, false, caller, true);
+
+    CHECK(harness.m_control->isPermitted(caller, called, false));
+    CHECK(harness.m_control->isPermitted(called, caller, false));
+    CHECK_FALSE(harness.m_control->isPermitted(caller, 5519002U, false));
+    CHECK_FALSE(harness.m_control->isPermitted(caller, called, true));
+
+    harness.m_control->permittedTG(0U);
+    CHECK_FALSE(harness.m_control->isPermitted(caller, called, false));
+}
+
+TEST_CASE("P25 voice-channel release still releases group grants immediately",
+    "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t srcId = 1001U;
+    const uint32_t dstId = 2001U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, srcId, dstId, false));
+
+    HostTestHooks::p25VoiceChannelReleaseGrant(*harness.m_control, dstId);
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, dstId));
+}
+
+TEST_CASE("P25 active unit-to-unit call continues with a grant instead of another answer request",
+    "[p25][host][control][u2u][procedure][continuation]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519007U;
+    const uint32_t called = 5519001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+
+    // The post-answer grant is answering unit -> original caller.
+    REQUIRE(HostTestHooks::p25SeedU2UGrant(*harness.m_control, called, caller));
+    HostTestHooks::p25VoiceChannelReleaseGrant(*harness.m_control, caller);
+    REQUIRE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    REQUIRE(HostTestHooks::p25U2UGrantSource(*harness.m_control, caller, called) == called);
+    REQUIRE(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == caller);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    CHECK(HostTestHooks::p25U2UGrantSource(*harness.m_control, caller, called) == caller);
+    CHECK(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == called);
+}
+
+TEST_CASE("P25 unit-to-unit cancellation cleanup releases only private call state",
+    "[p25][host][control][u2u][procedure][cancel]")
+{
+    P25HostHarness harness;
+    const uint32_t privateChannelNo = 1U;
+    const uint32_t groupChannelNo = 2U;
+    const uint32_t caller = 5519007U;
+    const uint32_t called = 5519001U;
+    const uint32_t groupSrcId = 1001U;
+    const uint32_t groupDstId = 2001U;
+    harness.m_chLookup.setRFChData(privateChannelNo, lookups::VoiceChData(1U, privateChannelNo, "", 0U, ""));
+    harness.m_chLookup.setRFChData(groupChannelNo, lookups::VoiceChData(1U, groupChannelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(privateChannelNo));
+    REQUIRE(harness.m_chLookup.initializeRFCh(groupChannelNo));
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    REQUIRE(HostTestHooks::p25SeedU2UGrant(*harness.m_control, caller, called));
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, groupSrcId, groupDstId, false));
+
+    REQUIRE(HostTestHooks::p25ReleaseU2UGrant(*harness.m_control, caller));
+
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    CHECK(HostTestHooks::p25U2UGrantSource(*harness.m_control, caller, called) == 0U);
+    CHECK(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, groupDstId));
+}
+
+TEST_CASE("P25 cancel service request clears pending unit-to-unit setup",
+    "[p25][host][control][u2u][procedure][cancel]")
+{
+    P25HostHarness harness;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    buildCancelServiceRequest(called, p25::defines::TSBKO::IOSP_UU_ANS, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
 }
 
 TEST_CASE("P25 unit-to-unit availability-check procedure grants only after proceed",
+    "[p25][host][control][u2u][procedure]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_WAIT, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, called, caller));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+
+    // A duplicate final response is no longer correlated and must not create
+    // another grant or pending transaction.
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 unit-to-unit deny consumes the availability transaction without a grant",
     "[p25][host][control][u2u][procedure]")
 {
     P25HostHarness harness;
@@ -664,17 +853,12 @@ TEST_CASE("P25 unit-to-unit availability-check procedure grants only after proce
 
     buildUUVchRequest(caller, called, raw);
     REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
-    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
-    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
 
-    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_WAIT, raw);
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_DENY, raw);
     REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
-    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
-    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
-
-    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
-    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
-    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
 }
 
 TEST_CASE("P25 unit-to-unit rejects unsolicited and mismatched answer responses",
@@ -697,13 +881,39 @@ TEST_CASE("P25 unit-to-unit rejects unsolicited and mismatched answer responses"
     buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
     REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
     CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
-    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, caller));
 
     buildUUVchRequest(caller, called, raw);
     REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
     buildUUAnswerResponse(called, unrelatedCaller, p25::defines::ResponseCode::ANS_PROCEED, raw);
     REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
     CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, unrelatedCaller));
+}
+
+TEST_CASE("P25 unit-to-unit availability transaction expires before a late response",
+    "[p25][host][control][u2u][procedure]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    HostTestHooks::p25ClockU2U(*harness.m_control, 16000U);
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
 }
 
 TEST_CASE("P25 unit-to-unit without availability check grants the request immediately",
@@ -723,6 +933,71 @@ TEST_CASE("P25 unit-to-unit without availability check grants the request immedi
     buildUUVchRequest(caller, called, raw);
     REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
     CHECK(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    // A manual-answer SU may respond after the unchecked grant has expired.
+    // The response is correlated to the original request and must re-establish
+    // the same private call without accepting an unsolicited answer response.
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, called));
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+}
+
+TEST_CASE("P25 unit-to-unit network answer completes the originating-site transaction",
+    "[p25][host][control][u2u][procedure][network]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessNetworkRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 unit-to-unit target site correlates a network answer request with the RF response",
+    "[p25][host][control][u2u][procedure][network]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+
+    buildUUAnswerRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessNetworkRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
 }
 
 TEST_CASE("P25 host preserves encrypted network call parameters", "[p25][host][control][crypto]")

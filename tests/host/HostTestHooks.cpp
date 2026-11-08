@@ -18,7 +18,9 @@
 #include "common/nxdn/channel/LICH.h"
 #include "common/nxdn/channel/SACCH.h"
 #include "common/nxdn/lc/RTCH.h"
+#include "common/edac/Trellis.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
+#include "common/p25/P25Utils.h"
 #include "host/p25/packet/ControlSignaling.h"
 
 #include <cstring>
@@ -422,11 +424,78 @@ bool HostTestHooks::p25ProcessRawTSBK(p25::Control& control, const uint8_t* raw)
     return control.m_control->process(frame, sizeof(frame), std::move(tsbk));
 }
 
+/* Injects an independently encoded raw TSBK through P25 network processing. */
+
+bool HostTestHooks::p25ProcessNetworkRawTSBK(p25::Control& control, const uint8_t* raw)
+{
+    uint8_t fec[p25::defines::P25_TSBK_FEC_LENGTH_BYTES] = { 0U };
+    uint8_t encoded[p25::defines::P25_TSDU_FRAME_LENGTH_BYTES] = { 0U };
+    edac::Trellis trellis;
+    trellis.encode12(raw, fec);
+    p25::P25Utils::encode(fec, encoded, 114U, 318U);
+
+    p25::lc::LC lc;
+    p25::data::LowSpeedData lsd;
+    p25::defines::DUID::E duid = p25::defines::DUID::TSDU;
+    return control.m_control->processNetwork(encoded, sizeof(encoded), lc, lsd, duid);
+}
+
+/* Tests whether one P25 private grant owns the specified RID pair. */
+
+bool HostTestHooks::p25IsU2UGranted(const p25::Control& control, uint32_t srcId, uint32_t dstId)
+{
+    return control.m_affiliations->isU2UGranted(srcId, dstId);
+}
+
+/* Gets the current source RID advertised for a P25 private grant. */
+
+uint32_t HostTestHooks::p25U2UGrantSource(const p25::Control& control, uint32_t srcId, uint32_t dstId)
+{
+    const uint32_t owner = control.m_affiliations->getU2UGrantOwner(srcId, dstId);
+    return control.m_affiliations->getU2UGrantSource(owner);
+}
+
+/* Gets the current target RID advertised for a P25 private grant. */
+
+uint32_t HostTestHooks::p25U2UGrantTarget(const p25::Control& control, uint32_t srcId, uint32_t dstId)
+{
+    const uint32_t owner = control.m_affiliations->getU2UGrantOwner(srcId, dstId);
+    return control.m_affiliations->getU2UGrantTarget(owner);
+}
+
+/* Gets the number of pending P25 U2U availability transactions. */
+
+size_t HostTestHooks::p25PendingU2UCount(const p25::Control& control)
+{
+    return control.m_control->m_u2uAvailabilityTransactions.size();
+}
+
+/* Advances P25 U2U availability transaction timers. */
+
+void HostTestHooks::p25ClockU2U(p25::Control& control, uint32_t ms)
+{
+    control.m_control->clock(ms);
+}
+
 /* Releases a P25 grant for a steering-policy test. */
 
 bool HostTestHooks::p25ReleaseGrant(p25::Control& control, uint32_t dstId)
 {
     return control.m_affiliations->releaseGrant(dstId, false);
+}
+
+/* Releases the active P25 private grant involving a radio ID. */
+
+bool HostTestHooks::p25ReleaseU2UGrant(p25::Control& control, uint32_t unitId)
+{
+    return control.m_affiliations->releaseU2UGrant(unitId);
+}
+
+/* Applies the P25 voice-channel grant-release policy. */
+
+void HostTestHooks::p25VoiceChannelReleaseGrant(p25::Control& control, uint32_t dstId)
+{
+    control.releaseGrantFromVoiceChannel(dstId);
 }
 
 /* Gets the last P25 RF destination ID. */
