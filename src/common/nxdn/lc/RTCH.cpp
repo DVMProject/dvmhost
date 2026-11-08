@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "nxdn/NXDNDefines.h"
@@ -43,6 +43,7 @@ RTCH::RTCH() :
     m_group(true),
     m_duplex(false),
     m_transmissionMode(TransmissionMode::MODE_4800),
+    m_transmissionPermit(false),
     m_packetInfo(),
     m_rsp(),
     m_dataFrameNumber(0U),
@@ -70,6 +71,7 @@ RTCH::RTCH(const RTCH& data) :
     m_group(true),
     m_duplex(false),
     m_transmissionMode(TransmissionMode::MODE_4800),
+    m_transmissionPermit(false),
     m_packetInfo(),
     m_rsp(),
     m_dataFrameNumber(0U),
@@ -237,6 +239,8 @@ bool RTCH::decodeLC(const uint8_t* data)
         m_priority = (data[1U] & 0x20U) == 0x20U;                                   // Priority Flag
         m_srcId = (uint16_t)((data[3U] << 8) | data[4U]) & 0xFFFFU;                 // Source Radio Address
         m_dstId = (uint16_t)((data[5U] << 8) | data[6U]) & 0xFFFFU;                 // Target Radio Address
+        m_transmissionPermit = m_messageType == MessageType::RTCH_TX_REL_EX &&
+            (data[7U] & 0x80U) == 0x80U;                                           // Transmission Permit
         break;
     case MessageType::RTCH_DCALL_HDR:
         m_callType = (data[2U] >> 5) & 0x07U;                                       // Call Type
@@ -362,6 +366,8 @@ void RTCH::encodeLC(uint8_t* data)
         data[4U] = (m_srcId >> 0U) & 0xFFU;                                         // ...
         data[5U] = (m_dstId >> 8U) & 0xFFU;                                         // Target Radio Address
         data[6U] = (m_dstId >> 0U) & 0xFFU;                                         // ...
+        if (m_messageType == MessageType::RTCH_TX_REL_EX)
+            data[7U] = m_transmissionPermit ? 0x80U : 0x00U;                        // Transmission Permit
         break;
     case MessageType::RTCH_DCALL_HDR:
         data[1U] = (m_emergency ? 0x80U : 0x00U) +                                  // Emergency Flag
@@ -465,6 +471,7 @@ void RTCH::copy(const RTCH& data)
     m_group = data.m_group;
     m_duplex = data.m_duplex;
     m_transmissionMode = data.m_transmissionMode;
+    m_transmissionPermit = data.m_transmissionPermit;
 
     m_packetInfo = data.m_packetInfo;
     m_rsp = data.m_rsp;

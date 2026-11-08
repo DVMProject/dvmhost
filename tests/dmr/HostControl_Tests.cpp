@@ -834,6 +834,73 @@ TEST_CASE("DMR Tier III re-key on a retained payload channel recreates its grant
     CHECK(HostTestHooks::dmrPayloadDstId(*payload) == 0U);
 }
 
+TEST_CASE("DMR Tier III OACSU grants only after the called unit accepts",
+    "[dmr][tier3][host][control][u2u][oacsu]")
+{
+    DMRHostHarness harness;
+    constexpr uint32_t CALLER_ID = 1001U;
+    constexpr uint32_t CALLED_ID = 1002U;
+
+    REQUIRE(harness.m_chLookup.initializeRFCh(101U));
+    HostTestHooks::dmrEnableTier3(*harness.m_control, 101U, 1U);
+    dmr::Slot* tscc = HostTestHooks::dmrSlot1(*harness.m_control);
+    HostTestHooks::dmrRegisterUnit(*tscc, CALLER_ID);
+    HostTestHooks::dmrRegisterUnit(*tscc, CALLED_ID);
+
+    HostTestHooks::dmrBeginU2UOACSU(*tscc, CALLER_ID, CALLED_ID, 4U);
+    CHECK(HostTestHooks::dmrPendingU2UOACSU(*tscc) == 1U);
+    CHECK_FALSE(HostTestHooks::dmrIsGranted(*tscc, CALLED_ID));
+
+    REQUIRE(HostTestHooks::dmrRespondU2UOACSU(*tscc, CALLED_ID, CALLER_ID, true));
+    CHECK(HostTestHooks::dmrPendingU2UOACSU(*tscc) == 0U);
+    CHECK(HostTestHooks::dmrIsGranted(*tscc, CALLED_ID));
+    CHECK_FALSE(HostTestHooks::dmrIsGroupGrant(*tscc, CALLED_ID));
+}
+
+TEST_CASE("DMR Tier III OACSU rejection and cancellation do not create grants",
+    "[dmr][tier3][host][control][u2u][oacsu]")
+{
+    DMRHostHarness harness;
+    constexpr uint32_t CALLER_ID = 1001U;
+    constexpr uint32_t CALLED_ID = 1002U;
+
+    REQUIRE(harness.m_chLookup.initializeRFCh(101U));
+    HostTestHooks::dmrEnableTier3(*harness.m_control, 101U, 1U);
+    dmr::Slot* tscc = HostTestHooks::dmrSlot1(*harness.m_control);
+    HostTestHooks::dmrRegisterUnit(*tscc, CALLER_ID);
+    HostTestHooks::dmrRegisterUnit(*tscc, CALLED_ID);
+
+    HostTestHooks::dmrBeginU2UOACSU(*tscc, CALLER_ID, CALLED_ID);
+    REQUIRE(HostTestHooks::dmrRespondU2UOACSU(*tscc, CALLED_ID, CALLER_ID, false));
+    CHECK_FALSE(HostTestHooks::dmrIsGranted(*tscc, CALLED_ID));
+
+    HostTestHooks::dmrBeginU2UOACSU(*tscc, CALLER_ID, CALLED_ID);
+    REQUIRE(HostTestHooks::dmrCancelU2UOACSU(*tscc, CALLER_ID));
+    CHECK(HostTestHooks::dmrPendingU2UOACSU(*tscc) == 0U);
+    CHECK_FALSE(HostTestHooks::dmrIsGranted(*tscc, CALLED_ID));
+}
+
+TEST_CASE("DMR Tier III OACSU prevents competing private-call transactions",
+    "[dmr][tier3][host][control][u2u][oacsu]")
+{
+    DMRHostHarness harness;
+    constexpr uint32_t FIRST_CALLER_ID = 1001U;
+    constexpr uint32_t SECOND_CALLER_ID = 1002U;
+    constexpr uint32_t CALLED_ID = 1003U;
+    constexpr uint32_t OTHER_CALLED_ID = 1004U;
+
+    REQUIRE(harness.m_chLookup.initializeRFCh(101U));
+    HostTestHooks::dmrEnableTier3(*harness.m_control, 101U, 1U);
+    dmr::Slot* tscc = HostTestHooks::dmrSlot1(*harness.m_control);
+
+    REQUIRE(HostTestHooks::dmrBeginU2UOACSU(*tscc, FIRST_CALLER_ID, CALLED_ID));
+    CHECK_FALSE(HostTestHooks::dmrBeginU2UOACSU(*tscc, SECOND_CALLER_ID, CALLED_ID));
+    CHECK_FALSE(HostTestHooks::dmrBeginU2UOACSU(*tscc, FIRST_CALLER_ID, OTHER_CALLED_ID));
+    CHECK(HostTestHooks::dmrPendingU2UOACSU(*tscc) == 1U);
+    CHECK_FALSE(HostTestHooks::dmrIsGranted(*tscc, CALLED_ID));
+    CHECK_FALSE(HostTestHooks::dmrIsGranted(*tscc, OTHER_CALLED_ID));
+}
+
 TEST_CASE("DMR rfTGHang expiry ends active RF call and returns slot to listening", "[dmr][host][control][rf]")
 {
     DMRHostHarness harness;

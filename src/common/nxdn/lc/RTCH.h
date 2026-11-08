@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -147,6 +147,10 @@ namespace nxdn
              * @brief Transmission mode.
              */
             DECLARE_PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+            /**
+             * @brief Transmission right flag carried by TX_REL_EX.
+             */
+            DECLARE_PROPERTY(bool, transmissionPermit, TransmissionPermit);
             /** @} */
 
             /** @name Data Call Data */

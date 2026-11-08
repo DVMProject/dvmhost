@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -385,8 +385,11 @@ namespace nxdn
                 RTCH_SDCALL_RESP = 0x3BU,               //!< SDCALL_RESP - Short Data Call Response
 
             // Control Channel Message Types
+                RCCH_VCALL_REQ = 0x01U,                 //!< VCALL_REQ (ISP) / VCALL_RESP (OSP)
+                RCCH_VCALL_REC = 0x02U,                 //!< VCALL_REC_RESP (ISP) / VCALL_REC_REQ (OSP)
                 RCCH_VCALL_CONN = 0x03U,                //!< VCALL_CONN - Voice Call Connection Request (ISP) / Voice Call Connection Response (OSP)
                 RCCH_VCALL_ASSGN = 0x04U,               //!< VCALL_ASSGN - Voice Call Assignment
+                RCCH_VCALL_ASSGN_DUP = 0x05U,           //!< VCALL_ASSGN_DUP - Voice Call Assignment Duplicate
                 RCCH_DCALL_ASSGN = 0x14U,               //!< DCALL_ASSGN - Data Call Assignment
                 RCCH_SITE_INFO = 0x18U,                 //!< SITE_INFO - Site Information
                 RCCH_REG = 0x20U,                       //!< REG - Registration Request (ISP) / Registration Response (OSP)

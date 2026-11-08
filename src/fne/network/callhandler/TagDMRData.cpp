@@ -499,7 +499,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_statusPVCall[dstId].activeCall = true;
 
                     // find the SSRC of the peer that registered this unit
-                    uint32_t regSSRC = m_network->findPeerUnitReg(srcId);
+                    uint32_t regSSRC = m_network->findPeerUnitReg(dstId);
                     m_statusPVCall[dstId].dstPeerId = regSSRC;
                     m_statusPVCall.unlock();
 
@@ -753,21 +753,33 @@ bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, b
         }
     }
 
-    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+    if (!unitToUnit) {
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
 
-    // check TGID validity
-    if (tg.isInvalid()) {
-        return false;
+        // check TGID validity
+        if (tg.isInvalid()) {
+            return false;
+        }
+
+        if (!tg.config().active()) {
+            return false;
+        }
     }
-
-    if (!tg.config().active()) {
-        return false;
+    else {
+        lookups::RadioId target = m_network->m_ridLookup->find(dstId);
+        if ((!target.radioDefault() && !target.radioEnabled()) ||
+            (target.radioDefault() && m_network->m_rejectUnknownRID)) {
+            return false;
+        }
     }
 
     // repeat traffic to the connected peers
     if (m_network->peerCount() > 0U) {
+        const uint32_t registeredPeerId = unitToUnit ? m_network->findPeerUnitReg(dstId) : 0U;
         for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first) {
+                if (registeredPeerId != 0U && peer.first != registeredPeerId)
+                    continue;
                 write_CSBK_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
             }
         }
@@ -1484,8 +1496,13 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
     }
     else {
-        if (!aff->hasGroupAff(dstId)) {
+        if (grp && !aff->hasGroupAff(dstId)) {
             return false;
+        }
+        if (!grp && !aff->isUnitReg(dstId)) {
+            TrafficNetwork::PeerConnectionPtr connection = m_network->findPeer(peerId);
+            if (connection == nullptr || !connection->isConventional())
+                return false;
         }
     }
 

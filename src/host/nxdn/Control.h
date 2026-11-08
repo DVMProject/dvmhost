@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -289,6 +289,7 @@ namespace nxdn
         bool m_duplex;
         bool m_enableControl;
         bool m_dedicatedControl;
+        bool m_unitToUnitAvailCheck;
         bool m_ignoreAffiliationCheck;
         bool m_legacyGroupReg;
 

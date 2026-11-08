@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -168,11 +168,17 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
             // validate the source RID
             VALID_SRCID(rcch->toString(true), MessageType::RTCH_VCALL, srcId, CauseResponse::VD_REQ_UNIT_NOT_PERM);
 
-            // validate the talkgroup ID
-            VALID_TGID(rcch->toString(true), MessageType::RTCH_VCALL, dstId, srcId, CauseResponse::VD_TGT_UNIT_NOT_PERM);
-
-            // verify the source RID is affiliated
-            VERIFY_SRCID_AFF(rcch->toString(true), MessageType::RTCH_VCALL, srcId, dstId, CauseResponse::VD_REQ_UNIT_NOT_REG);
+            const bool group = rcch->getGroup();
+            if (group) {
+                // validate the talkgroup ID and source affiliation
+                VALID_TGID(rcch->toString(true), MessageType::RTCH_VCALL, dstId, srcId, CauseResponse::VD_TGT_UNIT_NOT_PERM);
+                VERIFY_SRCID_AFF(rcch->toString(true), MessageType::RTCH_VCALL, srcId, dstId, CauseResponse::VD_REQ_UNIT_NOT_REG);
+            }
+            else {
+                // validate the target subscriber for an individual call
+                VALID_DSTID(rcch->toString(true), MessageType::RTCH_VCALL, dstId, srcId, CauseResponse::VD_TGT_UNIT_NOT_PERM);
+                VERIFY_SRCID_REG(rcch->toString(true), MessageType::RTCH_VCALL, srcId, CauseResponse::VD_REQ_UNIT_NOT_REG);
+            }
 
             VERBOSE_LOG_MSG(rcch->toString(true), srcId, dstId);
             uint8_t serviceOptions = (rcch->getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
@@ -180,13 +186,50 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
                 (rcch->getPriority() & 0x07U);                                      // Priority
 
             if (m_nxdn->m_authoritative) {
-                writeRF_Message_Grant(srcId, dstId, serviceOptions, true);
+                if (!group && m_nxdn->m_unitToUnitAvailCheck)
+                    beginU2UAvailability(srcId, dstId, serviceOptions);
+                else
+                    writeRF_Message_Grant(srcId, dstId, serviceOptions, group);
             } else {
                 if (m_nxdn->m_network != nullptr)
-                    m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, false);
+                    m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, !group);
             }
         }
         break;
+        case MessageType::RCCH_VCALL_REC:
+        {
+            const bool accepted = rcch->getCauseResponse() == CauseResponse::VD_ACCEPTED;
+            if (!completeU2UAvailability(srcId, dstId, accepted))
+                writeNetwork(data, len);
+        }
+        break;
+        case MessageType::RCCH_VCALL_CONN:
+        {
+            if (!completeU2UAvailability(srcId, dstId, true))
+                writeNetwork(data, len);
+        }
+        break;
+        case MessageType::DISC:
+        {
+            cancelU2U(srcId);
+            uint32_t grantDstId = m_nxdn->m_affiliations->isGranted(srcId) ? srcId : m_nxdn->m_affiliations->getGrantedBySrcId(srcId);
+            if (grantDstId == 0U && m_nxdn->m_affiliations->isGranted(dstId))
+                grantDstId = dstId;
+            if (grantDstId != 0U)
+                m_nxdn->m_affiliations->releaseGrant(grantDstId, false);
+
+            // create and send a disconnect message on the RF interface
+            std::unique_ptr<MESSAGE_TYPE_VCALL_CONN> disconnect = std::make_unique<MESSAGE_TYPE_VCALL_CONN>();
+            disconnect->setMessageType(MessageType::DISC);
+            disconnect->setCallType(CallType::INDIVIDUAL);
+            disconnect->setGroup(false);
+            disconnect->setSrcId(srcId);
+            disconnect->setDstId(dstId);
+            disconnect->setCauseResponse(CauseResponse::DREQ_USER);
+
+            writeRF_Message(disconnect.get(), false, true);
+        }
+            break;
         case MessageType::RCCH_REG:
         {
             // make sure control data is supported
@@ -261,13 +304,33 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
                             (rcch->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
                             (rcch->getPriority() & 0x07U);                                  // Priority
 
-                        writeRF_Message_Grant(srcId, dstId, serviceOptions, true, true);
+                        writeRF_Message_Grant(srcId, dstId, serviceOptions, rcch->getGroup(), true);
                     }
                 }
             }
             return true; // don't allow this to write to the air
+            case MessageType::RCCH_VCALL_REC:
+            {
+                const bool accepted = rcch->getCauseResponse() == CauseResponse::VD_ACCEPTED;
+                if (completeU2UAvailability(srcId, dstId, accepted))
+                    return true;
+            }
+            break;
             case MessageType::RCCH_VCALL_CONN:
-                break; // the FNE may explicitly send these
+                if (completeU2UAvailability(srcId, dstId, true))
+                    return true;
+                break;
+            case MessageType::DISC:
+            {
+                cancelU2U(srcId);
+
+                uint32_t grantDstId = m_nxdn->m_affiliations->isGranted(srcId) ? srcId : m_nxdn->m_affiliations->getGrantedBySrcId(srcId);
+                if (grantDstId == 0U && m_nxdn->m_affiliations->isGranted(dstId))
+                    grantDstId = dstId;
+                if (grantDstId != 0U)
+                    m_nxdn->m_affiliations->releaseGrant(grantDstId, false);
+            }
+            break;
             default:
                 LogError(LOG_NET, "NXDN, unhandled message type, messageType = $%02X", rcch->getMessageType());
                 return false;
@@ -277,6 +340,37 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
     }
 
     return true;
+}
+
+/* Expires pending Type-C call setup transactions. */
+
+void ControlSignaling::clock()
+{
+    // expire pending Type-C call setup transactions based on the current time
+    const auto now = std::chrono::steady_clock::now();
+    for (auto it = m_u2uTransactions.begin(); it != m_u2uTransactions.end();) {
+        if (it->second.expires <= now) {
+            writeRF_Message_Deny(0U, it->second.callerId,
+                CauseResponse::VD_TGT_UNIT_NOT_PERM, MessageType::RTCH_VCALL);
+            it = m_u2uTransactions.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+
+    // update grants on the RF interface if the last update was more than 500ms ago
+    if (now - m_lastGrantUpdate >= std::chrono::milliseconds(500)) {
+        const std::unordered_map<uint32_t, uint32_t> grants =
+            m_nxdn->m_affiliations->grantTable();
+        for (const auto& grant : grants) {
+            const uint32_t dstId = grant.first;
+            writeRF_Message_Grant(m_nxdn->m_affiliations->getGrantedSrcId(dstId),
+                dstId, 4U, m_nxdn->m_affiliations->isGroup(dstId), true, true,
+                grant.second, true);
+        }
+        m_lastGrantUpdate = now;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -297,6 +391,8 @@ ControlSignaling::ControlSignaling(Control* nxdn, bool debug, bool verbose) :
     m_verifyAff(false),
     m_verifyReg(false),
     m_disableGrantSrcIdCheck(false),
+    m_u2uTransactions(),
+    m_lastGrantUpdate(std::chrono::steady_clock::now()),
     m_lastRejectId(0U),
     m_verbose(verbose),
     m_debug(debug)
@@ -450,13 +546,16 @@ void ControlSignaling::writeRF_ControlData(uint8_t n, bool first)
 
 /* Helper to write a grant packet. */
 
-bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo)
+bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
+    uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo, bool update)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
     uint8_t priority = ((serviceOptions & 0xFFU) & 0x07U);                  // Priority
 
     std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_ASSGN> rcch = std::make_unique<rcch::MESSAGE_TYPE_VCALL_ASSGN>();
+    if (update)
+        rcch->setMessageType(MessageType::RCCH_VCALL_ASSGN_DUP);
 
     // are we skipping checking?
     if (!skip) {
@@ -594,7 +693,8 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uin
     else {
         if (m_nxdn->m_affiliations->isGranted(dstId)) {
             chNo = m_nxdn->m_affiliations->getGrantedCh(dstId);
-            m_nxdn->m_affiliations->touchGrant(dstId);
+            if (!update)
+                m_nxdn->m_affiliations->touchGrant(dstId);
         }
         else {
             return false;
@@ -693,6 +793,7 @@ void ControlSignaling::writeRF_Message_Deny(uint32_t srcId, uint32_t dstId, uint
     case MessageType::RTCH_VCALL:
         rcch = std::make_unique<rcch::MESSAGE_TYPE_VCALL_CONN>();
         rcch->setMessageType(MessageType::RTCH_VCALL);
+        break;
     default:
         return;
     }
@@ -956,4 +1057,88 @@ void ControlSignaling::writeRF_CC_Message_Idle()
     if (m_nxdn->m_duplex) {
         m_nxdn->addFrame(data);
     }
+}
+
+/* Starts a Type-C individual-call availability check. */
+
+bool ControlSignaling::beginU2UAvailability(uint16_t callerId, uint16_t calledId, uint8_t serviceOptions)
+{
+    constexpr uint32_t AVAILABILITY_TIMEOUT_SECONDS = 5U;
+
+    // check if the called subscriber is already involved in another pending U2U transaction
+    auto calledIt = m_u2uTransactions.find(calledId);
+    if (calledIt != m_u2uTransactions.end() && calledIt->second.callerId != callerId) {
+        writeRF_Message_Deny(0U, callerId, CauseResponse::VD_QUE_TGT_UNIT_BUSY, MessageType::RTCH_VCALL);
+        return false;
+    }
+
+    // check if the caller is already involved in another pending U2U transaction
+    for (const auto& transaction : m_u2uTransactions) {
+        if (transaction.second.callerId == callerId && transaction.second.calledId != calledId) {
+            writeRF_Message_Deny(0U, callerId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
+            return false;
+        }
+    }
+
+    m_u2uTransactions[calledId] = {
+        callerId,
+        calledId,
+        serviceOptions,
+        std::chrono::steady_clock::now() + std::chrono::seconds(AVAILABILITY_TIMEOUT_SECONDS)
+    };
+
+    writeRF_Message_Deny(0U, callerId, CauseResponse::VD_QUE_CHN_RESOURCE_NOT_AVAIL, MessageType::RTCH_VCALL);
+
+    // create and send the RCCH individual-call availability request
+    std::unique_ptr<MESSAGE_TYPE_VCALL_CONN> request = std::make_unique<MESSAGE_TYPE_VCALL_CONN>();
+    request->setMessageType(MessageType::RCCH_VCALL_REC);
+    request->setCallType(CallType::INDIVIDUAL);
+    request->setGroup(false);
+    request->setSrcId(callerId);
+    request->setDstId(calledId);
+
+    writeRF_Message(request.get(), false, true);
+
+    return true;
+}
+
+/* Completes a Type-C individual-call availability check. */
+
+bool ControlSignaling::completeU2UAvailability(uint16_t calledId, uint16_t callerId, bool accepted)
+{
+    // find the pending U2U transaction for the called subscriber ID
+    auto it = m_u2uTransactions.find(calledId);
+    if (it == m_u2uTransactions.end() || it->second.callerId != callerId)
+        return false;
+
+    // store the transaction for easier access and readability
+    const U2UTransaction transaction = it->second;
+    if (accepted) {
+        if (!writeRF_Message_Grant(transaction.callerId, transaction.calledId,
+            transaction.serviceOptions, false)) {
+            return true;
+        }
+    }
+    else {
+        // if the called subscriber is not available, send a deny message
+        writeRF_Message_Deny(0U, transaction.callerId, CauseResponse::VD_TGT_UNIT_NOT_PERM, MessageType::RTCH_VCALL);
+    }
+
+    m_u2uTransactions.erase(it);
+    return true;
+}
+
+/* Cancels pending Type-C individual-call state. */
+
+bool ControlSignaling::cancelU2U(uint16_t unitId)
+{
+    // iterate through all pending U2U transactions and remove any involving the specified unit ID
+    for (auto it = m_u2uTransactions.begin(); it != m_u2uTransactions.end(); ++it) {
+        if (it->second.callerId == unitId || it->second.calledId == unitId) {
+            m_u2uTransactions.erase(it);
+            return true;
+        }
+    }
+
+    return false;
 }

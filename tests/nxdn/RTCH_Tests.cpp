@@ -281,3 +281,24 @@ TEST_CASE("RTCH derives encrypted state from VCALL cipher type", "[nxdn][rtch][s
     REQUIRE(decoded.getAlgId() == 0x02U);
     REQUIRE(decoded.getKId() == 0x15U);
 }
+
+TEST_CASE("RTCH TX_REL_EX preserves transmission permission", "[nxdn][rtch][u2u]") {
+    for (const bool permit : { false, true }) {
+        RTCH release;
+        release.setMessageType(MessageType::RTCH_TX_REL_EX);
+        release.setSrcId(1001U);
+        release.setDstId(1002U);
+        release.setTransmissionPermit(permit);
+
+        uint8_t data[NXDN_RTCH_LC_LENGTH_BYTES] = {};
+        release.encode(data, NXDN_FACCH1_LENGTH_BITS);
+        REQUIRE((data[7U] & 0x80U) == (permit ? 0x80U : 0x00U));
+
+        RTCH decoded;
+        decoded.decode(data, NXDN_FACCH1_LENGTH_BITS);
+        CHECK(decoded.getMessageType() == MessageType::RTCH_TX_REL_EX);
+        CHECK(decoded.getSrcId() == 1001U);
+        CHECK(decoded.getDstId() == 1002U);
+        CHECK(decoded.getTransmissionPermit() == permit);
+    }
+}

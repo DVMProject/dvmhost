@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -373,26 +373,11 @@ namespace dmr
          * @brief Represents an authentication transaction.
          */
         struct AuthTransaction {
-            /**
-             * @brief Service options for the authentication transaction.
-             */
-            uint8_t serviceOptions;
-            /**
-             * @brief Challenge value for the authentication transaction.
-             */
-            uint32_t challenge;
-            /**
-             * @brief Expected response for the authentication transaction.
-             */
-            uint32_t expectedResponse;
-            /**
-             * @brief Expiration time of the authentication transaction.
-             */
-            std::chrono::steady_clock::time_point expires;
-            /**
-             * @brief Flag indicating whether the challenge has been sent.
-             */
-            bool challengeSent;
+            uint8_t serviceOptions;                             //!< Service options for the authentication transaction.
+            uint32_t challenge;                                 //!< Challenge value for the authentication transaction.
+            uint32_t expectedResponse;                          //!< Expected response for the authentication transaction.
+            std::chrono::steady_clock::time_point expires;      //!< Expiration time of the authentication transaction.
+            bool challengeSent;                                 //!< Flag indicating whether the challenge has been sent.
         };
         std::unordered_map<uint32_t, AuthTransaction> m_authTransactions;
 
@@ -400,24 +385,25 @@ namespace dmr
          * @brief Represents a Unified Data Transport (UDT) transaction.
          */
         struct UDTTransaction {
-            /**
-             * @brief Target ID of the UDT transaction.
-             */
-            uint32_t target;
-            /**
-             * @brief Indicates whether the UDT transaction is for a group.
-             */
-            bool group;
-            /**
-             * @brief Service kind of the UDT transaction.
-             */
-            uint8_t serviceKind;
-            /**
-             * @brief Expiration time of the UDT transaction.
-             */
-            std::chrono::steady_clock::time_point expires;
+            uint32_t target;                                    //!< Target ID of the UDT transaction.
+            bool group;                                         //!< Indicates whether the UDT transaction is for a group.
+            uint8_t serviceKind;                                //!< Service kind of the UDT transaction.
+            std::chrono::steady_clock::time_point expires;      //!< Expiration time of the UDT transaction.
         };
         std::unordered_map<uint32_t, UDTTransaction> m_udtTransactions;
+
+        /**
+         * @brief Represents a Tier III OACSU individual voice transaction.
+         * @ingroup host_dmr
+         */
+        struct U2UOACSUTransaction {
+            uint32_t callerId;                                  //!< Calling subscriber ID.
+            uint32_t calledId;                                  //!< Called subscriber ID.
+            uint8_t serviceOptions;                             //!< Voice service options from the original request.
+            std::chrono::steady_clock::time_point nextRetry;    //!< Time at which the availability enquiry is retransmitted.
+            std::chrono::steady_clock::time_point expires;      //!< Expiration time of the availability check.
+        };
+        std::unordered_map<uint32_t, U2UOACSUTransaction> m_u2uOACSUTransactions;
 
         uint32_t m_slotNo;
 
@@ -692,6 +678,29 @@ namespace dmr
          * @return True if the acknowledgement was successfully processed, false otherwise.
          */
         bool processUDTAcknowledgement(uint32_t targetId);
+
+        /**
+         * @brief Starts a Tier III OACSU individual voice availability check.
+         * @param callerId Calling subscriber ID.
+         * @param calledId Called subscriber ID.
+         * @param serviceOptions Voice service options.
+         * @return True when a new or duplicate transaction was accepted.
+         */
+        bool beginU2UOACSU(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions);
+        /**
+         * @brief Completes a pending OACSU availability check from a called-unit response.
+         * @param calledId Responding called subscriber ID.
+         * @param callerId Original calling subscriber ID.
+         * @param accepted Whether the called subscriber accepted the availability check.
+         * @return True when a matching transaction was processed.
+         */
+        bool processU2UOACSUResponse(uint32_t calledId, uint32_t callerId, bool accepted);
+        /**
+         * @brief Cancels a pending OACSU transaction initiated by a caller.
+         * @param callerId Calling subscriber ID.
+         * @return True when a matching transaction was cancelled.
+         */
+        bool cancelU2UOACSU(uint32_t callerId);
 
         /**
          * @brief Helper to set the DMR short LC.

@@ -200,6 +200,50 @@ bool HostTestHooks::dmrIsGranted(const dmr::Slot& slot, uint32_t dstId)
     return slot.s_affiliations->isGranted(dstId);
 }
 
+/* Tests whether a DMR grant is classified as group traffic. */
+
+bool HostTestHooks::dmrIsGroupGrant(const dmr::Slot& slot, uint32_t dstId)
+{
+    return slot.s_affiliations->isGroup(dstId);
+}
+
+/* Registers a DMR subscriber on the local Tier III site. */
+
+void HostTestHooks::dmrRegisterUnit(dmr::Slot& slot, uint32_t unitId)
+{
+    slot.s_affiliations->unitReg(unitId);
+}
+
+/* Starts a synthetic DMR Tier III OACSU transaction. */
+
+bool HostTestHooks::dmrBeginU2UOACSU(dmr::Slot& slot, uint32_t callerId,
+    uint32_t calledId, uint8_t serviceOptions)
+{
+    return slot.beginU2UOACSU(callerId, calledId, serviceOptions);
+}
+
+/* Returns the number of pending DMR OACSU transactions. */
+
+size_t HostTestHooks::dmrPendingU2UOACSU(const dmr::Slot& slot)
+{
+    return slot.m_u2uOACSUTransactions.size();
+}
+
+/* Delivers a synthetic called-unit OACSU response. */
+
+bool HostTestHooks::dmrRespondU2UOACSU(dmr::Slot& slot, uint32_t calledId,
+    uint32_t callerId, bool accepted)
+{
+    return slot.processU2UOACSUResponse(calledId, callerId, accepted);
+}
+
+/* Cancels a synthetic pending DMR OACSU transaction. */
+
+bool HostTestHooks::dmrCancelU2UOACSU(dmr::Slot& slot, uint32_t callerId)
+{
+    return slot.cancelU2UOACSU(callerId);
+}
+
 /* Gets a P25 Phase 2 slot for tests. */
 
 p25::phase2::Slot& HostTestHooks::p25P2Slot(p25::phase2::Control& control, uint32_t slotNo)

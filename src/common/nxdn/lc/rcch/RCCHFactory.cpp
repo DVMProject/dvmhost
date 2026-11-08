@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -42,8 +42,13 @@ std::unique_ptr<RCCH> RCCHFactory::createRCCH(const uint8_t* data, uint32_t leng
     // message type opcodes
     switch (messageType) {
     case MessageType::RTCH_VCALL:
+    case MessageType::RCCH_VCALL_REC:
     case MessageType::RCCH_VCALL_CONN:
+    case MessageType::DISC:
         return decode(new MESSAGE_TYPE_VCALL_CONN(), data, length, offset);
+    case MessageType::RCCH_VCALL_ASSGN:
+    case MessageType::RCCH_VCALL_ASSGN_DUP:
+        return decode(new MESSAGE_TYPE_VCALL_ASSGN(), data, length, offset);
     case MessageType::RTCH_DCALL_HDR:
         return decode(new MESSAGE_TYPE_DCALL_HDR(), data, length, offset);
     case MessageType::IDLE:

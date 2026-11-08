@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -40,12 +40,14 @@ void MESSAGE_TYPE_VCALL_CONN::decode(const uint8_t* data, uint32_t length, uint3
     RCCH::decode(data, rcch, length, offset);
 
     m_callType = (rcch[2U] >> 5) & 0x07U;                                           // Call Type
+    m_group = m_callType != CallType::INDIVIDUAL;                                   // Group Flag
     m_emergency = (rcch[1U] & 0x80U) == 0x80U;                                      // Emergency Flag
     m_priority = (rcch[1U] & 0x20U) == 0x20U;                                       // Priority Flag
     m_duplex = (rcch[2U] & 0x10U) == 0x10U;                                         // Half/Full Duplex Flag
     m_transmissionMode = (rcch[2U] & 0x07U);                                        // Transmission Mode
     m_srcId = (uint16_t)((rcch[3U] << 8) | rcch[4U]) & 0xFFFFU;                     // Source Radio Address
     m_dstId = (uint16_t)((rcch[5U] << 8) | rcch[6U]) & 0xFFFFU;                     // Target Radio Address
+    m_causeRsp = rcch[7U];                                                          // Cause (VD/DREQ/DISC)
 }
 
 /* Encode RCCH data. */

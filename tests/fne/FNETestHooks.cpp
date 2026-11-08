@@ -299,6 +299,24 @@ bool FNETestHooks::validateP25IndividualCall(TrafficNetwork& network, uint32_t p
             peerId, control, p25::defines::DUID::LDU2, STREAM_ID, false);
 }
 
+/* Processes a synthetic DMR FNE grant request. */
+
+bool FNETestHooks::processDMRGrantRequest(TrafficNetwork& network, uint32_t peerId,
+    uint32_t sourceId, uint32_t destinationId, bool unitToUnit)
+{
+    return network.m_tagDMR->processGrantReq(
+        sourceId, destinationId, 1U, unitToUnit, peerId, 1U, 105U);
+}
+
+/* Processes a synthetic NXDN FNE grant request. */
+
+bool FNETestHooks::processNXDNGrantRequest(TrafficNetwork& network, uint32_t peerId,
+    uint32_t sourceId, uint32_t destinationId, bool unitToUnit)
+{
+    return network.m_tagNXDN->processGrantReq(
+        sourceId, destinationId, unitToUnit, peerId, 1U, 106U);
+}
+
 /* Sets whether unit-to-unit traffic is globally disabled. */
 
 void FNETestHooks::disallowU2U(TrafficNetwork& network, bool disabled)

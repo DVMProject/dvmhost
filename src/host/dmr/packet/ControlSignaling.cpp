@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -208,14 +208,19 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     // verify the source RID is registered
                     VERIFY_SRCID_REG(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
-                    writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 1U);
-
                     if (m_slot->s_authoritative) {
-                        writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), false);
+                        m_slot->beginU2UOACSU(srcId, dstId, isp->getServiceOptions());
                     } else {
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
                         if (m_slot->s_network != nullptr)
                             m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, true);
                     }
+                    break;
+                case ServiceKind::CANCEL_CALL:
+                    if (m_slot->cancelU2UOACSU(srcId))
+                        writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, 0U);
+                    else
+                        writeRF_CSBK_NACK_RSP(srcId, ReasonCode::TS_DENY_RSN_CALL_CNCL_REFUSED, ServiceKind::CANCEL_CALL);
                     break;
                 case ServiceKind::GRP_VOICE_CALL:
                     // make sure control data is supported
@@ -319,12 +324,16 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         case CSBKO::ACK_RSP_U:
         {
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
+
             ::ActivityLog("DMR", true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+
             CSBK_ACK_RSP* ack = static_cast<CSBK_ACK_RSP*>(csbk.get());
             if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_AUTH_RESP)
                 m_slot->processRegistrationAuthResponse(srcId, dstId);
-            else if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_MSG)
-                m_slot->processUDTAcknowledgement(srcId);
+            else if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_MSG) {
+                if (!m_slot->processU2UOACSUResponse(srcId, dstId, true))
+                    m_slot->processUDTAcknowledgement(srcId);
+            }
         }
         break;
         case CSBKO::EXT_FNCT:
@@ -364,6 +373,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         case CSBKO::NACK_RSP:
         {
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
+            m_slot->processU2UOACSUResponse(srcId, dstId, false);
         }
         break;
         case CSBKO::MAINT:
@@ -581,9 +591,15 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         }
         break;
         case CSBKO::ACK_RSP:
+        case CSBKO::ACK_RSP_U:
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
+
             ::ActivityLog("DMR", false, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+
+            CSBK_ACK_RSP* ack = static_cast<CSBK_ACK_RSP*>(csbk.get());
+            if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_MSG)
+                m_slot->processU2UOACSUResponse(srcId, dstId, true);
         }
         break;
         case CSBKO::EXT_FNCT:
@@ -623,6 +639,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         case CSBKO::NACK_RSP:
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
+            m_slot->processU2UOACSUResponse(srcId, dstId, false);
         }
         break;
         case CSBKO::PRECCSBK:
@@ -851,8 +868,8 @@ void ControlSignaling::writeRF_CSBK_ACK_RSP(uint32_t dstId, uint8_t reason, uint
 
 /* Helper to write an AHOY packet. */
 
-void ControlSignaling::writeRF_CSBK_AHOY(uint32_t dstId, uint8_t serviceKind,
-    uint32_t sourceOrChallenge, bool gi, uint8_t appendedBlocks)
+void ControlSignaling::writeRF_CSBK_AHOY(uint32_t dstId, uint8_t serviceKind, uint32_t sourceOrChallenge, bool gi, 
+    uint8_t appendedBlocks, bool network)
 {
     std::unique_ptr<CSBK_AHOY> csbk = std::make_unique<CSBK_AHOY>();
     csbk->setServiceKind(serviceKind);
@@ -871,6 +888,8 @@ void ControlSignaling::writeRF_CSBK_AHOY(uint32_t dstId, uint8_t serviceKind,
     }
 
     writeRF_CSBK_Imm(csbk.get());
+    if (network)
+        writeNet_CSBK(csbk.get());
 }
 
 /* Helper to write a NACK RSP packet. */
@@ -894,7 +913,8 @@ void ControlSignaling::writeRF_CSBK_NACK_RSP(uint32_t dstId, uint8_t reason, uin
 
 /* Helper to write a grant packet. */
 
-bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net, bool skip, uint32_t chNo, uint8_t preferredSlot)
+bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions,
+    bool grp, bool net, bool skip, uint32_t chNo, uint8_t preferredSlot, bool targetConfirmed)
 {
     Slot* tscc = m_slot->s_dmr->getTSCCSlot();
 
@@ -949,7 +969,17 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         if (!tscc->s_affiliations->isGranted(dstId)) {
             ::lookups::TalkgroupRuleGroupVoice groupVoice = tscc->s_tidLookup->find(dstId);
-            slot = preferredSlot != 0U ? preferredSlot : groupVoice.source().tgSlot();
+            if (preferredSlot != 0U) {
+                slot = preferredSlot;
+            }
+            else if (grp) {
+                slot = groupVoice.source().tgSlot();
+            }
+            else {
+                // Individual calls have no talkgroup rule from which to obtain
+                // a preferred slot. Prefer the payload slot opposite the TSCC.
+                slot = tscc->m_slotNo == 1U ? 2U : 1U;
+            }
 
             if (grp && !tscc->m_ignoreAffiliationCheck) {
                 // is this an affiliation required group?
@@ -962,7 +992,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            if (!grp && !tscc->m_ignoreAffiliationCheck) {
+            if (!grp && !targetConfirmed && !tscc->m_ignoreAffiliationCheck) {
                 // is this the target registered?
                 if (!tscc->s_affiliations->isUnitReg(dstId)) {
                     LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, IND_VOICE_CALL (Individual Voice Call) ignored, no unit registration, dstId = %u", tscc->m_slotNo, dstId);
@@ -987,6 +1017,11 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
 
             uint32_t availChNo = chNo != 0U ? chNo : tscc->s_affiliations->getAvailableChannelForSlot(slot);
+            if (!grp && preferredSlot == 0U && availChNo == 0U) {
+                slot = slot == 1U ? 2U : 1U;
+                availChNo = tscc->s_affiliations->getAvailableChannelForSlot(slot);
+            }
+
             if (availChNo == 0U) {
                 if (grp) {
                     if (!net) {
@@ -1221,6 +1256,14 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         // transmit private grant (x2)
         for (uint8_t i = 0; i < 2U; i++)
             writeRF_CSBK_Imm(csbk.get());
+
+        // Tier III individual assignment is required at both subscriber
+        // sites; ask the FNE to demand a site-local grant for the called
+        // subscriber rather than forwarding this site's channel number
+        if (!net && tscc->s_network != nullptr) {
+            tscc->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR,
+                srcId, dstId, slot, true);
+        }
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel
         if (chNo != tscc->s_channelNo) {

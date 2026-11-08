@@ -70,6 +70,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_duplex(duplex),
     m_enableControl(false),
     m_dedicatedControl(false),
+    m_unitToUnitAvailCheck(false),
     m_ignoreAffiliationCheck(false),
     m_legacyGroupReg(false),
     m_defaultNetIdleTalkgroup(0U),
@@ -218,6 +219,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_control->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+    m_unitToUnitAvailCheck = control["unitToUnitAvailCheck"].as<bool>(false);
     m_ccDebug = control["debug"].as<bool>(false);
 
     m_ignoreAffiliationCheck = nxdnProtocol["ignoreAffiliationCheck"].as<bool>(false);
@@ -596,6 +598,8 @@ void Control::clock()
 {
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
+
+    m_control->clock();
 
     if (m_network != nullptr) {
         processNetwork();

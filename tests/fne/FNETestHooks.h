@@ -175,6 +175,28 @@ public:
     static bool validateP25IndividualCall(network::TrafficNetwork& network, uint32_t peerId,
         uint32_t sourceId, uint32_t destinationId);
     /**
+     * @brief Processes a synthetic DMR FNE grant request.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the request is an individual call.
+     * @return True when the request is accepted.
+     */
+    static bool processDMRGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit);
+    /**
+     * @brief Processes a synthetic NXDN FNE grant request.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the request is an individual call.
+     * @return True when the request is accepted.
+     */
+    static bool processNXDNGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit);
+    /**
      * @brief Sets whether unit-to-unit traffic is globally disabled.
      * @param network The TrafficNetwork instance.
      * @param disabled Whether unit-to-unit traffic is disabled.

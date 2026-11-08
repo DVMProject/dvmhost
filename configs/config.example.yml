@@ -194,6 +194,8 @@ protocols:
             slot: 1
             # Flag indicating whether or not the source ID validation before granting disabled.
             disableGrantSourceIdCheck: false
+            # Check that the called subscriber is available before assigning an individual voice call.
+            unitToUnitAvailCheck: false
             # Require ETSI DMR authentication before accepting unit registration. The 16-byte
             # authentication key is requested from the upstream FNE through the existing LLA key path.
             requireAuthForReg: false

@@ -589,6 +589,112 @@ TEST_CASE("FNE P25 uses the explicit U2U flag for late-entry voice", "[fne][call
         harness.traffic, PEER_ID, SOURCE_ID, DESTINATION_ID));
 }
 
+TEST_CASE("FNE DMR individual grant demand targets the called unit site",
+    "[fne][callhandler][routing][u2u][dmr]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t SOURCE_SITE = 1002U;
+    constexpr uint32_t TARGET_SITE = 1003U;
+    constexpr uint32_t OTHER_SITE = 1004U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, SOURCE_SITE, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, TARGET_SITE, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, OTHER_SITE, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+    FNETestHooks::registerP25Unit(harness.traffic, SOURCE_SITE, SOURCE_ID);
+    FNETestHooks::registerP25Unit(harness.traffic, TARGET_SITE, DESTINATION_ID);
+
+    std::vector<uint32_t> writes;
+    FNETestHooks::capturePeerWrites(harness.traffic, writes);
+    REQUIRE(FNETestHooks::processDMRGrantRequest(
+        harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true));
+    CHECK(writes == std::vector<uint32_t>{ TARGET_SITE });
+}
+
+TEST_CASE("FNE DMR group grant demand retains group peer routing",
+    "[fne][callhandler][routing][group][dmr]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t SITE_A = 1002U;
+    constexpr uint32_t SITE_B = 1003U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t TALK_GROUP = 3100U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, SITE_A, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, SITE_B, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.talkgroups.addEntry(TALK_GROUP, 1U, true, false);
+    FNETestHooks::addGroupAffiliation(harness.traffic, SITE_A, SOURCE_ID, TALK_GROUP);
+    FNETestHooks::addGroupAffiliation(harness.traffic, SITE_B, SOURCE_ID, TALK_GROUP);
+
+    std::vector<uint32_t> writes;
+    FNETestHooks::capturePeerWrites(harness.traffic, writes);
+    REQUIRE(FNETestHooks::processDMRGrantRequest(
+        harness.traffic, SOURCE_PEER, SOURCE_ID, TALK_GROUP, false));
+    std::sort(writes.begin(), writes.end());
+    CHECK(writes == std::vector<uint32_t>{ SITE_A, SITE_B });
+}
+
+TEST_CASE("FNE NXDN individual grant demand targets the called unit site",
+    "[fne][callhandler][routing][u2u][nxdn]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t SOURCE_SITE = 1002U;
+    constexpr uint32_t TARGET_SITE = 1003U;
+    constexpr uint32_t OTHER_SITE = 1004U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, SOURCE_SITE, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, TARGET_SITE, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, OTHER_SITE, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+    FNETestHooks::registerP25Unit(harness.traffic, SOURCE_SITE, SOURCE_ID);
+    FNETestHooks::registerP25Unit(harness.traffic, TARGET_SITE, DESTINATION_ID);
+
+    std::vector<uint32_t> writes;
+    FNETestHooks::capturePeerWrites(harness.traffic, writes);
+    REQUIRE(FNETestHooks::processNXDNGrantRequest(
+        harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true));
+    CHECK(writes == std::vector<uint32_t>{ TARGET_SITE });
+}
+
+TEST_CASE("FNE NXDN group grant demand retains group peer routing",
+    "[fne][callhandler][routing][group][nxdn]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t SITE_A = 1002U;
+    constexpr uint32_t SITE_B = 1003U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t TALK_GROUP = 3100U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, SITE_A, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, SITE_B, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.talkgroups.addEntry(TALK_GROUP, 1U, true, false);
+    FNETestHooks::addGroupAffiliation(harness.traffic, SITE_A, SOURCE_ID, TALK_GROUP);
+    FNETestHooks::addGroupAffiliation(harness.traffic, SITE_B, SOURCE_ID, TALK_GROUP);
+
+    std::vector<uint32_t> writes;
+    FNETestHooks::capturePeerWrites(harness.traffic, writes);
+    REQUIRE(FNETestHooks::processNXDNGrantRequest(
+        harness.traffic, SOURCE_PEER, SOURCE_ID, TALK_GROUP, false));
+    std::sort(writes.begin(), writes.end());
+    CHECK(writes == std::vector<uint32_t>{ SITE_A, SITE_B });
+}
+
 TEST_CASE("FNE call handlers validate source radios and group state", "[fne][callhandler][validation]")
 {
     constexpr uint32_t PEER_ID = 1001U;

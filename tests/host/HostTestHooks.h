@@ -140,6 +140,52 @@ public:
      * @brief Tests whether the shared DMR affiliation table contains a grant.
      */
     static bool dmrIsGranted(const dmr::Slot& slot, uint32_t dstId);
+    /**
+     * @brief Tests whether a DMR grant is classified as group traffic.
+     * @param slot DMR control-channel slot.
+     * @param dstId Granted destination ID.
+     * @return True when the grant is a group grant.
+     */
+    static bool dmrIsGroupGrant(const dmr::Slot& slot, uint32_t dstId);
+    /**
+     * @brief Registers a DMR subscriber on the local Tier III site.
+     * @param slot DMR control-channel slot.
+     * @param unitId Subscriber ID to register.
+     */
+    static void dmrRegisterUnit(dmr::Slot& slot, uint32_t unitId);
+    /**
+     * @brief Starts a synthetic DMR Tier III OACSU transaction.
+     * @param slot DMR control-channel slot.
+     * @param callerId Calling subscriber ID.
+     * @param calledId Called subscriber ID.
+     * @param serviceOptions Voice service options.
+     * @return True when the transaction is accepted.
+     */
+    static bool dmrBeginU2UOACSU(dmr::Slot& slot, uint32_t callerId,
+        uint32_t calledId, uint8_t serviceOptions = 0U);
+    /**
+     * @brief Returns the number of pending DMR OACSU transactions.
+     * @param slot DMR control-channel slot.
+     * @return Number of pending transactions.
+     */
+    static size_t dmrPendingU2UOACSU(const dmr::Slot& slot);
+    /**
+     * @brief Delivers a synthetic called-unit OACSU response.
+     * @param slot DMR control-channel slot.
+     * @param calledId Called subscriber ID.
+     * @param callerId Calling subscriber ID.
+     * @param accepted Whether the called unit accepted the request.
+     * @return True when a matching transaction was processed.
+     */
+    static bool dmrRespondU2UOACSU(dmr::Slot& slot, uint32_t calledId,
+        uint32_t callerId, bool accepted);
+    /**
+     * @brief Cancels a synthetic pending DMR OACSU transaction.
+     * @param slot DMR control-channel slot.
+     * @param callerId Calling subscriber ID.
+     * @return True when a transaction was cancelled.
+     */
+    static bool dmrCancelU2UOACSU(dmr::Slot& slot, uint32_t callerId);
     /** @} */
 
     /**

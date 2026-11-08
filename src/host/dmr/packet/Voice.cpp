@@ -143,6 +143,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     }
                 }
             }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, destination RID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+
+                ::ActivityLog("DMR", true, "Slot %u RF private voice rejection from %u to %u ", m_slot->m_slotNo, srcId, dstId);
+
+                m_slot->m_rfLastDstId = 0U;
+                m_slot->m_rfLastSrcId = 0U;
+                m_slot->m_rfTGHang.stop();
+                m_slot->m_rfState = RS_RF_REJECTED;
+                return false;
+            }
 
             m_slot->m_data->m_lastRejectId = 0U;
 
@@ -607,6 +618,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         m_slot->m_rfState = RS_RF_REJECTED;
                         return false;
                     }
+                }
+                else if (!acl::AccessControl::validateSrcId(dstId)) {
+                    LogWarning(LOG_RF, "DMR Slot %u, VOICE denial, destination RID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                    m_slot->m_rfState = RS_RF_REJECTED;
+                    return false;
                 }
 
                 m_slot->m_rfLC = std::move(lc);

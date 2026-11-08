@@ -464,9 +464,17 @@ void Slot::processNetwork(const data::NetData& dmrData)
                         break;
                     }
 
-                    // validate the target ID, if the target is a talkgroup
-                    if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
-                        break;
+                    if (unitToUnit) {
+                        // validate the target subscriber for an individual call
+                        if (!acl::AccessControl::validateSrcId(dmrData.getDstId())) {
+                            break;
+                        }
+                    }
+                    else {
+                        // validate the target talkgroup for a group call
+                        if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
+                            break;
+                        }
                     }
 
                     if (m_verbose) {
@@ -593,6 +601,24 @@ void Slot::clock()
             it = m_udtTransactions.erase(it);
         else
             ++it;
+    }
+
+    // ETSI TS 102 361-4 6.6.1.5: abandon an individual call when its
+    // called-party availability transaction expires
+    for (auto it = m_u2uOACSUTransactions.begin(); it != m_u2uOACSUTransactions.end(); ) {
+        if (it->second.expires <= now) {
+            m_control->writeRF_CSBK_NACK_RSP(it->second.callerId,
+                ReasonCode::TS_DENY_RSN_TGT_UNAVAILABLE, ServiceKind::IND_VOICE_CALL);
+            it = m_u2uOACSUTransactions.erase(it);
+        }
+        else {
+            if (it->second.nextRetry <= now) {
+                m_control->writeRF_CSBK_AHOY(it->second.calledId,
+                    ServiceKind::IND_VOICE_CALL, it->second.callerId, false, 0U, true);
+                it->second.nextRetry = now + std::chrono::seconds(1U);
+            }
+            ++it;
+        }
     }
 
     if (s_network != nullptr) {
@@ -916,7 +942,7 @@ void Slot::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
         LogInfoEx(LOG_DMR, "DMR Slot %u, network TG grant demand, srcId = %u, dstId = %u", m_slotNo, srcId, dstId);
     }
 
-    m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp);
+    m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp, true);
 }
 
 /* Releases a granted TG. */
@@ -1894,6 +1920,100 @@ bool Slot::processUDTAcknowledgement(uint32_t targetId)
 
             m_control->writeRF_CSBK_ACK_RSP(caller, ReasonCode::TS_ACK_RSN_MSG, 0U);
 
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/* Starts a Tier III OACSU individual voice availability check. */
+
+bool Slot::beginU2UOACSU(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions)
+{
+    constexpr uint32_t OACSU_TIMEOUT_SECONDS = 10U;
+    constexpr uint32_t OACSU_RETRY_SECONDS = 1U;
+
+    const auto now = std::chrono::steady_clock::now();
+
+    // check if there is an existing U2U OACSU transaction for the called party 
+    auto calledIt = m_u2uOACSUTransactions.find(calledId);
+    if (calledIt != m_u2uOACSUTransactions.end() && calledIt->second.callerId != callerId) {
+        m_control->writeRF_CSBK_NACK_RSP(callerId,
+            ReasonCode::TS_DENY_RSN_TGT_BUSY, ServiceKind::IND_VOICE_CALL);
+        return false;
+    }
+
+    // if there is an existing transaction for the called party, send a wait response and an ahoy to the called party
+    if (calledIt != m_u2uOACSUTransactions.end()) {
+        m_control->writeRF_CSBK_ACK_RSP(callerId, ReasonCode::TS_WAIT_RSN, 0U);
+        m_control->writeRF_CSBK_AHOY(calledId, ServiceKind::IND_VOICE_CALL,
+            callerId, false, 0U, true);
+        return true;
+    }
+
+    // check if the caller has any existing U2U OACSU transactions with other called parties
+    for (const auto& transaction : m_u2uOACSUTransactions) {
+        if (transaction.second.callerId == callerId && transaction.second.calledId != calledId) {
+            m_control->writeRF_CSBK_NACK_RSP(callerId,
+                ReasonCode::TS_DENY_RSN_SYS_BUSY, ServiceKind::IND_VOICE_CALL);
+            return false;
+        }
+    }
+
+    // create a new U2U OACSU transaction for the called party
+    m_u2uOACSUTransactions[calledId] = {
+        callerId,
+        calledId,
+        serviceOptions,
+        now + std::chrono::seconds(OACSU_RETRY_SECONDS),
+        now + std::chrono::seconds(OACSU_TIMEOUT_SECONDS)
+    };
+
+    m_control->writeRF_CSBK_ACK_RSP(callerId, ReasonCode::TS_WAIT_RSN, 0U);
+    m_control->writeRF_CSBK_AHOY(calledId, ServiceKind::IND_VOICE_CALL,
+        callerId, false, 0U, true);
+    return true;
+}
+
+/* Completes a Tier III OACSU individual voice availability check. */
+
+bool Slot::processU2UOACSUResponse(uint32_t calledId, uint32_t callerId, bool accepted)
+{
+    // find the U2U OACSU transaction for the called party
+    auto it = m_u2uOACSUTransactions.find(calledId);
+    if (it == m_u2uOACSUTransactions.end() || it->second.callerId != callerId)
+        return false;
+
+    const U2UOACSUTransaction transaction = it->second;
+
+    // process the response for the U2U OACSU transaction
+    if (accepted) {
+        if (!m_control->writeRF_CSBK_Grant(transaction.callerId, transaction.calledId,
+                transaction.serviceOptions, false, false, false, 0U, 0U, true)) {
+            m_u2uOACSUTransactions.erase(it);
+            return true;
+        }
+    }
+    else {
+        m_control->writeRF_CSBK_NACK_RSP(transaction.callerId,
+            ReasonCode::TS_DENY_RSN_TGT_UNAVAILABLE, ServiceKind::IND_VOICE_CALL);
+    }
+
+    m_u2uOACSUTransactions.erase(it);
+
+    return true;
+}
+
+/* Cancels a pending Tier III OACSU individual voice availability check. */
+
+bool Slot::cancelU2UOACSU(uint32_t callerId)
+{
+    // cancel any pending U2U OACSU transactions for the caller
+    for (auto it = m_u2uOACSUTransactions.begin(); it != m_u2uOACSUTransactions.end(); ++it) {
+        if (it->second.callerId == callerId) {
+            m_control->writeRF_CSBK_AHOY(it->second.calledId, ServiceKind::CANCEL_CALL, callerId, false, 0U, true);
+            m_u2uOACSUTransactions.erase(it);
             return true;
         }
     }
