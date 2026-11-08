@@ -1050,12 +1050,16 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         }
                         else {
                             VERBOSE_LOG_TSBK_NET(tsbk->toString(), srcId, dstId);
-                            if (m_p25->m_affiliations->isUnitReg(dstId)) {
-                                const uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +
-                                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +
-                                    (tsbk->getPriority() & 0x07U);
-                                startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, false, true);
+                            // only the control-enabled site currently serving
+                            // the target SU may place this request on RF
+                            if (!m_p25->m_enableControl || !m_p25->m_affiliations->isUnitReg(dstId)) {
+                                return true;
                             }
+
+                            const uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +
+                                (tsbk->getEncrypted() ? 0x40U : 0x00U) +
+                                (tsbk->getPriority() & 0x07U);
+                            startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, false, true);
                         }
                     }
                     break;

@@ -340,6 +340,8 @@ protocols:
         # Flag indicating whether or not the host will acknowledge message packets.
         noMessageAck: true
         # Flag indicating that unit-to-unit availiability checks should be performed for a private call.
+        #   (Disable unitToUnitAvailCheck for trunked sites that must call conventional RIDs, as unit-to-unit availability 
+        #    checks are not applicable in such scenarios.)
         unitToUnitAvailCheck: false
         # Flag indicating telephone interconnect requests are forwarded to the network for a telephone
         #   interconnect gateway peer to service. (If disabled, telephone interconnect requests are denied.)

@@ -165,6 +165,16 @@ public:
     static bool validateGroupCall(network::TrafficNetwork& network, ParrotProtocol protocol,
         uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo = 1U);
     /**
+     * @brief Validates P25 individual traffic whose current LCO is not private.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Source subscriber ID.
+     * @param destinationId Target subscriber ID.
+     * @return True when the explicit individual-call flag is honored.
+     */
+    static bool validateP25IndividualCall(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId);
+    /**
      * @brief Sets whether unit-to-unit traffic is globally disabled.
      * @param network The TrafficNetwork instance.
      * @param disabled Whether unit-to-unit traffic is disabled.

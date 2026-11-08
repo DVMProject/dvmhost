@@ -201,6 +201,7 @@ bool FNETestHooks::isPeerPermitted(TrafficNetwork& network, ParrotProtocol proto
         p25::lc::LC control;
         control.setDstId(destinationId);
         control.setLCO(group ? p25::defines::LCO::GROUP : p25::defines::LCO::PRIVATE);
+        control.setGroup(group);
         return network.m_tagP25->isPeerPermitted(
             peerId, control, p25::defines::DUID::LDU1, STREAM_ID, fromUpstream);
     }
@@ -278,6 +279,24 @@ bool FNETestHooks::validateGroupCall(TrafficNetwork& network, ParrotProtocol pro
     }
 
     return false;
+}
+
+/* Validates P25 individual traffic whose current LCO is not private. */
+
+bool FNETestHooks::validateP25IndividualCall(TrafficNetwork& network, uint32_t peerId,
+    uint32_t sourceId, uint32_t destinationId)
+{
+    constexpr uint32_t STREAM_ID = 103U;
+
+    p25::lc::LC control;
+    control.setSrcId(sourceId);
+    control.setDstId(destinationId);
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setGroup(false);
+    return network.m_tagP25->validate(
+        peerId, control, p25::defines::DUID::LDU2, nullptr, 0U, STREAM_ID) &&
+        network.m_tagP25->isPeerPermitted(
+            peerId, control, p25::defines::DUID::LDU2, STREAM_ID, false);
 }
 
 /* Sets whether unit-to-unit traffic is globally disabled. */

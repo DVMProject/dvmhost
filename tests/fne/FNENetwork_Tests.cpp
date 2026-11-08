@@ -570,6 +570,25 @@ TEST_CASE("FNE call handlers reject globally disabled unit-to-unit traffic", "[f
     }
 }
 
+TEST_CASE("FNE P25 uses the explicit U2U flag for late-entry voice", "[fne][callhandler][routing][u2u]")
+{
+    constexpr uint32_t PEER_ID = 1001U;
+    constexpr uint32_t SOURCE_ID = 5519007U;
+    constexpr uint32_t DESTINATION_ID = 5519001U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, PEER_ID, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+
+    CHECK(FNETestHooks::validateP25IndividualCall(
+        harness.traffic, PEER_ID, SOURCE_ID, DESTINATION_ID));
+
+    FNETestHooks::disallowU2U(harness.traffic, true);
+    CHECK_FALSE(FNETestHooks::validateP25IndividualCall(
+        harness.traffic, PEER_ID, SOURCE_ID, DESTINATION_ID));
+}
+
 TEST_CASE("FNE call handlers validate source radios and group state", "[fne][callhandler][validation]")
 {
     constexpr uint32_t PEER_ID = 1001U;

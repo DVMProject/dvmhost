@@ -1000,6 +1000,22 @@ TEST_CASE("P25 unit-to-unit target site correlates a network answer request with
     CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
 }
 
+TEST_CASE("P25 network answer request is ignored outside the target unit site",
+    "[p25][host][control][u2u][procedure][network]")
+{
+    P25HostHarness harness;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    buildUUAnswerRequest(caller, called, raw);
+
+    REQUIRE(HostTestHooks::p25ProcessNetworkRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
 TEST_CASE("P25 host preserves encrypted network call parameters", "[p25][host][control][crypto]")
 {
     P25HostHarness harness;

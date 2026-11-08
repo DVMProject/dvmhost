@@ -586,8 +586,9 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         TrafficNetwork::MetricsLogging::incrementActiveCalls(m_network);
                     }
 
-                    // is this a private call?
-                    if (lco == LCO::PRIVATE) {
+                    // The network U2U flag is authoritative across all voice
+                    // data units, including late entry without a private LC.
+                    if (!control.getGroup() && !isTelIntTraffic(control, duid, nullptr)) {
                         m_statusPVCall.lock(false);
                         m_statusPVCall[dstId].callStartTime = pktTime;
                         m_statusPVCall[dstId].srcId = srcId;
@@ -687,7 +688,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     privateCallInProgress = true;
                 }
             } else {
-                if (lco == LCO::PRIVATE) {
+                if (!control.getGroup() && !telInt) {
                     privateCallInProgress = true;
                 }
             }
@@ -754,7 +755,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         }
 
                         // is this a private call?
-                        if ((lco == LCO::PRIVATE) && !neighbor) {
+                        if (!control.getGroup() && !telInt && !neighbor) {
                             // is this a private call? if so only repeat to the peer that registered the unit
                             auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
                                 if (x.second.dstId == dstId) {
@@ -1605,7 +1606,15 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
     if (g_promiscuousHub)
         return true;
 
-    if (control.getLCO() == LCO::PRIVATE) {
+    // telephone interconnect calls are individual calls routed by their
+    // gateway policy rather than the U2U subscriber policy
+    if (duid != DUID::TSDU && isTelIntTraffic(control, duid, nullptr)) {
+        return true;
+    }
+
+    // use the explicit network individual-call flag; private voice LC is not
+    // guaranteed in every LDU, particularly during late entry
+    if (!control.getGroup()) {
         if (m_network->m_disallowU2U)
             return false;
         if (!m_network->checkU2UDroppedPeer(peerId))
@@ -1618,11 +1627,6 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
         }
 
         return false;
-    }
-
-    // telephone interconnect calls are individual calls routed by isTelIntPeerPermitted()
-    if (duid != DUID::TSDU && isTelIntTraffic(control, duid, nullptr)) {
-        return true;
     }
 
     TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
@@ -1868,6 +1872,8 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     }
     m_rejectedCallStreams.unlock();
 
+    const bool telIntCall = (duid != DUID::TSDU) && isTelIntTraffic(control, duid, nullptr);
+
     // validate private call in-progress
     bool privateCallInProgress = false;
     if ((control.getLCO() != LCO::PRIVATE) && !control.getGroup()) {
@@ -1885,8 +1891,7 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
     }
 
     // is this a private or telephone interconnect call?
-    bool telIntCall = (duid != DUID::TSDU) && isTelIntTraffic(control, duid, nullptr);
-    if ((control.getLCO() == LCO::PRIVATE) || telIntCall || privateCallInProgress) {
+    if ((!control.getGroup() && !telIntCall) || telIntCall || privateCallInProgress) {
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
         if (!rid.radioDefault()) {
