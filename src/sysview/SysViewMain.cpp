@@ -1209,35 +1209,39 @@ void* threadNetworkPump(void* arg)
 
                         if (rfct == NXDDEF::RFChannelType::RCCH) {
                             rcch = lc::rcch::RCCHFactory::createRCCH(frame.get(), frameLength);
-
-                            json::object netEvent = json::object();
-                            std::string type = "rcch";
-                            netEvent["type"].set<std::string>(type);
-
-                            uint8_t lco = rcch->getMessageType();
-                            netEvent["opcode"].set<uint8_t>(lco);
-                            std::string desc = rcch->toString();
-                            netEvent["desc"].set<std::string>(desc);
-
-                            // report raw RCCH bytes in hex format
-                            uint8_t* rcchRaw = rcch.get()->getDecodedRaw();
-                            std::stringstream ss;
-                            ss << std::hex << std::setfill('0');
-                            for (uint8_t i = 0; i < NXDDEF::NXDN_RCCH_LC_LENGTH_BYTES; i++) {
-                                ss << std::setw(2) << (int)rcchRaw[i];
+                            if (rcch == nullptr) {
+                                LogWarning(LOG_NET, "NXDN, undecodable RCCH");
                             }
-                            netEvent["data"].set<std::string>(ss.str());
+                            else {
+                                json::object netEvent = json::object();
+                                std::string type = "rcch";
+                                netEvent["type"].set<std::string>(type);
 
-                            // generate a net event for this
-                            if (g_netDataEvent != nullptr) {
-                                std::string resolvedSrc = resolveRID(srcId);
-                                std::string resolvedDst = resolveTGID(dstId);
-                                netEvent["srcId"].set<uint32_t>(srcId);
-                                netEvent["srcStr"].set<std::string>(resolvedSrc);
-                                netEvent["dstId"].set<uint32_t>(dstId);
-                                netEvent["dstStr"].set<std::string>(resolvedDst);
+                                uint8_t lco = rcch->getMessageType();
+                                netEvent["opcode"].set<uint8_t>(lco);
+                                std::string desc = rcch->toString();
+                                netEvent["desc"].set<std::string>(desc);
 
-                                g_netDataEvent(netEvent);
+                                // report raw RCCH bytes in hex format
+                                uint8_t* rcchRaw = rcch.get()->getDecodedRaw();
+                                std::stringstream ss;
+                                ss << std::hex << std::setfill('0');
+                                for (uint8_t i = 0; i < NXDDEF::NXDN_RCCH_LC_LENGTH_BYTES; i++) {
+                                    ss << std::setw(2) << (int)rcchRaw[i];
+                                }
+                                netEvent["data"].set<std::string>(ss.str());
+
+                                // generate a net event for this
+                                if (g_netDataEvent != nullptr) {
+                                    std::string resolvedSrc = resolveRID(srcId);
+                                    std::string resolvedDst = resolveTGID(dstId);
+                                    netEvent["srcId"].set<uint32_t>(srcId);
+                                    netEvent["srcStr"].set<std::string>(resolvedSrc);
+                                    netEvent["dstId"].set<uint32_t>(dstId);
+                                    netEvent["dstStr"].set<std::string>(resolvedDst);
+
+                                    g_netDataEvent(netEvent);
+                                }
                             }
                         }
                     }
@@ -1504,6 +1508,8 @@ int main(int argc, char** argv)
         wnd = new SysViewMainWnd(app);
         finalcut::FWidget::setMainWidget(wnd);
     } else {
+        log_stacktrace::SignalHandling sh(g_foreground);
+
         // in WebSocket mode install signal handlers
         ::signal(SIGINT, sigHandler);
         ::signal(SIGTERM, sigHandler);
