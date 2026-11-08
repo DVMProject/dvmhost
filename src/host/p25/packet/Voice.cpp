@@ -106,7 +106,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
     DUID::E duid = m_p25->m_nid.getDUID();
 
-    if (m_p25->m_rfState != RS_RF_LISTENING) {
+    if (m_p25->m_rfState != RS_RF_LISTENING && m_rfLC.getGroup()) {
         m_p25->m_rfTGHang.start();
     }
 
