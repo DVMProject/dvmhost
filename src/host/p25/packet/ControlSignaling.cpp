@@ -2378,7 +2378,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 }
             }
 
-            if (!grp && !m_p25->m_ignoreAffiliationCheck) {
+            if (!grp && !m_p25->m_ignoreAffiliationCheck && m_unitToUnitAvailCheck) {
                 // is this the target registered?
                 if (!m_p25->m_affiliations->isUnitReg(dstId)) {
                     LogWarning(LOG_NET, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request) ignored, no unit registration, dstId = %u", dstId);
