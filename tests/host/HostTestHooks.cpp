@@ -18,6 +18,8 @@
 #include "common/nxdn/channel/LICH.h"
 #include "common/nxdn/channel/SACCH.h"
 #include "common/nxdn/lc/RTCH.h"
+#include "common/p25/lc/tsbk/TSBKFactory.h"
+#include "host/p25/packet/ControlSignaling.h"
 
 #include <cstring>
 
@@ -382,6 +384,42 @@ bool HostTestHooks::p25IsGranted(const p25::Control& control, uint32_t dstId)
 bool HostTestHooks::p25SeedGrant(p25::Control& control, uint32_t srcId, uint32_t dstId, bool netGranted)
 {
     return control.m_affiliations->grantCh(dstId, srcId, 15U, true, netGranted);
+}
+
+/* Seeds a P25 unit-to-unit grant for a call-procedure test. */
+
+bool HostTestHooks::p25SeedU2UGrant(p25::Control& control, uint32_t srcId, uint32_t dstId)
+{
+    return control.m_affiliations->grantCh(dstId, srcId, 15U, false, false);
+}
+
+/* Configures P25 unit-to-unit call-procedure policy for a test. */
+
+void HostTestHooks::p25ConfigureU2U(p25::Control& control, bool availabilityCheck)
+{
+    control.m_enableControl = true;
+    control.m_ignoreAffiliationCheck = false;
+    control.m_control->m_unitToUnitAvailCheck = availabilityCheck;
+}
+
+/* Registers a P25 unit for a call-procedure test. */
+
+void HostTestHooks::p25RegisterUnit(p25::Control& control, uint32_t srcId)
+{
+    control.m_affiliations->unitReg(srcId);
+}
+
+/* Injects an independently encoded raw TSBK into P25 control signaling. */
+
+bool HostTestHooks::p25ProcessRawTSBK(p25::Control& control, const uint8_t* raw)
+{
+    std::unique_ptr<p25::lc::TSBK> tsbk = p25::lc::tsbk::TSBKFactory::createTSBK(raw, true);
+    if (tsbk == nullptr) {
+        return false;
+    }
+
+    uint8_t frame[2U] = { 0U };
+    return control.m_control->process(frame, sizeof(frame), std::move(tsbk));
 }
 
 /* Releases a P25 grant for a steering-policy test. */

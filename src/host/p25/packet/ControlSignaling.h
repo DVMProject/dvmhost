@@ -31,6 +31,8 @@
 #include <unordered_set>
 #include <algorithm>
 
+class HostTestHooks;
+
 namespace p25
 {
     // ---------------------------------------------------------------------------
@@ -155,6 +157,7 @@ namespace p25
             void setTSBKVerbose(bool verbose);
 
         protected:
+            friend class ::HostTestHooks;
             friend class packet::Voice;
             friend class packet::Data;
             friend class p25::Control;

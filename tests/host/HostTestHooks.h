@@ -233,6 +233,33 @@ public:
      */
     static bool p25SeedGrant(p25::Control& control, uint32_t srcId, uint32_t dstId, bool netGranted);
     /**
+     * @brief Seeds a P25 unit-to-unit grant for a call-procedure test.
+     * @param control P25 control instance.
+     * @param srcId Source radio ID.
+     * @param dstId Destination radio ID.
+     * @returns bool True if the grant was created; otherwise, false.
+     */
+    static bool p25SeedU2UGrant(p25::Control& control, uint32_t srcId, uint32_t dstId);
+    /**
+     * @brief Configures P25 unit-to-unit call-procedure policy for a test.
+     * @param control P25 control instance.
+     * @param availabilityCheck Flag indicating whether the availability check is enabled.
+     */
+    static void p25ConfigureU2U(p25::Control& control, bool availabilityCheck);
+    /**
+     * @brief Registers a P25 unit for a call-procedure test.
+     * @param control P25 control instance.
+     * @param srcId Radio ID to register.
+     */
+    static void p25RegisterUnit(p25::Control& control, uint32_t srcId);
+    /**
+     * @brief Injects an independently encoded raw TSBK into P25 control signaling.
+     * @param control P25 control instance.
+     * @param raw Raw 12-byte TSBK including CRC.
+     * @returns bool True if the TSBK was accepted; otherwise, false.
+     */
+    static bool p25ProcessRawTSBK(p25::Control& control, const uint8_t* raw);
+    /**
      * @brief Releases a P25 grant for a steering-policy test.
      * @param control P25 control instance.
      * @param dstId Destination ID to release.
