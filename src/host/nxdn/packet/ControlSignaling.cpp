@@ -289,6 +289,23 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
         uint16_t srcId = rcch->getSrcId();
         uint16_t dstId = rcch->getDstId();
 
+        if (m_nxdn->m_network->disallowUnitToUnit()) {
+            switch (rcch->getMessageType()) {
+            case MessageType::RTCH_VCALL:
+                if (!rcch->getGroup()) {
+                    LogWarning(LOG_NET, "NXDN, rejecting network unit-to-unit call request, srcId = %u, dstId = %u",
+                        srcId, dstId);
+                    return false;
+                }
+                break;
+            case MessageType::RCCH_VCALL_REC:
+            case MessageType::RCCH_VCALL_CONN:
+                return false;
+            default:
+                break;
+            }
+        }
+
         // handle standard NXDN message opcodes
         switch (rcch->getMessageType()) {
             case MessageType::RTCH_VCALL:

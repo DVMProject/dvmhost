@@ -444,6 +444,10 @@ bool Slot::processNetwork(uint8_t* data, uint32_t length, const lc::LC& control,
 {
     CHECK_NET_AUTHORITATIVE(control.getDstId());
 
+    if (s_network->disallowUnitToUnit() && isVoiceDUID(duid) && (controlByte & network::NET_CTRL_U2U) == network::NET_CTRL_U2U) {
+        return false;
+    }
+
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
         ++m_netMissed;
         if (m_debug)
@@ -1151,6 +1155,13 @@ bool Slot::processMAC(uint8_t* data, uint32_t length, defines::P2_DUID::E duid,
     const bool sync = isFACCHDUID(duid);
     if (net && !m_control.decodeVCH_MACPDU_OEMI(frame, sync))
         return false;
+
+    if (net && s_network->disallowUnitToUnit() &&
+        m_control.getLCO() == defines::P2_MAC_MCO::PRIVATE) {
+        LogWarning(LOG_NET, "P25 Phase 2 Slot %u, rejecting network unit-to-unit MAC PDU, srcId = %u, dstId = %u",
+            m_slotNo + 1U, m_control.getSrcId(), m_control.getDstId());
+        return false;
+    }
 
     // The transport discriminator and the discriminator protected inside the
     // MAC burst must agree.  Do not let metadata reinterpret one coded form

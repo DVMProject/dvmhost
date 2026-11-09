@@ -870,6 +870,7 @@ bool Host::createNetwork()
     bool allowStatusTransfer = networkConf["allowStatusTransfer"].as<bool>(true);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool saveLookup = networkConf["saveLookups"].as<bool>(false);
+    bool disallowUnitToUnit = networkConf["disallowUnitToUnit"].as<bool>(false);
     bool packetDump = networkConf["packetDump"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
@@ -995,6 +996,7 @@ bool Host::createNetwork()
         LogInfo("    Allow Status Transfer: %s", m_allowStatusTransfer ? "yes" : "no");
         LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
         LogInfo("    Save Network Lookups: %s", saveLookup ? "yes" : "no");
+        LogInfo("    Disallow Network Unit-to-Unit: %s", disallowUnitToUnit ? "yes" : "no");
 
         LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
         LogInfo("    KMF Encrypted: %s", kmfEncrypted ? "yes" : "no");
@@ -1024,7 +1026,7 @@ bool Host::createNetwork()
     // initialize networking
     if (netEnable) {
         m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, false, slot1, slot2, 
-            allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup);
+            allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup, disallowUnitToUnit);
 
         m_network->setPacketDump(packetDump);
         m_network->setLookups(m_ridLookup, m_tidLookup);

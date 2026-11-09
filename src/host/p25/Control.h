@@ -365,6 +365,7 @@ namespace p25
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
         uint32_t m_netLastSrcId;
+        bool m_netRejectedU2UStream;
 
         uint32_t m_permittedDstId;
         uint32_t m_permittedSrcId;

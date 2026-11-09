@@ -240,6 +240,12 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();
 
+    if (m_nxdn->m_network->disallowUnitToUnit() && !group) {
+        LogWarning(LOG_NET, "NXDN, rejecting network individual data call, srcId = %u, dstId = %u",
+            srcId, dstId);
+        return false;
+    }
+
     // overwrite the destination ID if the network message header and
     // decoded network LC data don't agree (this can happen if the network is dynamically
     // altering the destination ID in-flight)

@@ -107,6 +107,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_netState(RS_NET_IDLE),
     m_netLastDstId(0U),
     m_netLastSrcId(0U),
+    m_netRejectedU2UStream(false),
     m_permittedDstId(0U),
     m_permittedSrcId(0U),
     m_permittedU2U(false),
@@ -1633,6 +1634,38 @@ void Control::processNetwork()
 
     control.setNetId(netId);
     control.setSysId(sysId);
+
+    if (m_network->disallowUnitToUnit()) {
+        const bool privateCall = lco == LCO::PRIVATE || lco == LCO::PRIVATE_EXT;
+        const bool voiceFrame = duid == DUID::HDU || duid == DUID::LDU1 || duid == DUID::LDU2;
+        const bool callEnd = duid == DUID::TDU || duid == DUID::TDULC;
+
+        // continuation frames such as LDU2 do not carry a voice-user LCO, so
+        // retain rejection state until call end or a fresh group call header
+        if (m_netRejectedU2UStream) {
+            const bool newGroupCall = (duid == DUID::HDU || duid == DUID::LDU1) && !privateCall && !unitToUnit;
+            if (newGroupCall) {
+                m_netRejectedU2UStream = false;
+            }
+            else if (voiceFrame || callEnd) {
+                if (callEnd)
+                    m_netRejectedU2UStream = false;
+                return;
+            }
+        }
+
+        // reject network unit-to-unit calls if either a private call or unit-to-unit call is detected
+        if (privateCall || unitToUnit) {
+            if (voiceFrame) {
+                m_netRejectedU2UStream = true;
+                m_network->resetP25();
+            }
+
+            LogWarning(LOG_NET, "P25, rejecting network unit-to-unit call stream, lco = $%02X, srcId = %u, dstId = %u",
+                lco, srcId, dstId);
+            return;
+        }
+    }
 
     lsd.setLSD1(lsd1);
     lsd.setLSD2(lsd2);

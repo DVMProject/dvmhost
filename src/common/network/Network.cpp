@@ -30,9 +30,10 @@ using namespace network;
 
 Network::Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
     bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, 
-    bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup) :
+    bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup, bool disallowUnitToUnit) :
     BaseNetwork(peerId, duplex, debug, slot1, slot2, allowActivityTransfer, allowDiagnosticTransfer, localPort),
     m_pktLastSeq(0U),
+    m_disallowUnitToUnit(disallowUnitToUnit),
     m_address(address),
     m_port(port),
     m_configuredAddress(address),

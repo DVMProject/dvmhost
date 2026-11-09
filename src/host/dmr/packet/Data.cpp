@@ -441,6 +441,12 @@ void Data::processNetwork(const data::NetData& dmrData)
         uint32_t srcId = m_netDataHeader.getSrcId();
         uint32_t dstId = m_netDataHeader.getDstId();
 
+        if (m_slot->s_network->disallowUnitToUnit() && !gi) {
+            LogWarning(LOG_NET, "DMR Slot %u, rejecting network individual data call, srcId = %u, dstId = %u",
+                m_slot->m_slotNo, srcId, dstId);
+            return;
+        }
+
         if (!m_slot->s_authoritative && m_slot->m_permittedDstId != dstId) {
             return;
         }

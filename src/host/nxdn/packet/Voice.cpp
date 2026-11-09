@@ -694,6 +694,12 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
         bool group = lc.getGroup();
         bool encrypted = lc.getEncrypted();
 
+        if (m_nxdn->m_network->disallowUnitToUnit() && !group) {
+            LogWarning(LOG_NET, "NXDN, rejecting network unit-to-unit voice call, srcId = %u, dstId = %u",
+                srcId, dstId);
+            return false;
+        }
+
         // overwrite the destination ID if the network message header and
         // decoded network LC data don't agree (this can happen if the network is dynamically
         // altering the destination ID in-flight)

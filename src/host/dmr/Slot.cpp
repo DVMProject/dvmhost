@@ -459,6 +459,10 @@ void Slot::processNetwork(const data::NetData& dmrData)
                 bool unitToUnit = (dmrData.getControl() & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
                 
                 if (grantDemand) {
+                    if (s_network->disallowUnitToUnit() && unitToUnit) {
+                        break;
+                    }
+
                     // validate source RID
                     if (!acl::AccessControl::validateSrcId(dmrData.getSrcId())) {
                         break;

@@ -872,6 +872,18 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     return false;
                 }
 
+                if (m_p25->m_network->disallowUnitToUnit()) {
+                    switch (tsbk->getLCO()) {
+                    case TSBKO::IOSP_UU_VCH:
+                    case TSBKO::IOSP_UU_ANS:
+                    case TSBKO::OSP_UU_VCH_GRANT_UPD:
+                        LogWarning(LOG_NET, P25_TSDU_STR ", rejecting network unit-to-unit signaling, lco = $%02X", tsbk->getLCO());
+                        return false;
+                    default:
+                        break;
+                    }
+                }
+
                 // handle updating internal adjacent site information
                 if (tsbk->getLCO() == TSBKO::OSP_ADJ_STS_BCAST) {
                     if (!m_p25->m_enableControl) {

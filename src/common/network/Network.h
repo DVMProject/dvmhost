@@ -163,10 +163,11 @@ namespace network
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
+         * @param disallowUnitToUnit Flag indicating that inbound unit-to-unit traffic will be discarded.
          */
         Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, 
-            bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+            bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup, bool disallowUnitToUnit = false);
         /**
          * @brief Finalizes a instance of the Network class.
          */
@@ -331,6 +332,11 @@ namespace network
          * @brief Last received RTP sequence number.
          */
         DECLARE_RO_PROPERTY_PLAIN(uint16_t, pktLastSeq);
+
+        /** 
+         * @brief Flag indicating that inbound unit-to-unit traffic is discarded. 
+         */
+        DECLARE_RO_PROPERTY_PLAIN(bool, disallowUnitToUnit);
 
     protected:
         std::string m_address;

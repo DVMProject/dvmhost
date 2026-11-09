@@ -106,6 +106,9 @@ network:
     # Maximum allowable DMR network jitter.
     jitter: 360
 
+    # Flag indicating whether inbound unit-to-unit calls from the network will be discarded.
+    disallowUnitToUnit: false
+
     # Flag indicating whether DMR slot 1 traffic will be passed.
     slot1: true
     # Flag indicating whether DMR slot 2 traffic will be passed.
