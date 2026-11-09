@@ -165,8 +165,8 @@ public:
      * @param localPort The local port number to bind the network socket to.
      * @param peerId The peer ID for the network connection.
      */
-    NXDNTestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U) :
-        network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, false, false, true, false, true, true, false, false, false, false),
+    NXDNTestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U, bool disallowUnitToUnit = false) :
+        network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, false, false, true, false, true, true, false, false, false, false, disallowUnitToUnit),
         m_resetNXDNCount(0U)
     {
         // keep protocol gates deterministic for this NXDN-focused harness
@@ -175,6 +175,12 @@ public:
         m_nxdnEnabled = true;
         m_analogEnabled = false;
     }
+
+    /** @brief Marks the test network as ready to accept outbound frames. */
+    void activateForTest() { m_status = network::NET_STAT_RUNNING; }
+
+    /** @brief Gets the next outbound packet sequence value. */
+    uint16_t outboundSequence() const { return m_pktSeq; }
 
     /**
      * @brief Activates loopback mode for the network connection.
@@ -408,7 +414,7 @@ public:
      * @brief Initializes a new instance of the NXDNHostHarness class.
      * @param authoritative Indicates whether the host is authoritative.
      */
-    explicit NXDNHostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U) :
+    explicit NXDNHostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U, bool disallowUnitToUnit = false) :
         m_rpc("127.0.0.1", 1U, 0U, "test", false),
         m_modem(new NXDNTestModemPort(), false, false, false, false, false, false,
             0U, 0U, 0U, 1024U, 4096U, 1024U, true, true, false, false, false, false),
@@ -417,7 +423,7 @@ public:
         m_tidLookup("", 0U, false, false),
         m_idenLookup("", 0U),
         m_rssiMapper(),
-        m_network(withNetwork ? new NXDNTestNetwork(networkLocalPort, networkPeerId) : nullptr),
+        m_network(withNetwork ? new NXDNTestNetwork(networkLocalPort, networkPeerId, disallowUnitToUnit) : nullptr),
         m_control(nullptr)
     {
         g_RPC = &m_rpc;
@@ -473,6 +479,33 @@ public:
     NXDNTestNetwork* m_network;
     nxdn::Control* m_control;
 };
+
+TEST_CASE("NXDN blocks inbound and outbound unit-to-unit network traffic", "[nxdn][host][network][u2u][u2u-block]")
+{
+    NXDNHostHarness harness(true, true, 0U, 1U, true);
+
+    harness.network()->activateForTest();
+    REQUIRE(HostTestHooks::nxdnStartRFCall(*harness.m_control, 1001U, 2001U, false));
+    REQUIRE(harness.network()->outboundSequence() == 0U);
+    HostTestHooks::nxdnClearRFCall(*harness.m_control);
+
+    nxdn::lc::RTCH control;
+    control.setMessageType(nxdn::defines::MessageType::RTCH_VCALL);
+    control.setCallType(nxdn::defines::CallType::INDIVIDUAL);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+    control.setGroup(false);
+    control.setTransmissionMode(nxdn::defines::TransmissionMode::MODE_4800);
+
+    REQUIRE_FALSE(HostTestHooks::nxdnStartNetCall(*harness.m_control, control));
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
+
+    control.setCallType(nxdn::defines::CallType::BROADCAST);
+    control.setDstId(3001U);
+    control.setGroup(true);
+    REQUIRE(HostTestHooks::nxdnStartNetCall(*harness.m_control, control));
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+}
 
 TEST_CASE("NXDN host e2e loopback handles missed frames without dropping active call", "[nxdn][host][control][net][e2e]")
 {

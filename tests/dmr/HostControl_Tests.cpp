@@ -220,8 +220,8 @@ public:
      * @param localPort The local port number.
      * @param peerId The peer ID.
      */
-    DMRTestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U) :
-        network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, true, false, false, false, true, true, false, false, false, false),
+    DMRTestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U, bool disallowUnitToUnit = false) :
+        network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, true, false, false, false, true, true, false, false, false, false, disallowUnitToUnit),
         m_resetDMRCount(0U)
     {
         // keep protocol gates deterministic for this P25-focused harness
@@ -230,6 +230,12 @@ public:
         m_nxdnEnabled = false;
         m_analogEnabled = false;
     }
+
+    /** @brief Marks the test network as ready to accept outbound frames. */
+    void activateForTest() { m_status = network::NET_STAT_RUNNING; }
+
+    /** @brief Gets the next outbound packet sequence value. */
+    uint16_t outboundSequence() const { return m_pktSeq; }
 
     /**
      * @brief Activates the loopback network connection.
@@ -390,7 +396,7 @@ public:
      * @brief Initializes a new instance of the DMRHostHarness class.
      * @param authoritative Indicates whether the host is authoritative.
      */
-    explicit DMRHostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U) :
+    explicit DMRHostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U, bool disallowUnitToUnit = false) :
         m_rpc("127.0.0.1", 1U, 0U, "test", false),
         m_modem(new DMRTestModemPort(), false, false, false, false, false, false,
             0U, 0U, 0U, 4096U, 4096U, 1024U, true, true, false, false, false, false),
@@ -399,7 +405,7 @@ public:
         m_tidLookup("", 0U, false, false),
         m_idenLookup("", 0U),
         m_rssiMapper(),
-        m_network(withNetwork ? new DMRTestNetwork(networkLocalPort, networkPeerId) : nullptr),
+        m_network(withNetwork ? new DMRTestNetwork(networkLocalPort, networkPeerId, disallowUnitToUnit) : nullptr),
         m_control(nullptr)
     {
         g_RPC = &m_rpc;
@@ -435,6 +441,23 @@ public:
     DMRTestNetwork* m_network;
     dmr::Control* m_control;
 };
+
+TEST_CASE("DMR blocks inbound and outbound unit-to-unit network traffic", "[dmr][host][network][u2u][u2u-block]")
+{
+    DMRHostHarness harness(true, true, 0U, 1U, true);
+    dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+
+    harness.network()->activateForTest();
+    REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1001U, 2001U, false));
+    REQUIRE(harness.network()->outboundSequence() == 0U);
+    HostTestHooks::dmrClearRFCall(*slot);
+
+    HostTestHooks::dmrStartNetVoiceCall(*slot, 1001U, 2001U, false);
+    REQUIRE(HostTestHooks::dmrNetState(*slot) == RS_NET_IDLE);
+
+    HostTestHooks::dmrStartNetVoiceCall(*slot, 1001U, 3001U, true);
+    REQUIRE(HostTestHooks::dmrNetState(*slot) == RS_NET_AUDIO);
+}
 
 TEST_CASE("DMR host e2e loopback handles missed frames without dropping active call", "[dmr][host][control][net][e2e]")
 {

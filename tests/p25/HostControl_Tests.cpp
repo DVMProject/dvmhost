@@ -274,8 +274,8 @@ public:
      * @param localPort The local port number.
      * @param peerId The peer ID.
      */
-    P25TestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U) :
-        network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, false, true, false, false, true, true, false, false, false, false),
+    P25TestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U, bool disallowUnitToUnit = false) :
+        network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, false, true, false, false, true, true, false, false, false, false, disallowUnitToUnit),
         m_resetP25Count(0U)
     {
         // keep protocol gates deterministic for this P25-focused harness
@@ -283,6 +283,41 @@ public:
         m_p25Enabled = true;
         m_nxdnEnabled = false;
         m_analogEnabled = false;
+    }
+
+    /** @brief Marks the test network as ready to accept outbound frames. */
+    void activateForTest() { m_status = network::NET_STAT_RUNNING; }
+
+    /** @brief Gets the next outbound packet sequence value. */
+    uint16_t outboundSequence() const { return m_pktSeq; }
+
+    /**
+     * @brief Queues a P25 voice frame directly into the receive ring buffer.
+     * @param control Link control carried by the frame.
+     * @param duid P25 data-unit identifier to queue.
+     */
+    void queueVoice(const p25::lc::LC& control, p25::defines::DUID::E duid)
+    {
+        p25::data::LowSpeedData lsd;
+        uint32_t length = 0U;
+        UInt8Array message = duid == p25::defines::DUID::LDU1 ?
+            createP25_LDU1Message(length, control, lsd, CAL_P25_LDU1_1K,
+                p25::defines::FrameType::DATA_UNIT, 0U) :
+            createP25_LDU2Message(length, control, lsd, CAL_P25_LDU2_1K, 0U);
+        REQUIRE(message != nullptr);
+        REQUIRE(length > 0U);
+
+        if (length >= 254U) {
+            const uint8_t marker = 254U;
+            const uint8_t remainder = static_cast<uint8_t>(length - 254U);
+            m_rxP25Data.addData(&marker, 1U);
+            m_rxP25Data.addData(&remainder, 1U);
+        }
+        else {
+            const uint8_t frameLength = static_cast<uint8_t>(length);
+            m_rxP25Data.addData(&frameLength, 1U);
+        }
+        m_rxP25Data.addData(message.get(), length);
     }
 
     /**
@@ -437,7 +472,7 @@ public:
      * @brief Initializes a new instance of the P25HostHarness class.
      * @param authoritative Indicates whether the host is authoritative.
      */
-    explicit P25HostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U) :
+    explicit P25HostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U, bool disallowUnitToUnit = false) :
         m_rpc("127.0.0.1", 1U, 0U, "test", false),
         m_modem(new P25TestModemPort(), false, false, false, false, false, false,
             0U, 0U, 0U, 1024U, 4096U, 1024U, true, true, false, false, false, false),
@@ -446,7 +481,7 @@ public:
         m_tidLookup("", 0U, false, false),
         m_idenLookup("", 0U),
         m_rssiMapper(),
-        m_network(withNetwork ? new P25TestNetwork(networkLocalPort, networkPeerId) : nullptr),
+        m_network(withNetwork ? new P25TestNetwork(networkLocalPort, networkPeerId, disallowUnitToUnit) : nullptr),
         m_control(nullptr)
     {
         g_RPC = &m_rpc;
@@ -500,6 +535,27 @@ public:
     P25TestNetwork* m_network;
     p25::Control* m_control;
 };
+
+TEST_CASE("P25 blocks inbound and outbound unit-to-unit network voice", "[p25][host][network][u2u][u2u-block]")
+{
+    P25HostHarness harness(true, true, 0U, 1U, true);
+    harness.network()->activateForTest();
+
+    HostTestHooks::p25WriteRFVoiceToNetwork(*harness.m_control, 1001U, 2001U, false);
+    REQUIRE(harness.network()->outboundSequence() == 0U);
+
+    p25::lc::LC privateCall;
+    privateCall.setLCO(p25::defines::LCO::PRIVATE);
+    privateCall.setSrcId(1001U);
+    privateCall.setDstId(2001U);
+    harness.network()->queueVoice(privateCall, p25::defines::DUID::LDU1);
+    HostTestHooks::p25ProcessNetworkQueue(*harness.m_control);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+
+    harness.network()->queueVoice(privateCall, p25::defines::DUID::LDU2);
+    HostTestHooks::p25ProcessNetworkQueue(*harness.m_control);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+}
 
 TEST_CASE("P25 active talkgroup updates preserve the working TGID", "[p25][active_tg]")
 {

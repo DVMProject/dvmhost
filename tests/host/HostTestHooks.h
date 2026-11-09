@@ -564,6 +564,19 @@ public:
      */
     static bool p25TerminateNetCall(p25::Control& control, const p25::lc::LC& lc, p25::defines::DUID::E duid = p25::defines::DUID::TDU);
     /**
+     * @brief Attempts to write a synthetic P25 RF voice frame to the network.
+     * @param control P25 control instance.
+     * @param srcId Source radio ID.
+     * @param dstId Destination radio or talkgroup ID.
+     * @param group True for group traffic; false for unit-to-unit traffic.
+     */
+    static void p25WriteRFVoiceToNetwork(p25::Control& control, uint32_t srcId, uint32_t dstId, bool group);
+    /**
+     * @brief Processes one queued P25 network frame.
+     * @param control P25 control instance.
+     */
+    static void p25ProcessNetworkQueue(p25::Control& control);
+    /**
      * @brief Selects the next secondary active talkgroup for a P25 voice channel.
      */
     static bool p25NextActiveTalkgroups(p25::Control& control, const std::vector<uint32_t>& activeTG,
@@ -662,7 +675,7 @@ public:
      * @param dstId Destination ID for synthetic call.
      * @return bool True if frame processing succeeds.
      */
-    static bool nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId);
+    static bool nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId, bool group = true);
     /**
      * @brief Injects a synthetic NXDN network call start frame.
      * @param control NXDN control instance.

@@ -22,6 +22,7 @@
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/P25Utils.h"
 #include "host/p25/packet/ControlSignaling.h"
+#include "host/p25/packet/Voice.h"
 
 #include <cstring>
 
@@ -621,6 +622,25 @@ bool HostTestHooks::p25TerminateNetCall(p25::Control& control, const p25::lc::LC
     return voice->processNetwork(buffer, 1U, localControl, lsd, localDuid, frameType);
 }
 
+/* Attempts to write a synthetic P25 RF voice frame to the network. */
+
+void HostTestHooks::p25WriteRFVoiceToNetwork(p25::Control& control, uint32_t srcId, uint32_t dstId, bool group)
+{
+    control.m_voice->m_rfLC.setLCO(group ? p25::defines::LCO::GROUP : p25::defines::LCO::PRIVATE);
+    control.m_voice->m_rfLC.setSrcId(srcId);
+    control.m_voice->m_rfLC.setDstId(dstId);
+
+    uint8_t data[p25::defines::P25_LDU_FRAME_LENGTH_BYTES] = { 0U };
+    control.m_voice->writeNetwork(data, p25::defines::DUID::LDU1);
+}
+
+/* Processes one queued P25 network frame. */
+
+void HostTestHooks::p25ProcessNetworkQueue(p25::Control& control)
+{
+    control.processNetwork();
+}
+
 /* Selects the next secondary active talkgroup for a P25 voice channel. */
 
 bool HostTestHooks::p25NextActiveTalkgroups(p25::Control& control, const std::vector<uint32_t>& activeTG,
@@ -715,7 +735,7 @@ void HostTestHooks::nxdnSetRFRejected(nxdn::Control& control)
 
 /* Injects synthetic NXDN RF call start frame. */
 
-bool HostTestHooks::nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId)
+bool HostTestHooks::nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId, bool group)
 {
     uint8_t start[nxdn::defines::NXDN_FRAME_LENGTH_BYTES + 2U];
     ::memset(start, 0x00U, sizeof(start));
@@ -743,9 +763,10 @@ bool HostTestHooks::nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint
     uint8_t buffer[nxdn::defines::NXDN_RTCH_LC_LENGTH_BYTES];
     nxdn::lc::RTCH lc;
     lc.setMessageType(nxdn::defines::MessageType::RTCH_VCALL);
+    lc.setCallType(group ? nxdn::defines::CallType::BROADCAST : nxdn::defines::CallType::INDIVIDUAL);
     lc.setSrcId(srcId);
     lc.setDstId(dstId);
-    lc.setGroup(true);
+    lc.setGroup(group);
     lc.setTransmissionMode(nxdn::defines::TransmissionMode::MODE_4800);
     lc.encode(buffer, nxdn::defines::NXDN_RTCH_LC_LENGTH_BITS);
 
