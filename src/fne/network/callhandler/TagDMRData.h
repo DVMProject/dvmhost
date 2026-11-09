@@ -174,7 +174,7 @@ namespace network
              * @brief Sets the debug flag.
              * @param debug Debug flag.
              */
-            void setDebug(bool debug) { m_debug = debug; m_packetData->setDebug(debug); }
+            void setDebug(bool debug);
 
         private:
 #if defined(CATCH2_TEST_COMPILATION)

@@ -1231,6 +1231,14 @@ void TagP25Data::write_TSDU_U_Reg_Cmd(uint32_t peerId, uint32_t dstId)
     write_TSDU(peerId, osp.get());
 }
 
+/* Sets the debug flag. */
+
+void TagP25Data::setDebug(bool debug)
+{
+    m_debug = debug;
+    m_packetData->setDebug(debug);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------

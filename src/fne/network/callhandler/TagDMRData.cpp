@@ -980,6 +980,14 @@ void TagDMRData::write_Call_Alrt(uint32_t peerId, uint8_t slot, uint32_t srcId, 
     write_CSBK(peerId, slot, csbk.get());
 }
 
+/* Sets the debug flag. */
+
+void TagDMRData::setDebug(bool debug)
+{
+    m_debug = debug;
+    m_packetData->setDebug(debug);
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
