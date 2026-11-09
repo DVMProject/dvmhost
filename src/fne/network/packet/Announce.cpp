@@ -171,12 +171,19 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                             break;
                         }
 
+                        // build a map of source ID to destination ID for the new affiliations
                         std::unordered_map<uint32_t, uint32_t> affiliations;
                         affiliations.reserve(len);
                         uint32_t offs = 4U;
                         for (uint32_t i = 0U; i < len; i++) {
                             const uint32_t srcId = GET_UINT24(req->buffer, offs);
                             const uint32_t dstId = GET_UINT24(req->buffer, offs + 4U);
+
+                            if (srcId == P25DEF::WUID_FNE) {
+                                LogWarning(LOG_MASTER, "PEER %u (%s) ignoring affiliation for FNE source ID", peerId, connection->identWithQualifier().c_str());
+                                continue;
+                            }
+
                             affiliations[srcId] = dstId;
                             offs += 8U;
                         }
@@ -226,6 +233,12 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                         uint32_t offs = 4U;
                         for (uint32_t i = 0U; i < len; i++) {
                             const uint32_t srcId = GET_UINT24(req->buffer, offs);
+
+                            if (srcId == P25DEF::WUID_FNE) {
+                                LogWarning(LOG_MASTER, "PEER %u (%s) ignoring unit registration for FNE source ID", peerId, connection->identWithQualifier().c_str());
+                                continue;
+                            }
+
                             registrations.push_back(srcId);
                             offs += 3U;
                         }

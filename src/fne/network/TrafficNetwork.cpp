@@ -1818,6 +1818,13 @@ std::vector<TrafficNetwork::PeerAffiliationMapPair> TrafficNetwork::peerAffiliat
 bool TrafficNetwork::updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint32_t dstId)
 {
     std::unordered_map<uint32_t, uint32_t> aggregate;
+
+    if (srcId == P25DEF::WUID_FNE) {
+        LogWarning(LOG_MASTER, "PEER %u ignoring affiliation for FNE source ID", peerId);
+        return false;
+    }
+
+    // scope is intentional
     {
         std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
         std::shared_ptr<fne_lookups::AffiliationLookup> affiliations = getPeerAffiliations(peerId);
@@ -1838,6 +1845,8 @@ bool TrafficNetwork::updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint
 bool TrafficNetwork::removePeerAffiliation(uint32_t peerId, uint32_t srcId)
 {
     std::unordered_map<uint32_t, uint32_t> aggregate;
+
+    // scope is intentional
     {
         std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
         std::shared_ptr<fne_lookups::AffiliationLookup> affiliations = getPeerAffiliations(peerId);
@@ -1857,6 +1866,8 @@ bool TrafficNetwork::removePeerAffiliation(uint32_t peerId, uint32_t srcId)
 bool TrafficNetwork::replacePeerAffiliations(uint32_t peerId, const std::unordered_map<uint32_t, uint32_t>& affiliations)
 {
     std::unordered_map<uint32_t, uint32_t> aggregate;
+
+    // scope is intentional
     {
         std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
         std::shared_ptr<fne_lookups::AffiliationLookup> peerAffiliations = getPeerAffiliations(peerId);
@@ -1880,11 +1891,13 @@ std::unordered_map<uint32_t, uint32_t> TrafficNetwork::buildAggregatedAffiliatio
         return lhs.first < rhs.first;
     });
 
+    // build the aggregate affiliation map from the peer snapshot
     std::unordered_map<uint32_t, uint32_t> aggregate;
     for (const auto& peer : peerSnapshot) {
         if (peer.second == nullptr)
             continue;
 
+        // iterate over the peer's group affiliations and merge into the aggregate map
         const std::unordered_map<uint32_t, uint32_t> affiliations = peer.second->grpAffTable();
         for (const auto& affiliation : affiliations) {
             const auto result = aggregate.emplace(affiliation.first, affiliation.second);
@@ -1914,6 +1927,13 @@ void TrafficNetwork::publishAggregatedAffiliations(const std::unordered_map<uint
 bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc)
 {
     std::vector<uint32_t> aggregate;
+
+    if (srcId == P25DEF::WUID_FNE) {
+        LogWarning(LOG_MASTER, "PEER %u ignoring unit registration for FNE source ID", peerId);
+        return false;
+    }
+
+    // scope is intentional
     {
         std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
         std::shared_ptr<fne_lookups::AffiliationLookup> registrations = getPeerAffiliations(peerId);
@@ -1937,6 +1957,8 @@ bool TrafficNetwork::removePeerUnitRegistration(uint32_t peerId, uint32_t srcId)
 {
     std::vector<uint32_t> aggregate;
     std::unordered_map<uint32_t, uint32_t> aggregateAffiliations;
+
+    // scope is intentional
     {
         std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
         std::shared_ptr<fne_lookups::AffiliationLookup> registrations = getPeerAffiliations(peerId);
@@ -1959,20 +1981,22 @@ bool TrafficNetwork::removePeerUnitRegistration(uint32_t peerId, uint32_t srcId)
 bool TrafficNetwork::replacePeerUnitRegistrations(uint32_t peerId, const std::vector<uint32_t>& registrations, uint32_t ssrc)
 {
     std::vector<uint32_t> aggregate;
+
+    // scope is intentional
     {
         std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
         std::shared_ptr<fne_lookups::AffiliationLookup> peerRegistrations = getPeerAffiliations(peerId);
         if (peerRegistrations == nullptr)
             return false;
 
+        // build a map of source ID to SSRC for the new registrations
         std::unordered_map<uint32_t, uint32_t> registrationOrigins;
         registrationOrigins.reserve(registrations.size());
         for (const uint32_t srcId : registrations)
             registrationOrigins[srcId] = ssrc;
 
         peerRegistrations->replaceUnitRegistrations(registrationOrigins);
-        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
+        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         m_unitRouteRegistry.replacePeer(peerId, registrations, ssrc, now);
         aggregate = buildAggregatedUnitRegistrations();
     }
@@ -1995,6 +2019,7 @@ std::vector<uint32_t> TrafficNetwork::buildAggregatedUnitRegistrations()
         if (peer.second == nullptr)
             continue;
 
+        // iterate over the peer's unit registrations and merge into the aggregate map
         const std::vector<uint32_t> registrations = peer.second->unitRegTable();
         for (const uint32_t srcId : registrations) {
             const uint32_t ssrc = peer.second->getSSRCByUnitReg(srcId);
