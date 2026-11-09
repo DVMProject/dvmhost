@@ -163,7 +163,7 @@ namespace network
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
-         * @param disallowUnitToUnit Flag indicating that inbound unit-to-unit traffic will be discarded.
+         * @param disallowUnitToUnit Flag indicating that network unit-to-unit traffic will be discarded.
          */
         Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, 
@@ -172,6 +172,18 @@ namespace network
          * @brief Finalizes a instance of the Network class.
          */
         ~Network() override;
+
+        /**
+         * @brief Writes a grant request unless unit-to-unit network traffic is disabled.
+         * @param mode DVM protocol mode requesting the grant.
+         * @param srcId Source subscriber ID.
+         * @param dstId Destination subscriber or talkgroup ID.
+         * @param slot DMR slot number, or zero for protocols without slots.
+         * @param unitToUnit Flag indicating an individual-call grant request.
+         * @return True if the request was written; otherwise false.
+         */
+        bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit);
 
         /**
          * @brief Resets the DMR ring buffer for the given slot.
@@ -334,7 +346,7 @@ namespace network
         DECLARE_RO_PROPERTY_PLAIN(uint16_t, pktLastSeq);
 
         /** 
-         * @brief Flag indicating that inbound unit-to-unit traffic is discarded. 
+         * @brief Flag indicating that network unit-to-unit traffic is discarded.
          */
         DECLARE_RO_PROPERTY_PLAIN(bool, disallowUnitToUnit);
 

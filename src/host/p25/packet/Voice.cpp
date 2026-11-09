@@ -1489,6 +1489,9 @@ void Voice::writeNetwork(const uint8_t *data, defines::DUID::E duid, defines::Fr
     if (m_p25->m_network == nullptr)
         return;
 
+    if (m_p25->m_network->disallowUnitToUnit() && !m_rfLC.getGroup())
+        return;
+
     if (m_p25->m_rfTimeoutTimer.isRunning() && m_p25->m_rfTimeoutTimer.hasExpired())
         return;
 

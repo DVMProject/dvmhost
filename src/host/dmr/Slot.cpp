@@ -1529,6 +1529,9 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
     if (s_network == nullptr)
         return;
 
+    if (s_network->disallowUnitToUnit() && flco == FLCO::PRIVATE)
+        return;
+
     data::NetData dmrData;
     dmrData.setSlotNo(m_slotNo);
     dmrData.setDataType(dataType);

@@ -115,6 +115,17 @@ Network::~Network()
     delete m_mux;
 }
 
+/* Writes a grant request unless unit-to-unit network traffic is disabled. */
+
+bool Network::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+    const uint8_t slot, const bool unitToUnit)
+{
+    if (m_disallowUnitToUnit && unitToUnit)
+        return false;
+
+    return BaseNetwork::writeGrantReq(mode, srcId, dstId, slot, unitToUnit);
+}
+
 /* Resets the DMR ring buffer for the given slot. */
 
 void Network::resetDMR(uint32_t slotNo)

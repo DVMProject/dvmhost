@@ -996,7 +996,7 @@ bool Host::createNetwork()
         LogInfo("    Allow Status Transfer: %s", m_allowStatusTransfer ? "yes" : "no");
         LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
         LogInfo("    Save Network Lookups: %s", saveLookup ? "yes" : "no");
-        LogInfo("    Disallow Network Unit-to-Unit: %s", disallowUnitToUnit ? "yes" : "no");
+        LogInfo("    Disallow Network Unit-to-Unit Calls: %s", disallowUnitToUnit ? "yes" : "no");
 
         LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
         LogInfo("    KMF Encrypted: %s", kmfEncrypted ? "yes" : "no");

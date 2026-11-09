@@ -1603,6 +1603,17 @@ void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool 
     if (m_p25->m_network == nullptr)
         return;
 
+    if (m_p25->m_network->disallowUnitToUnit()) {
+        switch (tsbk->getLCO()) {
+        case TSBKO::IOSP_UU_VCH:
+        case TSBKO::IOSP_UU_ANS:
+        case TSBKO::OSP_UU_VCH_GRANT_UPD:
+            return;
+        default:
+            break;
+        }
+    }
+
     if (m_p25->m_rfTimeoutTimer.isRunning() && m_p25->m_rfTimeoutTimer.hasExpired())
         return;
 
@@ -1624,6 +1635,9 @@ void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, boo
     assert(data != nullptr);
 
     if (m_p25->m_network == nullptr)
+        return;
+
+    if (m_p25->m_network->disallowUnitToUnit() && (tduLc->getLCO() == LCO::PRIVATE || tduLc->getLCO() == LCO::PRIVATE_EXT))
         return;
 
     if (m_p25->m_rfTimeoutTimer.isRunning() && m_p25->m_rfTimeoutTimer.hasExpired())

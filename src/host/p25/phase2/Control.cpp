@@ -292,6 +292,10 @@ bool Control::writeNetwork(Slot* slot, const uint8_t* data, uint32_t length)
     if (m_network == nullptr || slot == nullptr || data == nullptr)
         return true;
 
+    if (m_network->disallowUnitToUnit() && (slot->m_control.getLCO() == defines::P2_MAC_MCO::PRIVATE || 
+        (slot->m_controlByte & network::NET_CTRL_U2U) == network::NET_CTRL_U2U))
+        return true;
+
     const bool ret = m_network->writeP25P2(slot->m_control, slot->m_duid, (uint8_t)slot->m_slotNo, slot->m_rfScrambleOffset, data, slot->m_controlByte);
     if (!ret)
         LogWarning(LOG_NET, "P25 Phase 2 Slot %u, failed to write network frame, duid = $%02X", slot->m_slotNo + 1U, (uint8_t)slot->m_duid);
