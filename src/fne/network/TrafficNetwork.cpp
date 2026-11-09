@@ -1901,10 +1901,12 @@ std::unordered_map<uint32_t, uint32_t> TrafficNetwork::buildAggregatedAffiliatio
         const std::unordered_map<uint32_t, uint32_t> affiliations = peer.second->grpAffTable();
         for (const auto& affiliation : affiliations) {
             const auto result = aggregate.emplace(affiliation.first, affiliation.second);
+            /*
             if (!result.second && result.first->second != affiliation.second) {
                 LogWarning(LOG_MASTER, "PEER %u affiliation conflict, srcId = %u, dstId = %u already represented by dstId = %u from a lower peer ID",
                     peer.first, affiliation.first, affiliation.second, result.first->second);
             }
+            */
         }
     }
 
@@ -2024,10 +2026,11 @@ std::vector<uint32_t> TrafficNetwork::buildAggregatedUnitRegistrations()
         for (const uint32_t srcId : registrations) {
             const uint32_t ssrc = peer.second->getSSRCByUnitReg(srcId);
             const auto result = aggregateOrigins.emplace(srcId, ssrc);
+            /*
             if (!result.second && result.first->second != ssrc) {
-                LogWarning(LOG_MASTER, "PEER %u unit registration conflict, srcId = %u already represented by lower peer ID",
-                    peer.first, srcId);
+                LogWarning(LOG_MASTER, "PEER %u unit registration conflict, srcId = %u already represented by lower peer ID", peer.first, srcId);
             }
+            */
         }
     }
 
