@@ -724,13 +724,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 }
             }
         }
-
+        
         /*
         ** MASTER TRAFFIC
         */
 
         // repeat traffic to nodes connected to us as peers
-        if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
+        if (m_network->peerCount() > 0U) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
@@ -767,8 +767,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
-                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U && peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -797,10 +796,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     routeRewrite(outboundPeerBuffer, peer.first, duid, dstId);
 
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
-                        LogDebugEx(LOG_P25, "TagP25Data::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u", 
-                            ssrc, peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, fromUpstream);
-                    }
+                    //if (m_network->m_debug) {
+                        LogDebugEx(LOG_P25, "TagP25Data::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
+                            ssrc, peerId, peer.first, duid, lco, MFId, srcId, dstId, len, pktSeq, streamId, fromUpstream, privateCallInProgress, noConnectedPeerRepeat);
+                    //}
 
                     i++;
                 }

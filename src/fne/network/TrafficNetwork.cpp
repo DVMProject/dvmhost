@@ -413,7 +413,7 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
     yaml::Node& privateCallRouting = conf["privateCallRouting"];
-    m_privateCallRoutingEnabled = privateCallRouting["enabled"].as<bool>(false);
+    m_privateCallRoutingEnabled = privateCallRouting["enable"].as<bool>(false);
     m_privateCallUnknownDestination = privateCallRouting["unknownDestination"].as<std::string>("reject");
     m_privateCallLearnFromTraffic = privateCallRouting["learnFromTraffic"].as<bool>(true);
     m_privateCallRouteLifetime = privateCallRouting["routeLifetime"].as<uint32_t>(300U);

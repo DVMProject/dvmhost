@@ -606,7 +606,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         */
 
         // repeat traffic to nodes peered to us as master
-        if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
+        if (m_network->peerCount() > 0U) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
@@ -620,6 +620,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
+                    // are we routing private calls?
                     if (m_network->m_privateCallRoutingEnabled) {
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
@@ -638,8 +639,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
-                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U && peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -664,8 +664,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u", 
-                            ssrc, peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, fromUpstream);
+                        LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
+                            ssrc, peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, fromUpstream, privateCallInProgress, noConnectedPeerRepeat);
                     }
 
                     i++;

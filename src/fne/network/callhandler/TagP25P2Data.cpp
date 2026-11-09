@@ -576,7 +576,7 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
         */
 
         // repeat traffic to nodes peered to us as master
-        if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
+        if (m_network->peerCount() > 0U) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
@@ -608,8 +608,7 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
-                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U && peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -634,8 +633,8 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
 
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, srcId = %u, dstId = %u, duid = $%02X, macMCO = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u", 
-                            ssrc, peerId, peer.first, srcId, dstId, duid, macMCO, slotNo, len, pktSeq, streamId, fromUpstream);
+                        LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, srcId = %u, dstId = %u, duid = $%02X, macMCO = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
+                            ssrc, peerId, peer.first, srcId, dstId, duid, macMCO, slotNo, len, pktSeq, streamId, fromUpstream, privateCallInProgress, noConnectedPeerRepeat);
                     }
 
                     i++;

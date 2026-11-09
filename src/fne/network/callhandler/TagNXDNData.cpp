@@ -617,7 +617,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         */
 
         // repeat traffic to nodes peered to us as master
-        if (m_network->peerCount() > 0U && !noConnectedPeerRepeat) {
+        if (m_network->peerCount() > 0U) {
             uint32_t i = 0U;
             udp::BufferQueue queue = udp::BufferQueue();
 
@@ -649,8 +649,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
-                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U && peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -675,8 +674,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_network->m_debug) {
-                        LogDebugEx(LOG_NXDN, "TagNXDNData::processFrame()", "Master, ssrc = %u, srcPeer = %u,  dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u", 
-                            ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, fromUpstream);
+                        LogDebugEx(LOG_NXDN, "TagNXDNData::processFrame()", "Master, ssrc = %u, srcPeer = %u,  dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
+                            ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, fromUpstream, privateCallInProgress, noConnectedPeerRepeat);
                     }
 
                     i++;
