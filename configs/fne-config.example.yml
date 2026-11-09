@@ -252,9 +252,6 @@ master:
 
     # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
     restrictGrantToAffiliatedOnly: false
-    # Flag indicating whether or not a private call will only be routed to the network peers the RID registers with.
-    restrictPrivateCallToRegOnly: false
-
     # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.
     disallowAdjStsBcast: false
     # Flag indicating whether or not a P25 ADJ_STS_BCAST will pass to connected external peers.
@@ -284,10 +281,24 @@ master:
     # Flag indicating that P25 terminators will be filtered by destination ID (i.e. valid RID or valid TGID).
     filterTerminators: true
 
-    # Flag indicating the FNE will drop all inbound Unit-to-Unit calls.
-    disallowAllUnitToUnit: false
-    # List of peers that unit to unit calls are dropped for.
-    dropUnitToUnit: []
+    #
+    # Private (Unit-to-Unit) Call Routing Configuration
+    #
+    privateCallRouting:
+        # Flag indicating whether private/unit-to-unit calls may be routed.
+        #   When disabled, all private/unit-to-unit setup, grant, media, and signaling traffic is rejected.
+        enabled: false
+
+        # Action used when the destination unit has no current route: reject, or flood.
+        #   WARNING: The flood policy can result in unintended network-wide message propagation and should be used with caution.
+        unknownDestination: reject
+
+        # Flag indicating whether valid inbound RF traffic refreshes dynamic unit locations.
+        learnFromTraffic: true
+        # Dynamic unit route lifetime in seconds.
+        routeLifetime: 300
+        # Reachability query timeout in milliseconds when unknownDestination is query.
+        queryTimeout: 1000
 
     #
     # Database Metrics and Logging

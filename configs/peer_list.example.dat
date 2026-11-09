@@ -28,12 +28,14 @@
 #   * TELEPHONE INTERCONNECT [OPTIONAL] - Flag indicating the peer connection is a telephone interconnect gateway.
 #                                       Telephone interconnect requests and calls are only routed between interconnect
 #                                       gateway peers and the peer the subscriber unit is registered to.
+#   * ALLOW UNIT-TO-UNIT [OPTIONAL] - Flag indicating the peer may originate, receive, or transit unit-to-unit calls.
+#                                       If omitted, unit-to-unit traffic is allowed for backward compatibility.
 #
-# Entry Format: "Peer ID,Peer Password,Peer Replication (1 = Enabled / 0 = Disabled),Peer Alias (optional),Can Request Keys (1 = Enabled / 0 = Disabled),Can Issue Inhibit (1 = Enabled / 0 = Disabled),Has Call Priority (1 = Enabled / 0 = Disabled),Jitter Enabled (1 = Enabled / 0 = Disabled),Jitter Max Size, Jitter Max Wait,Telephone Interconnect (1 = Enabled / 0 = Disabled)<newline>"
+# Entry Format: "Peer ID,Peer Password,Peer Replication (1 = Enabled / 0 = Disabled),Peer Alias (optional),Can Request Keys (1 = Enabled / 0 = Disabled),Can Issue Inhibit (1 = Enabled / 0 = Disabled),Has Call Priority (1 = Enabled / 0 = Disabled),Jitter Enabled (1 = Enabled / 0 = Disabled),Jitter Max Size,Jitter Max Wait,Telephone Interconnect (1 = Enabled / 0 = Disabled),Allow Unit-to-Unit (1 = Enabled / 0 = Disabled)<newline>"
 # Examples:
 #1234,,0,,1,0,0,0,4,40000,
 #5678,MYSECUREPASSWORD,0,,0,0,0,0,4,40000,
 #9876,MYSECUREPASSWORD,1,,0,0,0,0,4,40000,
 #5432,MYSECUREPASSWORD,,Peer Alias 1,0,0,0,0,4,40000,
 #1012,MYSECUREPASSWORD,1,Peer Alias 2,1,0,0,0,4,40000,
-#2468,MYSECUREPASSWORD,0,Interconnect Gateway,0,0,0,0,4,40000,1,
+#2468,MYSECUREPASSWORD,0,Interconnect Gateway,0,0,0,0,4,40000,1,1,

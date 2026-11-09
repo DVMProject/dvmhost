@@ -263,6 +263,11 @@ bool PeerListLookup::load()
             if (parsed.size() >= 11)
                 telephoneInterconnect = ::atoi(parsed[10].c_str()) == 1;
 
+            // parse unit-to-unit routing permission; omitted fields preserve legacy behavior
+            bool allowUnitToUnit = true;
+            if (parsed.size() >= 12 && !parsed[11].empty())
+                allowUnitToUnit = ::atoi(parsed[11].c_str()) == 1;
+
             // parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
@@ -275,6 +280,7 @@ bool PeerListLookup::load()
             entry.canIssueInhibit(canIssueInhibit);
             entry.hasCallPriority(hasCallPriority);
             entry.telephoneInterconnect(telephoneInterconnect);
+            entry.allowUnitToUnit(allowUnitToUnit);
             entry.jitterBufferEnabled(jitterBufferEnabled);
             entry.jitterBufferMaxSize(jitterBufferMaxSize);
             entry.jitterBufferMaxWait(jitterBufferMaxWait);
@@ -283,7 +289,7 @@ bool PeerListLookup::load()
 
             // log depending on what was loaded
             if (m_verbose) {
-                LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s%s", id,
+                LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s%s%s", id,
                     (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
                     (!password.empty() ? "using unique peer password" : "using master password"),
                     (peerReplica) ? ", Replication Enabled" : "",
@@ -291,7 +297,8 @@ bool PeerListLookup::load()
                     (canIssueInhibit) ? ", Can Issue Inhibit" : "",
                     (hasCallPriority) ? ", Has Call Priority" : "",
                     (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "",
-                    (telephoneInterconnect) ? ", Telephone Interconnect" : "");
+                    (telephoneInterconnect) ? ", Telephone Interconnect" : "",
+                    (!allowUnitToUnit) ? ", Unit-to-Unit Disabled" : "");
             }
         }
     }
@@ -409,6 +416,14 @@ bool PeerListLookup::save(bool quiet)
         // add telephone interconnect flag
         bool telephoneInterconnect = entry.second.telephoneInterconnect();
         if (telephoneInterconnect) {
+            line += "1,";
+        } else {
+            line += "0,";
+        }
+
+        // add unit-to-unit routing permission
+        bool allowUnitToUnit = entry.second.allowUnitToUnit();
+        if (allowUnitToUnit) {
             line += "1";
         } else {
             line += "0";

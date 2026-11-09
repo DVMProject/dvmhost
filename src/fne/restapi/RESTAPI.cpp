@@ -1073,6 +1073,7 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
                 bool canIssueInhibit = entry.second.canIssueInhibit();
                 bool hasCallPriority = entry.second.hasCallPriority();
                 bool telephoneInterconnect = entry.second.telephoneInterconnect();
+                bool allowUnitToUnit = entry.second.allowUnitToUnit();
                 peerObj["peerId"].set<uint32_t>(peerId);
                 peerObj["peerAlias"].set<std::string>(peerAlias);
                 peerObj["peerPassword"].set<bool>(peerPassword);
@@ -1081,6 +1082,7 @@ void RESTAPI::restAPI_GetPeerList(const HTTPPayload& request, HTTPPayload& reply
                 peerObj["canIssueInhibit"].set<bool>(canIssueInhibit);
                 peerObj["hasCallPriority"].set<bool>(hasCallPriority);
                 peerObj["telephoneInterconnect"].set<bool>(telephoneInterconnect);
+                peerObj["allowUnitToUnit"].set<bool>(allowUnitToUnit);
                 peers.push_back(json::value(peerObj));
             }
         }
@@ -1197,6 +1199,17 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
         telephoneInterconnect = req["telephoneInterconnect"].get<bool>();
     }
 
+    // Get allowUnitToUnit
+    bool allowUnitToUnit = true;
+    if (req.find("allowUnitToUnit") != req.end()) {
+        if (!req["allowUnitToUnit"].is<bool>()) {
+            errorPayload(reply, "allowUnitToUnit was not a valid boolean");
+            return;
+        }
+
+        allowUnitToUnit = req["allowUnitToUnit"].get<bool>();
+    }
+
     PeerId entry = PeerId(peerId, peerAlias, peerPassword, false);
 
     // Set additional values
@@ -1205,6 +1218,7 @@ void RESTAPI::restAPI_PutPeerAdd(const HTTPPayload& request, HTTPPayload& reply,
     entry.canIssueInhibit(canIssueInhibit);
     entry.hasCallPriority(hasCallPriority);
     entry.telephoneInterconnect(telephoneInterconnect);
+    entry.allowUnitToUnit(allowUnitToUnit);
 
     LogInfoEx(LOG_REST, "request to add peer ACL, peerId = %u", peerId);
 

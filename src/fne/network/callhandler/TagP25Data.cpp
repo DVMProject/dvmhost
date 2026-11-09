@@ -213,6 +213,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             return false;
         }
 
+        m_network->learnUnitRouteFromTraffic(peerId, srcId, ssrc);
+
         // special case: if we've received a TSDU and its an LC_CALL_TERM; lets validate the source peer ID,
         //  LC_CALL_TERMs should only be sourced from the peer that initiated the call; other peers should not be
         //  transmitting LC_CALL_TERMs for the call
@@ -674,7 +676,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         bool telInt = isTelIntTraffic(control, duid, tsbk.get());
 
         // is this a private call in-progress?
-        if (m_network->m_restrictPVCallToRegOnly) {
+        if (m_network->m_privateCallRoutingEnabled) {
             if ((control.getLCO() != LCO::PRIVATE) && !control.getGroup()) {
                 // is this a private call? if so only repeat to the peer that registered the unit
                 auto it = std::find_if(m_statusPVCall.begin(), m_statusPVCall.end(), [&](StatusMapPair& x) {
@@ -747,7 +749,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    if (m_network->m_restrictPVCallToRegOnly) {
+                    if (m_network->m_privateCallRoutingEnabled) {
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
@@ -765,7 +767,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
+                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -870,6 +873,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
 bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
+    if (unitToUnit && (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(dstId))) {
+        return false;
+    }
+
     // if we have an Rx status for the destination deny the grant
     auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
         if (x.second.dstId == dstId) {
@@ -890,21 +897,35 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
         }
     }
 
-    lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
+    if (!unitToUnit) {
+        lookups::TalkgroupRuleGroupVoice tg = m_network->m_tidLookup->find(dstId);
 
-    // check TGID validity
-    if (tg.isInvalid()) {
-        return false;
+        // check TGID validity
+        if (tg.isInvalid()) {
+            return false;
+        }
+
+        if (!tg.config().active()) {
+            return false;
+        }
     }
-
-    if (!tg.config().active()) {
-        return false;
-    } 
+    else {
+        lookups::RadioId target = m_network->m_ridLookup->find(dstId);
+        if ((!target.radioDefault() && !target.radioEnabled()) ||
+            (target.radioDefault() && m_network->m_rejectUnknownRID)) {
+            return false;
+        }
+    }
 
     // repeat traffic to the connected peers
     if (m_network->peerCount() > 0U) {
+        const uint32_t registeredPeerId = unitToUnit ? m_network->findPeerUnitReg(dstId) : 0U;
         for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first) {
+                if (registeredPeerId != 0U && peer.first != registeredPeerId)
+                    continue;
+                if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
+                    continue;
                 write_TSDU_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
             }
         }
@@ -1335,7 +1356,7 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
             case TSBKO::IOSP_UU_VCH:
             case TSBKO::IOSP_UU_ANS:
                 {
-                    if (m_network->checkU2UDroppedPeer(peerId))
+                    if (!m_network->isUnitToUnitPeerAllowed(peerId))
                         return false;
                 }
                 break;
@@ -1615,9 +1636,7 @@ bool TagP25Data::isPeerPermitted(uint32_t peerId, lc::LC& control, DUID::E duid,
     // use the explicit network individual-call flag; private voice LC is not
     // guaranteed in every LDU, particularly during late entry
     if (!control.getGroup()) {
-        if (m_network->m_disallowU2U)
-            return false;
-        if (!m_network->checkU2UDroppedPeer(peerId))
+        if (m_network->isUnitToUnitPeerAllowed(peerId))
             return true;
 
         // is this a U2U call?
@@ -1892,6 +1911,11 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 
     // is this a private or telephone interconnect call?
     if ((!control.getGroup() && !telIntCall) || telIntCall || privateCallInProgress) {
+        if (!telIntCall && (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(control.getDstId()))) {
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25, NET_ICC::REJECT_TRAFFIC, control.getDstId());
+            return false;
+        }
+
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(control.getDstId());
         if (!rid.radioDefault()) {
@@ -2116,16 +2140,18 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
-    // check the affiliations for this peer to see if we can grant traffic
-    std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(peerId);
-    if (aff == nullptr) {
-        std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
-        LogError(LOG_MASTER, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, peerIdentity.c_str());
-        return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
-    }
-    else {
-        if (!aff->hasGroupAff(dstId)) {
-            return false;
+    if (grp) {
+        // check the affiliations for this peer to see if we can grant traffic
+        std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(peerId);
+        if (aff == nullptr) {
+            std::string peerIdentity = m_network->resolvePeerIdentity(peerId);
+            LogError(LOG_MASTER, "PEER %u (%s) has an invalid affiliations lookup? This shouldn't happen BUGBUG.", peerId, peerIdentity.c_str());
+            return false; // this will cause no traffic to pass for this peer now...I'm not sure this is good behavior
+        }
+        else {
+            if (!aff->hasGroupAff(dstId)) {
+                return false;
+            }
         }
     }
 

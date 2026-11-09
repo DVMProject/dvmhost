@@ -156,6 +156,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             return false;
         }
 
+        m_network->learnUnitRouteFromTraffic(peerId, srcId, ssrc);
+
         // is this the end of the call stream?
         if (dataSync && (dataType == DataType::TERMINATOR_WITH_LC)) {
             bool illegalTerm = false;
@@ -564,7 +566,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         bool privateCallInProgress = false;
 
         // is this a private call in-progress?
-        if (m_network->m_restrictPVCallToRegOnly) {
+        if (m_network->m_privateCallRoutingEnabled) {
             if (flco == FLCO::PRIVATE) {
                 privateCallInProgress = true;
             }
@@ -618,7 +620,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    if (m_network->m_restrictPVCallToRegOnly) {
+                    if (m_network->m_privateCallRoutingEnabled) {
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
@@ -636,7 +638,8 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
+                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -733,6 +736,10 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
 bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
+    if (unitToUnit && (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(dstId))) {
+        return false;
+    }
+
     // if we have an Rx status for the destination deny the grant
     auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
         if (x.second.dstId == dstId/* && x.second.slotNo == slot*/) {
@@ -779,6 +786,8 @@ bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, b
         for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first) {
                 if (registeredPeerId != 0U && peer.first != registeredPeerId)
+                    continue;
+                if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
                     continue;
                 write_CSBK_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
             }
@@ -1129,11 +1138,7 @@ bool TagDMRData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t 
         return true;
 
     if (data.getFLCO() == FLCO::PRIVATE) {
-        if (m_network->m_disallowU2U)
-            return false;
-        if (!m_network->checkU2UDroppedPeer(peerId))
-            return true;
-        return false;
+        return m_network->isUnitToUnitPeerAllowed(peerId);
     }
 
     TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
@@ -1346,6 +1351,11 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, lc::CSBK* csbk, 
 
     // is this a private call?
     if (data.getFLCO() == FLCO::PRIVATE) {
+        if (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(data.getDstId())) {
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
+            return false;
+        }
+
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(data.getDstId());
         if (!rid.radioDefault()) {
@@ -1499,7 +1509,7 @@ bool TagDMRData::write_CSBK_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         if (grp && !aff->hasGroupAff(dstId)) {
             return false;
         }
-        if (!grp && !aff->isUnitReg(dstId)) {
+        if (!grp && !aff->isUnitReg(dstId) && !m_network->shouldFloodUnitToUnit(dstId)) {
             TrafficNetwork::PeerConnectionPtr connection = m_network->findPeer(peerId);
             if (connection == nullptr || !connection->isConventional())
                 return false;

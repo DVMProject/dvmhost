@@ -117,6 +117,8 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
             return false;
         }
 
+        m_network->learnUnitRouteFromTraffic(peerId, srcId, ssrc);
+
         // is this the end of the call stream?
         if (pktSeq == RTP_END_OF_CALL_SEQ || macOpcode == P2_MAC_HEADER_OPCODE::END_PTT ||
             (macDecoded && macMCO == P2_MAC_MCO::MAC_RELEASE)) {
@@ -474,7 +476,7 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                     m_statusPVCall[dstId].activeCall = true;
 
                     // find the SSRC of the peer that registered this unit
-                    uint32_t regSSRC = m_network->findPeerUnitReg(srcId);
+                    uint32_t regSSRC = m_network->findPeerUnitReg(dstId);
                     m_statusPVCall[dstId].dstPeerId = regSSRC;
                     m_statusPVCall.unlock();
 
@@ -534,7 +536,7 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
         bool privateCallInProgress = false;
 
         // is this a private call in-progress?
-        if (m_network->m_restrictPVCallToRegOnly) {
+        if (m_network->m_privateCallRoutingEnabled) {
             if (unitToUnit) {
                 privateCallInProgress = true;
             }
@@ -588,7 +590,7 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                         continue;
                     }
 
-                    if (m_network->m_restrictPVCallToRegOnly) {
+                    if (m_network->m_privateCallRoutingEnabled) {
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
@@ -606,7 +608,8 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
+                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -890,7 +893,7 @@ bool TagP25P2Data::isPeerPermitted(uint32_t peerId, uint32_t dstId, uint8_t slot
         return true;
 
     if (unitToUnit)
-        return !m_network->m_disallowU2U && !m_network->checkU2UDroppedPeer(peerId);
+        return m_network->isUnitToUnitPeerAllowed(peerId);
 
     TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
 
@@ -1034,6 +1037,11 @@ bool TagP25P2Data::validate(uint32_t peerId, uint32_t srcId, uint32_t dstId, uin
 
     // is this a private call?
     if (unitToUnit) {
+        if (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(dstId)) {
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2, NET_ICC::REJECT_TRAFFIC, dstId, slotNo);
+            return false;
+        }
+
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(dstId);
         if (!rid.radioDefault()) {

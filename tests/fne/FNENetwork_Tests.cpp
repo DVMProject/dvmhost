@@ -13,9 +13,11 @@
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 #include "fne/network/callhandler/TagAnalogData.h"
+#include "fne/network/UnitRouteRegistry.h"
 #include "common/analog/AnalogDefines.h"
 #include "common/BitManipulation.h"
 #include "common/lookups/AffiliationLookup.h"
+#include "common/lookups/PeerListLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 
@@ -67,6 +69,92 @@ public:
     network::TrafficNetwork traffic;
     network::MetadataNetwork metadata;
 };
+
+TEST_CASE("FNE unit route registry timestamps learned routes", "[fne][routing][u2u][registry]")
+{
+    network::UnitRouteRegistry registry(1000U);
+
+    REQUIRE(registry.update(2001U, 1001U, 1001U, true, 100U));
+    CHECK(registry.resolve(2001U, 1099U).valid);
+    CHECK_FALSE(registry.resolve(2001U, 1100U).valid);
+
+    const std::vector<network::UnitRoute> expired = registry.expire(1100U);
+    REQUIRE(expired.size() == 1U);
+    CHECK(expired[0U].unitId == 2001U);
+    CHECK_FALSE(registry.resolve(2001U, 1100U).valid);
+}
+
+TEST_CASE("FNE explicit unit registrations do not expire", "[fne][routing][u2u][registry]")
+{
+    network::UnitRouteRegistry registry(1000U);
+
+    REQUIRE(registry.update(2001U, 1001U, 1001U, false, 100U));
+    CHECK(registry.expire(100000U).empty());
+    const network::UnitRoute route = registry.resolve(2001U, 100000U);
+    REQUIRE(route.valid);
+    CHECK(route.peerId == 1001U);
+    CHECK_FALSE(route.learned);
+}
+
+TEST_CASE("FNE unit route registry validates, refreshes, and moves learned routes",
+    "[fne][routing][u2u][registry]")
+{
+    network::UnitRouteRegistry registry(1000U);
+
+    CHECK_FALSE(registry.update(0U, 1001U, 1001U, true, 100U));
+    CHECK_FALSE(registry.update(2001U, 0U, 1001U, true, 100U));
+    REQUIRE(registry.update(2001U, 1001U, 0U, true, 100U));
+    CHECK(registry.resolve(2001U, 100U).ssrc == 1001U);
+
+    REQUIRE(registry.update(2001U, 1001U, 3001U, true, 900U));
+    CHECK(registry.resolve(2001U, 1899U).valid);
+    CHECK_FALSE(registry.resolve(2001U, 1900U).valid);
+
+    REQUIRE(registry.update(2001U, 1002U, 3002U, true, 2000U));
+    const network::UnitRoute moved = registry.resolve(2001U, 2000U);
+    REQUIRE(moved.valid);
+    CHECK(moved.peerId == 1002U);
+    CHECK(moved.ssrc == 3002U);
+}
+
+TEST_CASE("FNE explicit unit routes resist traffic learning and support removal",
+    "[fne][routing][u2u][registry]")
+{
+    network::UnitRouteRegistry registry(1000U);
+
+    REQUIRE(registry.update(2001U, 1001U, 3001U, false, 100U));
+    CHECK_FALSE(registry.update(2001U, 1002U, 3002U, true, 200U));
+    REQUIRE(registry.update(2001U, 1001U, 3003U, true, 300U));
+
+    const network::UnitRoute route = registry.resolve(2001U, 5000U);
+    REQUIRE(route.valid);
+    CHECK(route.peerId == 1001U);
+    CHECK(route.ssrc == 3001U);
+    CHECK_FALSE(route.learned);
+    CHECK_FALSE(registry.erase(2001U, 1002U));
+    CHECK(registry.erase(2001U, 1001U));
+    CHECK_FALSE(registry.resolve(2001U, 5000U).valid);
+}
+
+TEST_CASE("FNE unit route snapshots replace only the selected peer",
+    "[fne][routing][u2u][registry]")
+{
+    network::UnitRouteRegistry registry(1000U);
+    REQUIRE(registry.update(2001U, 1001U, 1001U, false, 100U));
+    REQUIRE(registry.update(2002U, 1001U, 1001U, false, 100U));
+    REQUIRE(registry.update(2003U, 1002U, 1002U, false, 100U));
+
+    registry.replacePeer(1001U, std::vector<uint32_t>{ 2002U, 2004U, 0U }, 3001U, 200U);
+    CHECK_FALSE(registry.resolve(2001U, 200U).valid);
+    CHECK(registry.resolve(2002U, 200U).peerId == 1001U);
+    CHECK(registry.resolve(2003U, 200U).peerId == 1002U);
+    CHECK(registry.resolve(2004U, 200U).ssrc == 3001U);
+
+    std::vector<uint32_t> removed = registry.erasePeer(1001U);
+    std::sort(removed.begin(), removed.end());
+    CHECK(removed == std::vector<uint32_t>{ 2002U, 2004U });
+    CHECK(registry.resolve(2003U, 200U).valid);
+}
 
 TEST_CASE("FNE orders each digital protocol stream without blocking independent calls", "[fne][ordering]")
 {
@@ -570,6 +658,287 @@ TEST_CASE("FNE call handlers reject globally disabled unit-to-unit traffic", "[f
     }
 }
 
+TEST_CASE("FNE call handlers enforce per-peer unit-to-unit authorization", "[fne][callhandler][routing][u2u]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t TARGET_PEER = 1002U;
+    constexpr uint32_t DESTINATION_ID = 2001U;
+
+    FNEHarness harness;
+    lookups::PeerListLookup peers("", 0U, true, false);
+    lookups::PeerId sourceEntry(SOURCE_PEER, "source", "", false);
+    sourceEntry.allowUnitToUnit(false);
+    peers.addEntry(SOURCE_PEER, sourceEntry);
+    harness.traffic.setLookups(&harness.radios, nullptr, &harness.talkgroups, &peers, nullptr, nullptr);
+
+    FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, TARGET_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::registerP25Unit(harness.traffic, TARGET_PEER, DESTINATION_ID);
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols = {
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::P25P2,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (FNETestHooks::ParrotProtocol protocol : protocols) {
+        CAPTURE(static_cast<int>(protocol));
+        CHECK_FALSE(FNETestHooks::isPeerPermitted(
+            harness.traffic, protocol, SOURCE_PEER, DESTINATION_ID, false));
+    }
+}
+
+TEST_CASE("FNE private-call unknown destinations reject or flood by policy",
+    "[fne][routing][u2u][policy]")
+{
+    FNEHarness harness;
+
+    FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "reject", true, 300000U);
+    CHECK_FALSE(FNETestHooks::isUnitRouteAvailable(harness.traffic, 2001U));
+    CHECK_FALSE(FNETestHooks::isUnitRouteAvailable(harness.traffic, 0U));
+
+    FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "flood", true, 300000U);
+    CHECK(FNETestHooks::isUnitRouteAvailable(harness.traffic, 2001U));
+    CHECK_FALSE(FNETestHooks::isUnitRouteAvailable(harness.traffic, 0U));
+
+    FNETestHooks::configurePrivateCallRouting(harness.traffic, false, "flood", true, 300000U);
+    CHECK_FALSE(FNETestHooks::isUnitRouteAvailable(harness.traffic, 2001U));
+}
+
+TEST_CASE("FNE private-call traffic learning honors policy and peer authorization",
+    "[fne][routing][u2u][learning]")
+{
+    constexpr uint32_t ALLOWED_PEER = 1001U;
+    constexpr uint32_t DENIED_PEER = 1002U;
+    constexpr uint32_t UNIT_ID = 2001U;
+
+    FNEHarness harness;
+    lookups::PeerListLookup peers("", 0U, true, false);
+    lookups::PeerId allowed(ALLOWED_PEER, "allowed", "", false);
+    allowed.allowUnitToUnit(true);
+    peers.addEntry(ALLOWED_PEER, allowed);
+    lookups::PeerId denied(DENIED_PEER, "denied", "", false);
+    denied.allowUnitToUnit(false);
+    peers.addEntry(DENIED_PEER, denied);
+    harness.traffic.setLookups(&harness.radios, nullptr, &harness.talkgroups, &peers, nullptr, nullptr);
+    FNETestHooks::registerP25Unit(harness.traffic, ALLOWED_PEER, 2999U);
+    FNETestHooks::registerP25Unit(harness.traffic, DENIED_PEER, 2998U);
+
+    FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "reject", false, 300000U);
+    FNETestHooks::learnUnitRoute(harness.traffic, ALLOWED_PEER, UNIT_ID, 3001U);
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, UNIT_ID) == 0U);
+
+    FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "reject", true, 300000U);
+    FNETestHooks::learnUnitRoute(harness.traffic, DENIED_PEER, UNIT_ID, 3002U);
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, UNIT_ID) == 0U);
+
+    FNETestHooks::learnUnitRoute(harness.traffic, ALLOWED_PEER, UNIT_ID, 3001U);
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, UNIT_ID) == ALLOWED_PEER);
+    CHECK(FNETestHooks::isUnitRouteAvailable(harness.traffic, UNIT_ID));
+}
+
+TEST_CASE("FNE private-call registration snapshots and peer teardown clean routes",
+    "[fne][routing][u2u][lifecycle]")
+{
+    constexpr uint32_t PEER_ID = 1001U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, PEER_ID, network::NET_STAT_RUNNING, true);
+    FNETestHooks::registerP25Unit(harness.traffic, PEER_ID, 2001U);
+    REQUIRE(FNETestHooks::replaceUnitRegistrations(
+        harness.traffic, PEER_ID, std::vector<uint32_t>{ 2002U, 2003U }, 3001U));
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, 2001U) == 0U);
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, 2002U) == PEER_ID);
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, 2003U) == PEER_ID);
+
+    FNETestHooks::teardownPeer(harness.traffic, PEER_ID);
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, 2002U) == 0U);
+    CHECK(FNETestHooks::findUnitRoute(harness.traffic, 2003U) == 0U);
+}
+
+TEST_CASE("FNE private-call grants target only the registered next hop",
+    "[fne][callhandler][routing][u2u][grants]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t TARGET_PEER = 1002U;
+    constexpr uint32_t OTHER_PEER = 1003U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols = {
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (FNETestHooks::ParrotProtocol protocol : protocols) {
+        CAPTURE(static_cast<int>(protocol));
+        FNEHarness harness;
+        FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, TARGET_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, OTHER_PEER, network::NET_STAT_RUNNING, true);
+        harness.radios.addEntry(SOURCE_ID, true, "test source");
+        harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+        FNETestHooks::registerP25Unit(harness.traffic, TARGET_PEER, DESTINATION_ID);
+
+        std::vector<uint32_t> writes;
+        FNETestHooks::capturePeerWrites(harness.traffic, writes);
+        bool accepted = false;
+        if (protocol == FNETestHooks::ParrotProtocol::DMR) {
+            accepted = FNETestHooks::processDMRGrantRequest(
+                harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true);
+        }
+        else if (protocol == FNETestHooks::ParrotProtocol::P25) {
+            accepted = FNETestHooks::processP25GrantRequest(
+                harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true);
+        }
+        else {
+            accepted = FNETestHooks::processNXDNGrantRequest(
+                harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true);
+        }
+        REQUIRE(accepted);
+        CHECK(writes == std::vector<uint32_t>{ TARGET_PEER });
+    }
+}
+
+TEST_CASE("FNE private-call flood reaches every authorized transit peer",
+    "[fne][callhandler][routing][u2u][flood]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t ALLOWED_PEER_A = 1002U;
+    constexpr uint32_t ALLOWED_PEER_B = 1003U;
+    constexpr uint32_t DENIED_PEER = 1004U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols = {
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (FNETestHooks::ParrotProtocol protocol : protocols) {
+        CAPTURE(static_cast<int>(protocol));
+        FNEHarness harness;
+        lookups::PeerListLookup peers("", 0U, true, false);
+        for (uint32_t peerId : { SOURCE_PEER, ALLOWED_PEER_A, ALLOWED_PEER_B }) {
+            lookups::PeerId peer(peerId, "allowed", "", false);
+            peer.allowUnitToUnit(true);
+            peers.addEntry(peerId, peer);
+        }
+        lookups::PeerId denied(DENIED_PEER, "denied", "", false);
+        denied.allowUnitToUnit(false);
+        peers.addEntry(DENIED_PEER, denied);
+        harness.traffic.setLookups(&harness.radios, nullptr, &harness.talkgroups, &peers, nullptr, nullptr);
+        FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "flood", true, 300000U);
+
+        FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, ALLOWED_PEER_A, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, ALLOWED_PEER_B, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, DENIED_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::registerP25Unit(harness.traffic, ALLOWED_PEER_A, 2901U);
+        FNETestHooks::registerP25Unit(harness.traffic, ALLOWED_PEER_B, 2902U);
+        harness.radios.addEntry(SOURCE_ID, true, "test source");
+        harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+
+        std::vector<uint32_t> writes;
+        FNETestHooks::capturePeerWrites(harness.traffic, writes);
+        bool accepted = false;
+        if (protocol == FNETestHooks::ParrotProtocol::DMR) {
+            accepted = FNETestHooks::processDMRGrantRequest(
+                harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true);
+        }
+        else if (protocol == FNETestHooks::ParrotProtocol::P25) {
+            accepted = FNETestHooks::processP25GrantRequest(
+                harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true);
+        }
+        else {
+            accepted = FNETestHooks::processNXDNGrantRequest(
+                harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true);
+        }
+
+        REQUIRE(accepted);
+        std::sort(writes.begin(), writes.end());
+        CHECK(writes == std::vector<uint32_t>{ ALLOWED_PEER_A, ALLOWED_PEER_B });
+    }
+}
+
+TEST_CASE("FNE P25 Phase 2 private voice honors known routes and flood policy",
+    "[fne][callhandler][routing][u2u][flood][p25p2]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t TARGET_PEER = 1002U;
+    constexpr uint32_t OTHER_PEER = 1003U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    SECTION("known destination selects only its registered peer") {
+        FNEHarness harness;
+        FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, TARGET_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, OTHER_PEER, network::NET_STAT_RUNNING, true);
+        harness.radios.addEntry(SOURCE_ID, true, "test source");
+        harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+        FNETestHooks::registerP25Unit(harness.traffic, TARGET_PEER, DESTINATION_ID);
+
+        std::vector<uint32_t> writes;
+        FNETestHooks::capturePeerWrites(harness.traffic, writes);
+        REQUIRE(FNETestHooks::processP25P2PrivateFrame(
+            harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, 201U));
+        CHECK(writes == std::vector<uint32_t>{ TARGET_PEER });
+    }
+
+    SECTION("unknown destination floods to authorized peers") {
+        FNEHarness harness;
+        FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "flood", true, 300000U);
+        FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, TARGET_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, OTHER_PEER, network::NET_STAT_RUNNING, true);
+        harness.radios.addEntry(SOURCE_ID, true, "test source");
+        harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+
+        std::vector<uint32_t> writes;
+        FNETestHooks::capturePeerWrites(harness.traffic, writes);
+        REQUIRE(FNETestHooks::processP25P2PrivateFrame(
+            harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, 202U));
+        std::sort(writes.begin(), writes.end());
+        CHECK(writes == std::vector<uint32_t>{ TARGET_PEER, OTHER_PEER });
+    }
+}
+
+TEST_CASE("FNE private-call routing denies an unauthorized destination peer",
+    "[fne][callhandler][routing][u2u][egress]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t TARGET_PEER = 1002U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    FNEHarness harness;
+    lookups::PeerListLookup peers("", 0U, true, false);
+    lookups::PeerId source(SOURCE_PEER, "source", "", false);
+    source.allowUnitToUnit(true);
+    peers.addEntry(SOURCE_PEER, source);
+    lookups::PeerId target(TARGET_PEER, "target", "", false);
+    target.allowUnitToUnit(false);
+    peers.addEntry(TARGET_PEER, target);
+    harness.traffic.setLookups(&harness.radios, nullptr, &harness.talkgroups, &peers, nullptr, nullptr);
+    FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, TARGET_PEER, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+    FNETestHooks::registerP25Unit(harness.traffic, TARGET_PEER, DESTINATION_ID);
+
+    CHECK_FALSE(FNETestHooks::isUnitRouteAvailable(harness.traffic, DESTINATION_ID));
+    CHECK_FALSE(FNETestHooks::processDMRGrantRequest(
+        harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true));
+    CHECK_FALSE(FNETestHooks::processP25GrantRequest(
+        harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true));
+    CHECK_FALSE(FNETestHooks::processNXDNGrantRequest(
+        harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true));
+}
+
 TEST_CASE("FNE P25 uses the explicit U2U flag for late-entry voice", "[fne][callhandler][routing][u2u]")
 {
     constexpr uint32_t PEER_ID = 1001U;
@@ -580,6 +949,7 @@ TEST_CASE("FNE P25 uses the explicit U2U flag for late-entry voice", "[fne][call
     FNETestHooks::addPeer(harness.traffic, PEER_ID, network::NET_STAT_RUNNING, true);
     harness.radios.addEntry(SOURCE_ID, true, "test source");
     harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+    FNETestHooks::registerP25Unit(harness.traffic, PEER_ID, DESTINATION_ID);
 
     CHECK(FNETestHooks::validateP25IndividualCall(
         harness.traffic, PEER_ID, SOURCE_ID, DESTINATION_ID));

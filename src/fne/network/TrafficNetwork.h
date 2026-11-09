@@ -45,6 +45,7 @@
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/network/FNEPeerConnection.h"
 #include "fne/network/SpanningTree.h"
+#include "fne/network/UnitRouteRegistry.h"
 #include "fne/network/HAParameters.h"
 #include "fne/PatchStatusRegistry.h"
 #include "fne/CryptoContainer.h"
@@ -412,6 +413,7 @@ namespace network
         concurrent::unordered_map<uint32_t, std::shared_ptr<fne_lookups::AffiliationLookup>> m_peerAffiliations;
         mutable std::mutex m_peerAffiliationsMutex;
         mutable std::mutex m_affiliationUpdateMutex;
+        UnitRouteRegistry m_unitRouteRegistry;
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;
@@ -449,7 +451,6 @@ namespace network
         bool m_allowConvSiteAffOverride;
         bool m_disallowCallTerm;
         bool m_restrictGrantToAffOnly;
-        bool m_restrictPVCallToRegOnly;
         bool m_enableRIDInCallCtrl;
         bool m_disallowInCallCtrl;
         bool m_rejectUnknownRID;
@@ -461,8 +462,11 @@ namespace network
 
         bool m_forceListUpdate;
 
-        bool m_disallowU2U;
-        std::vector<uint32_t> m_dropU2UPeerTable;
+        bool m_privateCallRoutingEnabled;
+        std::string m_privateCallUnknownDestination;
+        bool m_privateCallLearnFromTraffic;
+        uint32_t m_privateCallRouteLifetime;
+        uint32_t m_privateCallQueryTimeout;
 
         bool m_enableMetrics;
         bool m_metricsLogRawData;
@@ -738,18 +742,40 @@ namespace network
         static constexpr bool validRepeaterAuthLength(int length) { return length == REPEATER_PCKT_HDR_LEN + REPEATER_AUTH_HASH_LEN; }
 
         /**
+         * @brief Checks whether unit-to-unit routing is enabled and the peer is authorized to carry it.
+         * @param peerId Peer ID for an ingress or egress link.
+         * @returns bool True if the peer may carry unit-to-unit traffic; otherwise, false.
+         */
+        bool isUnitToUnitPeerAllowed(uint32_t peerId) const;
+
+        /**
+         * @brief Checks whether a destination unit has an authorized route under the configured unknown-destination policy.
+         * @param dstId Destination unit ID.
+         * @returns bool True if the unit has an authorized route or legacy flooding is configured; otherwise, false.
+         */
+        bool isUnitToUnitRouteAvailable(uint32_t dstId);
+
+        /**
+         * @brief Checks whether an unknown destination should be flooded to authorized peers.
+         * @param dstId Destination unit ID.
+         * @returns bool True if no route exists and unknown-destination flooding is enabled.
+         */
+        bool shouldFloodUnitToUnit(uint32_t dstId);
+
+        /**
+         * @brief Learns or refreshes a dynamic subscriber route from validated inbound traffic.
+         * @param peerId Immediate ingress peer ID.
+         * @param srcId Source subscriber unit ID.
+         * @param ssrc RTP synchronization source ID.
+         */
+        void learnUnitRouteFromTraffic(uint32_t peerId, uint32_t srcId, uint32_t ssrc);
+
+        /**
          * @brief Checks if the passed length is valid for a repeater configuration packet.
          * @param length Length of the packet.
          * @returns bool True, if the length is valid for a repeater configuration packet, otherwise false.
          */
         static constexpr bool validRepeaterConfigLength(int length) { return length > REPEATER_PCKT_HDR_LEN && length <= (int)(DATA_PACKET_LENGTH); }
-
-        /**
-         * @brief Checks if the passed peer ID is blocked from unit-to-unit traffic.
-         * @param peerId Peer ID.
-         * @returns bool True, if peer is blocked from unit-to-unit traffic, otherwise false.
-         */
-        bool checkU2UDroppedPeer(uint32_t peerId);
 
         /**
          * @brief Helper to dump the current spanning tree configuration to the log.

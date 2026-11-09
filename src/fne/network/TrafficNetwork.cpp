@@ -111,6 +111,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_peerAffiliations(),
     m_peerAffiliationsMutex(),
     m_affiliationUpdateMutex(),
+    m_unitRouteRegistry(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
     m_peerReplicaKEKKeyQueue(),
@@ -137,7 +138,6 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_allowConvSiteAffOverride(false),
     m_disallowCallTerm(false),
     m_restrictGrantToAffOnly(false),
-    m_restrictPVCallToRegOnly(false),
     m_enableRIDInCallCtrl(true),
     m_disallowInCallCtrl(false),
     m_rejectUnknownRID(false),
@@ -145,8 +145,11 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_maskOutboundPeerIDForNonPL(false),
     m_filterTerminators(true),
     m_forceListUpdate(false),
-    m_disallowU2U(false),
-    m_dropU2UPeerTable(),
+    m_privateCallRoutingEnabled(true),
+    m_privateCallUnknownDestination("reject"),
+    m_privateCallLearnFromTraffic(true),
+    m_privateCallRouteLifetime(300U),
+    m_privateCallQueryTimeout(1000U),
     m_enableMetrics(false),
     m_metricsLogRawData(false),
     m_enableInfluxDB(false),
@@ -409,27 +412,30 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
     m_callCollisionTimeout = conf["callCollisionTimeout"].as<uint32_t>(5U);
 
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
-    m_restrictPVCallToRegOnly = conf["restrictPrivateCallToRegOnly"].as<bool>(false);
+    yaml::Node& privateCallRouting = conf["privateCallRouting"];
+    m_privateCallRoutingEnabled = privateCallRouting["enabled"].as<bool>(false);
+    m_privateCallUnknownDestination = privateCallRouting["unknownDestination"].as<std::string>("reject");
+    m_privateCallLearnFromTraffic = privateCallRouting["learnFromTraffic"].as<bool>(true);
+    m_privateCallRouteLifetime = privateCallRouting["routeLifetime"].as<uint32_t>(300U);
+    m_privateCallQueryTimeout = privateCallRouting["queryTimeout"].as<uint32_t>(1000U);
+    if (m_privateCallUnknownDestination != "reject" && m_privateCallUnknownDestination != "flood") {
+        LogWarning(LOG_HOST, "Invalid privateCallRouting unknownDestination value '%s', using reject", m_privateCallUnknownDestination.c_str());
+        m_privateCallUnknownDestination = "reject";
+    }
+    if (m_privateCallRouteLifetime == 0U) {
+        LogWarning(LOG_HOST, "Invalid privateCallRouting routeLifetime of 0 seconds, using 300 seconds");
+        m_privateCallRouteLifetime = 300U;
+    }
+    if (m_privateCallQueryTimeout == 0U) {
+        LogWarning(LOG_HOST, "Invalid privateCallRouting queryTimeout of 0 milliseconds, using 1000 milliseconds");
+        m_privateCallQueryTimeout = 1000U;
+    }
+    m_unitRouteRegistry.setLifetime(static_cast<uint64_t>(m_privateCallRouteLifetime) * 1000U);
     m_filterTerminators = conf["filterTerminators"].as<bool>(true);
 
     m_logDenials = conf["logDenials"].as<bool>(false);
     m_logUpstreamCallStartEnd = conf["logUpstreamCallStartEnd"].as<bool>(true);
 
-    /*
-    ** Drop Unit to Unit Peers
-    */
-
-    m_disallowU2U = conf["disallowAllUnitToUnit"].as<bool>(false);
-
-    yaml::Node& dropUnitToUnit = conf["dropUnitToUnit"];
-    if (dropUnitToUnit.size() > 0U) {
-        for (size_t i = 0; i < dropUnitToUnit.size(); i++) {
-            uint32_t peerId = (uint32_t)::strtoul(dropUnitToUnit[i].as<std::string>("0").c_str(), NULL, 10);
-            if (peerId != 0U) {
-                m_dropU2UPeerTable.push_back(peerId);
-            }
-        }
-    }
 
     // Metrics configuration
     yaml::Node metricsConf = conf["metrics"];
@@ -476,7 +482,6 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogWarning(LOG_MASTER, "Call Collisions are disabled because the call collision timeout is set to 0 seconds. This is not recommended, and can cause undesired behavior.");
         }
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
-        LogInfo("    Restrict private call to registered units: %s", m_restrictPVCallToRegOnly ? "yes" : "no");
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
             LogWarning(LOG_MASTER, "NOTICE: All P25 ADJ_STS_BCAST messages will be blocked and dropped!");
@@ -493,7 +498,13 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    Mask Outbound Traffic Peer ID for Non-Peer Link: yes");
         }
         LogInfo("    Traffic Terminators Filtered by Destination ID: %s", m_filterTerminators ? "yes" : "no");
-        LogInfo("    Disallow Unit-to-Unit: %s", m_disallowU2U ? "yes" : "no");
+        LogInfo("    Private Call Routing: %s", m_privateCallRoutingEnabled ? "yes" : "no");
+        if (m_privateCallRoutingEnabled) {
+            LogInfo("    Private Call Unknown Destination: %s", m_privateCallUnknownDestination.c_str());
+            LogInfo("    Private Call Learn From Traffic: %s", m_privateCallLearnFromTraffic ? "yes" : "no");
+            LogInfo("    Private Call Route Lifetime: %u seconds", m_privateCallRouteLifetime);
+            LogInfo("    Private Call Query Timeout: %u milliseconds", m_privateCallQueryTimeout);
+        }
 
         LogInfo("High Availability Parameters");
         LogInfo("    High Availability Enabled: %s", m_haEnabled ? "yes" : "no");
@@ -933,9 +944,16 @@ void TrafficNetwork::clock(uint32_t ms)
         if (m_patchStatusEnabled && m_patchStatusRegistry.cleanupExpired() > 0U)
             writePatchStatusToConsoles(m_patchStatusRegistry.snapshot());
 
-            // cleanup possibly stale data calls
+        // cleanup possibly stale data calls
         m_tagDMR->packetData()->cleanupStale();
         m_tagP25->packetData()->cleanupStale();
+
+        // expire old unit routes
+        const std::vector<UnitRoute> expiredRoutes = m_unitRouteRegistry.expire(now);
+        for (const UnitRoute& route : expiredRoutes) {
+            LogInfoEx(LOG_MASTER, "Private call route expired, srcId = %u, peerId = %u", route.unitId, route.peerId);
+            removePeerUnitRegistration(route.peerId, route.unitId);
+        }
 
         MetricsLogging::resetActiveCalls();
 
@@ -1542,18 +1560,61 @@ void TrafficNetwork::processNetworkRx(NetPacketRequest* req)
 ** General Helper Functions
 */
 
-/* Checks if the passed peer ID is blocked from unit-to-unit traffic. */
+/* Checks whether unit-to-unit routing is enabled and the peer is authorized to carry it. */
 
-bool TrafficNetwork::checkU2UDroppedPeer(uint32_t peerId)
+bool TrafficNetwork::isUnitToUnitPeerAllowed(uint32_t peerId) const
 {
-    if (m_dropU2UPeerTable.empty())
+    if (!m_privateCallRoutingEnabled || peerId == 0U)
         return false;
 
-    if (std::find(m_dropU2UPeerTable.begin(), m_dropU2UPeerTable.end(), peerId) != m_dropU2UPeerTable.end()) {
+    if (m_peerListLookup == nullptr)
         return true;
+
+    lookups::PeerId peer = m_peerListLookup->find(peerId);
+    return peer.peerDefault() || peer.allowUnitToUnit();
+}
+
+/* Checks whether a destination unit has an authorized route under the configured unknown-destination policy. */
+
+bool TrafficNetwork::isUnitToUnitRouteAvailable(uint32_t dstId)
+{
+    if (!m_privateCallRoutingEnabled || dstId == 0U)
+        return false;
+
+    const uint32_t nextHopPeerId = findPeerUnitReg(dstId);
+    if (nextHopPeerId != 0U)
+        return isUnitToUnitPeerAllowed(nextHopPeerId);
+
+    return m_privateCallUnknownDestination == "flood";
+}
+
+/* Checks whether an unknown destination should be flooded to authorized peers. */
+
+bool TrafficNetwork::shouldFloodUnitToUnit(uint32_t dstId)
+{
+    if (!m_privateCallRoutingEnabled || dstId == 0U || m_privateCallUnknownDestination != "flood")
+        return false;
+
+    return findPeerUnitReg(dstId) == 0U;
+}
+
+/* Learns or refreshes a dynamic subscriber route from validated inbound traffic. */
+
+void TrafficNetwork::learnUnitRouteFromTraffic(uint32_t peerId, uint32_t srcId, uint32_t ssrc)
+{
+    if (!m_privateCallRoutingEnabled || !m_privateCallLearnFromTraffic || !isUnitToUnitPeerAllowed(peerId) || srcId == 0U)
+        return;
+
+    const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    // check the current unit route for the source ID; if it is not valid or the peer ID does not match,
+    // update the peer unit registration
+    const UnitRoute current = m_unitRouteRegistry.resolve(srcId, now);
+    if (!current.valid || current.peerId != peerId) {
+        updatePeerUnitRegistration(peerId, srcId, ssrc);
     }
 
-    return false;
+    m_unitRouteRegistry.update(srcId, peerId, ssrc, true, now);
 }
 
 /* Helper to dump the current spanning tree configuration to the log. */
@@ -1675,6 +1736,7 @@ bool TrafficNetwork::erasePeerAffiliations(uint32_t peerId)
             auto it = m_peerAffiliations.find(peerId);
             if (it != m_peerAffiliations.end()) {
                 m_peerAffiliations.erase(peerId);
+                m_unitRouteRegistry.erasePeer(peerId);
                 erased = true;
             }
         }
@@ -1830,6 +1892,9 @@ bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId,
             return false;
 
         registrations->unitReg(srcId, ssrc);
+        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        m_unitRouteRegistry.update(srcId, peerId, ssrc, false, now);
         aggregate = buildAggregatedUnitRegistrations();
     }
 
@@ -1850,6 +1915,7 @@ bool TrafficNetwork::removePeerUnitRegistration(uint32_t peerId, uint32_t srcId)
             return false;
 
         registrations->unitDereg(srcId);
+        m_unitRouteRegistry.erase(srcId, peerId);
         aggregate = buildAggregatedUnitRegistrations();
         aggregateAffiliations = buildAggregatedAffiliations();
     }
@@ -1876,6 +1942,9 @@ bool TrafficNetwork::replacePeerUnitRegistrations(uint32_t peerId, const std::ve
             registrationOrigins[srcId] = ssrc;
 
         peerRegistrations->replaceUnitRegistrations(registrationOrigins);
+        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        m_unitRouteRegistry.replacePeer(peerId, registrations, ssrc, now);
         aggregate = buildAggregatedUnitRegistrations();
     }
 
@@ -2021,17 +2090,9 @@ bool TrafficNetwork::isPeerLocal(uint32_t peerId)
 
 uint32_t TrafficNetwork::findPeerUnitReg(uint32_t srcId)
 {
-    std::vector<PeerAffiliationMapPair> affSnapshot = peerAffiliationsSnapshot();
-    for (const auto& entry : affSnapshot) {
-        std::shared_ptr<fne_lookups::AffiliationLookup> aff = entry.second;
-        if (aff != nullptr) {
-            if (aff->isUnitReg(srcId)) {
-                return aff->getSSRCByUnitReg(srcId);
-            }
-        }
-    }
-
-    return 0U;
+    const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    return m_unitRouteRegistry.resolve(srcId, now).peerId;
 }
 
 /* Helper to resolve the peer ID to its identity string. */

@@ -186,6 +186,28 @@ public:
     static bool processDMRGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
         uint32_t sourceId, uint32_t destinationId, bool unitToUnit);
     /**
+     * @brief Processes a synthetic P25 FNE grant request.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the request is an individual call.
+     * @return True when the request is accepted.
+     */
+    static bool processP25GrantRequest(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit);
+    /**
+     * @brief Processes a synthetic P25 Phase 2 private voice frame.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber ID.
+     * @param streamId Call stream ID.
+     * @return True when the frame is accepted.
+     */
+    static bool processP25P2PrivateFrame(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, uint32_t streamId);
+    /**
      * @brief Processes a synthetic NXDN FNE grant request.
      * @param network The TrafficNetwork instance.
      * @param peerId Originating peer ID.
@@ -202,6 +224,49 @@ public:
      * @param disabled Whether unit-to-unit traffic is disabled.
      */
     static void disallowU2U(network::TrafficNetwork& network, bool disabled);
+    /**
+     * @brief Configures private-call route policy for a test.
+     * @param network The TrafficNetwork instance.
+     * @param enabled Whether private-call routing is enabled.
+     * @param unknownDestination Policy for an unregistered destination.
+     * @param learnFromTraffic Whether validated traffic may create routes.
+     * @param routeLifetimeMs Lifetime of learned routes in milliseconds.
+     */
+    static void configurePrivateCallRouting(network::TrafficNetwork& network, bool enabled,
+        const std::string& unknownDestination, bool learnFromTraffic, uint64_t routeLifetimeMs);
+    /**
+     * @brief Learns a subscriber route through the production traffic-learning path.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Immediate next-hop peer ID.
+     * @param unitId Subscriber unit ID.
+     * @param ssrc Advertised route origin.
+     */
+    static void learnUnitRoute(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t unitId, uint32_t ssrc);
+    /**
+     * @brief Resolves the current next-hop peer for a subscriber.
+     * @param network The TrafficNetwork instance.
+     * @param unitId Subscriber unit ID.
+     * @return Current next-hop peer ID, or zero when no route exists.
+     */
+    static uint32_t findUnitRoute(network::TrafficNetwork& network, uint32_t unitId);
+    /**
+     * @brief Tests destination availability under the current private-call policy.
+     * @param network The TrafficNetwork instance.
+     * @param unitId Destination subscriber unit ID.
+     * @return True when the destination is routable or flooding is enabled.
+     */
+    static bool isUnitRouteAvailable(network::TrafficNetwork& network, uint32_t unitId);
+    /**
+     * @brief Replaces one peer's explicit unit-registration snapshot.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Immediate next-hop peer ID.
+     * @param unitIds Complete registration snapshot.
+     * @param ssrc Advertised route origin.
+     * @return True when the snapshot was accepted.
+     */
+    static bool replaceUnitRegistrations(network::TrafficNetwork& network, uint32_t peerId,
+        const std::vector<uint32_t>& unitIds, uint32_t ssrc);
     /**
      * @brief Sets whether conventional sites bypass affiliation requirements.
      * @param network The TrafficNetwork instance.
@@ -276,6 +341,12 @@ public:
      * @param peerId The ID of the peer to remove.
      */
     static void removePeer(network::TrafficNetwork& network, uint32_t peerId);
+    /**
+     * @brief Runs production peer teardown, including route and affiliation cleanup.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to tear down.
+     */
+    static void teardownPeer(network::TrafficNetwork& network, uint32_t peerId);
     /**
      * @brief Clears all peers from the TrafficNetwork.
      * @param network The TrafficNetwork instance.

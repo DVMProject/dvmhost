@@ -671,11 +671,7 @@ bool TagAnalogData::peerRewrite(uint32_t peerId, uint32_t& dstId, bool outbound)
 bool TagAnalogData::isPeerPermitted(uint32_t peerId, data::NetData& data, uint32_t streamId, bool fromUpstream)
 {
     if (!data.getGroup()) {
-        if (m_network->m_disallowU2U)
-            return false;
-        if (!m_network->checkU2UDroppedPeer(peerId))
-            return true;
-        return false;
+        return m_network->isUnitToUnitPeerAllowed(peerId);
     }
 
     TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;

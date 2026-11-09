@@ -62,6 +62,7 @@ void FNETestHooks::registerP25Unit(TrafficNetwork& network, uint32_t sitePeerId,
         std::make_shared<fne_lookups::AffiliationLookup>("test-p25-registrations", nullptr, false);
     affiliations->unitReg(unitId, sitePeerId);
     network.m_peerAffiliations[sitePeerId] = affiliations;
+    network.updatePeerUnitRegistration(sitePeerId, unitId, sitePeerId);
 }
 
 /* Adds a talkgroup affiliation owned by a site peer. */
@@ -308,6 +309,30 @@ bool FNETestHooks::processDMRGrantRequest(TrafficNetwork& network, uint32_t peer
         sourceId, destinationId, 1U, unitToUnit, peerId, 1U, 105U);
 }
 
+/* Processes a synthetic P25 FNE grant request. */
+
+bool FNETestHooks::processP25GrantRequest(TrafficNetwork& network, uint32_t peerId,
+    uint32_t sourceId, uint32_t destinationId, bool unitToUnit)
+{
+    return network.m_tagP25->processGrantReq(
+        sourceId, destinationId, unitToUnit, peerId, 1U, 107U);
+}
+
+/* Processes a synthetic P25 Phase 2 private voice frame. */
+
+bool FNETestHooks::processP25P2PrivateFrame(TrafficNetwork& network, uint32_t peerId,
+    uint32_t sourceId, uint32_t destinationId, uint32_t streamId)
+{
+    std::vector<uint8_t> frame(P25_P2_PACKET_LENGTH, 0U);
+    SET_UINT24(sourceId, frame.data(), 5U);
+    SET_UINT24(destinationId, frame.data(), 8U);
+    frame[14U] = NET_CTRL_U2U;
+    frame[19U] = P2_DUID::VTCH_4V;
+    frame[23U] = 64U;
+    return network.m_tagP25P2->processFrame(
+        frame.data(), static_cast<uint32_t>(frame.size()), peerId, peerId, 1U, streamId);
+}
+
 /* Processes a synthetic NXDN FNE grant request. */
 
 bool FNETestHooks::processNXDNGrantRequest(TrafficNetwork& network, uint32_t peerId,
@@ -321,7 +346,48 @@ bool FNETestHooks::processNXDNGrantRequest(TrafficNetwork& network, uint32_t pee
 
 void FNETestHooks::disallowU2U(TrafficNetwork& network, bool disabled)
 {
-    network.m_disallowU2U = disabled;
+    network.m_privateCallRoutingEnabled = !disabled;
+}
+
+/* Configures private-call route policy for a test. */
+
+void FNETestHooks::configurePrivateCallRouting(TrafficNetwork& network, bool enabled,
+    const std::string& unknownDestination, bool learnFromTraffic, uint64_t routeLifetimeMs)
+{
+    network.m_privateCallRoutingEnabled = enabled;
+    network.m_privateCallUnknownDestination = unknownDestination;
+    network.m_privateCallLearnFromTraffic = learnFromTraffic;
+    network.m_unitRouteRegistry.setLifetime(routeLifetimeMs);
+}
+
+/* Learns a subscriber route through the production traffic-learning path. */
+
+void FNETestHooks::learnUnitRoute(TrafficNetwork& network, uint32_t peerId,
+    uint32_t unitId, uint32_t ssrc)
+{
+    network.learnUnitRouteFromTraffic(peerId, unitId, ssrc);
+}
+
+/* Resolves the current next-hop peer for a subscriber. */
+
+uint32_t FNETestHooks::findUnitRoute(TrafficNetwork& network, uint32_t unitId)
+{
+    return network.findPeerUnitReg(unitId);
+}
+
+/* Tests destination availability under the current private-call policy. */
+
+bool FNETestHooks::isUnitRouteAvailable(TrafficNetwork& network, uint32_t unitId)
+{
+    return network.isUnitToUnitRouteAvailable(unitId);
+}
+
+/* Replaces one peer's explicit unit-registration snapshot. */
+
+bool FNETestHooks::replaceUnitRegistrations(TrafficNetwork& network, uint32_t peerId,
+    const std::vector<uint32_t>& unitIds, uint32_t ssrc)
+{
+    return network.replacePeerUnitRegistrations(peerId, unitIds, ssrc);
 }
 
 /* Sets whether conventional sites bypass affiliation requirements. */
@@ -905,6 +971,13 @@ std::shared_ptr<FNEPeerConnection> FNETestHooks::retainPeer(
 void FNETestHooks::removePeer(TrafficNetwork& network, uint32_t peerId)
 {
     network.removePeer(peerId);
+}
+
+/* Runs production peer teardown, including route and affiliation cleanup. */
+
+void FNETestHooks::teardownPeer(TrafficNetwork& network, uint32_t peerId)
+{
+    network.erasePeer(peerId);
 }
 
 /**

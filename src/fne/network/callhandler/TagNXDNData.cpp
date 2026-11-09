@@ -200,6 +200,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
             return false;
         }
 
+        m_network->learnUnitRouteFromTraffic(peerId, srcId, ssrc);
+
         // specifically only check the following logic for end of call, voice or data frames
         if ((messageType == MessageType::RTCH_TX_REL || messageType == MessageType::RTCH_TX_REL_EX) ||
             (messageType == MessageType::RTCH_VCALL || messageType == MessageType::RTCH_DCALL_HDR ||
@@ -575,7 +577,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
         bool privateCallInProgress = false;
 
         // is this a private call in-progress?
-        if (m_network->m_restrictPVCallToRegOnly) {
+        if (m_network->m_privateCallRoutingEnabled) {
             if (!group) {
                 privateCallInProgress = true;
             }
@@ -629,7 +631,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         continue;
                     }
 
-                    if (m_network->m_restrictPVCallToRegOnly) {
+                    if (m_network->m_privateCallRoutingEnabled) {
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
@@ -647,7 +649,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                                 return false;
                             });
                             if (it != m_statusPVCall.end()) {
-                                if (peer.first != m_statusPVCall[dstId].dstPeerId) {
+                                if (m_statusPVCall[dstId].dstPeerId != 0U &&
+                                    peer.first != m_statusPVCall[dstId].dstPeerId) {
                                     continue;
                                 }
                             }
@@ -744,6 +747,10 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
 bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
+    if (unitToUnit && (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(dstId))) {
+        return false;
+    }
+
     // if we have an Rx status for the destination deny the grant
     auto it = std::find_if(m_status.begin(), m_status.end(), [&](StatusMapPair& x) {
         if (x.second.dstId == dstId) {
@@ -790,6 +797,8 @@ bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUni
         for (const auto& peer : m_network->peersSnapshot()) {
             if (peerId != peer.first) {
                 if (registeredPeerId != 0U && peer.first != registeredPeerId)
+                    continue;
+                if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
                     continue;
                 write_Message_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
             }
@@ -1003,11 +1012,7 @@ bool TagNXDNData::isPeerPermitted(uint32_t peerId, lc::RTCH& lc, uint8_t message
         return true;
 
     if (!lc.getGroup()) {
-        if (m_network->m_disallowU2U)
-            return false;
-        if (!m_network->checkU2UDroppedPeer(peerId))
-            return true;
-        return false;
+        return m_network->isUnitToUnitPeerAllowed(peerId);
     }
 
     TrafficNetwork::PeerConnectionPtr connection = peerId > 0U ? m_network->findPeer(peerId) : nullptr;
@@ -1159,6 +1164,11 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
 
     // is this a private call?
     if (!lc.getGroup()) {
+        if (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(lc.getDstId())) {
+            m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
+            return false;
+        }
+
         // is the destination ID a blacklisted ID?
         lookups::RadioId rid = m_network->m_ridLookup->find(lc.getDstId());
         if (!rid.radioDefault()) {
@@ -1323,7 +1333,7 @@ bool TagNXDNData::write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t 
         if (grp && !aff->hasGroupAff(dstId)) {
             return false;
         }
-        if (!grp && !aff->isUnitReg(dstId)) {
+        if (!grp && !aff->isUnitReg(dstId) && !m_network->shouldFloodUnitToUnit(dstId)) {
             TrafficNetwork::PeerConnectionPtr connection = m_network->findPeer(peerId);
             if (connection == nullptr || !connection->isConventional())
                 return false;
