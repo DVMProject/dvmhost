@@ -564,15 +564,9 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 ::ActivityLog("P25", true, "ack response from %u to %u", srcId, dstId);
 
-                // bryanb: HACK -- for some reason, if the AIV is false and we have a dstId
-                // its very likely srcId and dstId are swapped so we'll swap them
-                if (!iosp->getAIV() && dstId != 0U) {
-                    iosp->setAIV(true);
-                    iosp->setSrcId(dstId);
-                    iosp->setDstId(srcId);
-                }
-
-                writeRF_TSDU_SBF(iosp, false);
+                // ACK_RSP_U defines AIV and EX as zero; preserve its target and
+                // source addresses while transporting the response to the FNE.
+                RF_TO_WRITE_NET(iosp);
             }
             break;
             case TSBKO::ISP_CAN_SRV_REQ:
@@ -1160,7 +1154,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         IOSP_ACK_RSP* iosp = static_cast<IOSP_ACK_RSP*>(tsbk.get());
                         if (m_verbose) {
                             LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, AIV = %u, serviceType = $%02X, srcId = %u, dstId = %u",
-                                tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), dstId, srcId);
+                                tsbk->toString(true).c_str(), iosp->getAIV(), iosp->getService(), srcId, dstId);
                         }
 
                         ::ActivityLog("P25", false, "ack response from %u to %u", srcId, dstId);

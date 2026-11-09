@@ -16,6 +16,8 @@ using namespace p25::lc::tsbk;
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+
 TEST_CASE("TSBK unit-to-unit answer request and response layouts", "[p25][tsbk][u2u]")
 {
     const uint32_t callingUnit = 0x543210U;
@@ -66,4 +68,38 @@ TEST_CASE("TSBK unit-to-unit answer request and response layouts", "[p25][tsbk][
         REQUIRE(response->getSrcId() == calledUnit);
         REQUIRE(response->getDstId() == callingUnit);
     }
+}
+
+TEST_CASE("TSBK unit acknowledgement preserves responder and target addresses", "[p25][tsbk][u2u]")
+{
+    const uint32_t requestingUnit = 0x543210U;
+    const uint32_t respondingUnit = 0x123456U;
+
+    uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+    raw[0U] = 0x80U | TSBKO::IOSP_ACK_RSP;
+    raw[1U] = MFG_STANDARD;
+    raw[2U] = TSBKO::IOSP_CALL_ALRT;               // AIV = 0, EX = 0, service type
+    raw[3U] = 0x00U;                               // Reserved
+    raw[4U] = 0x54U;                               // Target: requesting unit
+    raw[5U] = 0x32U;
+    raw[6U] = 0x10U;
+    raw[7U] = 0x12U;                               // Source: responding unit
+    raw[8U] = 0x34U;
+    raw[9U] = 0x56U;
+    edac::CRC::addCCITT162(raw, P25_TSBK_LENGTH_BYTES);
+
+    std::unique_ptr<TSBK> tsbk = TSBKFactory::createTSBK(raw, true);
+    REQUIRE(tsbk != nullptr);
+
+    IOSP_ACK_RSP* response = dynamic_cast<IOSP_ACK_RSP*>(tsbk.get());
+    REQUIRE(response != nullptr);
+    REQUIRE_FALSE(response->getAIV());
+    REQUIRE_FALSE(response->getEX());
+    REQUIRE(response->getService() == TSBKO::IOSP_CALL_ALRT);
+    REQUIRE(response->getSrcId() == respondingUnit);
+    REQUIRE(response->getDstId() == requestingUnit);
+
+    uint8_t encoded[P25_TSBK_LENGTH_BYTES] = { 0U };
+    response->encode(encoded, true, true);
+    REQUIRE(std::equal(raw, raw + P25_TSBK_LENGTH_BYTES, encoded));
 }
