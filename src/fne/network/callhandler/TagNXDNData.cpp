@@ -596,7 +596,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                             if (peerId != peer.first) {
                                 TrafficNetwork::PeerConnectionPtr conn = peer.second;
                                 if (conn != nullptr) {
-                                    if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR) {
+                                    if (conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR || conn->peerClass() == PEER_CONN_CLASS_SYSVIEW) {
                                         continue;
                                     }
                                 }
@@ -635,7 +635,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
-                            neighbor = conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR;
+                            neighbor = conn->peerClass() == PEER_CONN_CLASS_NEIGHBOR || conn->peerClass() == PEER_CONN_CLASS_SYSVIEW;
                         }
 
                         // is this a private call?
