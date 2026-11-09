@@ -781,7 +781,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
         uint32_t dstId = lc->getDstId();
         FLCO::E flco = lc->getFLCO();
 
-        if (m_slot->s_network->disallowUnitToUnit() && flco == FLCO::PRIVATE) {
+        if (m_slot->s_network != nullptr && m_slot->s_network->disallowUnitToUnit() && flco == FLCO::PRIVATE) {
             LogWarning(LOG_NET, "DMR Slot %u, rejecting network unit-to-unit voice call, srcId = %u, dstId = %u",
                 m_slot->m_slotNo, srcId, dstId);
             return;
@@ -877,7 +877,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
         if (m_slot->m_netState != RS_NET_AUDIO) {
             std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
-            if (m_slot->s_network->disallowUnitToUnit() && lc->getFLCO() == FLCO::PRIVATE) {
+            if (m_slot->s_network != nullptr && m_slot->s_network->disallowUnitToUnit() && lc->getFLCO() == FLCO::PRIVATE) {
                 return;
             }
 
@@ -988,7 +988,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
         if (m_slot->m_netState == RS_NET_IDLE) {
             std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
-            if (m_slot->s_network->disallowUnitToUnit() && lc->getFLCO() == FLCO::PRIVATE) {
+            if (m_slot->s_network != nullptr && m_slot->s_network->disallowUnitToUnit() && lc->getFLCO() == FLCO::PRIVATE) {
                 return;
             }
 

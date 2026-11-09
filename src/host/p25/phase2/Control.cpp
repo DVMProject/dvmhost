@@ -292,7 +292,7 @@ bool Control::writeNetwork(Slot* slot, const uint8_t* data, uint32_t length)
     if (m_network == nullptr || slot == nullptr || data == nullptr)
         return true;
 
-    if (m_network->disallowUnitToUnit() && (slot->m_control.getLCO() == defines::P2_MAC_MCO::PRIVATE || 
+    if (m_network != nullptr && m_network->disallowUnitToUnit() && (slot->m_control.getLCO() == defines::P2_MAC_MCO::PRIVATE ||
         (slot->m_controlByte & network::NET_CTRL_U2U) == network::NET_CTRL_U2U))
         return true;
 

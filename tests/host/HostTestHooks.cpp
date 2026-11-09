@@ -178,6 +178,13 @@ bool HostTestHooks::dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_
     return slot.processFrame(frame, sizeof(frame));
 }
 
+/* Detaches the shared DMR network pointer during test-fixture teardown. */
+
+void HostTestHooks::dmrDetachNetwork()
+{
+    dmr::Slot::s_network = nullptr;
+}
+
 /* Configures a co-located DMR Tier III control channel. */
 
 void HostTestHooks::dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot)

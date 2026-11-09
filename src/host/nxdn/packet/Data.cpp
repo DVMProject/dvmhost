@@ -240,7 +240,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();
 
-    if (m_nxdn->m_network->disallowUnitToUnit() && !group) {
+    if (m_nxdn->m_network != nullptr && m_nxdn->m_network->disallowUnitToUnit() && !group) {
         LogWarning(LOG_NET, "NXDN, rejecting network individual data call, srcId = %u, dstId = %u",
             srcId, dstId);
         return false;

@@ -129,6 +129,10 @@ public:
      */
     static bool dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId, bool group = true);
     /**
+     * @brief Detaches the shared DMR network pointer during test-fixture teardown.
+     */
+    static void dmrDetachNetwork();
+    /**
      * @brief Configures one slot as a co-located Tier III control channel for tests.
      */
     static void dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot);

@@ -694,7 +694,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
         bool group = lc.getGroup();
         bool encrypted = lc.getEncrypted();
 
-        if (m_nxdn->m_network->disallowUnitToUnit() && !group) {
+        if (m_nxdn->m_network != nullptr && m_nxdn->m_network->disallowUnitToUnit() && !group) {
             LogWarning(LOG_NET, "NXDN, rejecting network unit-to-unit voice call, srcId = %u, dstId = %u",
                 srcId, dstId);
             return false;

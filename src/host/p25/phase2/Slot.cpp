@@ -444,7 +444,8 @@ bool Slot::processNetwork(uint8_t* data, uint32_t length, const lc::LC& control,
 {
     CHECK_NET_AUTHORITATIVE(control.getDstId());
 
-    if (s_network->disallowUnitToUnit() && isVoiceDUID(duid) && (controlByte & network::NET_CTRL_U2U) == network::NET_CTRL_U2U) {
+    if (s_network != nullptr && s_network->disallowUnitToUnit() && isVoiceDUID(duid) &&
+        (controlByte & network::NET_CTRL_U2U) == network::NET_CTRL_U2U) {
         return false;
     }
 
@@ -1156,7 +1157,7 @@ bool Slot::processMAC(uint8_t* data, uint32_t length, defines::P2_DUID::E duid,
     if (net && !m_control.decodeVCH_MACPDU_OEMI(frame, sync))
         return false;
 
-    if (net && s_network->disallowUnitToUnit() &&
+    if (net && s_network != nullptr && s_network->disallowUnitToUnit() &&
         m_control.getLCO() == defines::P2_MAC_MCO::PRIVATE) {
         LogWarning(LOG_NET, "P25 Phase 2 Slot %u, rejecting network unit-to-unit MAC PDU, srcId = %u, dstId = %u",
             m_slotNo + 1U, m_control.getSrcId(), m_control.getDstId());

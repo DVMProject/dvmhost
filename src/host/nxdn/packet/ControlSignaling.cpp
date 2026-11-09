@@ -289,7 +289,7 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
         uint16_t srcId = rcch->getSrcId();
         uint16_t dstId = rcch->getDstId();
 
-        if (m_nxdn->m_network->disallowUnitToUnit()) {
+        if (m_nxdn->m_network != nullptr && m_nxdn->m_network->disallowUnitToUnit()) {
             switch (rcch->getMessageType()) {
             case MessageType::RTCH_VCALL:
                 if (!rcch->getGroup()) {

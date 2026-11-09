@@ -1635,7 +1635,7 @@ void Control::processNetwork()
     control.setNetId(netId);
     control.setSysId(sysId);
 
-    if (m_network->disallowUnitToUnit()) {
+    if (m_network != nullptr && m_network->disallowUnitToUnit()) {
         const bool privateCall = lco == LCO::PRIVATE || lco == LCO::PRIVATE_EXT;
         const bool voiceFrame = duid == DUID::HDU || duid == DUID::LDU1 || duid == DUID::LDU2;
         const bool callEnd = duid == DUID::TDU || duid == DUID::TDULC;

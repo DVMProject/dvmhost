@@ -872,7 +872,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     return false;
                 }
 
-                if (m_p25->m_network->disallowUnitToUnit()) {
+                if (m_p25->m_network != nullptr && m_p25->m_network->disallowUnitToUnit()) {
                     switch (tsbk->getLCO()) {
                     case TSBKO::IOSP_UU_VCH:
                     case TSBKO::IOSP_UU_ANS:
@@ -1603,7 +1603,7 @@ void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool 
     if (m_p25->m_network == nullptr)
         return;
 
-    if (m_p25->m_network->disallowUnitToUnit()) {
+    if (m_p25->m_network != nullptr && m_p25->m_network->disallowUnitToUnit()) {
         switch (tsbk->getLCO()) {
         case TSBKO::IOSP_UU_VCH:
         case TSBKO::IOSP_UU_ANS:
@@ -1637,7 +1637,8 @@ void ControlSignaling::writeNetworkRF(lc::TDULC* tduLc, const uint8_t* data, boo
     if (m_p25->m_network == nullptr)
         return;
 
-    if (m_p25->m_network->disallowUnitToUnit() && (tduLc->getLCO() == LCO::PRIVATE || tduLc->getLCO() == LCO::PRIVATE_EXT))
+    if (m_p25->m_network != nullptr && m_p25->m_network->disallowUnitToUnit() &&
+        (tduLc->getLCO() == LCO::PRIVATE || tduLc->getLCO() == LCO::PRIVATE_EXT))
         return;
 
     if (m_p25->m_rfTimeoutTimer.isRunning() && m_p25->m_rfTimeoutTimer.hasExpired())

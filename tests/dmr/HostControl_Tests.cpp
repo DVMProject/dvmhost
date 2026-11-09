@@ -421,6 +421,7 @@ public:
     ~DMRHostHarness()
     {
         delete m_control;
+        HostTestHooks::dmrDetachNetwork();
         delete m_network;
         g_RPC = nullptr;
     }
