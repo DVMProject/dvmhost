@@ -65,7 +65,7 @@ AffiliationLookup::~AffiliationLookup() = default;
 
 /* Helper to group affiliate a source ID. */
 
-void AffiliationLookup::unitReg(uint32_t srcId)
+void AffiliationLookup::unitReg(uint32_t srcId, bool log)
 {
     if (isUnitReg(srcId)) {
         return;
@@ -78,9 +78,8 @@ void AffiliationLookup::unitReg(uint32_t srcId)
     m_unitRegTimers[srcId] = Timer(1000U, UNIT_REG_TIMEOUT);
     m_unitRegTimers[srcId].start();
 
-    if (m_verbose) {
-        LogInfoEx(LOG_HOST, "%s, unit registration, srcId = %u",
-            m_name.c_str(), srcId);
+    if (m_verbose && log) {
+        LogInfoEx(LOG_HOST, "%s, unit registration, srcId = %u", m_name.c_str(), srcId);
     }
 
     __unlock();
@@ -88,7 +87,7 @@ void AffiliationLookup::unitReg(uint32_t srcId)
 
 /* Helper to group unaffiliate a source ID. */
 
-bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
+bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic, bool log)
 {
     bool ret = false;
 
@@ -100,9 +99,8 @@ bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
 
     __lock();
 
-    if (m_verbose) {
-        LogInfoEx(LOG_HOST, "%s, unit deregistration, srcId = %u",
-            m_name.c_str(), srcId);
+    if (m_verbose && log) {
+        LogInfoEx(LOG_HOST, "%s, unit deregistration, srcId = %u", m_name.c_str(), srcId);
     }
 
     m_unitRegTimers[srcId].stop();
@@ -254,8 +252,7 @@ void AffiliationLookup::groupAff(uint32_t srcId, uint32_t dstId)
         m_grpAffTimers[srcId].start();
 
         if (m_verbose) {
-            LogInfoEx(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u",
-                m_name.c_str(), srcId, dstId);
+            LogInfoEx(LOG_HOST, "%s, group affiliation, srcId = %u, dstId = %u", m_name.c_str(), srcId, dstId);
         }
 
         __unlock();
@@ -272,8 +269,7 @@ bool AffiliationLookup::groupUnaff(uint32_t srcId)
     auto it = m_grpAffTable.find(srcId);
     if (it != m_grpAffTable.end()) {
         if (m_verbose) {
-            LogInfoEx(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u",
-                m_name.c_str(), srcId, it->second);
+            LogInfoEx(LOG_HOST, "%s, group unaffiliation, srcId = %u, dstId = %u", m_name.c_str(), srcId, it->second);
         }
 
         m_grpAffTable.erase(srcId);

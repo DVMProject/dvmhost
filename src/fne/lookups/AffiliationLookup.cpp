@@ -31,21 +31,21 @@ AffiliationLookup::~AffiliationLookup() = default;
 
 /* Helper to group affiliate a source ID. */
 
-void AffiliationLookup::unitReg(uint32_t srcId, uint32_t ssrc)
+void AffiliationLookup::unitReg(uint32_t srcId, uint32_t ssrc, bool log)
 {
     if (isUnitReg(srcId)) {
         m_unitRegPeerTable[srcId] = ssrc;
         return;
     }
 
-    ::lookups::AffiliationLookup::unitReg(srcId);
+    ::lookups::AffiliationLookup::unitReg(srcId, log);
 
     m_unitRegPeerTable[srcId] = ssrc;
 }
 
 /* Helper to group unaffiliate a source ID. */
 
-bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
+bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic, bool log)
 {
     bool ret = false;
 
@@ -53,7 +53,7 @@ bool AffiliationLookup::unitDereg(uint32_t srcId, bool automatic)
         return false;
     }
 
-    ret = ::lookups::AffiliationLookup::unitDereg(srcId, automatic);
+    ret = ::lookups::AffiliationLookup::unitDereg(srcId, automatic, log);
 
     if (ret) {
         // lookup dynamic table entry

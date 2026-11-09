@@ -981,7 +981,7 @@ void TrafficNetwork::clock(uint32_t ms)
         const std::vector<UnitRoute> expiredRoutes = m_unitRouteRegistry.expire(now);
         for (const UnitRoute& route : expiredRoutes) {
             LogInfoEx(LOG_MASTER, "Private call route expired, srcId = %u, peerId = %u", route.unitId, route.peerId);
-            removePeerUnitRegistration(route.peerId, route.unitId);
+            removePeerUnitRegistration(route.peerId, route.unitId, false);
         }
 
         MetricsLogging::resetActiveCalls();
@@ -1640,7 +1640,7 @@ void TrafficNetwork::learnUnitRouteFromTraffic(uint32_t peerId, uint32_t srcId, 
     // update the peer unit registration
     const UnitRoute current = m_unitRouteRegistry.resolve(srcId, now);
     if (!current.valid || current.peerId != peerId) {
-        updatePeerUnitRegistration(peerId, srcId, ssrc);
+        updatePeerUnitRegistration(peerId, srcId, ssrc, false);
     }
 
     m_unitRouteRegistry.update(srcId, peerId, ssrc, true, now);
@@ -1833,6 +1833,7 @@ bool TrafficNetwork::updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint
 
         affiliations->groupUnaff(srcId);
         affiliations->groupAff(srcId, dstId);
+
         aggregate = buildAggregatedAffiliations();
     }
 
@@ -1854,6 +1855,7 @@ bool TrafficNetwork::removePeerAffiliation(uint32_t peerId, uint32_t srcId)
             return false;
 
         affiliations->groupUnaff(srcId);
+
         aggregate = buildAggregatedAffiliations();
     }
 
@@ -1875,6 +1877,7 @@ bool TrafficNetwork::replacePeerAffiliations(uint32_t peerId, const std::unorder
             return false;
 
         peerAffiliations->replaceGroupAffiliations(affiliations);
+
         aggregate = buildAggregatedAffiliations();
     }
 
@@ -1901,12 +1904,12 @@ std::unordered_map<uint32_t, uint32_t> TrafficNetwork::buildAggregatedAffiliatio
         const std::unordered_map<uint32_t, uint32_t> affiliations = peer.second->grpAffTable();
         for (const auto& affiliation : affiliations) {
             const auto result = aggregate.emplace(affiliation.first, affiliation.second);
-            /*
+/*
             if (!result.second && result.first->second != affiliation.second) {
                 LogWarning(LOG_MASTER, "PEER %u affiliation conflict, srcId = %u, dstId = %u already represented by dstId = %u from a lower peer ID",
                     peer.first, affiliation.first, affiliation.second, result.first->second);
             }
-            */
+*/
         }
     }
 
@@ -1926,7 +1929,7 @@ void TrafficNetwork::publishAggregatedAffiliations(const std::unordered_map<uint
 
 /* Adds one peer unit registration and publishes the aggregate upstream. */
 
-bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc)
+bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc, bool log)
 {
     std::vector<uint32_t> aggregate;
 
@@ -1942,10 +1945,11 @@ bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId,
         if (registrations == nullptr)
             return false;
 
-        registrations->unitReg(srcId, ssrc);
-        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
+        registrations->unitReg(srcId, ssrc, log);
+
+        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         m_unitRouteRegistry.update(srcId, peerId, ssrc, false, now);
+
         aggregate = buildAggregatedUnitRegistrations();
     }
 
@@ -1955,7 +1959,7 @@ bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId,
 
 /* Removes one peer unit registration and publishes the aggregate upstream. */
 
-bool TrafficNetwork::removePeerUnitRegistration(uint32_t peerId, uint32_t srcId)
+bool TrafficNetwork::removePeerUnitRegistration(uint32_t peerId, uint32_t srcId, bool log)
 {
     std::vector<uint32_t> aggregate;
     std::unordered_map<uint32_t, uint32_t> aggregateAffiliations;
@@ -1967,8 +1971,10 @@ bool TrafficNetwork::removePeerUnitRegistration(uint32_t peerId, uint32_t srcId)
         if (registrations == nullptr)
             return false;
 
-        registrations->unitDereg(srcId);
+        registrations->unitDereg(srcId, false, log);
+
         m_unitRouteRegistry.erase(srcId, peerId);
+
         aggregate = buildAggregatedUnitRegistrations();
         aggregateAffiliations = buildAggregatedAffiliations();
     }
@@ -1998,8 +2004,10 @@ bool TrafficNetwork::replacePeerUnitRegistrations(uint32_t peerId, const std::ve
             registrationOrigins[srcId] = ssrc;
 
         peerRegistrations->replaceUnitRegistrations(registrationOrigins);
+
         const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         m_unitRouteRegistry.replacePeer(peerId, registrations, ssrc, now);
+
         aggregate = buildAggregatedUnitRegistrations();
     }
 
@@ -2026,21 +2034,24 @@ std::vector<uint32_t> TrafficNetwork::buildAggregatedUnitRegistrations()
         for (const uint32_t srcId : registrations) {
             const uint32_t ssrc = peer.second->getSSRCByUnitReg(srcId);
             const auto result = aggregateOrigins.emplace(srcId, ssrc);
-            /*
+/*
             if (!result.second && result.first->second != ssrc) {
                 LogWarning(LOG_MASTER, "PEER %u unit registration conflict, srcId = %u already represented by lower peer ID", peer.first, srcId);
             }
-            */
+*/
         }
     }
 
     m_globalAff->replaceUnitRegistrations(aggregateOrigins);
 
+    // build the aggregate list of unit registrations from the origins map
     std::vector<uint32_t> aggregate;
     aggregate.reserve(aggregateOrigins.size());
     for (const auto& registration : aggregateOrigins)
         aggregate.push_back(registration.first);
+
     std::sort(aggregate.begin(), aggregate.end());
+
     return aggregate;
 }
 

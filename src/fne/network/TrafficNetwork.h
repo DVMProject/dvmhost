@@ -863,16 +863,18 @@ namespace network
          * @param peerId Peer ID.
          * @param srcId Source Radio ID.
          * @param ssrc Originating peer ID.
+         * @param log Flag indicating whether the registration should be logged.
          * @returns bool True, if the peer affiliation lookup exists, otherwise false.
          */
-        bool updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc);
+        bool updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc, bool log = true);
         /**
          * @brief Removes one peer unit registration and publishes the aggregate upstream.
          * @param peerId Peer ID.
          * @param srcId Source Radio ID.
+         * @param log Flag indicating whether the deregistration should be logged.
          * @returns bool True, if the peer affiliation lookup exists, otherwise false.
          */
-        bool removePeerUnitRegistration(uint32_t peerId, uint32_t srcId);
+        bool removePeerUnitRegistration(uint32_t peerId, uint32_t srcId, bool log = true);
         /**
          * @brief Replaces one peer's unit registrations and publishes the aggregate upstream.
          * @param peerId Peer ID.

@@ -60,15 +60,17 @@ namespace fne_lookups
          * @brief Helper to register a source ID.
          * @param srcId Source Radio ID.
          * @param ssrc Originating Peer ID.
+         * @param log Flag indicating whether the registration should be logged.
          */
-        void unitReg(uint32_t srcId, uint32_t ssrc);
+        void unitReg(uint32_t srcId, uint32_t ssrc, bool log = true);
         /**
          * @brief Helper to deregister a source ID.
          * @param srcId Source Radio ID.
          * @param automatic Flag indicating the deregistration is a result of an automated timer.
+         * @param log Flag indicating whether the deregistration should be logged.
          * @returns bool True, if source ID is deregistered, otherwise false.
          */
-        bool unitDereg(uint32_t srcId, bool automatic = false) override;
+        bool unitDereg(uint32_t srcId, bool automatic = false, bool log = true) override;
         /**
          * @brief Helper to get the originating network peer ID by the registered source ID.
          * @param srcId Source Radio ID.

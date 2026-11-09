@@ -71,15 +71,17 @@ namespace lookups
         /**
          * @brief Helper to register a source ID.
          * @param srcId Source Radio ID.
+         * @param log Flag indicating whether the registration should be logged.
          */
-        virtual void unitReg(uint32_t srcId);
+        virtual void unitReg(uint32_t srcId, bool log = true);
         /**
          * @brief Helper to deregister a source ID.
          * @param srcId Source Radio ID.
          * @param automatic Flag indicating the deregistration is a result of an automated timer.
+         * @param log Flag indicating whether the deregistration should be logged.
          * @returns bool True, if source ID is deregistered, otherwise false.
          */
-        virtual bool unitDereg(uint32_t srcId, bool automatic = false);
+        virtual bool unitDereg(uint32_t srcId, bool automatic = false, bool log = true);
         /**
          * @brief Helper to start the source ID registration timer.
          * @param srcId Source Radio ID.
