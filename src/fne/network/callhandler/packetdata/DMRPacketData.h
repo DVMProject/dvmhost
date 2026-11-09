@@ -96,6 +96,12 @@ namespace network
                  */
                 void cleanupStale();
 
+                /**
+                 * @brief Sets the debug flag.
+                 * @param debug Debug flag.
+                 */
+                void setDebug(bool debug) { m_debug = debug; }
+
             private:
                 TrafficNetwork* m_network;
                 TagDMRData *m_tag;

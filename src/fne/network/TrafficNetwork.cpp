@@ -191,7 +191,11 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_logDenials(false),
     m_logUpstreamCallStartEnd(true),
     m_reportPeerPing(reportPeerPing),
-    m_verbose(verbose)
+    m_verbose(verbose),
+    m_dmrCHDebug(debug),
+    m_p25CHDebug(debug),
+    m_nxdnCHDebug(debug),
+    m_analogCHDebug(debug)
 {
     assert(host != nullptr);
     assert(!address.empty());
@@ -472,6 +476,19 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         LogWarning(LOG_MASTER, "Both InfluxDB and SQLite metrics logging are enabled. This could cause performance penalties, are you sure?");
     }
 
+    if (!m_debug) {
+        yaml::Node chDebugConf = conf["callhandlerDebug"];
+        m_dmrCHDebug = chDebugConf["dmrDebug"].as<bool>(false);
+        m_tagDMR->setDebug(m_dmrCHDebug);
+        m_p25CHDebug = chDebugConf["p25Debug"].as<bool>(false);
+        m_tagP25->setDebug(m_p25CHDebug);
+        m_tagP25P2->setDebug(m_p25CHDebug);
+        m_nxdnCHDebug = chDebugConf["nxdnDebug"].as<bool>(false);
+        m_tagNXDN->setDebug(m_nxdnCHDebug);
+        m_analogCHDebug = chDebugConf["analogDebug"].as<bool>(false);
+        m_tagAnalog->setDebug(m_analogCHDebug);
+    }
+
     if (printOptions) {
         LogInfo("    Log Traffic Denials: %s", m_logDenials ? "yes" : "no");
         LogInfo("    Log Upstream Call Start/End Events: %s", m_logUpstreamCallStartEnd ? "yes" : "no");
@@ -504,6 +521,18 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
             LogInfo("    Private Call Learn From Traffic: %s", m_privateCallLearnFromTraffic ? "yes" : "no");
             LogInfo("    Private Call Route Lifetime: %u seconds", m_privateCallRouteLifetime);
             LogInfo("    Private Call Query Timeout: %u milliseconds", m_privateCallQueryTimeout);
+        }
+        if (m_dmrCHDebug) {
+            LogInfo("    DMR Call Handler Debug: yes");
+        }
+        if (m_p25CHDebug) {
+            LogInfo("    P25 Call Handler Debug: yes");
+        }
+        if (m_nxdnCHDebug) {
+            LogInfo("    NXDN Call Handler Debug: yes");
+        }
+        if (m_analogCHDebug) {
+            LogInfo("    Analog Call Handler Debug: yes");
         }
 
         LogInfo("High Availability Parameters");

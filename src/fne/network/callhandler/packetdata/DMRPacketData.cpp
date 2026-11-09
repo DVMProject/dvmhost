@@ -678,7 +678,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
                 }
 
                 m_network->writePeer(peer.first, peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId);
-                if (m_network->m_debug) {
+                if (m_debug) {
                     LogDebugEx(LOG_DMR, "DMRPacketData::dispatchToFNE()", "Master, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, peer.first, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);
                 }
@@ -709,7 +709,7 @@ void DMRPacketData::dispatchToFNE(uint32_t peerId, dmr::data::NetData& dmrData, 
                 }
 
                 peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, data, len, pktSeq, streamId);
-                if (m_network->m_debug) {
+                if (m_debug) {
                     LogDebugEx(LOG_DMR, "DMRPacketData::dispatchToFNE()", "Peers, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, slotNo = %u, len = %u, pktSeq = %u, stream = %u", 
                         peerId, dstPeerId, seqNo, srcId, dstId, status->slotNo, len, pktSeq, streamId);
                 }

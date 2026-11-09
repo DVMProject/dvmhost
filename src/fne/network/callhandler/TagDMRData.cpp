@@ -663,7 +663,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     routeRewrite(outboundPeerBuffer, peer.first, dmrData, dataType, dstId, slotNo);
 
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
+                    if (m_debug) {
                         LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
                             ssrc, peerId, peer.first, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, fromUpstream, privateCallInProgress, noConnectedPeerRepeat);
                     }
@@ -718,7 +718,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId, false, 0U, ssrc);
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
+                    if (m_debug) {
                         LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Peers, ssrc = %u, srcPeer = %u, dstPeer = %u, seqNo = %u, srcId = %u, dstId = %u, flco = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u", 
                             ssrc, peerId, dstPeerId, seqNo, srcId, dstId, flco, slotNo, len, pktSeq, streamId, fromUpstream);
                     }
@@ -865,7 +865,7 @@ void TagDMRData::playbackParrot()
 
         if (m_network->m_parrotOnlyOriginating) {
             m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
-            if (m_network->m_debug) {
+            if (m_debug) {
                 LogDebugEx(LOG_DMR, "TagDMRData::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                     pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
             }
@@ -932,7 +932,7 @@ void TagDMRData::playbackParrot()
                 }
 
                 m_network->writePeerQueue(&queue, peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
-                if (m_network->m_debug) {
+                if (m_debug) {
                     LogDebugEx(LOG_DMR, "TagDMRData::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
                 }
@@ -1628,7 +1628,7 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
                 }
 
                 m_network->writePeerQueue(&queue, peer.first, m_network->m_peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId);
-                if (m_network->m_debug) {
+                if (m_debug) {
                     LogDebugEx(LOG_DMR, "TagDMRData::write_CSBK()", "peer = %u, slotNo = %u, len = %u, stream = %u", 
                         peer.first, slot, messageLength, streamId);
                 }
@@ -1643,7 +1643,7 @@ void TagDMRData::write_CSBK(uint32_t peerId, uint8_t slot, lc::CSBK* csbk)
                 uint32_t dstPeerId = peer.second->getPeerId();
 
                 peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR }, message.get(), messageLength, RTP_END_OF_CALL_SEQ, streamId);
-                if (m_network->m_debug) {
+                if (m_debug) {
                     LogDebugEx(LOG_DMR, "TagDMRData::write_CSBK()", "peer = %u, slotNo = %u, len = %u, stream = %u", 
                         dstPeerId, slot, messageLength, streamId);
                 }

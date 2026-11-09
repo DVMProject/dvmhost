@@ -632,7 +632,7 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                     routeRewrite(outboundPeerBuffer, peer.first, dstId, slotNo);
 
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
+                    if (m_debug) {
                         LogDebugEx(LOG_DMR, "TagDMRData::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, srcId = %u, dstId = %u, duid = $%02X, macMCO = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
                             ssrc, peerId, peer.first, srcId, dstId, duid, macMCO, slotNo, len, pktSeq, streamId, fromUpstream, privateCallInProgress, noConnectedPeerRepeat);
                     }
@@ -687,7 +687,7 @@ bool TagP25P2Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peer
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, outboundPeerBuffer, len, pktSeq, streamId, false, 0U, ssrc);
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
+                    if (m_debug) {
                         LogDebugEx(LOG_DMR, "TagP25P2Data::processFrame()", "Peers, ssrc = %u, srcPeer = %u, dstPeer = %u, srcId = %u, dstId = %u, duid = $%02X, macMCO = $%02X, slotNo = %u, len = %u, pktSeq = %u, stream = %u, fromUpstream = %u", 
                             ssrc, peerId, dstPeerId, srcId, dstId, duid, macMCO, slotNo, len, pktSeq, streamId, fromUpstream);
                     }
@@ -750,7 +750,7 @@ void TagP25P2Data::playbackParrot()
 
         if (m_network->m_parrotOnlyOriginating) {
             m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
-            if (m_network->m_debug) {
+            if (m_debug) {
                 LogDebugEx(LOG_P25, "TagP25P2Data::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                     pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
             }
@@ -817,7 +817,7 @@ void TagP25P2Data::playbackParrot()
                 }
 
                 m_network->writePeerQueue(&queue, peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
-                if (m_network->m_debug) {
+                if (m_debug) {
                     LogDebugEx(LOG_P25, "TagP25P2Data::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
                 }

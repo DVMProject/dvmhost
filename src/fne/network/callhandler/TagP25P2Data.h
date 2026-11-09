@@ -133,6 +133,12 @@ namespace network
              */
             uint32_t lastParrotDstId() const { return m_lastParrotDstId; }
 
+            /**
+             * @brief Sets the debug flag.
+             * @param debug Debug flag.
+             */
+            void setDebug(bool debug) { m_debug = debug; }
+
         private:
 #if defined(CATCH2_TEST_COMPILATION)
             friend class ::FNETestHooks;

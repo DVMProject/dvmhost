@@ -964,8 +964,8 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
             if (peerId != peer.first && selectedPeer(peer.first)) {
                 write_PDU_User(peer.first, peerId, nullptr, status->assembler.dataHeader, status->assembler.getExtendedAddress(),
                     status->assembler.getAuxiliaryES(), status->pduUserData);
-                if (m_network->m_debug) {
-                    LogDebug(LOG_P25, "srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
+                if (m_debug) {
+                    LogDebugEx(LOG_P25, "P25PacketData::dispatchToFNE()", "srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                         peerId, peer.first, DUID::PDU, srcId, dstId);
                 }
             }
@@ -991,8 +991,8 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
 
                 write_PDU_User(dstPeerId, peerId, peer.second, status->assembler.dataHeader, status->assembler.getExtendedAddress(),
                     status->assembler.getAuxiliaryES(), status->pduUserData);
-                if (m_network->m_debug) {
-                    LogDebug(LOG_P25, "srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
+                if (m_debug) {
+                    LogDebugEx(LOG_P25, "P25PacketData::dispatchToFNE()", "srcPeer = %u, dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", 
                         peerId, dstPeerId, DUID::PDU, srcId, dstId);
                 }
             }
@@ -1053,9 +1053,8 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
             }
         }
 
-        if (m_network->m_debug) {
-            LogDebug(LOG_P25, "dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u",
-                route.peerId, DUID::PDU, srcId, dstId);
+        if (m_debug) {
+            LogDebugEx(LOG_P25, "P25PacketData::dispatchUserFrameToFNE()", "dstPeer = %u, duid = $%02X, srcId = %u, dstId = %u", route.peerId, DUID::PDU, srcId, dstId);
         }
     }
     return dispatched;

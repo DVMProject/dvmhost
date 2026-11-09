@@ -538,6 +538,11 @@ namespace network
         bool m_reportPeerPing;
         bool m_verbose;
 
+        bool m_dmrCHDebug;
+        bool m_p25CHDebug;
+        bool m_nxdnCHDebug;
+        bool m_analogCHDebug;
+
         static std::array<std::mutex, PEER_STATE_LOCK_STRIPES> s_peerStateLocks;
 
         /**

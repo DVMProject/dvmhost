@@ -170,6 +170,12 @@ namespace network
              */
             packetdata::DMRPacketData* packetData() { return m_packetData; }
 
+            /**
+             * @brief Sets the debug flag.
+             * @param debug Debug flag.
+             */
+            void setDebug(bool debug) { m_debug = debug; m_packetData->setDebug(debug); }
+
         private:
 #if defined(CATCH2_TEST_COMPILATION)
             friend class ::FNETestHooks;

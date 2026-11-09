@@ -673,7 +673,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     routeRewrite(outboundPeerBuffer, peer.first, messageType, dstId);
 
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
+                    if (m_debug) {
                         LogDebugEx(LOG_NXDN, "TagNXDNData::processFrame()", "Master, ssrc = %u, srcPeer = %u,  dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
                             ssrc, peerId, peer.first, messageType, srcId, dstId, len, pktSeq, streamId, fromUpstream, privateCallInProgress, noConnectedPeerRepeat);
                     }
@@ -728,7 +728,7 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId, false, 0U, ssrc);
                     else
                         peer.second->writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, outboundPeerBuffer, len, pktSeq, streamId);
-                    if (m_network->m_debug) {
+                    if (m_debug) {
                         LogDebugEx(LOG_NXDN, "TagNXDNData::processFrame()", "Peers, ssrc = %u, srcPeer = %u, dstPeer = %u, messageType = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u", 
                             ssrc, peerId, dstPeerId, messageType, srcId, dstId, len, pktSeq, streamId, fromUpstream);
                     }
@@ -868,7 +868,7 @@ void TagNXDNData::playbackParrot()
 
         if (m_network->m_parrotOnlyOriginating) {
             m_network->writePeer(pkt.peerId, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
-            if (m_network->m_debug) {
+            if (m_debug) {
                 LogDebugEx(LOG_NXDN, "TagNXDNData::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                     pkt.peerId, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
             }
@@ -935,7 +935,7 @@ void TagNXDNData::playbackParrot()
                 }
 
                 m_network->writePeerQueue(&queue, peer.first, pkt.peerId, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN }, pkt.buffer, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
-                if (m_network->m_debug) {
+                if (m_debug) {
                     LogDebugEx(LOG_NXDN, "TagNXDNData::playbackParrot()", "Parrot, dstPeer = %u, len = %u, pktSeq = %u, streamId = %u", 
                         peer.first, pkt.bufferLen, pkt.pktSeq, pkt.streamId);
                 }
