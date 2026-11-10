@@ -400,11 +400,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     */
     int8_t lto = (int8_t)systemConf["localTimeOffset"].as<int32_t>(0);
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass, lto);
-    uint32_t valueTest = (netId >> 8);
-    const uint32_t constValue = 0x17DC0U;
-    if (valueTest == (constValue >> 5)) {
-        ::fatal("error 8\n");
-    }
     m_siteData.setCallsign(cwCallsign);
 
     lc::LC::setSiteData(m_siteData);

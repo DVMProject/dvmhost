@@ -356,7 +356,15 @@ bool Host::readParams()
 
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
         m_p25NetId = p25::P25Utils::netId(m_p25NetId);
-        if (m_p25NetId == 0xBEE00) {
+
+        /*
+        ** By disabling these checks, you are a giant toolbag and you are being highly irresponsible and negligent ..
+        ** These protections are not to stop you from using BEExx as a WACN on the trunked systems you build with this, it 
+        ** is to prevent poorly programmed subscribers of business, or public safety members from ROAMING to your trunked system
+        ** potentially cutting off their communications and possibly endangering their lives if they roam while in an 
+        ** emergency situation. I implore you to reconsider using BEExx as a WACN and to respect the safety of others.
+        */
+        if (m_p25NetId >= 0xBEE00 && m_p25NetId <= 0xBEEFF) {
             ::fatal("error 4\n");
         }
 
