@@ -389,6 +389,37 @@ public:
      */
     static void p25ClockU2U(p25::Control& control, uint32_t ms);
     /**
+     * @brief Stores an MFID transaction for P25 control-signaling tests.
+     */
+    static void p25StoreMFId(p25::Control& control, uint32_t srcId, uint32_t dstId,
+        uint8_t lco, uint8_t mfId, uint32_t timeoutSeconds);
+    /**
+     * @brief Resolves an MFID transaction with a caller-provided fallback.
+     */
+    static uint8_t p25TransactionMFId(const p25::Control& control, uint32_t srcId,
+        uint32_t dstId, uint8_t lco, uint8_t fallback);
+    /**
+     * @brief Tests whether an exact MFID transaction exists.
+     */
+    static bool p25HasMFIdTransaction(const p25::Control& control, uint32_t srcId,
+        uint32_t dstId, uint8_t lco);
+    /**
+     * @brief Clears one exact MFID transaction.
+     */
+    static void p25ClearMFId(p25::Control& control, uint32_t srcId, uint32_t dstId, uint8_t lco);
+    /**
+     * @brief Clears MFID transactions by LCO and optional subscriber.
+     */
+    static void p25ClearMFIds(p25::Control& control, uint8_t lco, uint32_t subscriberId = 0U);
+    /**
+     * @brief Gets the legacy ambient MFID compatibility value.
+     */
+    static uint8_t p25LastMFId(const p25::Control& control);
+    /**
+     * @brief Sets the legacy ambient MFID compatibility value.
+     */
+    static void p25SetLastMFId(p25::Control& control, uint8_t mfId);
+    /**
      * @brief Releases a P25 grant for a steering-policy test.
      * @param control P25 control instance.
      * @param dstId Destination ID to release.

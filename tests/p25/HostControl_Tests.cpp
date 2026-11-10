@@ -925,6 +925,94 @@ TEST_CASE("P25 active unit-to-unit call continues with a grant instead of anothe
     CHECK(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == called);
 }
 
+TEST_CASE("P25 MFID transactions are isolated by subscriber pair and LCO",
+    "[p25][host][control][mfid]")
+{
+    P25HostHarness harness;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    const uint8_t u2uLco = p25::defines::TSBKO::IOSP_UU_VCH;
+    const uint8_t alertLco = p25::defines::TSBKO::IOSP_CALL_ALRT;
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, caller, called, u2uLco, 0x90U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, caller, called, alertLco, 0xA4U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, called, caller, u2uLco, 0xB0U, 10U);
+
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, caller, called, u2uLco, 0x00U) == 0x90U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, caller, called, alertLco, 0x00U) == 0xA4U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, called, caller, u2uLco, 0x00U) == 0xB0U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, caller, called + 1U, u2uLco, 0x55U) == 0x55U);
+}
+
+TEST_CASE("P25 MFID transaction replacement does not disturb legacy fallback state",
+    "[p25][host][control][mfid][regression]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint32_t dstId = 2001U;
+    const uint8_t lco = p25::defines::TSBKO::IOSP_GRP_VCH;
+
+    HostTestHooks::p25SetLastMFId(*harness.m_control, 0x90U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco,
+        HostTestHooks::p25LastMFId(*harness.m_control)) == 0x90U);
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, srcId, dstId, lco, 0xA4U, 10U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco, 0x90U) == 0xA4U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, srcId, dstId, lco, 0xB0U, 10U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco, 0x90U) == 0xB0U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+}
+
+TEST_CASE("P25 MFID transaction cleanup is exact and subscriber scoped",
+    "[p25][host][control][mfid][cleanup]")
+{
+    P25HostHarness harness;
+    const uint8_t u2uLco = p25::defines::TSBKO::IOSP_UU_VCH;
+    const uint8_t alertLco = p25::defines::TSBKO::IOSP_CALL_ALRT;
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1001U, 2001U, u2uLco, 0x90U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1002U, 2002U, u2uLco, 0xA4U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1001U, 2001U, alertLco, 0xB0U, 10U);
+
+    HostTestHooks::p25ClearMFId(*harness.m_control, 1001U, 2001U, u2uLco);
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1002U, 2002U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, alertLco));
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1001U, 2001U, u2uLco, 0x90U, 10U);
+    HostTestHooks::p25ClearMFIds(*harness.m_control, u2uLco, 2001U);
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1002U, 2002U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, alertLco));
+
+    HostTestHooks::p25ClearMFIds(*harness.m_control, u2uLco);
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1002U, 2002U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, alertLco));
+}
+
+TEST_CASE("P25 orphaned MFID transactions expire without changing legacy fallback",
+    "[p25][host][control][mfid][expiry][regression]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint32_t dstId = 2001U;
+    const uint8_t lco = p25::defines::TSBKO::IOSP_CALL_ALRT;
+
+    HostTestHooks::p25SetLastMFId(*harness.m_control, 0x90U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, srcId, dstId, lco, 0xA4U, 1U);
+    REQUIRE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, srcId, dstId, lco));
+
+    HostTestHooks::p25ClockU2U(*harness.m_control, 2000U);
+
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, srcId, dstId, lco));
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco,
+        HostTestHooks::p25LastMFId(*harness.m_control)) == 0x90U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+}
+
 TEST_CASE("P25 conventional host accepts and acknowledges an emergency alarm TSBK",
     "[p25][host][control][emergency][conventional]")
 {

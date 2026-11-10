@@ -594,6 +594,58 @@ void HostTestHooks::p25ClockU2U(p25::Control& control, uint32_t ms)
     control.m_control->clock(ms);
 }
 
+/* Stores an MFID transaction for a control-signaling test. */
+
+void HostTestHooks::p25StoreMFId(p25::Control& control, uint32_t srcId, uint32_t dstId,
+    uint8_t lco, uint8_t mfId, uint32_t timeoutSeconds)
+{
+    control.m_control->storeMFId(srcId, dstId, lco, mfId, timeoutSeconds);
+}
+
+/* Resolves an MFID transaction with a compatibility fallback. */
+
+uint8_t HostTestHooks::p25TransactionMFId(const p25::Control& control, uint32_t srcId,
+    uint32_t dstId, uint8_t lco, uint8_t fallback)
+{
+    return control.m_control->transactionMFId(srcId, dstId, lco, fallback);
+}
+
+/* Tests whether an exact MFID transaction exists. */
+
+bool HostTestHooks::p25HasMFIdTransaction(const p25::Control& control, uint32_t srcId,
+    uint32_t dstId, uint8_t lco)
+{
+    return control.m_control->hasMFIdTransaction(srcId, dstId, lco);
+}
+
+/* Clears one exact MFID transaction. */
+
+void HostTestHooks::p25ClearMFId(p25::Control& control, uint32_t srcId, uint32_t dstId, uint8_t lco)
+{
+    control.m_control->clearMFId(srcId, dstId, lco);
+}
+
+/* Clears MFID transactions by LCO and optional subscriber. */
+
+void HostTestHooks::p25ClearMFIds(p25::Control& control, uint8_t lco, uint32_t subscriberId)
+{
+    control.m_control->clearMFIds(lco, subscriberId);
+}
+
+/* Gets the legacy ambient MFID compatibility value. */
+
+uint8_t HostTestHooks::p25LastMFId(const p25::Control& control)
+{
+    return control.m_control->m_lastMFID;
+}
+
+/* Sets the legacy ambient MFID compatibility value. */
+
+void HostTestHooks::p25SetLastMFId(p25::Control& control, uint8_t mfId)
+{
+    control.m_control->setLastMFId(mfId);
+}
+
 /* Releases a P25 grant for a steering-policy test. */
 
 bool HostTestHooks::p25ReleaseGrant(p25::Control& control, uint32_t dstId)

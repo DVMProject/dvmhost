@@ -167,6 +167,28 @@ namespace p25
             friend class lookups::P25AffiliationLookup;
 
             /**
+             * @brief Manufacturer identity retained for an asynchronous control transaction.
+             */
+            struct MFIdTransaction {
+                uint32_t srcId;                //!< Transaction source RID.
+                uint32_t dstId;                //!< Transaction destination RID.
+                uint8_t lco;                   //!< LCO which originated the transaction.
+                uint8_t mfId;                  //!< Manufacturer identity from the originating message.
+                Timer lifetime;                //!< Maximum lifetime of the retained identity.
+
+                MFIdTransaction(uint32_t src, uint32_t dst, uint8_t opcode, uint8_t manufacturer,
+                    uint32_t timeoutSeconds) :
+                    srcId(src),
+                    dstId(dst),
+                    lco(opcode),
+                    mfId(manufacturer),
+                    lifetime(1000U, timeoutSeconds)
+                {
+                    lifetime.start();
+                }
+            };
+
+            /**
              * @brief State of a pending unit-to-unit availability transaction.
              */
             enum class U2UAvailabilityState : uint8_t
@@ -265,6 +287,7 @@ namespace p25
             std::unordered_set<uint32_t> m_telIntGrants;
             std::unordered_map<uint64_t, U2UAvailabilityTransaction> m_u2uAvailabilityTransactions;
             std::unordered_map<uint32_t, GroupAffQueryTransaction> m_groupAffQueryTransactions;
+            std::unordered_map<uint64_t, MFIdTransaction> m_mfIdTransactions;
 
             uint8_t m_convFallbackPacketDelay;
             bool m_convFallback;
@@ -543,7 +566,55 @@ namespace p25
              * @param originatingSite Flag indicating this site received the original request.
              */
             void startU2UAvailabilityTransaction(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions,
-                bool originatingSite, bool answerRequired);
+                bool originatingSite, bool answerRequired, uint8_t mfId);
+
+            /**
+             * @brief Produces the ordered key for retained transaction MFID state.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @returns uint64_t Ordered 48-bit transaction key.
+             */
+            static uint64_t mfIdTransactionKey(uint32_t srcId, uint32_t dstId, uint8_t lco);
+            /**
+             * @brief Stores retained MFID state for a control transaction.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @param mfId MFID to remember.
+             * @param timeoutSeconds Timeout for the retained state.
+             */
+            void storeMFId(uint32_t srcId, uint32_t dstId, uint8_t lco, uint8_t mfId, uint32_t timeoutSeconds);
+            /**
+             * @brief Returns retained transaction MFID, or the supplied compatibility fallback.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @param fallback Compatibility fallback MFID.
+             * @returns uint8_t Retained MFID or the fallback.
+             */
+            uint8_t transactionMFId(uint32_t srcId, uint32_t dstId, uint8_t lco, uint8_t fallback) const;
+            /**
+             * @brief Tests whether retained MFID state exists for a control transaction.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @returns bool True if retained MFID state exists, false otherwise.
+             */
+            bool hasMFIdTransaction(uint32_t srcId, uint32_t dstId, uint8_t lco) const;
+            /**
+             * @brief Clears retained MFID state for one control transaction.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             */
+            void clearMFId(uint32_t srcId, uint32_t dstId, uint8_t lco);
+            /**
+             * @brief Clears retained MFID state for an LCO, optionally limited to a subscriber.
+             * @param lco LCO which originated the transactions.
+             * @param subscriberId Subscriber ID to limit the clearing, or 0 for all.
+             */
+            void clearMFIds(uint8_t lco, uint32_t subscriberId = 0U);
         };
     } // namespace packet
 } // namespace p25

@@ -282,9 +282,11 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     (tsbk->getPriority() & 0x07U);
 
                 if (m_p25->m_affiliations->isU2UGranted(srcId, dstId)) {
-                    // Control-channel continuation of an active message-trunked U2U call;
+                    // control-channel continuation of an active message-trunked U2U call;
                     // address the existing assignment to the requesting SU and do not
                     // restart target availability checking
+                    clearMFId(srcId, dstId, TSBKO::IOSP_UU_VCH);
+                    clearMFId(dstId, srcId, TSBKO::IOSP_UU_VCH);
                     m_u2uAvailabilityTransactions.erase(u2uTransactionKey(srcId, dstId));
                     m_u2uAvailabilityTransactions.erase(u2uTransactionKey(dstId, srcId));
                     if (m_p25->isGrantAuthoritative()) {
@@ -299,14 +301,14 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 if (m_unitToUnitAvailCheck) {
-                    startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, true, true);
+                    startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, true, true, tsbk->getMFId());
                     writeRF_TSDU_UU_Ans_Req(srcId, dstId);
                 }
                 else {
                     // some SUs use manual-answer signaling even when the FNE grants an unchecked
                     // U2U request immediately; retain correlation state so a later PROCEED can
                     // reissue a grant that expired while the called unit was ringing
-                    startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, true, false);
+                    startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, true, false, tsbk->getMFId());
                     if (m_p25->isGrantAuthoritative()) {
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
@@ -348,10 +350,15 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 if (transaction.responseTimer.hasExpired()) {
                     LogWarning(LOG_RF, P25_TSDU_STR ", %s ignored, pending request expired, srcId = %u, dstId = %u",
                         tsbk->toString(true).c_str(), srcId, dstId);
+                    clearMFId(transaction.callerId, transaction.calledId, TSBKO::IOSP_UU_VCH);
                     m_u2uAvailabilityTransactions.erase(transactionIt);
                     writeNetworkRF(iosp, data + 2U, true);
                     break;
                 }
+
+                const uint8_t previousMFId = m_lastMFID;
+                m_lastMFID = transactionMFId(transaction.callerId, transaction.calledId,
+                    TSBKO::IOSP_UU_VCH, previousMFId);
 
                 // handle the response for the unit-to-unit availability request
                 if (iosp->getResponse() == ResponseCode::ANS_PROCEED) {
@@ -363,11 +370,13 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                         m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, transaction.serviceOptions);
                     }
 
+                    clearMFId(transaction.callerId, transaction.calledId, TSBKO::IOSP_UU_VCH);
                     m_u2uAvailabilityTransactions.erase(transactionIt);
                 }
                 else if (iosp->getResponse() == ResponseCode::ANS_DENY) {
                     // handle the denial response for the unit-to-unit availability request
                     writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_UU_ANS);
+                    clearMFId(transaction.callerId, transaction.calledId, TSBKO::IOSP_UU_VCH);
                     m_u2uAvailabilityTransactions.erase(transactionIt);
                 }
                 else if (iosp->getResponse() == ResponseCode::ANS_WAIT) {
@@ -380,6 +389,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     LogWarning(LOG_RF, P25_TSDU_STR ", %s ignored, invalid response = $%02X, srcId = %u, dstId = %u",
                         tsbk->toString(true).c_str(), iosp->getResponse(), srcId, dstId);
                 }
+
+                m_lastMFID = previousMFId;
 
                 // preserve and forward the received ISP response; re-encoding
                 // IOSP_UU_ANS would incorrectly produce the OSP request layout
@@ -644,6 +655,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 if (service == TSBKO::IOSP_UU_VCH || service == TSBKO::IOSP_UU_ANS) {
                     for (auto it = m_u2uAvailabilityTransactions.begin(); it != m_u2uAvailabilityTransactions.end(); ) {
                         if (it->second.callerId == srcId || it->second.calledId == srcId) {
+                            clearMFId(it->second.callerId, it->second.calledId, TSBKO::IOSP_UU_VCH);
                             it = m_u2uAvailabilityTransactions.erase(it);
                         }
                         else {
@@ -777,6 +789,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 m_groupAffQueryTransactions.erase(query);
+                clearMFId(WUID_FNE, srcId, TSBKO::OSP_GRP_AFF_Q);
 
                 // preserve the normal affiliation path's null-group exception
                 if (dstId != 0U) {
@@ -1139,6 +1152,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                             if (transactionIt == m_u2uAvailabilityTransactions.end() ||
                                 transactionIt->second.responseTimer.hasExpired()) {
                                 if (transactionIt != m_u2uAvailabilityTransactions.end()) {
+                                    clearMFId(transactionIt->second.callerId, transactionIt->second.calledId, TSBKO::IOSP_UU_VCH);
                                     m_u2uAvailabilityTransactions.erase(transactionIt);
                                 }
 
@@ -1149,6 +1163,9 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                             // process the response based on the received ISP code
                             U2UAvailabilityTransaction& transaction = transactionIt->second;
+                            const uint8_t previousMFId = m_lastMFID;
+                            m_lastMFID = transactionMFId(transaction.callerId, transaction.calledId,
+                                TSBKO::IOSP_UU_VCH, previousMFId);
 
                             // handle the response based on the ISP code
                             if (iosp->getResponse() == ResponseCode::ANS_PROCEED) {
@@ -1161,11 +1178,13 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                     m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, transaction.serviceOptions);
                                 }
 
+                                clearMFId(transaction.callerId, transaction.calledId, TSBKO::IOSP_UU_VCH);
                                 m_u2uAvailabilityTransactions.erase(transactionIt);
                             }
                             else if (iosp->getResponse() == ResponseCode::ANS_DENY) {
                                 // handle the denial response by sending a deny packet to the source ID
                                 writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_UU_ANS);
+                                clearMFId(transaction.callerId, transaction.calledId, TSBKO::IOSP_UU_VCH);
                                 m_u2uAvailabilityTransactions.erase(transactionIt);
                             }
                             else if (iosp->getResponse() == ResponseCode::ANS_WAIT) {
@@ -1174,6 +1193,8 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                 transaction.state = U2UAvailabilityState::WAITING;
                                 transaction.responseTimer.start();
                             }
+
+                            m_lastMFID = previousMFId;
 
                             return true;
                         }
@@ -1188,7 +1209,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                             const uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +
                                 (tsbk->getEncrypted() ? 0x40U : 0x00U) +
                                 (tsbk->getPriority() & 0x07U);
-                            startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, false, true);
+                            startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, false, true, tsbk->getMFId());
                         }
                     }
                     break;
@@ -1441,9 +1462,12 @@ void ControlSignaling::writeRF_TSDU_Call_Alrt(uint32_t srcId, uint32_t dstId)
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
 
-    if (m_lastMFID != MFG_STANDARD) {
-        iosp->setMFId(m_lastMFID);
-        m_lastMFID = MFG_STANDARD;
+    const bool retainedMFId = hasMFIdTransaction(srcId, dstId, TSBKO::IOSP_CALL_ALRT);
+    const uint8_t mfId = transactionMFId(srcId, dstId, TSBKO::IOSP_CALL_ALRT, m_lastMFID);
+    if (mfId != MFG_STANDARD) {
+        iosp->setMFId(mfId);
+        if (!retainedMFId)
+            m_lastMFID = MFG_STANDARD;
     }
 
     VERBOSE_LOG_TSBK(iosp->toString(), srcId, dstId);
@@ -1479,9 +1503,12 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
     iosp->setSrcId(arg);
     iosp->setDstId(dstId);
 
-    if (m_lastMFID != MFG_STANDARD) {
-        iosp->setMFId(m_lastMFID);
-        m_lastMFID = MFG_STANDARD;
+    const bool retainedMFId = hasMFIdTransaction(arg, dstId, TSBKO::IOSP_EXT_FNCT);
+    const uint8_t mfId = transactionMFId(arg, dstId, TSBKO::IOSP_EXT_FNCT, m_lastMFID);
+    if (mfId != MFG_STANDARD) {
+        iosp->setMFId(mfId);
+        if (!retainedMFId)
+            m_lastMFID = MFG_STANDARD;
     }
 
     // class $02 is Motorola -- set the MFID properly
@@ -1533,8 +1560,12 @@ void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
     }
 
     m_groupAffQueryTransactions.erase(dstId);
+    clearMFId(WUID_FNE, dstId, TSBKO::OSP_GRP_AFF_Q);
+    const uint8_t transactionMFId = m_lastMFID;
     m_groupAffQueryTransactions.emplace(dstId, GroupAffQueryTransaction(GROUP_AFF_QUERY_TIMER_TIMEOUT));
     writeRF_TSDU_Grp_Aff_Q_Once(dstId);
+
+    storeMFId(WUID_FNE, dstId, TSBKO::OSP_GRP_AFF_Q, transactionMFId, GROUP_AFF_QUERY_TIMER_TIMEOUT * (GROUP_AFF_QUERY_MAX_RETRIES + 1U));
 }
 
 /* Emits a group affiliation query without changing transaction state. */
@@ -1545,9 +1576,13 @@ void ControlSignaling::writeRF_TSDU_Grp_Aff_Q_Once(uint32_t dstId)
     osp->setSrcId(WUID_FNE);
     osp->setDstId(dstId);
 
-    if (m_lastMFID != MFG_STANDARD) {
-        osp->setMFId(m_lastMFID);
-        m_lastMFID = MFG_STANDARD;
+    const bool retainedMFId = hasMFIdTransaction(WUID_FNE, dstId, TSBKO::OSP_GRP_AFF_Q);
+    const uint8_t mfId = transactionMFId(WUID_FNE, dstId, TSBKO::OSP_GRP_AFF_Q, m_lastMFID);
+    if (mfId != MFG_STANDARD) {
+        osp->setMFId(mfId);
+        if (!retainedMFId) {
+            m_lastMFID = MFG_STANDARD;
+        }
     }
 
     VERBOSE_LOG_TSBK_DST(osp->toString(), dstId);
@@ -1564,9 +1599,12 @@ void ControlSignaling::writeRF_TSDU_U_Reg_Cmd(uint32_t dstId)
     osp->setSrcId(WUID_FNE);
     osp->setDstId(dstId);
 
-    if (m_lastMFID != MFG_STANDARD) {
-        osp->setMFId(m_lastMFID);
-        m_lastMFID = MFG_STANDARD;
+    const bool retainedMFId = hasMFIdTransaction(WUID_FNE, dstId, TSBKO::OSP_U_REG_CMD);
+    const uint8_t mfId = transactionMFId(WUID_FNE, dstId, TSBKO::OSP_U_REG_CMD, m_lastMFID);
+    if (mfId != MFG_STANDARD) {
+        osp->setMFId(mfId);
+        if (!retainedMFId)
+            m_lastMFID = MFG_STANDARD;
     }
 
     VERBOSE_LOG_TSBK_DST(osp->toString(), dstId);
@@ -1711,9 +1749,14 @@ void ControlSignaling::clock(uint32_t ms)
 
             // if the transaction requires an answer and originated from a site, send a deny response to the called ID
             if (it->second.answerRequired && it->second.originatingSite) {
+                const uint8_t previousMFId = m_lastMFID;
+                m_lastMFID = transactionMFId(it->second.callerId, it->second.calledId,
+                    TSBKO::IOSP_UU_VCH, previousMFId);
                 writeRF_TSDU_Deny(it->second.calledId, it->second.callerId, ReasonCode::DENY_TGT_UNIT_REFUSED, TSBKO::IOSP_UU_VCH);
+                m_lastMFID = previousMFId;
             }
 
+            clearMFId(it->second.callerId, it->second.calledId, TSBKO::IOSP_UU_VCH);
             it = m_u2uAvailabilityTransactions.erase(it);
         }
         else {
@@ -1728,6 +1771,7 @@ void ControlSignaling::clock(uint32_t ms)
         if (it->second.responseTimer.isRunning() && it->second.responseTimer.hasExpired()) {
             if (it->second.retries >= GROUP_AFF_QUERY_MAX_RETRIES) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", group affiliation query response expired, dstId = %u", it->first);
+                clearMFId(WUID_FNE, it->first, TSBKO::OSP_GRP_AFF_Q);
                 it = m_groupAffQueryTransactions.erase(it);
                 continue;
             }
@@ -1739,6 +1783,16 @@ void ControlSignaling::clock(uint32_t ms)
 
         ++it;
     }
+
+    // Expire orphaned MFID records only after their owning procedures have
+    // had the opportunity to emit a final response using the retained value.
+    for (auto it = m_mfIdTransactions.begin(); it != m_mfIdTransactions.end(); ) {
+        it->second.lifetime.clock(ms);
+        if (it->second.lifetime.isRunning() && it->second.lifetime.hasExpired())
+            it = m_mfIdTransactions.erase(it);
+        else
+            ++it;
+    }
 }
 
 /* Clears all pending unit-to-unit availability transactions. */
@@ -1746,6 +1800,7 @@ void ControlSignaling::clock(uint32_t ms)
 void ControlSignaling::resetU2UAvailabilityTransactions()
 {
     m_u2uAvailabilityTransactions.clear();
+    clearMFIds(TSBKO::IOSP_UU_VCH);
 }
 
 /* Clears all pending group-affiliation query transactions. */
@@ -1753,6 +1808,7 @@ void ControlSignaling::resetU2UAvailabilityTransactions()
 void ControlSignaling::resetGroupAffQueryTransactions()
 {
     m_groupAffQueryTransactions.clear();
+    clearMFIds(TSBKO::OSP_GRP_AFF_Q);
 }
 
 /* Write data processed from RF to the network. */
@@ -2858,6 +2914,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         if (grp) {
+            const uint8_t grantMFId = transactionMFId(srcId, dstId, TSBKO::IOSP_GRP_VCH, m_lastMFID);
             // callback RPC to permit the granted TG on the specified voice channel
             {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
@@ -2907,7 +2964,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             if (voiceChData.isExplicitCh()) {
                 std::unique_ptr<MBT_OSP_GRP_VCH_GRANT> osp = std::make_unique<MBT_OSP_GRP_VCH_GRANT>();
-                osp->setMFId(m_lastMFID);
+                osp->setMFId(grantMFId);
                 osp->setSrcId(srcId);
                 osp->setDstId(dstId);
                 osp->setGrpVchId(voiceChData.chId());
@@ -2934,7 +2991,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
 
             std::unique_ptr<IOSP_GRP_VCH> iosp = std::make_unique<IOSP_GRP_VCH>();
-            iosp->setMFId(m_lastMFID);
+            iosp->setMFId(grantMFId);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
             iosp->setGrpVchId(voiceChData.chId());
@@ -2962,6 +3019,9 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
         }
         else {
+            uint8_t grantMFId = transactionMFId(srcId, dstId, TSBKO::IOSP_UU_VCH, m_lastMFID);
+            if (!hasMFIdTransaction(srcId, dstId, TSBKO::IOSP_UU_VCH))
+                grantMFId = transactionMFId(dstId, srcId, TSBKO::IOSP_UU_VCH, grantMFId);
             // callback RPC to permit the granted TG on the specified voice channel
             {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
@@ -3077,7 +3137,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
             if (voiceChData.isExplicitCh()) {
                 std::unique_ptr<MBT_OSP_UU_VCH_GRANT> osp = std::make_unique<MBT_OSP_UU_VCH_GRANT>();
-                osp->setMFId(m_lastMFID);
+                osp->setMFId(grantMFId);
                 osp->setSrcId(srcId);
                 osp->setDstId(dstId);
                 osp->setGrpVchId(voiceChData.chId());
@@ -3104,7 +3164,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             }
 
             std::unique_ptr<IOSP_UU_VCH> iosp = std::make_unique<IOSP_UU_VCH>();
-            iosp->setMFId(m_lastMFID);
+            iosp->setMFId(grantMFId);
             iosp->setSrcId(srcId);
             iosp->setDstId(dstId);
             iosp->setGrpVchId(voiceChData.chId());
@@ -3240,7 +3300,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
         return false;
 
     std::unique_ptr<OSP_SNDCP_CH_GNT> osp = std::make_unique<OSP_SNDCP_CH_GNT>();
-    osp->setMFId(m_lastMFID);
+    osp->setMFId(transactionMFId(srcId, srcId, TSBKO::ISP_SNDCP_CH_REQ, m_lastMFID));
     osp->siteIdenEntry(m_p25->m_idenEntry);
     osp->setSrcId(srcId);
     osp->setDstId(srcId);
@@ -3362,7 +3422,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
 void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<IOSP_UU_ANS> iosp = std::make_unique<IOSP_UU_ANS>();
-    iosp->setMFId(m_lastMFID);
+    iosp->setMFId(transactionMFId(srcId, dstId, TSBKO::IOSP_UU_VCH, m_lastMFID));
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
 
@@ -3403,7 +3463,10 @@ void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bo
 void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<OSP_DENY_RSP> osp = std::make_unique<OSP_DENY_RSP>();
-    osp->setMFId(m_lastMFID);
+    uint8_t mfId = transactionMFId(srcId, dstId, service, m_lastMFID);
+    if (!hasMFIdTransaction(srcId, dstId, service))
+        mfId = transactionMFId(dstId, srcId, service, mfId);
+    osp->setMFId(mfId);
     osp->setAIV(aiv);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
@@ -3432,7 +3495,7 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
 uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstId)
 {
     std::unique_ptr<IOSP_GRP_AFF> iosp = std::make_unique<IOSP_GRP_AFF>();
-    iosp->setMFId(m_lastMFID);
+    iosp->setMFId(transactionMFId(srcId, dstId, TSBKO::IOSP_GRP_AFF, m_lastMFID));
     iosp->setAnnounceGroup(m_announcementGroup);
     iosp->setSrcId(srcId);
     iosp->setDstId(dstId);
@@ -3543,7 +3606,7 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
 void ControlSignaling::writeRF_TSDU_U_Reg_Rsp(uint32_t srcId, uint32_t sysId)
 {
     std::unique_ptr<IOSP_U_REG> iosp = std::make_unique<IOSP_U_REG>();
-    iosp->setMFId(m_lastMFID);
+    iosp->setMFId(transactionMFId(srcId, srcId, TSBKO::IOSP_U_REG, m_lastMFID));
     iosp->setResponse(ResponseCode::ACCEPT);
     iosp->setSrcId(srcId);
     iosp->setDstId(srcId);
@@ -3597,7 +3660,7 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 
     if (dereged) {
         std::unique_ptr<OSP_U_DEREG_ACK> osp = std::make_unique<OSP_U_DEREG_ACK>();
-        osp->setMFId(m_lastMFID);
+        osp->setMFId(transactionMFId(srcId, WUID_FNE, TSBKO::ISP_U_DEREG_REQ, m_lastMFID));
         osp->setSrcId(WUID_FNE);
         osp->setDstId(srcId);
 
@@ -3619,7 +3682,10 @@ void ControlSignaling::writeRF_TSDU_U_Dereg_Ack(uint32_t srcId)
 void ControlSignaling::writeRF_TSDU_Queue(uint32_t srcId, uint32_t dstId, uint8_t reason, uint8_t service, bool grp, bool aiv)
 {
     std::unique_ptr<OSP_QUE_RSP> osp = std::make_unique<OSP_QUE_RSP>();
-    osp->setMFId(m_lastMFID);
+    uint8_t mfId = transactionMFId(srcId, dstId, service, m_lastMFID);
+    if (!hasMFIdTransaction(srcId, dstId, service))
+        mfId = transactionMFId(dstId, srcId, service, mfId);
+    osp->setMFId(mfId);
     osp->setAIV(aiv);
     osp->setSrcId(srcId);
     osp->setDstId(dstId);
@@ -3643,7 +3709,7 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
     bool ret = false;
 
     std::unique_ptr<OSP_LOC_REG_RSP> osp = std::make_unique<OSP_LOC_REG_RSP>();
-    osp->setMFId(m_lastMFID);
+    osp->setMFId(transactionMFId(srcId, dstId, TSBKO::ISP_LOC_REG_REQ, m_lastMFID));
     osp->setResponse(ResponseCode::ACCEPT);
     osp->setDstId(dstId);
     osp->setSrcId(srcId);
@@ -3827,13 +3893,14 @@ uint64_t ControlSignaling::u2uTransactionKey(uint32_t callerId, uint32_t calledI
 /* Starts or replaces a pending U2U availability transaction. */
 
 void ControlSignaling::startU2UAvailabilityTransaction(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions,
-    bool originatingSite, bool answerRequired)
+    bool originatingSite, bool answerRequired, uint8_t mfId)
 {
     // remove any existing transactions involving either the caller or called ID before starting a new one
     for (auto it = m_u2uAvailabilityTransactions.begin(); it != m_u2uAvailabilityTransactions.end(); ) {
         const U2UAvailabilityTransaction& transaction = it->second;
         if (transaction.callerId == callerId || transaction.callerId == calledId ||
             transaction.calledId == callerId || transaction.calledId == calledId) {
+            clearMFId(transaction.callerId, transaction.calledId, TSBKO::IOSP_UU_VCH);
             it = m_u2uAvailabilityTransactions.erase(it);
         }
         else {
@@ -3845,4 +3912,58 @@ void ControlSignaling::startU2UAvailabilityTransaction(uint32_t callerId, uint32
     const uint64_t key = u2uTransactionKey(callerId, calledId);
     m_u2uAvailabilityTransactions.emplace(key, U2UAvailabilityTransaction(callerId, calledId, serviceOptions,
         originatingSite, answerRequired, U2U_AVAILABILITY_TIMER_TIMEOUT));
+
+    storeMFId(callerId, calledId, TSBKO::IOSP_UU_VCH, mfId, U2U_AVAILABILITY_TIMER_TIMEOUT);
+}
+
+/* Produces the ordered key for retained transaction MFID state. */
+
+uint64_t ControlSignaling::mfIdTransactionKey(uint32_t srcId, uint32_t dstId, uint8_t lco)
+{
+    return (static_cast<uint64_t>(lco & 0x3FU) << 48) | (static_cast<uint64_t>(srcId & 0xFFFFFFU) << 24) | (dstId & 0xFFFFFFU);
+}
+
+/* Stores retained MFID state for a control transaction. */
+
+void ControlSignaling::storeMFId(uint32_t srcId, uint32_t dstId, uint8_t lco, uint8_t mfId, uint32_t timeoutSeconds)
+{
+    const uint64_t key = mfIdTransactionKey(srcId, dstId, lco);
+    m_mfIdTransactions.erase(key);
+    m_mfIdTransactions.emplace(key, MFIdTransaction(srcId, dstId, lco, mfId, timeoutSeconds));
+}
+
+/* Returns retained transaction MFID, or the supplied compatibility fallback. */
+
+uint8_t ControlSignaling::transactionMFId(uint32_t srcId, uint32_t dstId, uint8_t lco, uint8_t fallback) const
+{
+    const auto transaction = m_mfIdTransactions.find(mfIdTransactionKey(srcId, dstId, lco));
+    return transaction != m_mfIdTransactions.end() ? transaction->second.mfId : fallback;
+}
+
+/* Tests whether retained MFID state exists for a control transaction. */
+
+bool ControlSignaling::hasMFIdTransaction(uint32_t srcId, uint32_t dstId, uint8_t lco) const
+{
+    return m_mfIdTransactions.find(mfIdTransactionKey(srcId, dstId, lco)) != m_mfIdTransactions.end();
+}
+
+/* Clears retained MFID state for one control transaction. */
+
+void ControlSignaling::clearMFId(uint32_t srcId, uint32_t dstId, uint8_t lco)
+{
+    m_mfIdTransactions.erase(mfIdTransactionKey(srcId, dstId, lco));
+}
+
+/* Clears retained MFID state for an LCO, optionally limited to a subscriber. */
+
+void ControlSignaling::clearMFIds(uint8_t lco, uint32_t subscriberId)
+{
+    // iterate through all MFID transactions and erase those matching the LCO and optionally the subscriber ID
+    for (auto it = m_mfIdTransactions.begin(); it != m_mfIdTransactions.end(); ) {
+        const MFIdTransaction& transaction = it->second;
+        if (transaction.lco == lco && (subscriberId == 0U || transaction.srcId == subscriberId || transaction.dstId == subscriberId))
+            it = m_mfIdTransactions.erase(it);
+        else
+            ++it;
+    }
 }
