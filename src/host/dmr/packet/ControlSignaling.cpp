@@ -208,13 +208,11 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     // verify the source RID is registered
                     VERIFY_SRCID_REG(csbk->toString(), ServiceKind::IND_VOICE_CALL, srcId);
 
-                    if (m_slot->s_authoritative) {
+                    if (m_slot->isGrantAuthoritative()) {
                         m_slot->beginU2UOACSU(srcId, dstId, isp->getServiceOptions());
                     } else {
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
-                        if (m_slot->s_network != nullptr)
-                            m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR,
-                                srcId, dstId, m_slot->m_slotNo, true, isp->getServiceOptions());
+                        m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, true, isp->getServiceOptions());
                     }
                     break;
                 case ServiceKind::CANCEL_CALL:
@@ -235,12 +233,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
 
                     writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 1U);
 
-                    if (m_slot->s_authoritative) {
+                    if (m_slot->isGrantAuthoritative()) {
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
                     } else {
-                        if (m_slot->s_network != nullptr)
-                            m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR,
-                                srcId, dstId, m_slot->m_slotNo, false, isp->getServiceOptions());
+                        m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, false, isp->getServiceOptions());
                     }
                     break;
                 case ServiceKind::IND_DATA_CALL:
@@ -535,6 +531,26 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         case CSBKO::UU_ANS_RSP:
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
+        }
+        break;
+        case CSBKO::TV_GRANT:
+        case CSBKO::BTV_GRANT:
+        case CSBKO::PV_GRANT:
+        {
+            const bool group = csbko != CSBKO::PV_GRANT;
+            const uint8_t serviceOptions = (csbk->getEmergency() ? 0x80U : 0x00U) | 0x04U;
+
+            Slot* tscc = m_slot->s_dmr->getTSCCSlot();
+            if (tscc != nullptr && tscc->m_enableTSCC && tscc->m_dedicatedTSCC && !tscc->s_affiliations->isGranted(dstId)) {
+                if (!tscc->m_control->writeRF_CSBK_Grant(srcId, dstId, serviceOptions, group, true) &&
+                    tscc->s_network != nullptr) {
+                    tscc->s_network->writeGrantRelease(modem::DVM_STATE::STATE_DMR, srcId, dstId, 0U, !group, true);
+                }
+            }
+
+            // The FNE grant carries no site-specific channel assignment. The
+            // TSCC has either rebuilt it with local RF data or rejected it.
+            handled = true;
         }
         break;
         case CSBKO::RAND:
@@ -1115,8 +1131,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         // callback RPC to permit the granted TG on the specified voice channel
-        if (tscc->s_authoritative && tscc->m_supervisor &&
-            tscc->s_channelNo != chNo) {
+        if (tscc->s_channelNo != chNo) {
             ::lookups::VoiceChData voiceChData = tscc->s_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();
@@ -1210,8 +1225,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         // callback RPC to permit the granted TG on the specified voice channel
-        if (tscc->s_authoritative && tscc->m_supervisor &&
-            tscc->s_channelNo != chNo) {
+        if (tscc->s_channelNo != chNo) {
             ::lookups::VoiceChData voiceChData = tscc->s_affiliations->rfCh()->getRFChData(chNo);
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
                 json::object req = json::object();

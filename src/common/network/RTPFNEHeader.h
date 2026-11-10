@@ -60,6 +60,7 @@ namespace network
             PING = 0x74U,                           //!< Ping
             PONG = 0x75U,                           //!< Pong
 
+            GRANT_REL = 0x79U,                      //!< Grant Release
             GRANT_REQ = 0x7AU,                      //!< Grant Request
             INCALL_CTRL = 0x7BU,                    //!< In-Call Control
             KEY_REQ = 0x7CU,                        //!< Encryption Key TEK Request

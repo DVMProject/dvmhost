@@ -185,14 +185,13 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
                 (rcch->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
                 (rcch->getPriority() & 0x07U);                                      // Priority
 
-            if (m_nxdn->m_authoritative) {
+            if (m_nxdn->isGrantAuthoritative()) {
                 if (!group && m_nxdn->m_unitToUnitAvailCheck)
                     beginU2UAvailability(srcId, dstId, serviceOptions);
                 else
                     writeRF_Message_Grant(srcId, dstId, serviceOptions, group);
             } else {
-                if (m_nxdn->m_network != nullptr)
-                    m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, !group, serviceOptions);
+                m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, !group, serviceOptions);
             }
         }
         break;
@@ -321,7 +320,11 @@ bool ControlSignaling::processNetwork(FuncChannelType::E fct, ChOption::E option
                             (rcch->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
                             (rcch->getPriority() & 0x07U);                                  // Priority
 
-                        writeRF_Message_Grant(srcId, dstId, serviceOptions, rcch->getGroup(), true);
+                        const bool group = rcch->getGroup();
+                        if (!writeRF_Message_Grant(srcId, dstId, serviceOptions, group, true) &&
+                            m_nxdn->m_network != nullptr) {
+                            m_nxdn->m_network->writeGrantRelease(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, !group, true);
+                        }
                     }
                 }
             }
@@ -753,7 +756,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
     }
 
     // callback RPC to permit the granted TG on the specified voice channel
-    if (m_nxdn->m_authoritative && m_nxdn->m_supervisor) {
+    {
         ::lookups::VoiceChData voiceChData = m_nxdn->m_affiliations->rfCh()->getRFChData(chNo);
         if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
             chNo != m_nxdn->m_siteData.channelNo()) {
@@ -791,7 +794,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
                 return false;
             }
         }
-        else {
+        else if (chNo != m_nxdn->m_siteData.channelNo()) {
             ::LogError((net) ? LOG_NET : LOG_RF, "NXDN, %s, failed to permit TG for use, chNo = %u", rcch->toString().c_str(), chNo);
         }
     }

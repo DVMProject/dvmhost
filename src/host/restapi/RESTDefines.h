@@ -59,7 +59,6 @@
 
 #define PUT_MDM_KILL                    "/mdm/kill"
 
-#define PUT_SET_SUPERVISOR              "/set-supervisor"
 #define PUT_PERMIT_TG                   "/permit-tg"
 #define PUT_GRANT_TG                    "/grant-tg"
 #define GET_RELEASE_GRNTS               "/release-grants"

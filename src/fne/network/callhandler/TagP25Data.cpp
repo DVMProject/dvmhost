@@ -922,29 +922,37 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
         }
     }
 
+    // a private call remains one grant when either participant retries or
+    // becomes the next talker; group calls retain destination-only ownership
+    uint32_t grantOwner = dstId;
+    bool existingU2U = unitToUnit && m_network->m_globalAff->isGranted(dstId) && !m_network->m_globalAff->isGroup(dstId) && m_network->m_globalAff->getGrantedSrcId(dstId) == srcId;
+    if (unitToUnit && !existingU2U) {
+        grantOwner = m_network->m_globalAff->getGrantedBySrcId(dstId);
+        existingU2U = grantOwner == srcId && m_network->m_globalAff->isGranted(grantOwner) && !m_network->m_globalAff->isGroup(grantOwner);
+    }
+
+    if (existingU2U) {
+        m_network->m_globalAff->touchGrant(grantOwner);
+    }
+    else if (m_network->m_globalAff->isGranted(dstId) || !m_network->m_globalAff->grantCh(dstId, srcId, peerId, fne_lookups::GRANT_TIMER_TIMEOUT, !unitToUnit)) {
+        return false;
+    }
+
     // repeat traffic to the connected peers
     if (m_network->peerCount() > 0U) {
         const uint32_t registeredPeerId = unitToUnit ? m_network->findPeerUnitReg(dstId) : 0U;
         for (const auto& peer : m_network->peersSnapshot()) {
-            if (peerId != peer.first) {
-                if (registeredPeerId != 0U && peer.first != registeredPeerId)
-                    continue;
-                if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
-                    continue;
+            if (registeredPeerId != 0U && peer.first != registeredPeerId && peer.first != peerId)
+                continue;
+            if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
+                continue;
 
-                write_TSDU_Grant(peer.first, srcId, dstId, serviceOptions, !unitToUnit);
-            }
+            write_TSDU_Grant(peer.first, srcId, dstId, serviceOptions, !unitToUnit,
+                peer.first == peerId);
         }
     }
 
-    // check if the destination has been granted globally
-    if (!m_network->m_globalAff->isGranted(dstId)) {
-        if (m_network->m_globalAff->grantCh(dstId, srcId, peerId, fne_lookups::GRANT_TIMER_TIMEOUT, !unitToUnit)) {
-            return true;
-        }
-    }
-
-    return false;
+    return true;
 }
 
 /* Helper to trigger a call takeover from a In-Call control event. */
@@ -2140,7 +2148,8 @@ bool TagP25Data::validate(uint32_t peerId, lc::LC& control, DUID::E duid, const 
 
 /* Helper to write a grant packet. */
 
-bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp)
+bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId,
+    uint8_t serviceOptions, bool grp, bool requestingPeer)
 {
     bool emergency = ((serviceOptions & 0xFFU) & 0x80U) == 0x80U;           // Emergency Flag
     bool encryption = ((serviceOptions & 0xFFU) & 0x40U) == 0x40U;          // Encryption Flag
@@ -2150,7 +2159,7 @@ bool TagP25Data::write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstI
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
-    if (grp) {
+    if (grp && !requestingPeer) {
         // check the affiliations for this peer to see if we can grant traffic
         std::shared_ptr<fne_lookups::AffiliationLookup> aff = m_network->getPeerAffiliations(peerId);
         if (aff == nullptr) {

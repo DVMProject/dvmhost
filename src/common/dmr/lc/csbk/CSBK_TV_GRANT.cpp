@@ -27,6 +27,7 @@ CSBK_TV_GRANT::CSBK_TV_GRANT() : CSBK(),
     m_lateEntry(false)
 {
     m_CSBKO = CSBKO::TV_GRANT;
+    m_GI = true;
 }
 
 /* Decode a control signalling block. */
@@ -35,7 +36,21 @@ bool CSBK_TV_GRANT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    /* stub */
+    uint8_t csbk[DMR_CSBK_LENGTH_BYTES];
+    ::memset(csbk, 0x00U, DMR_CSBK_LENGTH_BYTES);
+
+    if (!CSBK::decode(data, csbk))
+        return false;
+
+    const ulong64_t csbkValue = CSBK::toValue(csbk);
+    m_logicalCh1 = (uint32_t)((csbkValue >> 52) & 0xFFFU);                          // Logical Physical Channel 1
+    m_slotNo = ((csbkValue >> 51) & 0x01U) == 0x01U ? 2U : 1U;                      // Logical Slot Number
+    m_lateEntry = ((csbkValue >> 50) & 0x01U) == 0x01U;                             // Late Entry
+    m_emergency = ((csbkValue >> 49) & 0x01U) == 0x01U;                             // Emergency
+    m_siteOffsetTiming = ((csbkValue >> 48) & 0x01U) == 0x01U;                      // Site Timing: Aligned or Offset
+    m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                            // Talkgroup ID
+    m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Source Radio Address
+    m_GI = true;
 
     return true;
 }

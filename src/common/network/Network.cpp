@@ -128,6 +128,21 @@ bool Network::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint
     return BaseNetwork::writeGrantReq(mode, srcId, dstId, slot, unitToUnit, serviceOptions);
 }
 
+/* Releases a grant previously assigned by the connected FNE. */
+
+bool Network::writeGrantRelease(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+    const uint8_t slot, const bool unitToUnit, const bool failed)
+{
+    return BaseNetwork::writeGrantRelease(mode, srcId, dstId, slot, unitToUnit, failed);
+}
+
+/* Determines whether the connected FNE can currently own grant decisions. */
+
+bool Network::hasGrantAuthority() const
+{
+    return m_status == NET_STAT_RUNNING || m_status == NET_STAT_MST_RUNNING;
+}
+
 /* Resets the DMR ring buffer for the given slot. */
 
 void Network::resetDMR(uint32_t slotNo)

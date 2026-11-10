@@ -155,7 +155,7 @@ namespace p25
              */
             bool isBusy() const;
 
-            /** @name Supervisory Control */
+            /** @name Traffic Permit Control */
             /** 
              * @brief Permits a destination on a non-authoritative Phase 2 slot. 
              * @param dstId Destination ID.

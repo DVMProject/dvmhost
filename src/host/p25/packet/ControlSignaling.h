@@ -147,6 +147,7 @@ namespace p25
              */
             void setLastMFId(uint8_t mfId) { m_lastMFID = mfId; }
 
+
             /**
              * @brief Flag indicating whether P25 TSBK verbosity is enabled or not.
              * @returns bool Flag indicating whether TSBK verbosity is enabled.
@@ -322,8 +323,9 @@ namespace p25
              * @param tsbk TSBK to write to network.
              * @param data Buffer containing encoded TSBK.
              * @param autoReset After writing TSBK to network, reset P25 network state.
+             * @param inbound Flag indicating the TSBK originated on the inbound RF path.
              */
-            void writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset);
+            void writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset, bool inbound = true);
             /**
              * @brief Write data processed from RF to the network.
              * @param tduLc TDULC to write to network.

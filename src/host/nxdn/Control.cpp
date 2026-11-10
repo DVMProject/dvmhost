@@ -62,7 +62,6 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_data(nullptr),
     m_control(nullptr),
     m_authoritative(authoritative),
-    m_supervisor(false),
     m_ran(ran),
     m_timeout(timeout),
     m_modem(modem),
@@ -198,13 +197,11 @@ void Control::reset()
 
 /* Helper to set NXDN configuration options. */
 
-void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, lookups::VoiceChData controlChData,
+void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, lookups::VoiceChData controlChData,
     uint16_t siteId, uint32_t sysId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node nxdnProtocol = conf["protocols"]["nxdn"];
-
-    m_supervisor = supervisor;
 
     m_control->m_verifyAff = nxdnProtocol["verifyAff"].as<bool>(false);
     m_control->m_verifyReg = nxdnProtocol["verifyReg"].as<bool>(false);
@@ -285,20 +282,24 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
-        // callback REST API to clear TG permit for the granted TG on the specified voice channel
-        if (m_authoritative && m_supervisor) {
-            ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
-            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
-                chNo != m_siteData.channelNo()) {
-                json::object req = json::object();
-                dstId = 0U; // clear TG value
-                req["dstId"].set<uint32_t>(dstId);
+        const bool networkGrant = m_affiliations->isNetGranted(dstId);
+        const bool unitToUnit = !m_affiliations->isGroup(dstId);
+        if (!m_authoritative && networkGrant && m_network != nullptr) {
+            m_network->writeGrantRelease(modem::DVM_STATE::STATE_NXDN, srcId, dstId, slot, unitToUnit);
+        }
 
-                g_RPC->req(RPC_PERMIT_NXDN_TG, req, nullptr, voiceChData.address(), voiceChData.port());
-            }
-            else {
-                ::LogError(LOG_NXDN, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to clear TG permit, chNo = %u", chNo);
-            }
+        // clear the TG permit on the selected remote voice channel
+        ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
+        if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+            chNo != m_siteData.channelNo()) {
+            json::object req = json::object();
+            dstId = 0U; // clear TG value
+            req["dstId"].set<uint32_t>(dstId);
+
+            g_RPC->req(RPC_PERMIT_NXDN_TG, req, nullptr, voiceChData.address(), voiceChData.port());
+        }
+        else if (chNo != m_siteData.channelNo()) {
+            ::LogError(LOG_NXDN, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to clear TG permit, chNo = %u", chNo);
         }
     });
 
@@ -334,8 +335,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
-            if (m_supervisor)
-                LogInfoEx(LOG_NXDN, "Host is configured to operate as a NXDN control channel, site controller mode.");
+            LogInfoEx(LOG_NXDN, "Host is configured to operate as a NXDN control channel.");
         }
 
         if (m_defaultNetIdleTalkgroup != 0U) {
@@ -817,6 +817,13 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     m_permittedDstId = dstId;
+}
+
+/* Determines whether this control channel currently owns grant decisions. */
+
+bool Control::isGrantAuthoritative() const
+{
+    return m_authoritative || m_network == nullptr || !m_network->hasGrantAuthority();
 }
 
 /* Grants a TGID on a non-authoritative host. */

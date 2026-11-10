@@ -303,9 +303,11 @@ namespace network
              * @param dstId Destination ID.
              * @param serviceOptions Service Options.
              * @param grp Flag indicating the destination ID is a talkgroup.
+             * @param requestingPeer Flag indicating routing checks were already satisfied by the grant request.
              * @returns True, if granted, otherwise false.
              */
-            bool write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp);
+            bool write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId,
+                uint8_t serviceOptions, bool grp, bool requestingPeer = false);
             /**
              * @brief Helper to write a deny packet.
              * @param peerId Peer ID.

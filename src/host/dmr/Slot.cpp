@@ -165,7 +165,6 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_tsccAdjSSCnt(0U),
     m_disableGrantSrcIdCheck(false),
     m_lastLateEntry(0U),
-    m_supervisor(false),
     m_notifyCC(true),
     m_ccDebug(debug),
     m_verbose(verbose),
@@ -399,6 +398,13 @@ uint32_t Slot::getFrame(uint8_t* data, bool* imm)
 
 void Slot::processNetwork(const data::NetData& dmrData)
 {
+    const DataType::E dataType = dmrData.getDataType();
+    Slot* tscc = s_dmr->getTSCCSlot();
+    const bool fneGrantControl = !s_authoritative && s_network != nullptr &&
+        s_network->hasGrantAuthority() && tscc != nullptr && tscc->m_enableTSCC &&
+        tscc->m_dedicatedTSCC && (dataType == DataType::CSBK ||
+        dataType == DataType::MBC_HEADER || dataType == DataType::MBC_DATA);
+
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
         return;
@@ -427,19 +433,6 @@ void Slot::processNetwork(const data::NetData& dmrData)
             }
         }
     }
-
-    // don't process network frames if this modem isn't authoritative
-    if (!s_authoritative && m_permittedDstId != dmrData.getDstId()) {
-        if (!g_disableNonAuthoritativeLogging)
-            LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
-        return;
-    }
-
-    m_networkWatchdog.start();
-
-    DataType::E dataType = dmrData.getDataType();
-
-    Slot* tscc = s_dmr->getTSCCSlot();
 
     bool enableTSCC = false;
     if (tscc != nullptr)
@@ -505,6 +498,15 @@ void Slot::processNetwork(const data::NetData& dmrData)
                 return;
         }
     }
+
+    // don't process network frames if this modem isn't authoritative
+    if (!s_authoritative && !fneGrantControl && m_permittedDstId != dmrData.getDstId()) {
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
+        return;
+    }
+
+    m_networkWatchdog.start();
 
     switch (dataType)
     {
@@ -934,6 +936,13 @@ void Slot::permittedTG(uint32_t dstId)
     m_permittedDstId = dstId;
 }
 
+/* Determines whether this control channel currently owns grant decisions. */
+
+bool Slot::isGrantAuthoritative() const
+{
+    return s_authoritative || s_network == nullptr || !s_network->hasGrantAuthority();
+}
+
 /* Grants a TGID on a non-authoritative host. */
 
 void Slot::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
@@ -1176,6 +1185,12 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 
     // set the grant release callback
     s_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
+        const bool networkGrant = s_affiliations->isNetGranted(dstId);
+        const bool unitToUnit = !s_affiliations->isGroup(dstId);
+        if (!s_authoritative && networkGrant && s_network != nullptr) {
+            s_network->writeGrantRelease(modem::DVM_STATE::STATE_DMR, srcId, dstId, slot, unitToUnit);
+        }
+
         Slot* tscc = s_dmr->getTSCCSlot();
         if (tscc != nullptr) {
             if (chNo == tscc->s_channelNo) {
@@ -1196,19 +1211,17 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                 ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
             }
 
-            // callback REST API to clear TG permit for the granted TG on the specified voice channel
-            if (s_authoritative && s_dmr->m_supervisor) {
-                if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                    json::object req = json::object();
-                    dstId = 0U; // clear TG value
-                    req["dstId"].set<uint32_t>(dstId);
-                    req["slot"].set<uint8_t>(slot);
+            // clear the TG permit on the selected remote voice channel
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                json::object req = json::object();
+                dstId = 0U; // clear TG value
+                req["dstId"].set<uint32_t>(dstId);
+                req["slot"].set<uint8_t>(slot);
 
-                    g_RPC->req(RPC_PERMIT_DMR_TG, req, nullptr, voiceChData.address(), voiceChData.port());
-                }
-                else {
-                    ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
-                }
+                g_RPC->req(RPC_PERMIT_DMR_TG, req, nullptr, voiceChData.address(), voiceChData.port());
+            }
+            else {
+                ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
             }
         }
     });

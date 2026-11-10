@@ -222,6 +222,18 @@ public:
     static bool processNXDNGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
         uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions = 4U);
     /**
+     * @brief Processes a synthetic FNE grant release.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Peer requesting the release.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the grant is an individual call.
+     * @param failed Whether the owning site failed to commit the grant locally.
+     * @return True if a matching grant was released.
+     */
+    static bool processGrantRelease(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, bool failed = false);
+    /**
      * @brief Sets whether unit-to-unit traffic is globally disabled.
      * @param network The TrafficNetwork instance.
      * @param disabled Whether unit-to-unit traffic is disabled.

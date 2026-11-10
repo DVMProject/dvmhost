@@ -1052,3 +1052,17 @@ TEST_CASE("NXDN rfTGHang zero fallback arms rfLossWatchdog and recovers RF state
     REQUIRE(HostTestHooks::nxdnRFState(*harness.m_control) == RS_RF_LISTENING);
     REQUIRE_FALSE(HostTestHooks::nxdnRFLossWatchdog(*harness.m_control).isRunning());
 }
+
+TEST_CASE("NXDN grant authority follows configuration and FNE availability",
+    "[nxdn][host][control][grant-authority]")
+{
+    NXDNHostHarness delegated(false, true);
+    REQUIRE(delegated.m_control->isGrantAuthoritative());
+
+    delegated.network()->activateForTest();
+    REQUIRE_FALSE(delegated.m_control->isGrantAuthoritative());
+
+    NXDNHostHarness local(true, true);
+    local.network()->activateForTest();
+    REQUIRE(local.m_control->isGrantAuthoritative());
+}

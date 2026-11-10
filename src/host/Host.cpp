@@ -129,7 +129,6 @@ Host::Host(const std::string& confFile) :
     m_p25QueueSizeBytes(2592U), // 12 frames
     m_nxdnQueueSizeBytes(1488U), // 31 frames
     m_authoritative(true),
-    m_supervisor(false),
     m_dmr1RejCnt(0U),
     m_dmr2RejCnt(0U),
     m_p25RejCnt(0U),
@@ -461,7 +460,7 @@ int Host::run()
         m_dmr = std::make_unique<dmr::Control>(m_authoritative, m_dmrColorCode, callHang, m_dmrQueueSizeBytes,
             embeddedLCOnly, dumpTAData, m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, 
             m_idenTable, rssi, jitter, dmrDumpDataPacket, dmrRepeatDataPacket, dmrDumpCsbkData, dmrDebug, dmrVerbose);
-        m_dmr->setOptions(m_conf, m_supervisor, m_controlChData, m_dmrNetId, m_siteId, m_channelId, 
+        m_dmr->setOptions(m_conf, m_controlChData, m_dmrNetId, m_siteId, m_channelId,
             m_channelNo, true);
 
         if (dmrCtrlChannel) {
@@ -530,7 +529,7 @@ int Host::run()
         m_p25 = std::make_unique<p25::Control>(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
             m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
             p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose);
-        m_p25->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData,
+        m_p25->setOptions(m_conf, m_cwCallsign, m_controlChData,
             m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
 
         if (p25CtrlChannel) {
@@ -590,7 +589,7 @@ int Host::run()
         m_nxdn = std::make_unique<nxdn::Control>(m_authoritative, m_nxdnRAN, callHang, m_nxdnQueueSizeBytes,
             m_timeout, m_rfTalkgroupHang, m_modem, m_network, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, m_idenTable, rssi, 
             nxdnDumpRcchData, nxdnDebug, nxdnVerbose);
-        m_nxdn->setOptions(m_conf, m_supervisor, m_cwCallsign, m_controlChData, m_siteId, 
+        m_nxdn->setOptions(m_conf, m_cwCallsign, m_controlChData, m_siteId,
             m_sysId, m_channelId, m_channelNo, true);
 
         if (nxdnCtrlChannel) {

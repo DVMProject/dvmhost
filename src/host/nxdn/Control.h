@@ -112,7 +112,6 @@ namespace nxdn
         /**
          * @brief Helper to set NXDN configuration options.
          * @param conf Instance of the yaml::Node class.
-         * @param supervisor Flag indicating whether the DMR has supervisory functions.
          * @param cwCallsign CW callsign of this host.
          * @param controlChData Control Channel data.
          * @param siteId NXDN Site Code.
@@ -121,7 +120,7 @@ namespace nxdn
          * @param channelNo Channel Number.
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
-        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, lookups::VoiceChData controlChData,
+        void setOptions(yaml::Node& conf, const std::string cwCallsign, lookups::VoiceChData controlChData,
             uint16_t siteId, uint32_t sysId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /** @name CC Control */
@@ -186,17 +185,16 @@ namespace nxdn
         void clockSiteData(uint32_t ms);
         /** @} */
 
-        /** @name Supervisory Control */
-        /**
-         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
-         * @param supervisor Flag indicating whether control has supervisory functions.
-         */
-        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /**
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
          */
         void permittedTG(uint32_t dstId);
+        /**
+         * @brief Determines whether this control channel currently owns grant decisions.
+         * @return True for configured authority or disconnected-network fallback.
+         */
+        bool isGrantAuthoritative() const;
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -278,7 +276,6 @@ namespace nxdn
         packet::ControlSignaling* m_control;
 
         bool m_authoritative;
-        bool m_supervisor;
 
         uint32_t m_ran;
         uint32_t m_timeout;
@@ -402,7 +399,7 @@ namespace nxdn
          */
         void notifyCC_TouchGrant(uint32_t dstId);
 
-        /** @name Supervisory Control */
+        /** @name Traffic Permit Control */
         /**
          * @brief (RPC Handler) Permits a TGID on a non-authoritative host.
          * @param req JSON request.

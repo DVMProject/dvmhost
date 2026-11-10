@@ -255,12 +255,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     (tsbk->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
                     (tsbk->getPriority() & 0x07U);                                      // Priority
 
-                if (m_p25->m_authoritative) {
+                if (m_p25->isGrantAuthoritative()) {
                     writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
                 } else {
-                    if (m_p25->m_network != nullptr)
-                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
-                            srcId, dstId, 0U, false, serviceOptions);
+                    m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, false, serviceOptions);
                 }
             }
             break;
@@ -289,15 +287,13 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     // restart target availability checking
                     m_u2uAvailabilityTransactions.erase(u2uTransactionKey(srcId, dstId));
                     m_u2uAvailabilityTransactions.erase(u2uTransactionKey(dstId, srcId));
-                    if (m_p25->m_authoritative) {
+                    if (m_p25->isGrantAuthoritative()) {
                         // TIA-102.AABD-B 4.2.1.2.2 and 7.3.6: the requesting SU
                         // is first to talk and therefore occupies the grant source field
-                        writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false,
-                            false, false, 0U, false, srcId);
+                        writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false, false, false, 0U, false, srcId);
                     }
-                    else if (m_p25->m_network != nullptr) {
-                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
-                            srcId, dstId, 0U, true, serviceOptions);
+                    else {
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, serviceOptions);
                     }
                     break;
                 }
@@ -311,12 +307,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     // U2U request immediately; retain correlation state so a later PROCEED can
                     // reissue a grant that expired while the called unit was ringing
                     startU2UAvailabilityTransaction(srcId, dstId, serviceOptions, true, false);
-                    if (m_p25->m_authoritative) {
+                    if (m_p25->isGrantAuthoritative()) {
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
-                        if (m_p25->m_network != nullptr)
-                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
-                                srcId, dstId, 0U, true, serviceOptions);
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, serviceOptions);
                     }
                 }
             }
@@ -361,13 +355,12 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 // handle the response for the unit-to-unit availability request
                 if (iosp->getResponse() == ResponseCode::ANS_PROCEED) {
-                    if (m_p25->m_authoritative) {
+                    if (m_p25->isGrantAuthoritative()) {
                         // select the answering unit as first talker and address the grant
                         // to the original caller so both subscribers follow the assignment
                         writeRF_TSDU_Grant(srcId, dstId, transaction.serviceOptions, false, false, false, 0U, false, srcId);
                     } else {
-                        if (m_p25->m_network != nullptr)
-                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, transaction.serviceOptions);
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, transaction.serviceOptions);
                     }
 
                     m_u2uAvailabilityTransactions.erase(transactionIt);
@@ -1120,7 +1113,10 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                     (tsbk->getEncrypted() ? 0x40U : 0x00U) +                        // Encrypted Flag
                                     (tsbk->getPriority() & 0x07U);                                  // Priority
 
-                                writeRF_TSDU_Grant(srcId, dstId, serviceOptions, (tsbk->getLCO() == TSBKO::IOSP_GRP_VCH), true);
+                                const bool group = tsbk->getLCO() == TSBKO::IOSP_GRP_VCH;
+                                if (!writeRF_TSDU_Grant(srcId, dstId, serviceOptions, group, true) && m_p25->m_network != nullptr) {
+                                    m_p25->m_network->writeGrantRelease(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, !group, true);
+                                }
                             }
                         }
                     }
@@ -1156,12 +1152,12 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                             // handle the response based on the ISP code
                             if (iosp->getResponse() == ResponseCode::ANS_PROCEED) {
-                                if (m_p25->m_authoritative) {
+                                if (m_p25->isGrantAuthoritative()) {
                                     // select the answering unit as first talker and address the grant
                                     // to the original caller so both subscribers follow the assignment
                                     writeRF_TSDU_Grant(srcId, dstId, transaction.serviceOptions, false, false, false, 0U, false, srcId);
                                 }
-                                else if (m_p25->m_network != nullptr) {
+                                else {
                                     m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, transaction.serviceOptions);
                                 }
 
@@ -1761,7 +1757,7 @@ void ControlSignaling::resetGroupAffQueryTransactions()
 
 /* Write data processed from RF to the network. */
 
-void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset)
+void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset, bool inbound)
 {
     assert(tsbk != nullptr);
     assert(data != nullptr);
@@ -1789,7 +1785,8 @@ void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool 
     lc.setSrcId(tsbk->getSrcId());
     lc.setDstId(tsbk->getDstId());
 
-    m_p25->m_network->writeP25TSDU(lc, data, network::NET_CTRL_ISP);
+    const uint8_t controlByte = inbound ? network::NET_CTRL_ISP : 0U;
+    m_p25->m_network->writeP25TSDU(lc, data, controlByte);
     if (autoReset)
         m_p25->m_network->resetP25();
 }
@@ -1945,7 +1942,7 @@ void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool for
     P25Utils::setStatusBitsStartIdle(data + 2U);
 
     if (!noNetwork)
-        writeNetworkRF(tsbk, data + 2U, true);
+        writeNetworkRF(tsbk, data + 2U, true, false);
 
     // we always force any immediate TSDUs as single-block
     if (imm) {
@@ -2862,7 +2859,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
         if (grp) {
             // callback RPC to permit the granted TG on the specified voice channel
-            if (m_p25->m_authoritative && m_p25->m_supervisor) {
+            {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
@@ -2899,7 +2896,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         return false;
                     }
                 }
-                else {
+                else if (chNo != m_p25->m_siteData.channelNo()) {
                     ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
                 }
             }
@@ -2966,7 +2963,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
         else {
             // callback RPC to permit the granted TG on the specified voice channel
-            if (m_p25->m_authoritative && m_p25->m_supervisor) {
+            {
                 if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                     chNo != m_p25->m_siteData.channelNo()) {
                     json::object req = json::object();
@@ -3009,7 +3006,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         return false;
                     }
                 }
-                else {
+                else if (chNo != m_p25->m_siteData.channelNo()) {
                     ::LogError((net) ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_UU_VCH (Unit-to-Unit Voice Channel Request), failed to permit TG for use, chNo = %u-%u", voiceChData.chId(), chNo);
                 }
             }
@@ -3297,7 +3294,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
         ::lookups::VoiceChData voiceChData = m_p25->m_affiliations->rfCh()->getRFChData(chNo);
 
         // callback RPC to permit the granted TG on the specified voice channel
-        if (m_p25->m_authoritative && m_p25->m_supervisor) {
+        {
             if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
                 chNo != m_p25->m_siteData.channelNo()) {
                 json::object req = json::object();
@@ -3336,7 +3333,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                     return false;
                 }
             }
-            else {
+            else if (chNo != m_p25->m_siteData.channelNo()) {
                 ::LogError(LOG_RF, P25_TSDU_STR ", TSBKO, ISP_SNDCP_CH_REQ (SNDCP Data Channel Request), failed to permit for use, chNo = %u-%u", voiceChData.chId(), chNo);
             }
         }

@@ -120,6 +120,16 @@ public:
      */
     static void dmrStartNetVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId, bool group = true);
     /**
+     * @brief Injects an FNE-generated DMR voice grant response.
+     * @param slot Slot receiving the network CSBK.
+     * @param srcId Calling subscriber ID.
+     * @param dstId Called subscriber or talkgroup ID.
+     * @param group True for a talkgroup grant; false for a private grant.
+     * @param emergency Emergency service flag carried by the grant.
+     */
+    static void dmrProcessNetworkGrant(dmr::Slot& slot, uint32_t srcId, uint32_t dstId,
+        bool group, bool emergency = false);
+    /**
      * @brief Injects a synthetic DMR RF voice call frame into a slot.
      * @param slot DMR slot instance.
      * @param srcId Source ID for synthetic call.
@@ -133,9 +143,14 @@ public:
      */
     static void dmrDetachNetwork();
     /**
-     * @brief Configures one slot as a co-located Tier III control channel for tests.
+     * @brief Configures one slot as a Tier III control channel for tests.
+     * @param control DMR controller to configure.
+     * @param channelNo Control-channel number.
+     * @param tsccSlot Control-channel slot number.
+     * @param dedicated True to configure a dedicated TSCC.
      */
-    static void dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot);
+    static void dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot,
+        bool dedicated = false);
     /**
      * @brief Gets the active Tier III payload destination for a slot.
      */
@@ -267,6 +282,20 @@ public:
      */
     static void p25ConfigureRFGrantSteering(p25::Control& control, bool enabled, bool dedicated);
     /**
+     * @brief Configures whether a dedicated P25 control channel carries voice.
+     * @param control P25 control instance.
+     * @param enabled Flag indicating voice on the control channel is enabled.
+     */
+    static void p25SetVoiceOnControl(p25::Control& control, bool enabled);
+    /**
+     * @brief Runs P25 network-voice admission for a test call.
+     * @param control P25 control instance.
+     * @param srcId Source radio ID.
+     * @param dstId Destination ID.
+     * @returns bool True when the network voice frame must be discarded.
+     */
+    static bool p25CheckNetworkVoiceAdmission(p25::Control& control, uint32_t srcId, uint32_t dstId);
+    /**
      * @brief Tests whether the P25 affiliation table contains a grant.
      * @param control P25 control instance.
      * @param dstId Destination ID to test.
@@ -316,6 +345,13 @@ public:
      * @returns bool True if the network TSBK was accepted; otherwise, false.
      */
     static bool p25ProcessNetworkRawTSBK(p25::Control& control, const uint8_t* raw);
+    /**
+     * @brief Emits a P25 deny response through the RF control-signaling path.
+     * @param control P25 control instance.
+     * @param srcId Source radio ID.
+     * @param dstId Destination ID.
+     */
+    static void p25WriteDenyResponse(p25::Control& control, uint32_t srcId, uint32_t dstId);
     /**
      * @brief Tests whether one P25 private grant owns the specified RID pair.
      * @param control P25 control instance.

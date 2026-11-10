@@ -339,7 +339,10 @@ public:
      */
     P25TestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U, bool disallowUnitToUnit = false) :
         network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, false, true, false, false, true, true, false, false, false, false, disallowUnitToUnit),
-        m_resetP25Count(0U)
+        m_resetP25Count(0U),
+        m_lastTSDUControlByte(0U),
+        m_lastTSDULCO(0U),
+        m_tsduWriteCount(0U)
     {
         // keep protocol gates deterministic for this P25-focused harness
         m_dmrEnabled = false;
@@ -518,8 +521,36 @@ public:
         return m_rxP25StreamId;
     }
 
+    /**
+     * @brief Records a P25 TSDU write without using the UDP transport.
+     * @param control Link control for the TSDU.
+     * @param data Encoded TSDU data.
+     * @param controlByte Network direction flags.
+     * @returns bool Always true.
+     */
+    bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte = 0U) override
+    {
+        REQUIRE(data != nullptr);
+        m_lastTSDUControlByte = controlByte;
+        m_lastTSDULCO = control.getLCO();
+        ++m_tsduWriteCount;
+        return true;
+    }
+
+    /** @brief Gets the direction flags from the last P25 TSDU write. */
+    uint8_t lastTSDUControlByte() const { return m_lastTSDUControlByte; }
+
+    /** @brief Gets the LCO from the last P25 TSDU write. */
+    uint8_t lastTSDULCO() const { return m_lastTSDULCO; }
+
+    /** @brief Gets the number of P25 TSDU writes. */
+    uint32_t tsduWriteCount() const { return m_tsduWriteCount; }
+
 private:
     uint32_t m_resetP25Count;
+    uint8_t m_lastTSDUControlByte;
+    uint8_t m_lastTSDULCO;
+    uint32_t m_tsduWriteCount;
 };
 
 // ---------------------------------------------------------------------------
@@ -599,6 +630,31 @@ public:
     P25TestNetwork* m_network;
     p25::Control* m_control;
 };
+
+TEST_CASE("P25 deny responses retain outbound direction when mirrored to the network", "[p25][host][control][deny][direction]")
+{
+    P25HostHarness harness(true, true);
+
+    HostTestHooks::p25WriteDenyResponse(*harness.m_control, 1001U, 2001U);
+
+    REQUIRE(harness.network()->tsduWriteCount() == 1U);
+    REQUIRE(harness.network()->lastTSDULCO() == p25::defines::TSBKO::OSP_DENY_RSP);
+    REQUIRE((harness.network()->lastTSDUControlByte() & network::NET_CTRL_ISP) == 0U);
+}
+
+TEST_CASE("P25 dedicated control channels silently discard network voice unless voice on control is enabled",
+    "[p25][host][control][dedicated][network-voice]")
+{
+    P25HostHarness harness(false, true);
+    harness.network()->activateForTest();
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, true);
+
+    REQUIRE(HostTestHooks::p25CheckNetworkVoiceAdmission(*harness.m_control, 1001U, 2001U));
+
+    HostTestHooks::p25SetVoiceOnControl(*harness.m_control, true);
+    harness.m_control->permittedTG(2001U);
+    REQUIRE_FALSE(HostTestHooks::p25CheckNetworkVoiceAdmission(*harness.m_control, 1001U, 2001U));
+}
 
 TEST_CASE("P25 blocks inbound and outbound unit-to-unit network voice", "[p25][host][network][u2u][u2u-block]")
 {
@@ -1843,4 +1899,18 @@ TEST_CASE("P25 rfTGHang zero fallback arms rfLossWatchdog and recovers RF state"
 
     REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
     REQUIRE_FALSE(HostTestHooks::p25RFLossWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 grant authority follows configuration and FNE availability",
+    "[p25][host][control][grant-authority]")
+{
+    P25HostHarness delegated(false, true);
+    REQUIRE(delegated.m_control->isGrantAuthoritative());
+
+    delegated.network()->activateForTest();
+    REQUIRE_FALSE(delegated.m_control->isGrantAuthoritative());
+
+    P25HostHarness local(true, true);
+    local.network()->activateForTest();
+    REQUIRE(local.m_control->isGrantAuthoritative());
 }

@@ -60,7 +60,6 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_authoritative(authoritative),
-    m_supervisor(false),
     m_colorCode(colorCode),
     m_modem(modem),
     m_network(network),
@@ -114,13 +113,11 @@ Control::~Control()
 
 /* Helper to set DMR configuration options. */
 
-void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChData controlChData, 
+void Control::setOptions(yaml::Node& conf, ::lookups::VoiceChData controlChData,
     uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
-
-    m_supervisor = supervisor;
 
     Slot::s_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
 
@@ -163,13 +160,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         switch (m_tsccSlotNo) {
         case 1U:
             m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
-            m_slot1->setSupervisor(m_supervisor);
             m_slot1->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
             m_slot1->setCCDebug(ccDebug);
             break;
         case 2U:
             m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
-            m_slot2->setSupervisor(m_supervisor);
             m_slot2->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
             m_slot2->setCCDebug(ccDebug);
             break;
@@ -255,8 +250,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             if (disableGrantSourceIdCheck) {
                 LogInfo("    TSCC Disable Grant Source ID Check: yes");
             }
-            if (m_supervisor)
-                LogInfoEx(LOG_DMR, "Host is configured to operate as a DMR TSCC, site controller mode.");
+            LogInfoEx(LOG_DMR, "Host is configured to operate as a DMR TSCC.");
         }
 
         if (defaultNetIdleTalkgroup != 0U) {
@@ -445,27 +439,6 @@ void Control::clockSiteData(uint32_t ms)
 {
     m_slot1->clockSiteData(ms);
     m_slot2->clockSiteData(ms);
-}
-
-/* Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels. */
-
-void Control::setSupervisor(bool supervisor)
-{
-    if (!m_enableTSCC) {
-        return;
-    }
-
-    switch (m_tsccSlotNo) {
-    case 1U:
-        m_slot1->setSupervisor(supervisor);
-        break;
-    case 2U:
-        m_slot2->setSupervisor(supervisor);
-        break;
-    default:
-        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", m_tsccSlotNo);
-        break;
-    }
 }
 
 /* Permits a TGID on a non-authoritative host. */

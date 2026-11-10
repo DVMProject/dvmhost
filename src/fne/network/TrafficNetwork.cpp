@@ -1536,6 +1536,7 @@ void TrafficNetwork::processNetworkRx(NetPacketRequest* req)
 
                 { NET_FUNC::PING, &TrafficNetwork::PacketHandler::ping },
 
+                { NET_FUNC::GRANT_REL, &TrafficNetwork::PacketHandler::grantRelease },
                 { NET_FUNC::GRANT_REQ, &TrafficNetwork::PacketHandler::grantRequest },
 
                 { NET_FUNC::INCALL_CTRL, &TrafficNetwork::PacketHandler::inCallControl },
@@ -2338,6 +2339,38 @@ void TrafficNetwork::processInCallCtrl(network::NET_ICC::ENUM command, network::
     default:
         break;
     }
+}
+
+/* Releases a global grant when its owner and call parties match. */
+
+bool TrafficNetwork::processGrantRelease(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId,
+    bool failed)
+{
+    uint32_t grantOwner = dstId;
+    if (unitToUnit && (!m_globalAff->isGranted(grantOwner) || m_globalAff->isGroup(grantOwner) || m_globalAff->getGrantedSrcId(grantOwner) != srcId)) {
+        grantOwner = m_globalAff->getGrantedBySrcId(dstId);
+    }
+
+    if (!m_globalAff->isGranted(grantOwner))
+        return false;
+    if (m_globalAff->getSSRCByGrant(grantOwner) != peerId)
+        return false;
+    if (m_globalAff->isGroup(grantOwner) == unitToUnit)
+        return false;
+
+    const uint32_t grantedSrcId = m_globalAff->getGrantedSrcId(grantOwner);
+    const bool matchingDirection = grantedSrcId == srcId && grantOwner == dstId;
+    const bool matchingReverseDirection = unitToUnit && grantedSrcId == dstId && grantOwner == srcId;
+    if (!matchingDirection && !matchingReverseDirection)
+        return false;
+
+    if (failed) {
+        LogWarning(LOG_MASTER, "PEER %u failed to commit grant locally, releasing, srcId = %u, dstId = %u",
+            peerId, srcId, dstId);
+    }
+
+    m_globalAff->releaseGrant(grantOwner, false);
+    return true;
 }
 
 /* Helper to send the network metadata to the specified peer in a separate thread. */

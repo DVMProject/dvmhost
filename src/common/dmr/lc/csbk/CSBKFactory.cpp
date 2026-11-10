@@ -128,6 +128,11 @@ std::unique_ptr<CSBK> CSBKFactory::createCSBK(const uint8_t* data, DataType::E d
         return decode(new CSBK_BROADCAST(), data, dataType);
     case CSBKO::MAINT:
         return decode(new CSBK_MAINT(), data, dataType);
+    case CSBKO::TV_GRANT:
+    case CSBKO::BTV_GRANT:
+        return decode(new CSBK_TV_GRANT(), data, dataType);
+    case CSBKO::PV_GRANT:
+        return decode(new CSBK_PV_GRANT(), data, dataType);
 
     default:
         LogError(LOG_DMR, "CSBKFactory::create(), unknown CSBK type, csbko = $%02X", CSBKO);

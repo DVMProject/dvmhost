@@ -342,6 +342,14 @@ bool FNETestHooks::processNXDNGrantRequest(TrafficNetwork& network, uint32_t pee
         sourceId, destinationId, unitToUnit, serviceOptions, peerId, 1U, 106U);
 }
 
+/* Processes a synthetic FNE grant release. */
+
+bool FNETestHooks::processGrantRelease(TrafficNetwork& network, uint32_t peerId,
+    uint32_t sourceId, uint32_t destinationId, bool unitToUnit, bool failed)
+{
+    return network.processGrantRelease(sourceId, destinationId, unitToUnit, peerId, failed);
+}
+
 /* Sets whether unit-to-unit traffic is globally disabled. */
 
 void FNETestHooks::disallowU2U(TrafficNetwork& network, bool disabled)

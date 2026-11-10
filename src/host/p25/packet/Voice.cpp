@@ -1594,6 +1594,11 @@ bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId, bool group)
 
 bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, bool group, defines::DUID::E duid)
 {
+    // a dedicated control channel does not carry network voice
+    if (m_p25->m_dedicatedControl && !m_p25->m_voiceOnControl) {
+        return true;
+    }
+
     // safety check: if the network is marked as not idle, but the last network destination ID is 0 *and* the 
     // network watchdog isn't running, then reset the network state to idle
     if (m_p25->m_netState != RS_NET_IDLE && m_p25->m_netLastDstId == 0U && !m_p25->m_networkWatchdog.isRunning()) {

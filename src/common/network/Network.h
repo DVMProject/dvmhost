@@ -187,6 +187,25 @@ namespace network
             const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions);
 
         /**
+         * @brief Releases a grant previously assigned by the connected FNE.
+         * @param mode DVM protocol mode owning the grant.
+         * @param srcId Source subscriber ID.
+         * @param dstId Destination subscriber or talkgroup ID.
+         * @param slot DMR or P25 Phase 2 slot number, or zero when not applicable.
+         * @param unitToUnit Flag indicating an individual-call grant.
+         * @param failed Flag indicating local RF grant commit failed.
+         * @return True if the release was written; otherwise false.
+         */
+        bool writeGrantRelease(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit, const bool failed = false);
+
+        /**
+         * @brief Determines whether the connected FNE can currently own grant decisions.
+         * @return True when the authenticated network session is running; otherwise false.
+         */
+        bool hasGrantAuthority() const;
+
+        /**
          * @brief Resets the DMR ring buffer for the given slot.
          * @param slotNo DMR slot ring buffer to reset.
          */

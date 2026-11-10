@@ -187,7 +187,6 @@ private:
     uint32_t m_nxdnQueueSizeBytes;
 
     bool m_authoritative;
-    bool m_supervisor;
 
     uint32_t m_dmr1RejCnt;
     uint32_t m_dmr2RejCnt;

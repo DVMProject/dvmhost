@@ -485,10 +485,32 @@ system:
     # Site Configuration
     #
     config:
-        # Flag indicating whether or not this host is authoritative (i.e. will automatically handle channel grant) for TGID operations.
+        # Controls how traffic is authorized and, for trunking control channels,
+        # which who owns channel-grant transactions (either the local host or the FNE).
+        #
+        # Role / operating mode                         Authoritative
+        # Standalone conventional repeater              true
+        # Standalone DVRS                               true
+        # Locally managed trunking control channel      true
+        # FNE-managed trunking control channel          false
+        # Trunked voice channel slaved to its CC        false
+        #
+        # true:  This host makes local traffic-admission decisions. A trunking
+        #        control channel also allocates and grants its own voice channels.
+        # false: Traffic must be explicitly permitted by the managing system. A
+        #        trunking control channel delegates grant transactions to the FNE
+        #        while the FNE connection is active, and falls back to local grant
+        #        handling when that connection is unavailable.
+        #
+        # IMPORTANT FOR TRUNKED VOICE CHANNELS:
+        #   When controlCh.rpcAddress and controlCh.rpcPort identify a control channel
+        #   and authoritative is false, this voice channel is slaved to that control
+        #   channel for traffic permits. It accepts only destinations the control
+        #   channel has permitted for an active grant, and clears the permit when the
+        #   grant is released. The control channel automatically permits the selected
+        #   remote voice channel before emitting a grant; no separate permit-control
+        #   flag is required.
         authoritative: true
-        # Flag indicating whether or not this host acts as a supervisor (i.e. will automatically handle permission) for voice channel TGID permission.
-        supervisor: false
 
         # Channel Identity (corresponds to the appropriate entry in the iden_table file).
         # Note: When using explicit channels, this represents the transmit channel number.

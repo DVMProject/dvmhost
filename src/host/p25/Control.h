@@ -120,7 +120,6 @@ namespace p25
         /**
          * @brief Helper to set P25 configuration options.
          * @param conf Instance of the yaml::Node class.
-         * @param supervisor Flag indicating whether the DMR has supervisory functions.
          * @param cwCallsign CW callsign of this host.
          * @param controlChData Control Channel data.
          * @param pSuperGroup 
@@ -132,7 +131,7 @@ namespace p25
          * @param channelNo Channel Number.
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
-        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
+        void setOptions(yaml::Node& conf, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
             uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /** @name CC Control */
@@ -203,12 +202,6 @@ namespace p25
         void clockSiteData(uint32_t ms);
         /** @} */
 
-        /** @name Supervisory Control */
-        /**
-         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
-         * @param supervisor Flag indicating whether control has supervisory functions.
-         */
-        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /**
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
@@ -225,6 +218,11 @@ namespace p25
          * @returns bool True when the traffic matches the active permit.
          */
         bool isPermitted(uint32_t srcId, uint32_t dstId, bool group) const;
+        /**
+         * @brief Determines whether this control channel currently owns grant decisions.
+         * @return True for configured authority or disconnected-network fallback.
+         */
+        bool isGrantAuthoritative() const;
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -307,7 +305,6 @@ namespace p25
         friend class lookups::P25AffiliationLookup;
 
         bool m_authoritative;
-        bool m_supervisor;
 
         uint32_t m_nac;
         uint32_t m_txNAC;
@@ -506,7 +503,7 @@ namespace p25
          */
         void writeRF_TDU(bool noNetwork, bool imm = false);
 
-        /** @name Supervisory Control */
+        /** @name Traffic Permit Control */
         /**
          * @brief (RPC Handler) Permits a TGID on a non-authoritative host.
          * @param req JSON request.

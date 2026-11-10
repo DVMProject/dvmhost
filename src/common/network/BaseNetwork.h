@@ -160,6 +160,15 @@ namespace network
     };
 
     /**
+     * @brief Grant-release status flags.
+     * @note These flags indicate the status of a grant release operation.
+     * @ingroup network_core
+     */
+    enum GRANT_RELEASE_FLAGS : uint8_t {
+        NET_GRANT_RELEASE_FAILED = 0x01U,           //!< Local RF grant commit failed
+    };
+
+    /**
      * @brief Peer Connection Class Enumerations
      * @note These values define which connection class a peer connection belongs to. This is used for determining how 
      *  to handle traffic from the peer.
@@ -463,6 +472,19 @@ namespace network
          */
         bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
             const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions);
+
+        /**
+         * @brief Writes a release for a grant previously assigned by the network.
+         * @param mode Digital mode owning the grant.
+         * @param srcId Source radio ID associated with the grant.
+         * @param dstId Destination radio or talkgroup ID associated with the grant.
+         * @param slot DMR or P25 Phase 2 slot number, or zero when not applicable.
+         * @param unitToUnit Flag indicating an individual-call grant.
+         * @param failed Flag indicating local RF grant commit failed.
+         * @returns bool True if the grant release was sent; otherwise false.
+         */
+        bool writeGrantRelease(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit, const bool failed = false);
 
         /**
          * @brief Writes a enc. key request to the network.

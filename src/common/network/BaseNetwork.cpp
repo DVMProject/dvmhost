@@ -111,8 +111,8 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     uint8_t buffer[MSG_HDR_SIZE];
     ::memset(buffer, 0x00U, MSG_HDR_SIZE);
 
-    SET_UINT32(srcId, buffer, 11U);                                                 // Source Address
-    SET_UINT32(dstId, buffer, 15U);                                                 // Destination Address
+    SET_UINT24(srcId, buffer, 11U);                                                 // Source Address
+    SET_UINT24(dstId, buffer, 15U);                                                 // Destination Address
     buffer[19U] = slot;                                                             // Slot Number
 
     if (unitToUnit)
@@ -122,6 +122,32 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
     buffer[21U] = serviceOptions;                                                   // Service Options
 
     return writeMaster({ NET_FUNC::GRANT_REQ, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, RTP_END_OF_CALL_SEQ, 0U);
+}
+
+/* Writes a grant release to the network. */
+
+bool BaseNetwork::writeGrantRelease(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+    const uint8_t slot, const bool unitToUnit, const bool failed)
+{
+    if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
+        return false;
+
+    uint8_t buffer[MSG_HDR_SIZE];
+    ::memset(buffer, 0x00U, MSG_HDR_SIZE);
+
+    SET_UINT24(srcId, buffer, 11U);
+    SET_UINT24(dstId, buffer, 15U);
+    buffer[19U] = slot;
+
+    if (unitToUnit)
+        buffer[19U] |= 0x80U;
+
+    buffer[20U] = mode;
+
+    if (failed)
+        buffer[21U] |= NET_GRANT_RELEASE_FAILED;
+
+    return writeMaster({ NET_FUNC::GRANT_REL, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, RTP_END_OF_CALL_SEQ, 0U);
 }
 
 /* Writes enc. key request to the network. */

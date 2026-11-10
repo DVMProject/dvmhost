@@ -81,3 +81,23 @@ void TrafficNetwork::PacketHandler::grantRequest(TrafficNetwork* network, NetPac
         }
     }
 }
+
+/* Handles NET_FUNC::GRANT_REL packets. */
+
+void TrafficNetwork::PacketHandler::grantRelease(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+{
+    TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
+    if (peerId == 0U || connection == nullptr)
+        return;
+
+    const std::string ip = udp::Socket::address(req->address);
+    if (!connection->connected() || connection->address() != ip)
+        return;
+
+    const uint32_t srcId = GET_UINT24(req->buffer, 11U);
+    const uint32_t dstId = GET_UINT24(req->buffer, 15U);
+    const bool unitToUnit = (req->buffer[19U] & 0x80U) == 0x80U;
+    const bool failed = (req->buffer[21U] & NET_GRANT_RELEASE_FAILED) == NET_GRANT_RELEASE_FAILED;
+
+    network->processGrantRelease(srcId, dstId, unitToUnit, peerId, failed);
+}

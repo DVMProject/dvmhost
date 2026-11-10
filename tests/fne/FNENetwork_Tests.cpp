@@ -798,7 +798,61 @@ TEST_CASE("FNE private-call grants target only the registered next hop",
                 harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true);
         }
         REQUIRE(accepted);
-        CHECK(writes == std::vector<uint32_t>{ TARGET_PEER });
+        std::sort(writes.begin(), writes.end());
+        CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, TARGET_PEER });
+    }
+}
+
+TEST_CASE("FNE private-call grants support retries and reverse talker direction",
+    "[fne][callhandler][routing][u2u][grants][continuation]")
+{
+    constexpr uint32_t SOURCE_PEER = 1001U;
+    constexpr uint32_t TARGET_PEER = 1002U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols = {
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (FNETestHooks::ParrotProtocol protocol : protocols) {
+        CAPTURE(static_cast<int>(protocol));
+        FNEHarness harness;
+        FNETestHooks::addPeer(harness.traffic, SOURCE_PEER, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, TARGET_PEER, network::NET_STAT_RUNNING, true);
+        harness.radios.addEntry(SOURCE_ID, true, "test source");
+        harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+        FNETestHooks::registerP25Unit(harness.traffic, SOURCE_PEER, SOURCE_ID);
+        FNETestHooks::registerP25Unit(harness.traffic, TARGET_PEER, DESTINATION_ID);
+
+        auto request = [&](uint32_t peerId, uint32_t sourceId, uint32_t destinationId) {
+            if (protocol == FNETestHooks::ParrotProtocol::DMR) {
+                return FNETestHooks::processDMRGrantRequest(
+                    harness.traffic, peerId, sourceId, destinationId, true);
+            }
+            if (protocol == FNETestHooks::ParrotProtocol::P25) {
+                return FNETestHooks::processP25GrantRequest(
+                    harness.traffic, peerId, sourceId, destinationId, true);
+            }
+            return FNETestHooks::processNXDNGrantRequest(
+                harness.traffic, peerId, sourceId, destinationId, true);
+        };
+
+        std::vector<uint32_t> writes;
+        FNETestHooks::capturePeerWrites(harness.traffic, writes);
+        REQUIRE(request(SOURCE_PEER, SOURCE_ID, DESTINATION_ID));
+
+        writes.clear();
+        REQUIRE(request(SOURCE_PEER, SOURCE_ID, DESTINATION_ID));
+        std::sort(writes.begin(), writes.end());
+        CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, TARGET_PEER });
+
+        writes.clear();
+        REQUIRE(request(TARGET_PEER, DESTINATION_ID, SOURCE_ID));
+        std::sort(writes.begin(), writes.end());
+        CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, TARGET_PEER });
     }
 }
 
@@ -860,7 +914,7 @@ TEST_CASE("FNE private-call flood reaches every authorized transit peer",
 
         REQUIRE(accepted);
         std::sort(writes.begin(), writes.end());
-        CHECK(writes == std::vector<uint32_t>{ ALLOWED_PEER_A, ALLOWED_PEER_B });
+        CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, ALLOWED_PEER_A, ALLOWED_PEER_B });
     }
 }
 
@@ -983,7 +1037,75 @@ TEST_CASE("FNE DMR individual grant demand targets the called unit site",
     FNETestHooks::capturePeerWrites(harness.traffic, writes);
     REQUIRE(FNETestHooks::processDMRGrantRequest(
         harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true));
-    CHECK(writes == std::vector<uint32_t>{ TARGET_SITE });
+    std::sort(writes.begin(), writes.end());
+    CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, TARGET_SITE });
+}
+
+TEST_CASE("FNE grant release requires the originating peer and matching call",
+    "[fne][callhandler][grant][release]")
+{
+    constexpr uint32_t OWNER_PEER = 1001U;
+    constexpr uint32_t OTHER_PEER = 1002U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t TALK_GROUP = 3100U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, OWNER_PEER, network::NET_STAT_RUNNING, true);
+    FNETestHooks::addPeer(harness.traffic, OTHER_PEER, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.talkgroups.addEntry(TALK_GROUP, 1U, true, false);
+
+    REQUIRE(FNETestHooks::processP25GrantRequest(
+        harness.traffic, OWNER_PEER, SOURCE_ID, TALK_GROUP, false));
+    CHECK_FALSE(FNETestHooks::processGrantRelease(
+        harness.traffic, OTHER_PEER, SOURCE_ID, TALK_GROUP, false));
+    CHECK_FALSE(FNETestHooks::processGrantRelease(
+        harness.traffic, OWNER_PEER, SOURCE_ID + 1U, TALK_GROUP, false));
+    CHECK_FALSE(FNETestHooks::processGrantRelease(
+        harness.traffic, OWNER_PEER, SOURCE_ID, TALK_GROUP, true));
+    CHECK(FNETestHooks::processGrantRelease(
+        harness.traffic, OWNER_PEER, SOURCE_ID, TALK_GROUP, false));
+    CHECK_FALSE(FNETestHooks::processGrantRelease(
+        harness.traffic, OWNER_PEER, SOURCE_ID, TALK_GROUP, false));
+}
+
+TEST_CASE("FNE grant release resolves reverse U2U direction",
+    "[fne][callhandler][grant][release][u2u]")
+{
+    constexpr uint32_t OWNER_PEER = 1001U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t DESTINATION_ID = 2002U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, OWNER_PEER, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.radios.addEntry(DESTINATION_ID, true, "test destination");
+    FNETestHooks::registerP25Unit(harness.traffic, OWNER_PEER, DESTINATION_ID);
+
+    REQUIRE(FNETestHooks::processP25GrantRequest(
+        harness.traffic, OWNER_PEER, SOURCE_ID, DESTINATION_ID, true));
+    CHECK(FNETestHooks::processGrantRelease(
+        harness.traffic, OWNER_PEER, DESTINATION_ID, SOURCE_ID, true));
+}
+
+TEST_CASE("FNE failed grant commit releases the reserved grant",
+    "[fne][callhandler][grant][release][failed]")
+{
+    constexpr uint32_t OWNER_PEER = 1001U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t TALK_GROUP = 3100U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, OWNER_PEER, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+    harness.talkgroups.addEntry(TALK_GROUP, 1U, true, false);
+
+    REQUIRE(FNETestHooks::processP25GrantRequest(
+        harness.traffic, OWNER_PEER, SOURCE_ID, TALK_GROUP, false));
+    CHECK(FNETestHooks::processGrantRelease(
+        harness.traffic, OWNER_PEER, SOURCE_ID, TALK_GROUP, false, true));
+    CHECK_FALSE(FNETestHooks::processGrantRelease(
+        harness.traffic, OWNER_PEER, SOURCE_ID, TALK_GROUP, false, true));
 }
 
 TEST_CASE("FNE DMR group grant demand retains group peer routing",
@@ -1009,7 +1131,7 @@ TEST_CASE("FNE DMR group grant demand retains group peer routing",
     REQUIRE(FNETestHooks::processDMRGrantRequest(
         harness.traffic, SOURCE_PEER, SOURCE_ID, TALK_GROUP, false));
     std::sort(writes.begin(), writes.end());
-    CHECK(writes == std::vector<uint32_t>{ SITE_A, SITE_B });
+    CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, SITE_A, SITE_B });
 }
 
 TEST_CASE("FNE NXDN individual grant demand targets the called unit site",
@@ -1036,7 +1158,8 @@ TEST_CASE("FNE NXDN individual grant demand targets the called unit site",
     FNETestHooks::capturePeerWrites(harness.traffic, writes);
     REQUIRE(FNETestHooks::processNXDNGrantRequest(
         harness.traffic, SOURCE_PEER, SOURCE_ID, DESTINATION_ID, true));
-    CHECK(writes == std::vector<uint32_t>{ TARGET_SITE });
+    std::sort(writes.begin(), writes.end());
+    CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, TARGET_SITE });
 }
 
 TEST_CASE("FNE NXDN group grant demand retains group peer routing",
@@ -1062,7 +1185,7 @@ TEST_CASE("FNE NXDN group grant demand retains group peer routing",
     REQUIRE(FNETestHooks::processNXDNGrantRequest(
         harness.traffic, SOURCE_PEER, SOURCE_ID, TALK_GROUP, false));
     std::sort(writes.begin(), writes.end());
-    CHECK(writes == std::vector<uint32_t>{ SITE_A, SITE_B });
+    CHECK(writes == std::vector<uint32_t>{ SOURCE_PEER, SITE_A, SITE_B });
 }
 
 TEST_CASE("FNE call handlers validate source radios and group state", "[fne][callhandler][validation]")

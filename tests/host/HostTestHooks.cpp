@@ -11,6 +11,8 @@
 #include "common/dmr/SlotType.h"
 #include "common/dmr/Sync.h"
 #include "common/dmr/lc/FullLC.h"
+#include "common/dmr/lc/csbk/CSBK_PV_GRANT.h"
+#include "common/dmr/lc/csbk/CSBK_TV_GRANT.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/NXDNUtils.h"
 #include "common/nxdn/Sync.h"
@@ -25,6 +27,7 @@
 #include "host/p25/packet/Voice.h"
 
 #include <cstring>
+#include <memory>
 
 #if defined(CATCH2_TEST_COMPILATION)
 
@@ -152,6 +155,43 @@ void HostTestHooks::dmrStartNetVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32
     slot.processNetwork(dmrData);
 }
 
+/* Injects an FNE-generated DMR voice grant response. */
+
+void HostTestHooks::dmrProcessNetworkGrant(dmr::Slot& slot, uint32_t srcId, uint32_t dstId,
+    bool group, bool emergency)
+{
+    std::unique_ptr<dmr::lc::CSBK> grant;
+    if (group)
+        grant = std::make_unique<dmr::lc::csbk::CSBK_TV_GRANT>();
+    else
+        grant = std::make_unique<dmr::lc::csbk::CSBK_PV_GRANT>();
+
+    grant->setSrcId(srcId);
+    grant->setDstId(dstId);
+    grant->setLogicalCh1(0U);
+    grant->setSlotNo(0U);
+    grant->setEmergency(emergency);
+
+    uint8_t data[dmr::defines::DMR_FRAME_LENGTH_BYTES];
+    ::memset(data, 0x00U, sizeof(data));
+    grant->encode(data);
+
+    dmr::SlotType slotType;
+    slotType.setColorCode(0U);
+    slotType.setDataType(dmr::defines::DataType::CSBK);
+    slotType.encode(data);
+    dmr::Sync::addDMRDataSync(data, true);
+
+    dmr::data::NetData dmrData;
+    dmrData.setSlotNo(slot.m_slotNo);
+    dmrData.setDataType(dmr::defines::DataType::CSBK);
+    dmrData.setSrcId(srcId);
+    dmrData.setDstId(dstId);
+    dmrData.setFLCO(group ? dmr::defines::FLCO::GROUP : dmr::defines::FLCO::PRIVATE);
+    dmrData.setData(data);
+    slot.processNetwork(dmrData);
+}
+
 /* Injects synthetic DMR RF voice call frame. */
 
 bool HostTestHooks::dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId, bool group)
@@ -187,14 +227,15 @@ void HostTestHooks::dmrDetachNetwork()
 
 /* Configures a co-located DMR Tier III control channel. */
 
-void HostTestHooks::dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot)
+void HostTestHooks::dmrEnableTier3(dmr::Control& control, uint32_t channelNo, uint8_t tsccSlot,
+    bool dedicated)
 {
     control.m_enableTSCC = true;
     control.m_tsccSlotNo = tsccSlot;
     dmr::Slot::s_channelNo = channelNo;
 
     dmr::Slot* slot = tsccSlot == 1U ? control.m_slot1 : control.m_slot2;
-    slot->setTSCC(true, false);
+    slot->setTSCC(true, dedicated);
 }
 
 /* Gets the active DMR Tier III payload destination. */
@@ -426,6 +467,20 @@ void HostTestHooks::p25ConfigureRFGrantSteering(p25::Control& control, bool enab
     control.m_allowRFGrantTGSteering = enabled;
 }
 
+/* Configures whether a dedicated P25 control channel carries voice. */
+
+void HostTestHooks::p25SetVoiceOnControl(p25::Control& control, bool enabled)
+{
+    control.m_voiceOnControl = enabled;
+}
+
+/* Runs P25 network-voice admission for a test call. */
+
+bool HostTestHooks::p25CheckNetworkVoiceAdmission(p25::Control& control, uint32_t srcId, uint32_t dstId)
+{
+    return control.m_voice->checkNetTrafficCollision(srcId, dstId, true, p25::defines::DUID::LDU1);
+}
+
 /* Tests whether the P25 affiliation table contains a grant. */
 
 bool HostTestHooks::p25IsGranted(const p25::Control& control, uint32_t dstId)
@@ -490,6 +545,16 @@ bool HostTestHooks::p25ProcessNetworkRawTSBK(p25::Control& control, const uint8_
     p25::data::LowSpeedData lsd;
     p25::defines::DUID::E duid = p25::defines::DUID::TSDU;
     return control.m_control->processNetwork(encoded, sizeof(encoded), lc, lsd, duid);
+}
+
+/* Emits a P25 deny response through the RF control-signaling path. */
+
+void HostTestHooks::p25WriteDenyResponse(p25::Control& control, uint32_t srcId, uint32_t dstId)
+{
+    control.m_enableControl = true;
+    control.m_control->writeRF_TSDU_Deny(srcId, dstId,
+        p25::defines::ReasonCode::DENY_TGT_GROUP_NOT_VALID,
+        p25::defines::TSBKO::IOSP_GRP_VCH, true, true);
 }
 
 /* Tests whether one P25 private grant owns the specified RID pair. */

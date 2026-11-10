@@ -61,7 +61,6 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_data(nullptr),
     m_control(nullptr),
     m_authoritative(authoritative),
-    m_supervisor(false),
     m_nac(nac),
     m_txNAC(nac),
     m_timeout(timeout),
@@ -234,7 +233,7 @@ void Control::reset()
 
 /* Helper to set P25 configuration options. */
 
-void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
+void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
     uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
@@ -245,8 +244,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         yaml::Node dfsiConf = modemConf["dfsi"];
         m_dfsiFDX = dfsiConf["fullDuplex"].as<bool>(false);
     }
-
-    m_supervisor = supervisor;
 
     m_tduPreambleCount = p25Protocol["tduPreambleCount"].as<uint32_t>(8U);
 
@@ -442,22 +439,26 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
+        const bool networkGrant = m_affiliations->isNetGranted(dstId);
+        const bool unitToUnit = !m_affiliations->isGroup(dstId);
+        if (!m_authoritative && networkGrant && m_network != nullptr) {
+            m_network->writeGrantRelease(modem::DVM_STATE::STATE_P25, srcId, dstId, slot, unitToUnit);
+        }
+
         m_control->m_telIntGrants.erase(dstId);
 
-        // callback REST API to clear TG permit for the granted TG on the specified voice channel
-        if (m_authoritative && m_supervisor) {
-            ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
-            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
-                chNo != m_siteData.channelNo()) {
-                json::object req = json::object();
-                dstId = 0U; // clear TG value
-                req["dstId"].set<uint32_t>(dstId);
+        // clear the TG permit on the selected remote voice channel
+        ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
+        if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+            chNo != m_siteData.channelNo()) {
+            json::object req = json::object();
+            dstId = 0U; // clear TG value
+            req["dstId"].set<uint32_t>(dstId);
 
-                g_RPC->req(RPC_PERMIT_P25_TG, req, nullptr, voiceChData.address(), voiceChData.port());
-            }
-            else {
-                ::LogError(LOG_P25, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
-            }
+            g_RPC->req(RPC_PERMIT_P25_TG, req, nullptr, voiceChData.address(), voiceChData.port());
+        }
+        else if (chNo != m_siteData.channelNo()) {
+            ::LogError(LOG_P25, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Grant), failed to clear TG permit, chNo = %u", chNo);
         }
     });
 
@@ -493,8 +494,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
-            if (m_supervisor)
-                LogInfoEx(LOG_P25, "Host is configured to operate as a P25 control channel, site controller mode.");
+            LogInfoEx(LOG_P25, "Host is configured to operate as a P25 control channel.");
         }
 
         if (m_controlOnly) {
@@ -1329,6 +1329,14 @@ bool Control::isPermitted(uint32_t srcId, uint32_t dstId, bool group) const
     }
 
     return dstId == m_permittedDstId;
+}
+
+/* Determines whether this control channel currently owns grant decisions. */
+
+bool Control::isGrantAuthoritative() const
+{
+    // A disconnected delegated controller resumes the existing local path.
+    return m_authoritative || m_network == nullptr || !m_network->hasGrantAuthority();
 }
 
 /* Grants a TGID on a non-authoritative host. */

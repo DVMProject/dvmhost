@@ -190,17 +190,16 @@ namespace dmr
         void clockSiteData(uint32_t ms);
         /** @} */
 
-        /** @name Supervisory Control */
-        /**
-         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
-         * @param supervisor Flag indicating whether control has supervisory functions.
-         */
-        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /**
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
          */
         void permittedTG(uint32_t dstId);
+        /**
+         * @brief Determines whether this control channel currently owns grant decisions.
+         * @return True for configured authority or disconnected-network fallback.
+         */
+        bool isGrantAuthoritative() const;
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -498,7 +497,6 @@ namespace dmr
 
         uint32_t m_lastLateEntry;
 
-        bool m_supervisor;
         bool m_notifyCC;
 
         bool m_ccDebug;

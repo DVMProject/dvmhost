@@ -1257,6 +1257,11 @@ bool Voice::checkRFTrafficCollision(uint32_t srcId, uint32_t dstId)
 
 bool Voice::checkNetTrafficCollision(lc::RTCH lc, uint32_t srcId, uint32_t dstId)
 {
+    // a dedicated control channel does not carry network voice
+    if (m_nxdn->m_dedicatedControl) {
+        return true;
+    }
+
     // don't process network frames if the destination ID's don't match and the RF TG hang timer is running
     if (m_nxdn->m_rfLastDstId != 0U) {
         if (m_nxdn->m_rfLastDstId != dstId && (m_nxdn->m_rfTGHang.isRunning() && !m_nxdn->m_rfTGHang.hasExpired())) {

@@ -154,9 +154,6 @@ bool Host::readParams()
         */
         yaml::Node rfssConfig = systemConf["config"];
         m_authoritative = rfssConfig["authoritative"].as<bool>(true);
-        if (m_authoritative) {
-            m_supervisor = rfssConfig["supervisor"].as<bool>(false);
-        }
 
         m_channelLookup = new ChannelLookup();
         m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
@@ -291,9 +288,8 @@ bool Host::readParams()
             uint16_t rpcApiPort = (uint16_t)channel["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
             std::string rpcApiPassword = channel["rpcPassword"].as<std::string>();
 
-            // if we are both non-authoritative and non-supervisory then check if the voice channel
-            // configuration seems sane
-            if (!m_authoritative && !m_supervisor) {
+            // A non-authoritative traffic channel must not point its voice-channel entry at its own RPC listener.
+            if (!m_authoritative) {
                 if ((rpcApiAddress == m_rpcAddress) && rpcApiPort == m_rpcPort) {
                     ::LogWarning(LOG_HOST, "Detected possible misconfiguration! Voice Channel RPC Address/Port and the configured RPC Address/Port are the same!");
                 }
@@ -378,9 +374,6 @@ bool Host::readParams()
 
         LogInfo("System Config Parameters");
         LogInfo("    Authoritative: %s", m_authoritative ? "yes" : "no");
-        if (m_authoritative) {
-            LogInfo("    Supervisor: %s", m_supervisor ? "yes" : "no");
-        }
         LogInfo("    RX Frequency: %uHz", m_rxFrequency);
         LogInfo("    TX Frequency: %uHz", m_txFrequency);
         LogInfo("    Base Frequency: %uHz", entry.baseFrequency());
@@ -405,7 +398,6 @@ bool Host::readParams()
         LogInfo("    NXDN RAN: %u", m_nxdnRAN);
 
         if (!m_authoritative) {
-            m_supervisor = false;
             LogWarning(LOG_HOST, "Host is non-authoritative! This requires a second instance configured in site controller mode.");
             LogWarning(LOG_HOST, "RPC is required to handle permit TG for VCs!");
         }

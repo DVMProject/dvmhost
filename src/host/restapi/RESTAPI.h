@@ -192,13 +192,6 @@ namespace host_restapi
         void restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
         /**
-         * @brief REST API endpoint; implements set supervisory mode request.
-         * @param request HTTP request.
-         * @param reply HTTP reply.
-         * @param match HTTP request matcher.
-         */
-        void restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
-        /**
          * @brief REST API endpoint; implements permit TG request.
          * @param request HTTP request.
          * @param reply HTTP reply.

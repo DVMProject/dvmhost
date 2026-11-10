@@ -122,7 +122,7 @@ namespace p25
             void clock(uint32_t ms);
             /** @} */
 
-            /** @name Supervisory Control */
+            /** @name Traffic Permit Control */
             /**
              * @brief Permits a TGID on a non-authoritative host.
              * @param dstId Destination ID.

@@ -13,6 +13,7 @@
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/udp/Socket.h"
+#include "host/modem/Modem.h"
 
 #include <catch2/catch_test_macros.hpp>
 

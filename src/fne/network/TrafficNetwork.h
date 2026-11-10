@@ -691,6 +691,17 @@ namespace network
             static void grantRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
 
             /**
+             * @brief Handles NET_FUNC::GRANT_REL packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID.
+             * @param ssrc RTP synchronization source ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             */
+            static void grantRelease(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now);
+
+            /**
              * @brief Handles NET_FUNC::INCALL_CTRL packets.
              * @param network Instance of the TrafficNetwork class.
              * @param req Instance of the NetPacketRequest structure.
@@ -954,6 +965,18 @@ namespace network
          */
         void processInCallCtrl(network::NET_ICC::ENUM command, network::NET_SUBFUNC::ENUM subFunc, uint32_t dstId, 
             uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId);
+
+        /**
+         * @brief Releases a global grant when its originating peer and call parties match.
+         * @param srcId Source subscriber ID.
+         * @param dstId Destination subscriber or talkgroup ID.
+         * @param unitToUnit Flag indicating an individual-call grant.
+         * @param peerId Authenticated peer requesting the release.
+         * @param failed Flag indicating local RF grant commit failed.
+         * @return True if a matching active grant was released; otherwise false.
+         */
+        bool processGrantRelease(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId,
+            bool failed = false);
 
         /**
          * @brief Helper to send the network metadata to the specified peer in a separate thread.

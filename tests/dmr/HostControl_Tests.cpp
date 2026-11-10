@@ -1016,3 +1016,66 @@ TEST_CASE("DMR rfTGHang zero fallback arms rfLossWatchdog and recovers RF state"
     REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_LISTENING);
     REQUIRE_FALSE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
 }
+
+TEST_CASE("DMR grant authority follows configuration and FNE availability",
+    "[dmr][host][control][grant-authority]")
+{
+    DMRHostHarness delegated(false, true);
+    dmr::Slot* delegatedSlot = HostTestHooks::dmrSlot1(*delegated.m_control);
+    REQUIRE(delegatedSlot->isGrantAuthoritative());
+
+    delegated.network()->activateForTest();
+    REQUIRE_FALSE(delegatedSlot->isGrantAuthoritative());
+
+    DMRHostHarness local(true, true);
+    local.network()->activateForTest();
+    dmr::Slot* localSlot = HostTestHooks::dmrSlot1(*local.m_control);
+    REQUIRE(localSlot->isGrantAuthoritative());
+}
+
+TEST_CASE("DMR FNE grant responses are rebuilt with local channel assignments",
+    "[dmr][host][control][grant-response]")
+{
+    constexpr uint32_t CHANNEL_NO = 101U;
+    constexpr uint32_t SOURCE_ID = 1001U;
+    constexpr uint32_t DESTINATION_ID = 2001U;
+
+    SECTION("group grant") {
+        DMRHostHarness harness(false, true);
+        harness.network()->activateForTest();
+        REQUIRE(harness.m_chLookup.initializeRFCh(CHANNEL_NO));
+        harness.m_tidLookup.addEntry(admissionRule(DESTINATION_ID, 2U, { SOURCE_ID }));
+        HostTestHooks::dmrEnableTier3(*harness.m_control, CHANNEL_NO, 1U, true);
+        dmr::Slot* tscc = HostTestHooks::dmrSlot1(*harness.m_control);
+
+        HostTestHooks::dmrProcessNetworkGrant(*tscc, SOURCE_ID, DESTINATION_ID, true, true);
+
+        CHECK(HostTestHooks::dmrIsGranted(*tscc, DESTINATION_ID));
+        CHECK(HostTestHooks::dmrIsGroupGrant(*tscc, DESTINATION_ID));
+    }
+
+    SECTION("private grant") {
+        DMRHostHarness harness(false, true);
+        harness.network()->activateForTest();
+        REQUIRE(harness.m_chLookup.initializeRFCh(CHANNEL_NO));
+        HostTestHooks::dmrEnableTier3(*harness.m_control, CHANNEL_NO, 1U, true);
+        dmr::Slot* tscc = HostTestHooks::dmrSlot1(*harness.m_control);
+        HostTestHooks::dmrRegisterUnit(*tscc, DESTINATION_ID);
+
+        HostTestHooks::dmrProcessNetworkGrant(*tscc, SOURCE_ID, DESTINATION_ID, false);
+
+        CHECK(HostTestHooks::dmrIsGranted(*tscc, DESTINATION_ID));
+        CHECK_FALSE(HostTestHooks::dmrIsGroupGrant(*tscc, DESTINATION_ID));
+    }
+
+    SECTION("allocation failure releases the FNE grant") {
+        DMRHostHarness harness(false, true);
+        harness.network()->activateForTest();
+        harness.m_tidLookup.addEntry(admissionRule(DESTINATION_ID, 2U, { SOURCE_ID }));
+        HostTestHooks::dmrEnableTier3(*harness.m_control, 0U, 1U, true);
+        dmr::Slot* tscc = HostTestHooks::dmrSlot1(*harness.m_control);
+        HostTestHooks::dmrProcessNetworkGrant(*tscc, SOURCE_ID, DESTINATION_ID, true);
+
+        CHECK_FALSE(HostTestHooks::dmrIsGranted(*tscc, DESTINATION_ID));
+    }
+}
