@@ -3507,8 +3507,13 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID rejection, srcId = %u", iosp->toString().c_str(), srcId);
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
-        iosp->setResponse(ResponseCode::REFUSED);
-        noNet = true;
+
+        if (m_p25->m_affiliations->groupUnaff(srcId) && m_p25->m_network != nullptr)
+            m_p25->m_network->announceGroupAffiliationRemoval(srcId);
+
+        writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_REQ_UNIT_NOT_VALID, TSBKO::IOSP_GRP_AFF);
+
+        return ResponseCode::REFUSED;
     }
 
     // register the RID if the MFID is $90 (this is typically DVRS, and DVRS won't unit register so we'll do it for them)
@@ -3535,8 +3540,13 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
     if (!m_p25->m_affiliations->isUnitReg(srcId) && m_verifyReg) {
         LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not registered, srcId = %u", iosp->toString().c_str(), srcId);
         ::ActivityLog("P25", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
-        iosp->setResponse(ResponseCode::REFUSED);
-        noNet = true;
+
+        if (m_p25->m_affiliations->groupUnaff(srcId) && m_p25->m_network != nullptr)
+            m_p25->m_network->announceGroupAffiliationRemoval(srcId);
+
+        writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_REQ_UNIT_NOT_VALID, TSBKO::IOSP_GRP_AFF);
+
+        return ResponseCode::REFUSED;
     }
 
     // validate the talkgroup ID
