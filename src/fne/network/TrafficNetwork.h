@@ -768,6 +768,13 @@ namespace network
         bool shouldFloodUnitToUnit(uint32_t dstId);
 
         /**
+         * @brief Checks whether an unknown subscriber destination should be flooded.
+         * @param dstId Destination unit ID.
+         * @returns bool True if no route exists and the shared unknown-destination policy permits flooding.
+         */
+        bool shouldFloodUnknownUnit(uint32_t dstId);
+
+        /**
          * @brief Learns or refreshes a dynamic subscriber route from validated inbound traffic.
          * @param peerId Immediate ingress peer ID.
          * @param srcId Source subscriber unit ID.

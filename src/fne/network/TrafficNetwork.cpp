@@ -1621,7 +1621,17 @@ bool TrafficNetwork::isUnitToUnitRouteAvailable(uint32_t dstId)
 
 bool TrafficNetwork::shouldFloodUnitToUnit(uint32_t dstId)
 {
-    if (!m_privateCallRoutingEnabled || dstId == 0U || m_privateCallUnknownDestination != "flood")
+    if (!m_privateCallRoutingEnabled)
+        return false;
+
+    return shouldFloodUnknownUnit(dstId);
+}
+
+/* Checks whether an unknown subscriber destination should be flooded. */
+
+bool TrafficNetwork::shouldFloodUnknownUnit(uint32_t dstId)
+{
+    if (dstId == 0U || m_privateCallUnknownDestination != "flood")
         return false;
 
     return findPeerUnitReg(dstId) == 0U;

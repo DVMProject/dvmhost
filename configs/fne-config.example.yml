@@ -289,7 +289,8 @@ master:
         #   When disabled, all private/unit-to-unit setup, grant, media, and signaling traffic is rejected.
         enable: false
 
-        # Action used when the destination unit has no current route: reject, or flood.
+        # Action used when a private call or gateway-originated P25 telephone interconnect call
+        # targets a destination unit with no current route: reject, or flood.
         #   WARNING: The flood policy can result in unintended network-wide message propagation and should be used with caution.
         unknownDestination: reject
 

@@ -135,8 +135,14 @@ TEST_CASE("FNE routes P25 telephone interconnect only between gateways and the r
     REQUIRE_FALSE(FNETestHooks::isP25TelIntPeerPermitted(
         harness.traffic, gatewayPeerId, otherGatewayPeerId, unitId));
 
+    const uint32_t unknownUnitId = unitId + 1U;
+    FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "reject", true, 300000U);
+    REQUIRE_FALSE(FNETestHooks::isP25TelIntPeerPermitted(
+        harness.traffic, gatewayPeerId, otherSitePeerId, unknownUnitId));
+
+    FNETestHooks::configurePrivateCallRouting(harness.traffic, true, "flood", true, 300000U);
     REQUIRE(FNETestHooks::isP25TelIntPeerPermitted(
-        harness.traffic, gatewayPeerId, otherSitePeerId, unitId + 1U));
+        harness.traffic, gatewayPeerId, otherSitePeerId, unknownUnitId));
     REQUIRE(FNETestHooks::isP25TelIntPeerPermitted(
         harness.traffic, gatewayPeerId, replicaPeerId, unitId));
 }

@@ -1616,7 +1616,7 @@ bool TagP25Data::isTelIntPeerPermitted(uint32_t srcPeerId, uint32_t dstPeerId, c
 
     uint32_t regPeerId = m_network->findPeerUnitReg(dstId);
     if (regPeerId == 0U)
-        return true;
+        return m_network->shouldFloodUnknownUnit(dstId);
 
     // voice channel peers belong to the site of their control channel
     uint32_t sitePeerId = dstPeerId;
