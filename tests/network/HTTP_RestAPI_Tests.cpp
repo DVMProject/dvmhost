@@ -14,12 +14,15 @@
 #include "common/restapi/http/HTTPClient.h"
 #include "common/restapi/http/HTTPPayload.h"
 #include "common/restapi/http/HTTPServer.h"
+#include "common/restapi/http/ServerConnectionManager.h"
 #include "common/restapi/RequestDispatcher.h"
 
 #include <asio.hpp>
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -67,12 +70,40 @@ namespace {
         for (const std::string& fragment : fragments) {
             asio::write(socket, asio::buffer(fragment));
             if (fragments.size() > 1U)
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
         std::string response;
         std::array<char, 4096U> buffer {};
         asio::error_code ec;
+        do {
+            const size_t length = socket.read_some(asio::buffer(buffer), ec);
+            response.append(buffer.data(), length);
+        } while (!ec);
+
+        REQUIRE(ec == asio::error::eof);
+        return response;
+    }
+
+    /**
+     * @brief Sends a partial request, closes the sending direction, and collects any response.
+     * @param port The port to which the partial request is sent.
+     * @param request Partial HTTP request bytes.
+     * @return Raw response bytes received before the server closes the connection.
+     */
+    std::string sendPartialRequest(uint16_t port, const std::string& request)
+    {
+        asio::io_service ioService;
+        asio::ip::tcp::socket socket(ioService);
+        socket.connect(asio::ip::tcp::endpoint(asio::ip::address_v4::loopback(), port));
+        asio::write(socket, asio::buffer(request));
+
+        asio::error_code ec;
+        socket.shutdown(asio::ip::tcp::socket::shutdown_send, ec);
+        REQUIRE_FALSE(ec);
+
+        std::string response;
+        std::array<char, 4096U> buffer {};
         do {
             const size_t length = socket.read_some(asio::buffer(buffer), ec);
             response.append(buffer.data(), length);
@@ -117,6 +148,36 @@ namespace {
         REQUIRE(separator != std::string::npos);
         return response.substr(separator + 4U);
     }
+
+    struct ManagedConnection;
+    using ManagedConnectionPtr = std::shared_ptr<ManagedConnection>;
+    using TestConnectionManager = ServerConnectionManager<ManagedConnectionPtr>;
+
+    /**
+     * @brief Minimal managed connection used to verify manager callback lock scope.
+     */
+    struct ManagedConnection {
+        std::function<void()> onStart;
+        std::function<void()> onStop;
+        std::atomic<unsigned int> starts { 0U };
+        std::atomic<unsigned int> stops { 0U };
+
+        /** @brief Records start and invokes the configured callback. */
+        void start()
+        {
+            ++starts;
+            if (onStart)
+                onStart();
+        }
+
+        /** @brief Records stop and invokes the configured callback. */
+        void stop()
+        {
+            ++stops;
+            if (onStop)
+                onStop();
+        }
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -397,6 +458,49 @@ TEST_CASE("HTTP server accumulates a fragmented request body", "[restapi][http][
     REQUIRE(fixture.state->calls == 1U);
 }
 
+TEST_CASE("HTTP server accepts every request header and body split", "[restapi][http][framing][e2e]")
+{
+    LoopbackHTTPServer fixture;
+    const std::string body("split\0body", 10U);
+    const std::string request =
+        "PUT /split HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "Content-Length: " + std::to_string(body.size()) + "\r\n"
+        "\r\n" + body;
+
+    for (size_t split = 1U; split < request.size(); ++split) {
+        CAPTURE(split);
+        const std::string response = sendRawRequest(fixture.port,
+            { request.substr(0U, split), request.substr(split) });
+        REQUIRE(response.find("HTTP/1.0 200 OK\r\n") == 0U);
+        REQUIRE(responseBody(response) == body);
+    }
+
+    REQUIRE(fixture.state->calls == request.size() - 1U);
+}
+
+TEST_CASE("HTTP server preserves fragmented binary bodies", "[restapi][http][framing][e2e]")
+{
+    LoopbackHTTPServer fixture;
+    std::string body(20000U, 'a');
+    body[0U] = '\0';
+    body[8191U] = '\0';
+    body[19999U] = '\0';
+
+    const std::string header =
+        "PUT /binary HTTP/1.1\r\nHost: localhost\r\nContent-Length: " +
+        std::to_string(body.size()) + "\r\n\r\n";
+    std::vector<std::string> fragments { header };
+    for (size_t offset = 0U; offset < body.size(); offset += 997U)
+        fragments.push_back(body.substr(offset, std::min<size_t>(997U, body.size() - offset)));
+
+    const std::string response = sendRawRequest(fixture.port, fragments);
+
+    REQUIRE(response.find("HTTP/1.0 200 OK\r\n") == 0U);
+    REQUIRE(responseBody(response) == body);
+    REQUIRE(fixture.state->calls == 1U);
+}
+
 TEST_CASE("HTTP server rejects malformed Content-Length", "[restapi][http][e2e][negative]")
 {
     LoopbackHTTPServer fixture;
@@ -406,6 +510,39 @@ TEST_CASE("HTTP server rejects malformed Content-Length", "[restapi][http][e2e][
     const std::string response = sendRawRequest(fixture.port, { request });
 
     REQUIRE(response.find("HTTP/1.0 400 Bad Request\r\n") == 0U);
+    REQUIRE(fixture.state->calls == 0U);
+}
+
+TEST_CASE("HTTP server rejects ambiguous Content-Length syntax", "[restapi][http][framing][e2e][negative]")
+{
+    LoopbackHTTPServer fixture;
+    const std::vector<std::string> values {
+        "+1",
+        "-1",
+        "1, 1",
+        "1x",
+        "1844674407370955161600000"
+    };
+
+    for (const std::string& value : values) {
+        CAPTURE(value);
+        const std::string request =
+            "PUT /length HTTP/1.1\r\nHost: localhost\r\nContent-Length: " + value + "\r\n\r\n";
+        const std::string response = sendRawRequest(fixture.port, { request });
+        REQUIRE(response.find("HTTP/1.0 400 Bad Request\r\n") == 0U);
+    }
+
+    REQUIRE(fixture.state->calls == 0U);
+}
+
+TEST_CASE("HTTP server never dispatches truncated requests", "[restapi][http][framing][e2e][negative]")
+{
+    LoopbackHTTPServer fixture;
+
+    REQUIRE(sendPartialRequest(fixture.port,
+        "PUT /partial HTTP/1.1\r\nHost: localhost\r\nContent-Len").empty());
+    REQUIRE(sendPartialRequest(fixture.port,
+        "PUT /partial HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nhe").empty());
     REQUIRE(fixture.state->calls == 0U);
 }
 
@@ -478,4 +615,40 @@ TEST_CASE("HTTP server services another connection while a REST handler is runni
     REQUIRE(responseBody(fastResponse) == "fast");
     REQUIRE(fastElapsed < std::chrono::milliseconds(400));
     REQUIRE(responseBody(slowResponse) == "slow");
+}
+
+TEST_CASE("HTTP connection manager invokes lifecycle callbacks outside its lock", "[restapi][http][connection-manager]")
+{
+    TestConnectionManager manager;
+    ManagedConnectionPtr first = std::make_shared<ManagedConnection>();
+    ManagedConnectionPtr second = std::make_shared<ManagedConnection>();
+
+    first->onStart = [&manager, second]() { manager.start(second); };
+    first->onStop = [&manager, second]() { manager.stop(second); };
+
+    manager.start(first);
+    REQUIRE(first->starts == 1U);
+    REQUIRE(second->starts == 1U);
+
+    manager.stop(first);
+    REQUIRE(first->stops == 1U);
+    REQUIRE(second->stops == 1U);
+}
+
+TEST_CASE("HTTP connection manager drains before invoking stop callbacks", "[restapi][http][connection-manager]")
+{
+    TestConnectionManager manager;
+    ManagedConnectionPtr first = std::make_shared<ManagedConnection>();
+    ManagedConnectionPtr replacement = std::make_shared<ManagedConnection>();
+
+    first->onStop = [&manager, replacement]() { manager.start(replacement); };
+    manager.start(first);
+    manager.stopAll();
+
+    REQUIRE(first->stops == 1U);
+    REQUIRE(replacement->starts == 1U);
+    REQUIRE(replacement->stops == 0U);
+
+    manager.stopAll();
+    REQUIRE(replacement->stops == 1U);
 }
