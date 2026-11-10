@@ -79,6 +79,9 @@ void OSP_TSBK_RAW::setTSBK(const uint8_t* tsbk)
     m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker
     m_mfId = tsbk[1U];                                                              // Mfg Id.
 
+    if (m_tsbk != nullptr)
+        delete[] m_tsbk;
+
     m_tsbk = new uint8_t[P25_TSBK_LENGTH_BYTES];
     ::memset(m_tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);
 
