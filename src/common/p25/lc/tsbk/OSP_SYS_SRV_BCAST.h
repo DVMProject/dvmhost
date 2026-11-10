@@ -60,6 +60,24 @@ namespace p25
                  * @returns std::string String representation of the TSBK.
                  */
                 std::string toString(bool isp = false) override;
+
+            public:
+                /**
+                 * @brief WUID validity field in 30-minute increments beyond four hours; 0xFF disables expiry.
+                 */
+                DECLARE_RO_PROPERTY(uint8_t, wuidValidity, WUIDValidity);
+                /**
+                 * @brief Bitmap of services currently available at the site.
+                 */
+                DECLARE_RO_PROPERTY(uint32_t, servicesAvailable, ServicesAvailable);
+                /**
+                 * @brief Bitmap of services supported by the site.
+                 */
+                DECLARE_RO_PROPERTY(uint32_t, servicesSupported, ServicesSupported);
+                /**
+                 * @brief Lowest service-request priority currently accepted by the site.
+                 */
+                DECLARE_RO_PROPERTY(uint8_t, requestPriority, RequestPriority);
             };
         } // namespace tsbk
     } // namespace lc

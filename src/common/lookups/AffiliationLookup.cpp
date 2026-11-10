@@ -45,6 +45,7 @@ AffiliationLookup::AffiliationLookup(const std::string name, ChannelLookup* chan
     m_chLookup(channelLookup),
     m_disableUnitRegTimeout(false),
     m_disableGrpAffTimeout(false),
+    m_unitRegTimeout(UNIT_REG_TIMEOUT),
     m_verbose(verbose)
 {
     m_name = name;
@@ -75,7 +76,7 @@ void AffiliationLookup::unitReg(uint32_t srcId, bool log)
 
     m_unitRegTable.push_back(srcId);
 
-    m_unitRegTimers[srcId] = Timer(1000U, UNIT_REG_TIMEOUT);
+    m_unitRegTimers[srcId] = Timer(1000U, m_unitRegTimeout);
     m_unitRegTimers[srcId].start();
 
     if (m_verbose && log) {
@@ -218,7 +219,7 @@ void AffiliationLookup::replaceUnitRegistrations(const std::vector<uint32_t>& re
             replacementTimers.emplace(srcId, currentTimer->second);
         }
         else {
-            Timer timer(1000U, UNIT_REG_TIMEOUT);
+            Timer timer(1000U, m_unitRegTimeout);
             timer.start();
             replacementTimers.emplace(srcId, timer);
         }

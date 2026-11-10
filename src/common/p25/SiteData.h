@@ -46,6 +46,7 @@ namespace p25
             m_callsign("CHANGEME"),
             m_chCnt(0U),
             m_netActive(false),
+            m_wuidValidity(0U),
             m_lto(0)
         {
             /* stub */
@@ -75,6 +76,7 @@ namespace p25
             m_callsign("CHANGEME"),
             m_chCnt(0U),
             m_netActive(false),
+            m_wuidValidity(0U),
             m_lto(0)
         {
             // lra clamping
@@ -149,6 +151,15 @@ namespace p25
         }
 
         /**
+         * @brief Helper to set the WUID validity period advertised by this site.
+         * @param wuidValidity WUID validity field in 30-minute increments beyond four hours; 0xFF disables expiry.
+         */
+        void setWuidValidity(uint8_t wuidValidity)
+        {
+            m_wuidValidity = wuidValidity;
+        }
+
+        /**
          * @brief Helper to set adjacent site data.
          * @param sysId P25 System ID.
          * @param rfssId P25 RFSS ID.
@@ -198,6 +209,7 @@ namespace p25
             m_callsign = "ADJSITE ";
             m_chCnt = -1; // don't store channel count for adjacent sites
             m_netActive = true; // adjacent sites are explicitly network active
+            m_wuidValidity = 0U;
             m_lto = 0;
         }
 
@@ -227,6 +239,8 @@ namespace p25
                 m_chCnt = data.m_chCnt;
 
                 m_netActive = data.m_netActive;
+
+                m_wuidValidity = data.m_wuidValidity;
 
                 m_lto = data.m_lto;
             }
@@ -284,6 +298,10 @@ namespace p25
          * @brief Flag indicating whether this site is a linked active network member.
          */
         DECLARE_RO_PROPERTY_PLAIN(bool, netActive);
+        /**
+         * @brief WUID validity field in 30-minute increments beyond four hours; 0xFF disables expiry.
+         */
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, wuidValidity);
         /**
          * @brief Local Time Offset.
          */

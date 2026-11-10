@@ -326,8 +326,11 @@ protocols:
         verifyReg: false
         # Flag indicating automated 12-hour idle group affiliation timeout is disabled.
         disableGrpAffTimeout: false
-        # Flag indicating automated 12-hour idle unit registration timeout is disabled.
+        # Flag indicating the WUID validity timeout is disabled. When true, the broadcast value is 255.
         disableUnitRegTimeout: false
+        # WUID validity advertised in SYS_SRV_BCST. The value adds 30-minute increments to the
+        # four-hour minimum; 0 is four hours and 255 disables WUID expiration.
+        wuidValidity: 0
         # Flag indicating the host requires LLA verification before allowing unit registration.
         requireLLAForReg: false
         # Flag indicating whether verbose dumping of P25 data packets is enabled.

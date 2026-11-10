@@ -402,6 +402,23 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     m_siteData = SiteData(netId, sysId, rfssId, siteId, 0U, channelId, channelNo, serviceClass, lto);
     m_siteData.setCallsign(cwCallsign);
 
+    bool disableUnitRegTimeout = p25Protocol["disableUnitRegTimeout"].as<bool>(false);
+    uint32_t wuidValidity = p25Protocol["wuidValidity"].as<uint32_t>(0U);
+    if (wuidValidity > 0xFFU) {
+        LogWarning(LOG_P25, "WUID validity value exceeds 8 bits, defaulting to 0 (4 hours).");
+        wuidValidity = 0U;
+    }
+    disableUnitRegTimeout = disableUnitRegTimeout || wuidValidity == 0xFFU;
+    if (disableUnitRegTimeout)
+        wuidValidity = 0xFFU;
+
+    m_siteData.setWuidValidity((uint8_t)wuidValidity);
+    if (!disableUnitRegTimeout) {
+        const uint32_t wuidValiditySeconds = (4U * 60U * 60U) + (wuidValidity * 30U * 60U);
+        m_affiliations->setUnitRegTimeout(wuidValiditySeconds);
+    }
+    m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
+
     lc::LC::setSiteData(m_siteData);
     lc::TDULC::setSiteData(m_siteData);
 
@@ -422,9 +439,6 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     bool disableGrpAffTimeout = p25Protocol["disableGrpAffTimeout"].as<bool>(false);
     m_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
-    bool disableUnitRegTimeout = p25Protocol["disableUnitRegTimeout"].as<bool>(false);
-    m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
-
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
         m_control->m_telIntGrants.erase(dstId);

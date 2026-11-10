@@ -45,14 +45,15 @@ void LC_SYS_SRV_BCAST::encode(uint8_t* data)
 {
     assert(data != nullptr);
 
-    const uint32_t services = (s_siteData.netActive()) ? SystemService::NET_ACTIVE : 0U | SYS_SRV_DEFAULT;
+    const uint32_t services = SYS_SRV_TRUNK | (s_siteData.netActive() ? SystemService::NET_ACTIVE : 0U);
 
     ulong64_t rsValue = 0U;
 
     m_implicit = true;
 
-    rsValue = 0U;
-    rsValue = (rsValue << 16) + services;                                           // System Services Available
+    rsValue = s_siteData.wuidValidity();                                             // WUID Validity
+    rsValue = (rsValue << 8);                                                        // Request Priority Level
+    rsValue = (rsValue << 24) + services;                                           // System Services Available
     rsValue = (rsValue << 24) + services;                                           // System Services Supported
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);

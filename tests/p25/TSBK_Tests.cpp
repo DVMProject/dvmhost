@@ -9,6 +9,7 @@
  */
 #include "host/Defines.h"
 #include "common/p25/lc/tsbk/OSP_SCCB.h"
+#include "common/p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
 #include "common/p25/lc/tsbk/OSP_TSBK_RAW.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/data/DataBlock.h"
@@ -31,6 +32,36 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         REQUIRE(P25_TSBK_LENGTH_BYTES == 12);
         REQUIRE(P25_TSBK_FEC_LENGTH_BYTES == 25);
         REQUIRE(P25_TSBK_FEC_LENGTH_BITS == (P25_TSBK_FEC_LENGTH_BYTES * 8 - 4)); // 196 bits (Trellis)
+    }
+
+    SECTION("System_Service_Broadcast_Known_Bytes") {
+        const SiteData previousSiteData = TSBK::getSiteData();
+        SiteData siteData;
+        siteData.setNetActive(true);
+        siteData.setWuidValidity(0x02U);
+        TSBK::setSiteData(siteData);
+
+        OSP_SYS_SRV_BCAST source;
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        source.encode(raw, true, true);
+
+        const uint32_t expectedServices = SYS_SRV_TRUNK | SystemService::NET_ACTIVE;
+        const uint32_t servicesAvailable = GET_UINT24(raw, 3U)
+        const uint32_t servicesSupported = GET_UINT24(raw, 6U)
+        CHECK(raw[2U] == 0x02U);
+        CHECK(servicesAvailable == expectedServices);
+        CHECK(servicesSupported == expectedServices);
+        CHECK(raw[9U] == 0x00U);
+
+        OSP_SYS_SRV_BCAST broadcast;
+        REQUIRE(broadcast.decode(raw, true));
+        CHECK(broadcast.getWUIDValidity() == 0x02U);
+        CHECK(broadcast.getServicesAvailable() == expectedServices);
+        CHECK(broadcast.getServicesSupported() == expectedServices);
+        CHECK(broadcast.getRequestPriority() == 0x00U);
+
+        TSBK::setSiteData(previousSiteData);
     }
 
     SECTION("Emergency_Alarm_Request_Roundtrip") {

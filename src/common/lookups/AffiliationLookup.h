@@ -287,6 +287,11 @@ namespace lookups
          * @param disable Flag indicating idle unit registration timeout should be disabled.
          */
         void setDisableUnitRegTimeout(bool disabled) { m_disableUnitRegTimeout = disabled; }
+        /**
+         * @brief Sets the idle unit registration timeout.
+         * @param timeout Timeout in seconds.
+         */
+        void setUnitRegTimeout(uint32_t timeout) { m_unitRegTimeout = timeout; }
 
         /**
          * @brief Helper to determine if the group affiliation timeout is enabled or not.
@@ -339,6 +344,7 @@ namespace lookups
 
         bool m_disableUnitRegTimeout;
         bool m_disableGrpAffTimeout;
+        uint32_t m_unitRegTimeout;
 
         bool m_verbose;
 
