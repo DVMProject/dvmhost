@@ -1019,7 +1019,9 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     }
 
                     OSP_ADJ_STS_BCAST* osp = static_cast<OSP_ADJ_STS_BCAST*>(tsbk.get());
-                    if (osp->getAdjSiteId() != m_p25->m_siteData.siteId()) {
+                    if (osp->getAdjSiteSysId() != m_p25->m_siteData.sysId() ||
+                        osp->getAdjSiteRFSSId() != m_p25->m_siteData.rfssId() ||
+                        osp->getAdjSiteId() != m_p25->m_siteData.siteId()) {
                         // update site table data
                         SiteData site;
                         try {
@@ -1033,7 +1035,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
                         }
 
-                        site.setAdjSite(osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
+                        site.setAdjSite(osp->getAdjSiteLRA(), osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
 
                         m_adjSiteTable[site.siteId()] = site;
                         m_adjSiteUpdateCnt[site.siteId()] = ADJ_SITE_UPDATE_CNT;
@@ -1044,7 +1046,8 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         // update site table data
                         SiteData site;
                         try {
-                            site = m_sccbTable.at(osp->getAdjSiteRFSSId());
+                            const uint16_t channel = (uint16_t)((osp->getAdjSiteChnId() << 12) | osp->getAdjSiteChnNo());
+                            site = m_sccbTable.at(channel);
                         }
                         catch (...) {
                             site = SiteData();
@@ -1055,10 +1058,11 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                 osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
                         }
 
-                        site.setAdjSite(osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
+                        site.setAdjSite(osp->getAdjSiteLRA(), osp->getAdjSiteSysId(), osp->getAdjSiteRFSSId(), osp->getAdjSiteId(), osp->getAdjSiteChnId(), osp->getAdjSiteChnNo(), osp->getAdjSiteSvcClass());
 
-                        m_sccbTable[site.rfssId()] = site;
-                        m_sccbUpdateCnt[site.rfssId()] = ADJ_SITE_UPDATE_CNT;
+                        const uint16_t channel = (uint16_t)((site.channelId() << 12) | site.channelNo());
+                        m_sccbTable[channel] = site;
+                        m_sccbUpdateCnt[channel] = ADJ_SITE_UPDATE_CNT;
                     }
 
                     return true;
@@ -1415,6 +1419,7 @@ void ControlSignaling::writeAdjSSNetwork()
         // transmit adjacent site broadcast
         std::unique_ptr<OSP_ADJ_STS_BCAST> osp = std::make_unique<OSP_ADJ_STS_BCAST>();
         osp->setSrcId(WUID_FNE);
+        osp->setAdjSiteLRA(m_p25->m_siteData.lra());
         osp->setAdjSiteCFVA(cfva);
         osp->setAdjSiteSysId(m_p25->m_siteData.sysId());
         osp->setAdjSiteRFSSId(m_p25->m_siteData.rfssId());
@@ -2462,6 +2467,7 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
                         }
 
                         // transmit adjacent site broadcast
+                        osp->setAdjSiteLRA(site.lra());
                         osp->setAdjSiteCFVA(cfva);
                         osp->setAdjSiteSysId(site.sysId());
                         osp->setAdjSiteRFSSId(site.rfssId());
@@ -2501,8 +2507,13 @@ void ControlSignaling::queueRF_TSBK_Ctrl(uint8_t lco)
 
                         // transmit SCCB broadcast
                         osp->setLCO(TSBKO::OSP_SCCB_EXP);
+                        osp->setSCCBRFSSId(site.rfssId());
+                        osp->setSCCBSiteId(site.siteId());
                         osp->setSCCBChnId1(site.channelId());
                         osp->setSCCBChnNo(site.channelNo());
+                        osp->setSCCBChnId2(site.channelId());
+                        osp->setSCCBChnNo2(site.channelNo());
+                        osp->setSCCBSvcClass(site.serviceClass());
 
                         tsbk = std::move(osp);
                         m_mbfSCCBCnt++;

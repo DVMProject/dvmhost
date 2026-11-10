@@ -64,6 +64,10 @@ namespace p25
             public:
                 // Adjacent Site Data
                 /**
+                 * @brief Adjacent site location registration area.
+                 */
+                DECLARE_PROPERTY(uint8_t, adjLRA, AdjSiteLRA);
+                /**
                  * @brief Adjacent site CFVA flags.
                  */
                 DECLARE_PROPERTY(uint8_t, adjCFVA, AdjSiteCFVA);

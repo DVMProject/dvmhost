@@ -1170,14 +1170,14 @@ void Control::clockSiteData(uint32_t ms)
                 if (m_control->m_sccbUpdateCnt.size() > 0) {
                     // update SCCB data
                     for (auto& entry : m_control->m_sccbUpdateCnt) {
-                        uint8_t rfssId = entry.first;
+                        uint16_t channel = entry.first;
                         uint8_t updateCnt = entry.second;
                         if (updateCnt > 0U) {
                             updateCnt--;
                         }
 
                         if (updateCnt == 0U) {
-                            SiteData siteData = m_control->m_sccbTable[rfssId];
+                            SiteData siteData = m_control->m_sccbTable[channel];
                             LogWarning(LOG_NET, "P25, Secondary Control Channel Expired, no data [FAILED], sysId = $%03X, rfss = $%02X, site = $%02X, chNo = %u-%u, svcClass = $%02X",
                                 siteData.sysId(), siteData.rfssId(), siteData.siteId(), siteData.channelId(), siteData.channelNo(), siteData.serviceClass());
                         }

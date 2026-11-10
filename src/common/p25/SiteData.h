@@ -161,6 +161,7 @@ namespace p25
 
         /**
          * @brief Helper to set adjacent site data.
+         * @param lra Location Registration Area.
          * @param sysId P25 System ID.
          * @param rfssId P25 RFSS ID.
          * @param siteId P25 Site ID.
@@ -168,7 +169,7 @@ namespace p25
          * @param channelNo Channel Number.
          * @param serviceClass Service class.
          */
-        void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
+        void setAdjSite(uint8_t lra, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
         {
             // sysId clamping
             sysId = P25Utils::sysId(sysId);
@@ -191,7 +192,7 @@ namespace p25
                 channelNo = 4095U;
             }
 
-            m_lra = 0U;
+            m_lra = lra;
 
             m_netId = 0U;
             m_sysId = sysId;
@@ -211,6 +212,20 @@ namespace p25
             m_netActive = true; // adjacent sites are explicitly network active
             m_wuidValidity = 0U;
             m_lto = 0;
+        }
+
+        /**
+         * @brief Helper to set adjacent site data when the Location Registration Area is unavailable.
+         * @param sysId P25 System ID.
+         * @param rfssId P25 RFSS ID.
+         * @param siteId P25 Site ID.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param serviceClass Service class.
+         */
+        void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
+        {
+            setAdjSite(0U, sysId, rfssId, siteId, channelId, channelNo, serviceClass);
         }
 
         /**

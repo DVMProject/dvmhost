@@ -63,13 +63,33 @@ namespace p25
 
             public:
                 /**
-                 * @brief SCCB channel ID 1.
+                 * @brief RF Sub-System ID containing the secondary control channel.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbRfssId, SCCBRFSSId);
+                /**
+                 * @brief Site ID containing the secondary control channel.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbSiteId, SCCBSiteId);
+                /**
+                 * @brief Explicit SCCB transmit channel ID.
                  */
                 DECLARE_PROPERTY(uint8_t, sccbChannelId1, SCCBChnId1);
                 /**
-                 * @brief Explicit SCCB channel number.
+                 * @brief Explicit SCCB transmit channel number.
                  */
                 DECLARE_PROPERTY(uint32_t, sccbChannelNo, SCCBChnNo);
+                /**
+                 * @brief Explicit SCCB receive channel ID.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbChannelId2, SCCBChnId2);
+                /**
+                 * @brief Explicit SCCB receive channel number.
+                 */
+                DECLARE_PROPERTY(uint32_t, sccbChannelNo2, SCCBChnNo2);
+                /**
+                 * @brief System service class for the secondary control channel.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbServiceClass, SCCBSvcClass);
 
                 DECLARE_COPY(OSP_SCCB_EXP);
             };

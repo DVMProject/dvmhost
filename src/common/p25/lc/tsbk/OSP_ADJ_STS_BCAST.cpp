@@ -24,6 +24,7 @@ using namespace p25::lc::tsbk;
 /* Initializes a new instance of the OSP_ADJ_STS_BCAST class. */
 
 OSP_ADJ_STS_BCAST::OSP_ADJ_STS_BCAST() : TSBK(),
+    m_adjLRA(s_siteData.lra()),
     m_adjCFVA(CFVA::FAILURE),
     m_adjSysId(0U),
     m_adjRfssId(0U),
@@ -50,6 +51,8 @@ bool OSP_ADJ_STS_BCAST::decode(const uint8_t* data, bool rawTSBK)
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
+    m_adjLRA = (uint8_t)((tsbkValue >> 56) & 0xFFU);                                // Location Registration Area
+    m_adjCFVA = (uint8_t)((tsbkValue >> 52) & 0x0FU);                               // CFVA
     m_adjSysId = (uint32_t)((tsbkValue >> 40) & 0xFFFU);                            // Site System ID
     m_adjRfssId = (uint8_t)((tsbkValue >> 32) & 0xFFU);                             // Site RFSS ID
     m_adjSiteId = (uint8_t)((tsbkValue >> 24) & 0xFFU);                             // Site ID
@@ -68,9 +71,9 @@ void OSP_ADJ_STS_BCAST::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     ulong64_t tsbkValue = 0U;
 
-    tsbkValue = s_siteData.lra();                                                   // Location Registration Area
+    tsbkValue = m_adjLRA;                                                           // Location Registration Area
     tsbkValue = (tsbkValue << 4) + m_adjCFVA;                                       // CFVA
-    tsbkValue = (tsbkValue << 12) + s_siteData.sysId();                             // System ID
+    tsbkValue = (tsbkValue << 12) + m_adjSysId;                                     // System ID
     tsbkValue = (tsbkValue << 8) + m_adjRfssId;                                     // RF Sub-System ID
     tsbkValue = (tsbkValue << 8) + m_adjSiteId;                                     // Site ID
     tsbkValue = (tsbkValue << 4) + m_adjChannelId;                                  // Channel ID
@@ -98,6 +101,7 @@ void OSP_ADJ_STS_BCAST::copy(const OSP_ADJ_STS_BCAST& data)
 {
     TSBK::copy(data);
 
+    m_adjLRA = data.m_adjLRA;
     m_adjCFVA = data.m_adjCFVA;
     m_adjSysId = data.m_adjSysId;
     m_adjRfssId = data.m_adjRfssId;

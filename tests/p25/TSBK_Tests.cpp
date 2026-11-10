@@ -9,6 +9,8 @@
  */
 #include "host/Defines.h"
 #include "common/p25/lc/tsbk/OSP_SCCB.h"
+#include "common/p25/lc/tsbk/OSP_SCCB_EXP.h"
+#include "common/p25/lc/tsbk/OSP_ADJ_STS_BCAST.h"
 #include "common/p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
 #include "common/p25/lc/tsbk/OSP_GRP_AFF_Q.h"
 #include "common/p25/lc/tsbk/ISP_GRP_AFF_Q_RSP.h"
@@ -64,6 +66,87 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         CHECK(broadcast.getRequestPriority() == 0x00U);
 
         TSBK::setSiteData(previousSiteData);
+    }
+
+    SECTION("Secondary_Control_Channel_Broadcast_Known_Bytes") {
+        OSP_SCCB source;
+        source.setSCCBRFSSId(0x21U);
+        source.setSCCBSiteId(0x43U);
+        source.setSCCBChnId1(0x1567U);
+        source.setSCCBSvcClass1(0xA5U);
+        source.setSCCBChnId2(0x2ABCU);
+        source.setSCCBSvcClass2(0x5AU);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        source.encode(raw, true, true);
+
+        const uint8_t expected[] = { 0x21U, 0x43U, 0x15U, 0x67U, 0xA5U, 0x2AU, 0xBCU, 0x5AU };
+        CHECK(::memcmp(raw + 2U, expected, sizeof(expected)) == 0);
+
+        OSP_SCCB decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getSCCBRFSSId() == 0x21U);
+        CHECK(decoded.getSCCBSiteId() == 0x43U);
+        CHECK(decoded.getSCCBChnId1() == 0x1567U);
+        CHECK(decoded.getSCCBSvcClass1() == 0xA5U);
+        CHECK(decoded.getSCCBChnId2() == 0x2ABCU);
+        CHECK(decoded.getSCCBSvcClass2() == 0x5AU);
+    }
+
+    SECTION("Secondary_Control_Channel_Broadcast_Explicit_Known_Bytes") {
+        OSP_SCCB_EXP source;
+        source.setSCCBRFSSId(0x21U);
+        source.setSCCBSiteId(0x43U);
+        source.setSCCBChnId1(0x01U);
+        source.setSCCBChnNo(0x567U);
+        source.setSCCBChnId2(0x02U);
+        source.setSCCBChnNo2(0xABCU);
+        source.setSCCBSvcClass(0xA5U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        source.encode(raw, true, true);
+
+        const uint8_t expected[] = { 0x21U, 0x43U, 0x15U, 0x67U, 0x00U, 0x2AU, 0xBCU, 0xA5U };
+        CHECK(::memcmp(raw + 2U, expected, sizeof(expected)) == 0);
+
+        OSP_SCCB_EXP decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getSCCBRFSSId() == 0x21U);
+        CHECK(decoded.getSCCBSiteId() == 0x43U);
+        CHECK(decoded.getSCCBChnId1() == 0x01U);
+        CHECK(decoded.getSCCBChnNo() == 0x567U);
+        CHECK(decoded.getSCCBChnId2() == 0x02U);
+        CHECK(decoded.getSCCBChnNo2() == 0xABCU);
+        CHECK(decoded.getSCCBSvcClass() == 0xA5U);
+    }
+
+    SECTION("Adjacent_Status_Broadcast_Known_Bytes") {
+        OSP_ADJ_STS_BCAST source;
+        source.setAdjSiteLRA(0x12U);
+        source.setAdjSiteCFVA(0x0BU);
+        source.setAdjSiteSysId(0x345U);
+        source.setAdjSiteRFSSId(0x67U);
+        source.setAdjSiteId(0x89U);
+        source.setAdjSiteChnId(0x0AU);
+        source.setAdjSiteChnNo(0xBCDU);
+        source.setAdjSiteSvcClass(0x5AU);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        source.encode(raw, true, true);
+
+        const uint8_t expected[] = { 0x12U, 0xB3U, 0x45U, 0x67U, 0x89U, 0xABU, 0xCDU, 0x5AU };
+        CHECK(::memcmp(raw + 2U, expected, sizeof(expected)) == 0);
+
+        OSP_ADJ_STS_BCAST decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getAdjSiteLRA() == 0x12U);
+        CHECK(decoded.getAdjSiteCFVA() == 0x0BU);
+        CHECK(decoded.getAdjSiteSysId() == 0x345U);
+        CHECK(decoded.getAdjSiteRFSSId() == 0x67U);
+        CHECK(decoded.getAdjSiteId() == 0x89U);
+        CHECK(decoded.getAdjSiteChnId() == 0x0AU);
+        CHECK(decoded.getAdjSiteChnNo() == 0xBCDU);
+        CHECK(decoded.getAdjSiteSvcClass() == 0x5AU);
     }
 
     SECTION("Group_Affiliation_Query_Known_Bytes") {
