@@ -71,8 +71,8 @@ using namespace p25::packet;
 
 // Validate the talkgroup ID.
 #define VALID_TGID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                    \
-    if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
-        LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, TGID rejection, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
+    if (!acl::AccessControl::validateTGId(_DSTID) || !acl::AccessControl::validateTGAccess(_SRCID, _DSTID)) { \
+        LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, TGID/RID admission rejection, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
         writeRF_TSDU_Deny(_SRCID, _DSTID, ReasonCode::DENY_TGT_GROUP_NOT_VALID, _PCKT); \
         m_p25->m_rfState = RS_RF_REJECTED;                                              \
         return false;                                                                   \
@@ -785,18 +785,9 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 m_groupAffQueryTransactions.erase(query);
 
-                // check if the announced group matches the expected announcement group and if the source is affiliated with the target group
-                if (isp->getAnnounceGroup() != m_announcementGroup || !m_p25->m_affiliations->isGroupAff(srcId, dstId)) {
-                    LogWarning(LOG_RF, P25_TSDU_STR ", affiliation query mismatch, srcId = %u, dstId = %u, anncId = %u", srcId, dstId, isp->getAnnounceGroup());
-                    writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::ISP_GRP_AFF_Q_RSP);
-                    writeRF_TSDU_U_Reg_Cmd(srcId);
-                    m_p25->m_rfState = RS_RF_REJECTED;
-                    return false;
-                }
-
                 // preserve the normal affiliation path's null-group exception
                 if (dstId != 0U) {
-                    // validate the talkgroup ID
+                    // validate the talkgroup ID and RID admission before using the affiliation state
                     VALID_TGID(tsbk->toString(true), TSBKO::ISP_GRP_AFF_Q_RSP, srcId, dstId);
 
                     // check if the target group ID is non-preferred
@@ -806,6 +797,15 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                         m_p25->m_rfState = RS_RF_REJECTED;
                         return false;
                     }
+                }
+
+                // check if the announced group matches the expected announcement group and if the source is affiliated with the target group
+                if (isp->getAnnounceGroup() != m_announcementGroup || !m_p25->m_affiliations->isGroupAff(srcId, dstId)) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", affiliation query mismatch, srcId = %u, dstId = %u, anncId = %u", srcId, dstId, isp->getAnnounceGroup());
+                    writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::ISP_GRP_AFF_Q_RSP);
+                    writeRF_TSDU_U_Reg_Cmd(srcId);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
                 }
 
                 writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_GRP_AFF_Q_RSP, false, true);
@@ -2631,6 +2631,17 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
+    // TG admission applies only to group calls; U2U and telephone interconnect calls use RID validation
+    if (grp && !acl::AccessControl::validateTGAccess(srcId, dstId)) {
+        LogWarning(net ? LOG_NET : LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, RID not admitted to TGID, srcId = %u, dstId = %u", srcId, dstId);
+        if (!net) {
+            writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, TSBKO::IOSP_GRP_VCH, true, true);
+            ::ActivityLog("P25", true, "group grant request from %u to TG %u denied", srcId, dstId);
+            m_p25->m_rfState = RS_RF_REJECTED;
+        }
+        return false;
+    }
+
     // are we skipping checking?
     if (!skip) {
         if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_rfState != RS_RF_DATA) {
@@ -3480,6 +3491,14 @@ uint8_t ControlSignaling::writeRF_TSDU_Grp_Aff_Rsp(uint32_t srcId, uint32_t dstI
             noNet = true;
         }
 
+        // check if the source RID has access to the specified talkgroup ID
+        if (!acl::AccessControl::validateTGAccess(srcId, dstId)) {
+            LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not admitted to TGID, srcId = %u, dstId = %u", iosp->toString().c_str(), srcId, dstId);
+            ::ActivityLog("P25", true, "group affiliation request from %u to TG %u denied", srcId, dstId);
+            iosp->setResponse(ResponseCode::DENY);
+            noNet = true;
+        }
+
         // deny affiliation if the TG is non-preferred on this site/CC
         if (acl::AccessControl::tgidNonPreferred(dstId)) {
             LogWarning(LOG_RF, P25_TSDU_STR ", %s non-preferred on this site, TGID rejection, dstId = %u", iosp->toString().c_str(), dstId);
@@ -3659,6 +3678,14 @@ bool ControlSignaling::writeRF_TSDU_Loc_Reg_Rsp(uint32_t srcId, uint32_t dstId, 
             if (!acl::AccessControl::validateTGId(dstId)) {
                 LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, TGID rejection, dstId = %u", osp->toString().c_str(), dstId);
                 ::ActivityLog("P25", true, "location registration request from %u to %s %u denied", srcId, "TG ", dstId);
+                osp->setResponse(ResponseCode::DENY);
+                noNet = true;
+            }
+
+            // check if the source RID has access to the specified talkgroup ID
+            if (!acl::AccessControl::validateTGAccess(srcId, dstId)) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, RID not admitted to TGID, srcId = %u, dstId = %u", osp->toString().c_str(), srcId, dstId);
+                ::ActivityLog("P25", true, "location registration request from %u to TG %u denied", srcId, dstId);
                 osp->setResponse(ResponseCode::DENY);
                 noNet = true;
             }

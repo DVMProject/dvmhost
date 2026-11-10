@@ -59,8 +59,8 @@ using namespace dmr::packet;
 
 // Validate the talkgroup ID.
 #define VALID_TGID(_PCKT_STR, _PCKT, _SRCID, _DSTID)                                    \
-    if (!acl::AccessControl::validateTGId(0U, _DSTID)) {                                \
-        LogWarning(LOG_RF, "DMR Slot %u, %s denial, TGID rejection, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _DSTID); \
+    if (!acl::AccessControl::validateTGId(0U, _DSTID) || !acl::AccessControl::validateTGAccess(m_slot->m_slotNo, _SRCID, _DSTID)) { \
+        LogWarning(LOG_RF, "DMR Slot %u, %s denial, TGID/RID admission rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, _PCKT_STR.c_str(), _SRCID, _DSTID); \
         writeRF_CSBK_ACK_RSP(_SRCID, ReasonCode::TS_DENY_RSN_TGT_GROUP_NOT_VALID, 0U);  \
         return false;                                                                   \
     }
@@ -931,6 +931,21 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         return true; // do not generate grant packets for $FFFF (All Call) TGID
     }
 
+    ::lookups::TalkgroupRuleGroupVoice groupVoice = tscc->s_tidLookup->find(dstId);
+    const uint8_t admissionSlot = preferredSlot != 0U ? preferredSlot : groupVoice.source().tgSlot();
+
+    // determine the admission slot for the talkgroup
+    if (grp && !acl::AccessControl::validateTGAccess(admissionSlot, srcId, dstId)) {
+        LogWarning(net ? LOG_NET : LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) denied, RID not admitted to TGID, srcId = %u, dstId = %u",
+            tscc->m_slotNo, srcId, dstId);
+        if (!net) {
+            writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_GROUP_NOT_VALID, 1U);
+            ::ActivityLog("DMR", true, "Slot %u group grant request rejection from %u to TG %u", tscc->m_slotNo, srcId, dstId);
+            m_slot->m_rfState = RS_RF_REJECTED;
+        }
+        return false;
+    }
+
     // are we skipping checking?
     if (!skip) {
         if (m_slot->m_rfState != RS_RF_LISTENING && m_slot->m_rfState != RS_RF_DATA) {
@@ -970,7 +985,6 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         }
 
         if (!tscc->s_affiliations->isGranted(dstId)) {
-            ::lookups::TalkgroupRuleGroupVoice groupVoice = tscc->s_tidLookup->find(dstId);
             if (preferredSlot != 0U) {
                 slot = preferredSlot;
             }

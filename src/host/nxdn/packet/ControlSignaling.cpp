@@ -63,8 +63,8 @@ using namespace nxdn::packet;
 
 // Validate the talkgroup ID.
 #define VALID_TGID(_PCKT_STR, _PCKT, _DSTID, _SRCID, _RSN)                              \
-    if (!acl::AccessControl::validateTGId(_DSTID)) {                                    \
-        LogWarning(LOG_RF, "NXDN, %s denial, TGID rejection, dstId = %u", _PCKT_STR.c_str(), _DSTID); \
+    if (!acl::AccessControl::validateTGId(_DSTID) || !acl::AccessControl::validateTGAccess(_SRCID, _DSTID)) { \
+        LogWarning(LOG_RF, "NXDN, %s denial, TGID/RID admission rejection, srcId = %u, dstId = %u", _PCKT_STR.c_str(), _SRCID, _DSTID); \
         writeRF_Message_Deny(0U, _SRCID, _RSN, _PCKT);                                  \
         m_nxdn->m_rfState = RS_RF_REJECTED;                                             \
         return false;                                                                   \
@@ -576,6 +576,18 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
     std::unique_ptr<rcch::MESSAGE_TYPE_VCALL_ASSGN> rcch = std::make_unique<rcch::MESSAGE_TYPE_VCALL_ASSGN>();
     if (update)
         rcch->setMessageType(MessageType::RCCH_VCALL_ASSGN_DUP);
+
+    // check if the group access is valid for the source and destination IDs
+    if (grp && !acl::AccessControl::validateTGAccess(srcId, dstId)) {
+        LogWarning(net ? LOG_NET : LOG_RF, "NXDN, %s denied, RID not admitted to TGID, srcId = %u, dstId = %u",
+            rcch->toString().c_str(), srcId, dstId);
+        if (!net) {
+            writeRF_Message_Deny(0U, srcId, CauseResponse::VD_GRP_NOT_PERM, MessageType::RTCH_VCALL);
+            ::ActivityLog("NXDN", true, "group grant request rejection from %u to TG %u", srcId, dstId);
+            m_nxdn->m_rfState = RS_RF_REJECTED;
+        }
+        return false;
+    }
 
     // are we skipping checking?
     if (!skip) {

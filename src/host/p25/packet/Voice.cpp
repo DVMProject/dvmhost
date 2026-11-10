@@ -329,9 +329,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
             }
             else {
                 // validate the target ID, if the target is a talkgroup
-                if (!acl::AccessControl::validateTGId(dstId, m_p25->m_forceAllowTG0)) {
+                if (!acl::AccessControl::validateTGId(dstId, m_p25->m_forceAllowTG0) || !acl::AccessControl::validateTGAccess(srcId, dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
-                        LogWarning(LOG_RF, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
+                        LogWarning(LOG_RF, P25_HDU_STR " denial, TGID/RID admission rejection, srcId = %u, dstId = %u", srcId, dstId);
                         if (m_p25->m_enableControl) {
                             m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::IOSP_GRP_VCH, true, true);
                         }

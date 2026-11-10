@@ -1139,11 +1139,7 @@ bool TagP25P2Data::validate(uint32_t peerId, uint32_t srcId, uint32_t dstId, uin
 
         // always peers can violate the rules...hurray
         if (!isAlwaysPeer) {
-            // does the TGID have a permitted RID list?
-            if (tg.config().permittedRIDs().size() > 0) {
-                // does the transmitting RID have permission?
-                std::vector<uint32_t> permittedRIDs = tg.config().permittedRIDs();
-                if (std::find(permittedRIDs.begin(), permittedRIDs.end(), srcId) == permittedRIDs.end()) {
+            if (!m_network->m_tidLookup->isRIDPermitted(dstId, slotNo, srcId)) {
                     // report error event to metrics
                     TrafficNetwork::MetricsLogging::logCallErrorEvent(m_network, peerId, streamId, srcId, dstId, std::string(DB_ERRSTR_RID_NOT_PERMITTED));
 
@@ -1153,7 +1149,6 @@ bool TagP25P2Data::validate(uint32_t peerId, uint32_t srcId, uint32_t dstId, uin
                     // report In-Call Control to the peer sending traffic
                     m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2, NET_ICC::REJECT_TRAFFIC, dstId, slotNo);
                     return false;
-                }
             }
         }
     }

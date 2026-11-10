@@ -57,6 +57,13 @@ namespace nxdn
              * @returns bool True, if talkgroup ID is valid, otherwise false.
              */
             static bool validateTGId(uint32_t id);
+            /**
+             * @brief Validates whether a radio ID is admitted to a talkgroup.
+             * @param srcId Source radio ID.
+             * @param dstId Destination talkgroup ID.
+             * @returns bool True if admitted, otherwise false.
+             */
+            static bool validateTGAccess(uint32_t srcId, uint32_t dstId);
 
             /**
              * @brief Helper to determine if a talkgroup ID is non-preferred.

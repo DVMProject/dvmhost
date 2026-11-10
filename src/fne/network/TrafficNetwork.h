@@ -1112,6 +1112,16 @@ namespace network
          */
         void writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId);
         /**
+         * @brief Sends the restricted RID admission lists for talkgroups visible to a peer.
+         * @details The complete dataset is compressed and fragmented with PacketBuffer. Its uncompressed
+         *  form begins with a 32-bit entry count. Each entry contains a 32-bit TGID, an 8-bit DMR slot,
+         *  a 32-bit RID count, and that many 32-bit RIDs. Only restricted talkgroups are present; an empty
+         *  dataset clears all received restrictions. All multi-byte fields use network byte order.
+         * @param peerId Peer ID.
+         * @param streamId Stream ID for this message.
+         */
+        void writeTGAdmissions(uint32_t peerId, uint32_t streamId);
+        /**
          * @brief Helper to send the list of radio aliases to the specified peer.
          * @note This doesn't have a data layout document because it is *only* sent as a packet buffered message.
          * @param peerId Peer ID.

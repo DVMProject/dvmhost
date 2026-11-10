@@ -432,7 +432,7 @@ namespace lookups
         DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
 
         /**
-         * @brief List of radios IDs permitted to transmit on the talkgroup.
+         * @brief Radio IDs admitted to affiliate with and originate traffic on the talkgroup; empty admits all RIDs.
          */
         DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, permittedRIDs);
 
@@ -628,6 +628,20 @@ namespace lookups
          * @return TalkgroupRuleGroupVoice Table entry.
          */
         virtual TalkgroupRuleGroupVoice findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
+
+        /**
+         * @brief Determines whether a radio ID is admitted to a talkgroup.
+         * @param id Talkgroup ID.
+         * @param slot DMR slot this talkgroup is valid on, or zero when not applicable.
+         * @param radioId Source radio ID.
+         * @returns bool True if talkgroup ACL enforcement is disabled, the talkgroup has no RID restriction, or the RID is permitted.
+         */
+        bool isRIDPermitted(uint32_t id, uint8_t slot, uint32_t radioId);
+        /**
+         * @brief Atomically replaces all network-delivered talkgroup RID admission lists.
+         * @param[in] admissions Talkgroup entries containing the replacement permitted RID lists.
+         */
+        void replaceRIDAdmissions(const std::vector<TalkgroupRuleGroupVoice>& admissions);
 
         /**
          * @brief Saves loaded talkgroup rules.

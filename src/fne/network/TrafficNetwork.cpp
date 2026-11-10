@@ -2481,6 +2481,7 @@ void TrafficNetwork::taskMetadataUpdate(MetadataUpdateRequest* req)
                         network->writeBlacklistRIDs(req->peerId, streamId);
                         network->writeTGIDs(req->peerId, streamId, false);
                         network->writeDeactiveTGIDs(req->peerId, streamId);
+                        network->writeTGAdmissions(req->peerId, streamId);
 
                         network->writeHAParameters(req->peerId, streamId, false);
                     }
@@ -3054,6 +3055,86 @@ void TrafficNetwork::writeDeactiveTGIDs(uint32_t peerId, uint32_t streamId)
 
     writePeerCommand(peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS }, 
         payload, 4U + (tgidList.size() * 5U), streamId, true);
+}
+
+/* Sends the restricted RID admission lists for talkgroups visible to a peer. */
+
+void TrafficNetwork::writeTGAdmissions(uint32_t peerId, uint32_t streamId)
+{
+    if (!m_tidLookup->sendTalkgroups()) {
+        return;
+    }
+
+    std::vector<lookups::TalkgroupRuleGroupVoice> admissions;
+    uint64_t payloadLength = 4U;
+
+    for (lookups::TalkgroupRuleGroupVoice entry : m_tidLookup->groupVoice()) {
+        const std::vector<uint32_t> inclusion = entry.config().inclusion();
+        const std::vector<uint32_t> exclusion = entry.config().exclusion();
+
+        if (!inclusion.empty() && std::find(inclusion.begin(), inclusion.end(), peerId) == inclusion.end()) {
+            continue;
+        }
+        if (inclusion.empty() && std::find(exclusion.begin(), exclusion.end(), peerId) != exclusion.end()) {
+            continue;
+        }
+
+        std::vector<uint32_t> permittedRIDs = entry.config().permittedRIDs();
+        permittedRIDs.erase(std::remove(permittedRIDs.begin(), permittedRIDs.end(), 0U), permittedRIDs.end());
+        std::sort(permittedRIDs.begin(), permittedRIDs.end());
+        permittedRIDs.erase(std::unique(permittedRIDs.begin(), permittedRIDs.end()), permittedRIDs.end());
+        if (permittedRIDs.empty()) {
+            continue;
+        }
+
+        lookups::TalkgroupRuleConfig config = entry.config();
+        config.permittedRIDs(permittedRIDs);
+        entry.config(config);
+        admissions.push_back(entry);
+        payloadLength += 9U + static_cast<uint64_t>(permittedRIDs.size()) * 4U;
+    }
+
+    if (payloadLength > 8192U * 1024U) {
+        LogError(LOG_MASTER, "PEER %u talkgroup RID admission dataset exceeds PacketBuffer limit", peerId);
+        return;
+    }
+
+    // build dataset
+    DECLARE_UINT8_ARRAY(payload, static_cast<uint32_t>(payloadLength));
+    SET_UINT32(admissions.size(), payload, 0U);
+
+    uint32_t offs = 4U;
+    for (const lookups::TalkgroupRuleGroupVoice& entry : admissions) {
+        const std::vector<uint32_t> permittedRIDs = entry.config().permittedRIDs();
+        SET_UINT32(entry.source().tgId(), payload, offs);
+        payload[offs + 4U] = entry.source().tgSlot();
+
+        SET_UINT32(permittedRIDs.size(), payload, offs + 5U);
+        offs += 9U;
+
+        for (uint32_t rid : permittedRIDs) {
+            SET_UINT32(rid, payload, offs);
+            offs += 4U;
+        }
+    }
+
+    PacketBuffer pkt(true, "Talkgroup RID Admission");
+    if (!pkt.encode(payload, static_cast<uint32_t>(payloadLength))) {
+        LogError(LOG_MASTER, "PEER %u talkgroup RID admission dataset failed to encode", peerId);
+        return;
+    }
+
+    if (m_debug) {
+        LogInfoEx(LOG_MASTER, "PEER %u sending RID admission lists for %u talkgroups in %u blocks", peerId,
+            static_cast<uint32_t>(admissions.size()), static_cast<uint32_t>(pkt.fragments.size()));
+    }
+
+    for (auto frag : pkt.fragments) {
+        writePeer(peerId, m_peerId, { NET_FUNC::MASTER, NET_SUBFUNC::MASTER_SUBFUNC_TG_ADMIT },
+            frag.second->data, FRAG_SIZE, 0U, streamId);
+        Thread::sleep(60U);
+    }
+    pkt.clear();
 }
 
 /* Helper to send the list of radio aliases to the specified peer. */

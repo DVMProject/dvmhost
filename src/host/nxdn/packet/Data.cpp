@@ -131,9 +131,9 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
             }
         }
         else {
-            if (!acl::AccessControl::validateTGId(dstId)) {
+            if (!acl::AccessControl::validateTGId(dstId) || !acl::AccessControl::validateTGAccess(srcId, dstId)) {
                 if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
-                    LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, TGID rejection, dstId = %u", dstId);
+                    LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, TGID/RID admission rejection, srcId = %u, dstId = %u", srcId, dstId);
                     ::ActivityLog("NXDN", true, "RF data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = dstId;
                 }

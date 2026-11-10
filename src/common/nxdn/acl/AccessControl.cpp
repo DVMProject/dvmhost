@@ -75,6 +75,13 @@ bool AccessControl::validateTGId(uint32_t id)
     return true;
 }
 
+/* Validates whether a radio ID is admitted to a talkgroup. */
+
+bool AccessControl::validateTGAccess(uint32_t srcId, uint32_t dstId)
+{
+    return m_tidLookup->isRIDPermitted(dstId, 0U, srcId);
+}
+
 /* Helper to determine if a talkgroup ID is non-preferred. */
 
 bool AccessControl::tgidNonPreferred(uint32_t id)

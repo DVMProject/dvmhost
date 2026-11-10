@@ -53,7 +53,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
-      # List of radio IDs permitted to transmit on the talkgroup.
+      # List of radio IDs admitted to affiliate with and originate traffic on the talkgroup.
+      #   An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.
       rid_permitted: []
     #
     # Source Configuration
@@ -92,7 +93,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
-      # List of radio IDs permitted to transmit on the talkgroup.
+      # List of radio IDs admitted to affiliate with and originate traffic on the talkgroup.
+      #   An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.
       rid_permitted: []
     #
     # Source Configuration
@@ -137,7 +139,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
-      # List of radio IDs permitted to transmit on the talkgroup.
+      # List of radio IDs admitted to affiliate with and originate traffic on the talkgroup.
+      #   An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.
       rid_permitted: []
     #
     # Source Configuration
@@ -174,7 +177,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
-      # List of radio IDs permitted to transmit on the talkgroup.
+      # List of radio IDs admitted to affiliate with and originate traffic on the talkgroup.
+      #   An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.
       rid_permitted: []
     #
     # Source Configuration
@@ -211,7 +215,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
-      # List of radio IDs permitted to transmit on the talkgroup.
+      # List of radio IDs admitted to affiliate with and originate traffic on the talkgroup.
+      #   An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.
       rid_permitted: []
     #
     # Source Configuration
@@ -248,7 +253,8 @@ groupVoice:
       #   sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming).
       #   If this list is empty *all* peers are preferred. (Trunking Only)
       preferred: []
-      # List of radio IDs permitted to transmit on the talkgroup.
+      # List of radio IDs admitted to affiliate with and originate traffic on the talkgroup.
+      #   An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.
       rid_permitted: []
     #
     # Source Configuration

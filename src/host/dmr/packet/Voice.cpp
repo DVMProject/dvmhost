@@ -110,9 +110,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // validate target TID, if the target is a talkgroup
             if (flco == FLCO::GROUP) {
-                if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
+                if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId) || !acl::AccessControl::validateTGAccess(m_slot->m_slotNo, srcId, dstId)) {
                     if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == dstId) {
-                        LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, TGID/RID admission rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                         ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
                     }
 

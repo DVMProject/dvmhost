@@ -29,6 +29,7 @@
 #include <chrono>
 #include <cstring>
 #include <thread>
+#include <vector>
 
 extern network::NetRPC* g_RPC;
 #include "host/dmr/Control.h"
@@ -37,6 +38,29 @@ extern network::NetRPC* g_RPC;
 //  Global Functions
 // ---------------------------------------------------------------------------
 namespace {
+
+/**
+ * @brief Builds one DMR talkgroup rule for controller admission tests.
+ * @param tgId Talkgroup ID.
+ * @param slot DMR slot.
+ * @param permittedRIDs RIDs admitted to the talkgroup.
+ * @returns TalkgroupRuleGroupVoice Test rule.
+ */
+lookups::TalkgroupRuleGroupVoice admissionRule(uint32_t tgId, uint8_t slot, const std::vector<uint32_t>& permittedRIDs)
+{
+    lookups::TalkgroupRuleGroupVoiceSource source;
+    source.tgId(tgId);
+    source.tgSlot(slot);
+
+    lookups::TalkgroupRuleConfig config;
+    config.active(true);
+    config.permittedRIDs(permittedRIDs);
+
+    lookups::TalkgroupRuleGroupVoice rule;
+    rule.source(source);
+    rule.config(config);
+    return rule;
+}
 
 /**
  * @brief Helper function to calculate the number of timer ticks needed to expire a given timer.
@@ -396,13 +420,14 @@ public:
      * @brief Initializes a new instance of the DMRHostHarness class.
      * @param authoritative Indicates whether the host is authoritative.
      */
-    explicit DMRHostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U, bool disallowUnitToUnit = false) :
+    explicit DMRHostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U,
+        bool disallowUnitToUnit = false, bool tgAcl = false) :
         m_rpc("127.0.0.1", 1U, 0U, "test", false),
         m_modem(new DMRTestModemPort(), false, false, false, false, false, false,
             0U, 0U, 0U, 4096U, 4096U, 1024U, true, true, false, false, false, false),
         m_chLookup(),
         m_ridLookup("", 0U, false, false),
-        m_tidLookup("", 0U, false, false),
+        m_tidLookup("", 0U, tgAcl, false),
         m_idenLookup("", 0U),
         m_rssiMapper(),
         m_network(withNetwork ? new DMRTestNetwork(networkLocalPort, networkPeerId, disallowUnitToUnit) : nullptr),
@@ -823,6 +848,35 @@ TEST_CASE("DMR processFrame accepts a synthetic RF voice call on the targeted sl
     REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*HostTestHooks::dmrSlot1(*harness.m_control), 1001U, 2001U));
     REQUIRE(HostTestHooks::dmrRFState(*HostTestHooks::dmrSlot1(*harness.m_control)) == RS_RF_AUDIO);
     REQUIRE(harness.m_control->getLastDstId(1U) == 2001U);
+}
+
+TEST_CASE("DMR controller enforces TG admission without applying it to private calls", "[dmr][host][control][rf][talkgroup-admission]")
+{
+    SECTION("restricted group traffic is rejected") {
+        DMRHostHarness harness(true, false, 0U, 1U, false, true);
+        dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+        harness.m_tidLookup.addEntry(admissionRule(2001U, 1U, { 1002U }));
+
+        REQUIRE_FALSE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1001U, 2001U, true));
+        REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_REJECTED);
+    }
+
+    SECTION("admitted group traffic is accepted") {
+        DMRHostHarness harness(true, false, 0U, 1U, false, true);
+        dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+        harness.m_tidLookup.addEntry(admissionRule(2001U, 1U, { 1001U }));
+
+        REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1001U, 2001U, true));
+        REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_AUDIO);
+    }
+
+    SECTION("private traffic bypasses talkgroup admission") {
+        DMRHostHarness harness(true, false, 0U, 1U, false, true);
+        dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+
+        REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1001U, 2001U, false));
+        REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_AUDIO);
+    }
 }
 
 TEST_CASE("DMR Tier III re-key on a retained payload channel recreates its grant", "[dmr][tier3][host][control][rf]")

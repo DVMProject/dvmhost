@@ -917,11 +917,7 @@ bool TagAnalogData::validate(uint32_t peerId, data::NetData& data, uint32_t stre
 
         // always peers can violate the rules...hurray
         if (!isAlwaysPeer) {
-            // does the TGID have a permitted RID list?
-            if (tg.config().permittedRIDs().size() > 0) {
-                // does the transmitting RID have permission?
-                std::vector<uint32_t> permittedRIDs = tg.config().permittedRIDs();
-                if (std::find(permittedRIDs.begin(), permittedRIDs.end(), data.getSrcId()) == permittedRIDs.end()) {
+            if (!m_network->m_tidLookup->isRIDPermitted(data.getDstId(), 0U, data.getSrcId())) {
                     // report error event to metrics
                     TrafficNetwork::MetricsLogging::logCallErrorEvent(m_network, peerId, streamId, data.getSrcId(), data.getDstId(), std::string(DB_ERRSTR_RID_NOT_PERMITTED));
 
@@ -931,7 +927,6 @@ bool TagAnalogData::validate(uint32_t peerId, data::NetData& data, uint32_t stre
                     // report In-Call Control to the peer sending traffic
                     m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG, NET_ICC::REJECT_TRAFFIC, data.getDstId());
                     return false;
-                }
             }
         }
     }

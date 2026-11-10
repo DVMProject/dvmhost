@@ -772,6 +772,11 @@ bool TagDMRData::processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, b
         if (!tg.config().active()) {
             return false;
         }
+
+        // check if the source RID is permitted for this talkgroup
+        if (!m_network->m_tidLookup->isRIDPermitted(dstId, slot, srcId)) {
+            return false;
+        }
     }
     else {
         lookups::RadioId target = m_network->m_ridLookup->find(dstId);
@@ -1472,11 +1477,7 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, lc::CSBK* csbk, 
 
         // always peers can violate the rules...hurray
         if (!isAlwaysPeer) {
-            // does the TGID have a permitted RID list?
-            if (tg.config().permittedRIDs().size() > 0) {
-                // does the transmitting RID have permission?
-                std::vector<uint32_t> permittedRIDs = tg.config().permittedRIDs();
-                if (std::find(permittedRIDs.begin(), permittedRIDs.end(), data.getSrcId()) == permittedRIDs.end()) {
+            if (!m_network->m_tidLookup->isRIDPermitted(data.getDstId(), data.getSlotNo(), data.getSrcId())) {
                     // report error event to metrics
                     TrafficNetwork::MetricsLogging::logCallErrorEvent(m_network, peerId, streamId, data.getSrcId(), data.getDstId(), std::string(DB_ERRSTR_RID_NOT_PERMITTED));
 
@@ -1486,7 +1487,6 @@ bool TagDMRData::validate(uint32_t peerId, data::NetData& data, lc::CSBK* csbk, 
                     // report In-Call Control to the peer sending traffic
                     m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_DMR, NET_ICC::REJECT_TRAFFIC, data.getDstId(), data.getSlotNo());
                     return false;
-                }
             }
         }
     }

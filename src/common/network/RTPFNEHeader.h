@@ -103,6 +103,7 @@ namespace network
             MASTER_SUBFUNC_BL_RID = 0x01U,          //!< Blacklist RIDs
             MASTER_SUBFUNC_ACTIVE_TGS = 0x02U,      //!< Active TGIDs
             MASTER_SUBFUNC_DEACTIVE_TGS = 0x03U,    //!< Deactive TGIDs
+            MASTER_SUBFUNC_TG_ADMIT = 0x04U,        //!< Talkgroup RID Admission Lists
             MASTER_HA_PARAMS = 0xA3U,               //!< HA Parameters
 
             KEYS_UPDATE_STATUS = 0x04U,             //!< Key Update Status Response

@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cstring>
 #include <thread>
+#include <vector>
 
 extern network::NetRPC* g_RPC;
 #include "host/p25/Control.h"
@@ -71,6 +72,28 @@ static const uint8_t CAL_P25_LDU2_1K[p25::defines::P25_LDU_FRAME_LENGTH_BYTES] =
 //  Global Functions
 // ---------------------------------------------------------------------------
 namespace {
+
+/**
+ * @brief Builds one P25 talkgroup rule for controller admission tests.
+ * @param tgId Talkgroup ID.
+ * @param permittedRIDs RIDs admitted to the talkgroup.
+ * @returns TalkgroupRuleGroupVoice Test rule.
+ */
+lookups::TalkgroupRuleGroupVoice admissionRule(uint32_t tgId, const std::vector<uint32_t>& permittedRIDs)
+{
+    lookups::TalkgroupRuleGroupVoiceSource source;
+    source.tgId(tgId);
+    source.tgSlot(0U);
+
+    lookups::TalkgroupRuleConfig config;
+    config.active(true);
+    config.permittedRIDs(permittedRIDs);
+
+    lookups::TalkgroupRuleGroupVoice rule;
+    rule.source(source);
+    rule.config(config);
+    return rule;
+}
 
 /**
  * @brief Helper function to calculate the number of timer ticks needed to expire a given timer.
@@ -512,13 +535,14 @@ public:
      * @brief Initializes a new instance of the P25HostHarness class.
      * @param authoritative Indicates whether the host is authoritative.
      */
-    explicit P25HostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U, bool disallowUnitToUnit = false) :
+    explicit P25HostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U,
+        bool disallowUnitToUnit = false, bool tgAcl = false) :
         m_rpc("127.0.0.1", 1U, 0U, "test", false),
         m_modem(new P25TestModemPort(), false, false, false, false, false, false,
             0U, 0U, 0U, 1024U, 4096U, 1024U, true, true, false, false, false, false),
         m_chLookup(),
         m_ridLookup("", 0U, false, false),
-        m_tidLookup("", 0U, false, false),
+        m_tidLookup("", 0U, tgAcl, false),
         m_idenLookup("", 0U),
         m_rssiMapper(),
         m_network(withNetwork ? new P25TestNetwork(networkLocalPort, networkPeerId, disallowUnitToUnit) : nullptr),
@@ -1708,6 +1732,49 @@ TEST_CASE("P25 processFrame accepts calibration-based RF LDU1 frame", "[p25][hos
     REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
     REQUIRE(harness.m_control->getLastSrcId() == 1U);
     REQUIRE(harness.m_control->getLastDstId() == 1U);
+}
+
+TEST_CASE("P25 controller enforces TG admission without applying it to U2U", "[p25][host][control][rf][talkgroup-admission]")
+{
+    SECTION("restricted group traffic is rejected") {
+        P25HostHarness harness(true, false, 0U, 1U, false, true);
+        harness.m_tidLookup.addEntry(admissionRule(1U, { 2U }));
+
+        uint8_t frame[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        buildP25RFFrame(CAL_P25_LDU1_1K, frame);
+        HostTestHooks::p25StampRFFrameNID(*harness.m_control, frame, p25::defines::DUID::LDU1);
+
+        REQUIRE_FALSE(harness.m_control->processFrame(frame, sizeof(frame)));
+        REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_REJECTED);
+    }
+
+    SECTION("admitted group traffic is accepted") {
+        P25HostHarness harness(true, false, 0U, 1U, false, true);
+        harness.m_tidLookup.addEntry(admissionRule(1U, { 1U }));
+
+        uint8_t frame[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        buildP25RFFrame(CAL_P25_LDU1_1K, frame);
+        HostTestHooks::p25StampRFFrameNID(*harness.m_control, frame, p25::defines::DUID::LDU1);
+
+        REQUIRE(harness.m_control->processFrame(frame, sizeof(frame)));
+        REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
+    }
+
+    SECTION("U2U grant bypasses talkgroup admission") {
+        P25HostHarness harness(true, false, 0U, 1U, false, true);
+        const uint32_t channelNo = 1U;
+        harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+        REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+        HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+        HostTestHooks::p25RegisterUnit(*harness.m_control, 1001U);
+        HostTestHooks::p25RegisterUnit(*harness.m_control, 2001U);
+
+        uint8_t request[p25::defines::P25_TSBK_LENGTH_BYTES];
+        buildUUVchRequest(1001U, 2001U, request);
+
+        REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, request));
+        REQUIRE(HostTestHooks::p25IsU2UGranted(*harness.m_control, 1001U, 2001U));
+    }
 }
 
 TEST_CASE("P25 processFrame accepts calibration-based RF LDU2 frame after LDU1", "[p25][host][rf]")

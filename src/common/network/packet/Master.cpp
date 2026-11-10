@@ -181,6 +181,98 @@ bool Network::PacketHandler::master(Network* network, uint32_t peerId, uint32_t 
         }
         break;
 
+    case NET_SUBFUNC::MASTER_SUBFUNC_TG_ADMIT:              // Talkgroup RID Admission Lists
+        {
+            if (network->m_enabled && network->m_updateLookup && network->m_tidLookup != nullptr) {
+                if (length != FRAG_SIZE) {
+                    LogWarning(LOG_NET, "Ignoring invalid talkgroup RID admission fragment length %d", length);
+                    network->m_tgAdmissionPkt.clear();
+                    network->m_tgAdmissionStreamId = 0U;
+                    break;
+                }
+
+                if (network->m_tgAdmissionStreamId != 0U && network->m_tgAdmissionStreamId != streamId) {
+                    network->m_tgAdmissionPkt.clear();
+                }
+                network->m_tgAdmissionStreamId = streamId;
+
+                uint8_t* message = nullptr;
+                uint32_t messageLength = 0U;
+                if (!network->m_tgAdmissionPkt.decode(buffer, &message, &messageLength)) {
+                    break;
+                }
+
+                UInt8Array messagePtr(message);
+                if (messageLength < 4U) {
+                    LogWarning(LOG_NET, "Ignoring truncated talkgroup RID admission dataset");
+                    network->m_tgAdmissionStreamId = 0U;
+                    break;
+                }
+
+                const uint32_t entryCount = GET_UINT32(message, 0U);
+                uint32_t offs = 4U;
+                std::vector<lookups::TalkgroupRuleGroupVoice> entries;
+                bool valid = true;
+
+                for (uint32_t i = 0U; i < entryCount; i++) {
+                    if (offs + 9U > messageLength) {
+                        valid = false;
+                        break;
+                    }
+
+                    const uint32_t tgId = GET_UINT32(message, offs);
+                    const uint8_t slot = message[offs + 4U];
+                    const uint32_t ridCount = GET_UINT32(message, offs + 5U);
+                    offs += 9U;
+
+                    if (tgId == 0U || slot > 2U || ridCount == 0U ||
+                        static_cast<uint64_t>(offs) + static_cast<uint64_t>(ridCount) * 4U > static_cast<uint64_t>(messageLength)) {
+                        valid = false;
+                        break;
+                    }
+
+                    lookups::TalkgroupRuleGroupVoiceSource source;
+                    lookups::TalkgroupRuleConfig config;
+                    std::vector<uint32_t> permittedRIDs;
+                    permittedRIDs.reserve(ridCount);
+                    for (uint32_t j = 0U; j < ridCount; j++, offs += 4U) {
+                        const uint32_t rid = GET_UINT32(message, offs);
+                        if (rid == 0U) {
+                            valid = false;
+                            break;
+                        }
+                        permittedRIDs.push_back(rid);
+                    }
+                    if (!valid) {
+                        break;
+                    }
+
+                    source.tgId(tgId);
+                    source.tgSlot(slot);
+                    config.permittedRIDs(permittedRIDs);
+                    lookups::TalkgroupRuleGroupVoice entry;
+                    entry.source(source);
+                    entry.config(config);
+                    entries.push_back(entry);
+                }
+
+                if (!valid || offs != messageLength) {
+                    LogWarning(LOG_NET, "Ignoring malformed talkgroup RID admission dataset");
+                    network->m_tgAdmissionStreamId = 0U;
+                    break;
+                }
+
+                network->m_tidLookup->replaceRIDAdmissions(entries);
+                LogInfoEx(LOG_NET, "Loaded RID admission lists for %u talkgroups", entries.size());
+                network->m_tgAdmissionStreamId = 0U;
+
+                if (network->m_saveLookup) {
+                    network->m_tidLookup->commit();
+                }
+            }
+        }
+        break;
+
     case NET_SUBFUNC::MASTER_HA_PARAMS:                     // HA Parameters
         {
             if (network->m_enabled) {

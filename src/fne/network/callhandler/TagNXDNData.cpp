@@ -782,6 +782,11 @@ bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUni
         if (!tg.config().active()) {
             return false;
         }
+
+        // check if the source RID is permitted for this talkgroup
+        if (!m_network->m_tidLookup->isRIDPermitted(dstId, 0U, srcId)) {
+            return false;
+        }
     }
     else {
         lookups::RadioId target = m_network->m_ridLookup->find(dstId);
@@ -801,7 +806,7 @@ bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUni
                 if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
                     continue;
 
-                    write_Message_Grant(peer.first, srcId, dstId, serviceOptions, !unitToUnit);
+                write_Message_Grant(peer.first, srcId, dstId, serviceOptions, !unitToUnit);
             }
         }
     }
@@ -1293,11 +1298,7 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
 
     // always peers can violate the rules...hurray
     if (!isAlwaysPeer) {
-        // does the TGID have a permitted RID list?
-        if (tg.config().permittedRIDs().size() > 0) {
-            // does the transmitting RID have permission?
-            std::vector<uint32_t> permittedRIDs = tg.config().permittedRIDs();
-            if (std::find(permittedRIDs.begin(), permittedRIDs.end(), lc.getSrcId()) == permittedRIDs.end()) {
+        if (!m_network->m_tidLookup->isRIDPermitted(lc.getDstId(), 0U, lc.getSrcId())) {
                 // report error event to metrics
                 TrafficNetwork::MetricsLogging::logCallErrorEvent(m_network, peerId, streamId, lc.getSrcId(), lc.getDstId(), std::string(DB_ERRSTR_RID_NOT_PERMITTED));
 
@@ -1307,7 +1308,6 @@ bool TagNXDNData::validate(uint32_t peerId, lc::RTCH& lc, uint8_t messageType, u
                 // report In-Call Control to the peer sending traffic
                 m_network->writePeerICC(peerId, streamId, NET_SUBFUNC::PROTOCOL_SUBFUNC_NXDN, NET_ICC::REJECT_TRAFFIC, lc.getDstId());
                 return false;
-            }
         }
     }
 

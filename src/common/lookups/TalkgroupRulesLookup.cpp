@@ -294,6 +294,56 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
     return entry;
 }
 
+/* Determines whether a radio ID is admitted to a talkgroup. */
+
+bool TalkgroupRulesLookup::isRIDPermitted(uint32_t id, uint8_t slot, uint32_t radioId)
+{
+    if (!m_acl) {
+        return true;
+    }
+
+    TalkgroupRuleGroupVoice entry = find(id, slot);
+    if (entry.isInvalid()) {
+        return false;
+    }
+
+    const std::vector<uint32_t> permittedRIDs = entry.config().permittedRIDs();
+    if (permittedRIDs.empty()) {
+        return true;
+    }
+
+    return std::find(permittedRIDs.begin(), permittedRIDs.end(), radioId) != permittedRIDs.end();
+}
+
+/* Atomically replaces all network-delivered talkgroup RID admission lists. */
+
+void TalkgroupRulesLookup::replaceRIDAdmissions(const std::vector<TalkgroupRuleGroupVoice>& admissions)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+
+    // clear the permitted RIDs for all existing group voice entries
+    for (TalkgroupRuleGroupVoice& entry : m_groupVoice) {
+        TalkgroupRuleConfig config = entry.config();
+        config.permittedRIDs(std::vector<uint32_t>());
+        entry.config(config);
+    }
+
+    // apply the new RID admissions to the existing group voice entries
+    for (const TalkgroupRuleGroupVoice& admission : admissions) {
+        const uint32_t id = admission.source().tgId();
+        const uint8_t slot = admission.source().tgSlot();
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+            [id, slot](const TalkgroupRuleGroupVoice& entry) {
+                return entry.source().tgId() == id && (slot == 0U || entry.source().tgSlot() == slot);
+            });
+        if (it != m_groupVoice.end()) {
+            TalkgroupRuleConfig config = it->config();
+            config.permittedRIDs(admission.config().permittedRIDs());
+            it->config(config);
+        }
+    }
+}
+
 /* Saves loaded talkgroup rules. */
 
 bool TalkgroupRulesLookup::commit(bool quiet)

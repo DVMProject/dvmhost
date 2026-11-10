@@ -163,8 +163,8 @@ bool Data::process(uint8_t* data, uint32_t len)
 
         // validate the target ID
         if (gi) {
-            if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
-                LogWarning(LOG_RF, "DMR Slot %u, DATA_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+            if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId) || !acl::AccessControl::validateTGAccess(m_slot->m_slotNo, srcId, dstId)) {
+                LogWarning(LOG_RF, "DMR Slot %u, DATA_HEADER denial, TGID/RID admission rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
                 return false;
             }

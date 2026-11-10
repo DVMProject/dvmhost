@@ -988,7 +988,8 @@ bool Slot::validateRFCall(uint32_t srcId, uint32_t dstId, bool group)
 
     const bool aclEnabled = s_ridLookup != nullptr && s_tidLookup != nullptr;
     const bool validSrc = !aclEnabled || acl::AccessControl::validateSrcId(srcId);
-    const bool validDst = !aclEnabled || (group ? acl::AccessControl::validateTGId(dstId) :
+    const bool validDst = !aclEnabled || (group ?
+        (acl::AccessControl::validateTGId(dstId) && acl::AccessControl::validateTGAccess(srcId, dstId)) :
         acl::AccessControl::validateSrcId(dstId));
     if (validSrc && validDst)
         return true;

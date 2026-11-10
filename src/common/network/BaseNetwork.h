@@ -450,7 +450,7 @@ namespace network
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      | Destination ID                | Reserved      |S| Reserverd   |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      | Mode          | Service Options| Reserved                     |
+         *      | Mode          | Service Opts  | Reserved                      |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * \endcode
          * @param mode Digital Mode.

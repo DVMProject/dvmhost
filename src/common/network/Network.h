@@ -377,6 +377,9 @@ namespace network
         lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::RadioAliasLookup* m_ridAliasLookup;
 
+        PacketBuffer m_tgAdmissionPkt;
+        uint32_t m_tgAdmissionStreamId;
+
         PacketBuffer m_radioAliasSyncPkt;
         uint32_t m_radioAliasSyncStreamId;
 
