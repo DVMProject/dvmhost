@@ -9,6 +9,7 @@
  */
 #include "host/Defines.h"
 #include "common/p25/lc/tdulc/LC_GROUP.h"
+#include "common/p25/lc/tdulc/LC_GROUP_UPDT.h"
 #include "common/p25/lc/tdulc/LC_PRIVATE.h"
 #include "common/p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
 #include "common/p25/P25Defines.h"
@@ -163,6 +164,42 @@ TEST_CASE("TDULC", "[p25][tdulc]") {
         REQUIRE(tdulc2.getDstId() == 0x123456U);
         REQUIRE(tdulc2.getSrcId() == 0x123456U);
         REQUIRE(tdulc2.getGroup() == false);
+    }
+
+    SECTION("Group_Update_Encode_Decode_Layout") {
+        SiteData siteData(WACN_STD_DEFAULT, SID_STD_DEFAULT, 1U, 1U, 0U, 0x05U,
+            1U, ServiceClass::VOICE, 0);
+        TDULC::setSiteData(siteData);
+
+        LC_GROUP_UPDT source;
+        source.setGrpVchNo(0x123U);
+        source.setDstId(0x4567U);
+        source.setGrpVchNoB(0x89AU);
+        source.setDstIdB(0xBCDEU);
+
+        uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+        ::memset(data, 0x00U, sizeof(data));
+        source.encode(data);
+
+        LC_GROUP_UPDT decoded;
+        REQUIRE(decoded.decode(data));
+
+        const uint8_t* raw = decoded.getDecodedRaw();
+        REQUIRE(raw != nullptr);
+        CHECK(raw[0U] == (0x40U | LCO::GROUP_UPDT));
+        CHECK(raw[1U] == 0x51U);
+        CHECK(raw[2U] == 0x23U);
+        CHECK(raw[3U] == 0x45U);
+        CHECK(raw[4U] == 0x67U);
+        CHECK(raw[5U] == 0x58U);
+        CHECK(raw[6U] == 0x9AU);
+        CHECK(raw[7U] == 0xBCU);
+        CHECK(raw[8U] == 0xDEU);
+        CHECK(decoded.getGrpVchNo() == 0x123U);
+        CHECK(decoded.getDstId() == 0x4567U);
+        CHECK(decoded.getGrpVchNoB() == 0x89AU);
+        CHECK(decoded.getDstIdB() == 0xBCDEU);
+        CHECK(decoded.getGroup());
     }
 
     SECTION("SrcId_Values") {

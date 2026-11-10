@@ -66,7 +66,7 @@ namespace p25
                 /**
                  * @brief Message value.
                  */
-                DECLARE_PROPERTY(uint8_t, messageValue, Message);
+                DECLARE_PROPERTY(uint16_t, messageValue, Message);
 
                 DECLARE_COPY(MBT_IOSP_MSG_UPDT);
             };

@@ -834,13 +834,13 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_STS_UPDT:
                                 {
                                     lc::tsbk::IOSP_STS_UPDT* iosp = static_cast<lc::tsbk::IOSP_STS_UPDT*>(tsbk.get());
-                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u (%s)",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, status = $%04X, srcId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getStatus(), srcId, resolveRID(srcId).c_str());
 
                                     // generate a net event for this
                                     if (g_netDataEvent != nullptr) {
-                                        uint8_t status = iosp->getStatus();
-                                        netEvent["status"].set<uint8_t>(status);
+                                        uint16_t status = iosp->getStatus();
+                                        netEvent["status"].set<uint16_t>(status);
 
                                         std::string resolvedSrc = resolveRID(srcId);
                                         std::string resolvedDst = resolveTGID(dstId);
@@ -856,14 +856,14 @@ void* threadNetworkPump(void* arg)
                                 case P25DEF::TSBKO::IOSP_MSG_UPDT:
                                 {
                                     lc::tsbk::IOSP_MSG_UPDT* iosp = static_cast<lc::tsbk::IOSP_MSG_UPDT*>(tsbk.get());
-                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u (%s), dstId = %u (%s)",
+                                    LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, message = $%04X, srcId = %u (%s), dstId = %u (%s)",
                                         tsbk->toString(true).c_str(), iosp->getMessage(), 
                                         srcId, resolveRID(srcId).c_str(), dstId, resolveTGID(dstId).c_str());
 
                                     // generate a net event for this
                                     if (g_netDataEvent != nullptr) {
-                                        uint8_t message = iosp->getMessage();
-                                        netEvent["message"].set<uint8_t>(message);
+                                        uint16_t message = iosp->getMessage();
+                                        netEvent["message"].set<uint16_t>(message);
 
                                         std::string resolvedSrc = resolveRID(srcId);
                                         std::string resolvedDst = resolveTGID(dstId);

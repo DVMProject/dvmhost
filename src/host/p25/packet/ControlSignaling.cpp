@@ -501,7 +501,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 IOSP_STS_UPDT* iosp = static_cast<IOSP_STS_UPDT*>(tsbk.get());
                 if (m_verbose) {
-                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, status = $%02X, srcId = %u", 
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, status = $%04X, srcId = %u",
                         tsbk->toString(true).c_str(), iosp->getStatus(), srcId);
                 }
 
@@ -521,7 +521,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 IOSP_MSG_UPDT* iosp = static_cast<IOSP_MSG_UPDT*>(tsbk.get());
                 if (m_verbose) {
-                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, message = $%02X, srcId = %u, dstId = %u",
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, message = $%04X, srcId = %u, dstId = %u",
                         tsbk->toString(true).c_str(), iosp->getMessage(), srcId, dstId);
                 }
 
@@ -1199,7 +1199,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                         IOSP_STS_UPDT* iosp = static_cast<IOSP_STS_UPDT*>(tsbk.get());
                         if (m_verbose) {
-                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, status = $%02X, srcId = %u",
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, status = $%04X, srcId = %u",
                                 tsbk->toString(true).c_str(), iosp->getStatus(), srcId);
                         }
 
@@ -1213,7 +1213,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
 
                         IOSP_MSG_UPDT* iosp = static_cast<IOSP_MSG_UPDT*>(tsbk.get());
                         if (m_verbose) {
-                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, message = $%02X, srcId = %u, dstId = %u",
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, message = $%04X, srcId = %u, dstId = %u",
                                 tsbk->toString(true).c_str(), iosp->getMessage(), srcId, dstId);
                         }
 

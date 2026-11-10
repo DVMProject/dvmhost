@@ -66,7 +66,7 @@ namespace p25
                 /**
                  * @brief Status value.
                  */
-                DECLARE_PROPERTY(uint8_t, statusValue, Status);
+                DECLARE_PROPERTY(uint16_t, statusValue, Status);
 
                 DECLARE_COPY(IOSP_STS_UPDT);
             };

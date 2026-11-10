@@ -53,6 +53,8 @@ TDULC::TDULC(LC* lc) : TDULC()
     m_dstId = lc->m_dstId;
 
     m_grpVchNo = lc->m_grpVchNo;
+    m_grpVchNoB = lc->m_grpVchNoB;
+    m_dstIdB = lc->m_dstIdB;
 
     m_emergency = lc->m_emergency;
     m_encrypted = lc->m_encrypted;
@@ -72,6 +74,8 @@ TDULC::TDULC() :
     m_srcId(0U),
     m_dstId(0U),
     m_grpVchNo(0U),
+    m_grpVchNoB(0U),
+    m_dstIdB(0U),
     m_explicitId(false),
     m_netId(WACN_STD_DEFAULT),
     m_sysId(SID_STD_DEFAULT),
@@ -258,6 +262,8 @@ void TDULC::copy(const TDULC& data)
     m_dstId = data.m_dstId;
 
     m_grpVchNo = data.m_grpVchNo;
+    m_grpVchNoB = data.m_grpVchNoB;
+    m_dstIdB = data.m_dstIdB;
 
     m_explicitId = data.m_explicitId;
 

@@ -133,6 +133,14 @@ namespace p25
              * @brief Voice channel number.
              */
             DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            /**
+             * @brief Voice channel number for the second group in a group update.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
+            /**
+             * @brief Destination ID for the second group in a group update.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, dstIdB, DstIdB);
 
             /**
              * @brief Flag indicating explicit addressing.

@@ -106,6 +106,64 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         CHECK(sourceId == WUID_SYSTEM);
     }
 
+    SECTION("Message_Update_Uses_16_Bit_Message_Value") {
+        const uint16_t messageValues[] = { 0x0000U, 0x1234U, 0xFFFFU };
+        for (uint16_t messageValue : messageValues) {
+            IOSP_MSG_UPDT source;
+            source.setMessage(messageValue);
+            source.setDstId(0x123456U);
+            source.setSrcId(0x654321U);
+
+            uint8_t raw[P25_TSBK_LENGTH_BYTES];
+            ::memset(raw, 0x00U, sizeof(raw));
+            source.encode(raw, true, true);
+
+            const uint16_t rawMessage = GET_UINT16(raw, 2U);
+            const uint32_t rawDstId = GET_UINT24(raw, 4U);
+            const uint32_t rawSrcId = GET_UINT24(raw, 7U);
+            CHECK(rawMessage == messageValue);
+            CHECK(rawDstId == 0x123456U);
+            CHECK(rawSrcId == 0x654321U);
+
+            std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+            REQUIRE(decoded != nullptr);
+            IOSP_MSG_UPDT* message = dynamic_cast<IOSP_MSG_UPDT*>(decoded.get());
+            REQUIRE(message != nullptr);
+            CHECK(message->getMessage() == messageValue);
+            CHECK(message->getDstId() == 0x123456U);
+            CHECK(message->getSrcId() == 0x654321U);
+        }
+    }
+
+    SECTION("Status_Update_Uses_16_Bit_Status_Value") {
+        const uint16_t statusValues[] = { 0x0000U, 0x1234U, 0xFFFFU };
+        for (uint16_t statusValue : statusValues) {
+            IOSP_STS_UPDT source;
+            source.setStatus(statusValue);
+            source.setDstId(0x123456U);
+            source.setSrcId(0x654321U);
+
+            uint8_t raw[P25_TSBK_LENGTH_BYTES];
+            ::memset(raw, 0x00U, sizeof(raw));
+            source.encode(raw, true, true);
+
+            const uint16_t rawStatus = GET_UINT16(raw, 2U);
+            const uint32_t rawDstId = GET_UINT24(raw, 4U);
+            const uint32_t rawSrcId = GET_UINT24(raw, 7U);
+            CHECK(rawStatus == statusValue);
+            CHECK(rawDstId == 0x123456U);
+            CHECK(rawSrcId == 0x654321U);
+
+            std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+            REQUIRE(decoded != nullptr);
+            IOSP_STS_UPDT* status = dynamic_cast<IOSP_STS_UPDT*>(decoded.get());
+            REQUIRE(status != nullptr);
+            CHECK(status->getStatus() == statusValue);
+            CHECK(status->getDstId() == 0x123456U);
+            CHECK(status->getSrcId() == 0x654321U);
+        }
+    }
+
     SECTION("Standard_Unconfirmed_MBT_TELE_INT_DIAL_REQ") {
         const uint8_t counts[] = { 1U, 10U, 11U, 34U };
         for (uint8_t count : counts) {

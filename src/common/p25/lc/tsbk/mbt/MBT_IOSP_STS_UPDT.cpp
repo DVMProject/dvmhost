@@ -43,7 +43,7 @@ bool MBT_IOSP_STS_UPDT::decodeMBT(const data::DataHeader& dataHeader, const data
 
     ulong64_t tsbkValue = AMBT::toValue(dataHeader, pduUserData);
 
-    m_statusValue = (uint8_t)((tsbkValue >> 48) & 0xFFFFU);                         // Message Value
+    m_statusValue = (uint16_t)((tsbkValue >> 48) & 0xFFFFU);                        // Status Value
     m_netId = (uint32_t)((tsbkValue >> 28) & 0xFFFFFU);                             // Network ID
     m_sysId = (uint32_t)((tsbkValue >> 16) & 0xFFFU);                               // System ID
     m_dstId = (uint32_t)(((tsbkValue) & 0xFFFFU) << 8) + pduUserData[6U];           // Target Radio Address
