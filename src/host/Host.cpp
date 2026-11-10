@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2023,2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2021 Nat Moore
  *
  */
