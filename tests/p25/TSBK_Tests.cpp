@@ -10,6 +10,8 @@
 #include "host/Defines.h"
 #include "common/p25/lc/tsbk/OSP_SCCB.h"
 #include "common/p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
+#include "common/p25/lc/tsbk/OSP_GRP_AFF_Q.h"
+#include "common/p25/lc/tsbk/ISP_GRP_AFF_Q_RSP.h"
 #include "common/p25/lc/tsbk/OSP_TSBK_RAW.h"
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/data/DataBlock.h"
@@ -62,6 +64,58 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         CHECK(broadcast.getRequestPriority() == 0x00U);
 
         TSBK::setSiteData(previousSiteData);
+    }
+
+    SECTION("Group_Affiliation_Query_Known_Bytes") {
+        OSP_GRP_AFF_Q query;
+        query.setDstId(0x123456U);
+        query.setSrcId(WUID_FNE);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        query.encode(raw, true, true);
+
+        CHECK(raw[2U] == 0x00U);
+        CHECK(raw[3U] == 0x00U);
+        CHECK(raw[4U] == 0x12U);
+        CHECK(raw[5U] == 0x34U);
+        CHECK(raw[6U] == 0x56U);
+        CHECK(raw[7U] == 0xFFU);
+        CHECK(raw[8U] == 0xFFU);
+        CHECK(raw[9U] == 0xFCU);
+
+        OSP_GRP_AFF_Q decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getDstId() == 0x123456U);
+        CHECK(decoded.getSrcId() == WUID_FNE);
+    }
+
+    SECTION("Group_Affiliation_Query_Response_Known_Bytes") {
+        ISP_GRP_AFF_Q_RSP response;
+        response.setEmergency(true);
+        response.setAnnounceGroup(0x2468U);
+        response.setDstId(0x1357U);
+        response.setSrcId(0x123456U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        response.encode(raw, true, true);
+
+        CHECK(raw[2U] == 0x80U);
+        CHECK(raw[3U] == 0x24U);
+        CHECK(raw[4U] == 0x68U);
+        CHECK(raw[5U] == 0x13U);
+        CHECK(raw[6U] == 0x57U);
+        CHECK(raw[7U] == 0x12U);
+        CHECK(raw[8U] == 0x34U);
+        CHECK(raw[9U] == 0x56U);
+
+        ISP_GRP_AFF_Q_RSP decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getEmergency());
+        CHECK(decoded.getAnnounceGroup() == 0x2468U);
+        CHECK(decoded.getDstId() == 0x1357U);
+        CHECK(decoded.getSrcId() == 0x123456U);
     }
 
     SECTION("Emergency_Alarm_Request_Roundtrip") {

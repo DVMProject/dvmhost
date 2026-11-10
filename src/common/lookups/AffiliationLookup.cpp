@@ -149,6 +149,21 @@ void AffiliationLookup::touchUnitReg(uint32_t srcId)
     }
 }
 
+/* Restarts only the source ID registration timer. */
+
+void AffiliationLookup::touchUnitRegTimer(uint32_t srcId)
+{
+    if (srcId == 0U) {
+        return;
+    }
+
+    __spinlock();
+
+    if (isUnitReg(srcId)) {
+        m_unitRegTimers[srcId].start();
+    }
+}
+
 /* Gets the current timer timeout for this unit registration. */
 
 uint32_t AffiliationLookup::unitRegTimeout(uint32_t srcId)

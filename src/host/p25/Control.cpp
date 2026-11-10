@@ -225,6 +225,7 @@ void Control::reset()
 
     if (m_control != nullptr) {
         m_control->resetU2UAvailabilityTransactions();
+        m_control->resetGroupAffQueryTransactions();
     }
 
     m_txImmQueue.clear();

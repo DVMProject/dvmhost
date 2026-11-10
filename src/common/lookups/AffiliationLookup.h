@@ -88,6 +88,11 @@ namespace lookups
          */
         virtual void touchUnitReg(uint32_t srcId);
         /**
+         * @brief Restarts only the source ID registration timer.
+         * @param srcId Source Radio ID.
+         */
+        virtual void touchUnitRegTimer(uint32_t srcId);
+        /**
          * @brief Gets the current timer timeout for this unit registration.
          * @param srcId Source Radio ID.
          * @returns uint32_t Current registration timer timeout for the unit registration.

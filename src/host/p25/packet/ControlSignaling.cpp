@@ -153,6 +153,8 @@ const uint32_t TSDU_CTRL_BURST_COUNT = 2U;
 const uint32_t TSBK_MBF_CNT = 3U;
 const uint32_t GRANT_TIMER_TIMEOUT = 15U;
 const uint32_t U2U_AVAILABILITY_TIMER_TIMEOUT = 15U;
+const uint32_t GROUP_AFF_QUERY_TIMER_TIMEOUT = 4U;
+const uint8_t GROUP_AFF_QUERY_MAX_RETRIES = 4U;
 const uint8_t CONV_FALLBACK_PACKET_DELAY = 8U;
 
 // ---------------------------------------------------------------------------
@@ -230,7 +232,6 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
             return false;
         }
 
-        m_p25->m_affiliations->touchUnitReg(srcId);
         m_lastMFID = tsbk->getMFId();
 
         // handle standard P25 reference opcodes
@@ -763,14 +764,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBKO::ISP_GRP_AFF_Q_RSP, srcId);
 
                 // validate the source RID
-                VALID_SRCID(tsbk->toString(true), TSBKO::IOSP_ACK_RSP, srcId);
+                VALID_SRCID(tsbk->toString(true), TSBKO::ISP_GRP_AFF_Q_RSP, srcId);
 
-                // validate the target RID
-                VALID_DSTID(tsbk->toString(true), TSBKO::IOSP_ACK_RSP, srcId, dstId);
-
-                if (m_p25->m_ackTSBKRequests) {
-                    writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_GRP_AFF_Q_RSP, true, true);
-                }
+                // verify the source RID is registered
+                VERIFY_SRCID_REG(tsbk->toString(true), TSBKO::ISP_GRP_AFF_Q_RSP, srcId);
 
                 ISP_GRP_AFF_Q_RSP* isp = static_cast<ISP_GRP_AFF_Q_RSP*>(tsbk.get());
                 if (m_verbose) {
@@ -778,15 +775,44 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                         tsbk->toString(true).c_str(), srcId, dstId, isp->getAnnounceGroup());
                 }
 
-                ::ActivityLog("P25", true, "group affiliation query response from %u to %s %u", srcId, "TG ", dstId);
-
-                if (!m_p25->m_affiliations->isGroupAff(srcId, dstId)) {
-                    // update dynamic affiliation table
-                    m_p25->m_affiliations->groupAff(srcId, dstId);
-
-                    if (m_p25->m_network != nullptr)
-                        m_p25->m_network->announceGroupAffiliation(srcId, dstId);
+                // look for a pending group affiliation query transaction for this source ID
+                auto query = m_groupAffQueryTransactions.find(srcId);
+                if (query == m_groupAffQueryTransactions.end()) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", unsolicited group affiliation query response, srcId = %u", srcId);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
                 }
+
+                m_groupAffQueryTransactions.erase(query);
+
+                // check if the announced group matches the expected announcement group and if the source is affiliated with the target group
+                if (isp->getAnnounceGroup() != m_announcementGroup || !m_p25->m_affiliations->isGroupAff(srcId, dstId)) {
+                    LogWarning(LOG_RF, P25_TSDU_STR ", affiliation query mismatch, srcId = %u, dstId = %u, anncId = %u", srcId, dstId, isp->getAnnounceGroup());
+                    writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::ISP_GRP_AFF_Q_RSP);
+                    writeRF_TSDU_U_Reg_Cmd(srcId);
+                    m_p25->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
+
+                // preserve the normal affiliation path's null-group exception
+                if (dstId != 0U) {
+                    // validate the talkgroup ID
+                    VALID_TGID(tsbk->toString(true), TSBKO::ISP_GRP_AFF_Q_RSP, srcId, dstId);
+
+                    // check if the target group ID is non-preferred
+                    if (acl::AccessControl::tgidNonPreferred(dstId)) {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", %s non-preferred on this site, TGID rejection, dstId = %u", tsbk->toString(true).c_str(), dstId);
+                        writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::ISP_GRP_AFF_Q_RSP);
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                        return false;
+                    }
+                }
+
+                writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_GRP_AFF_Q_RSP, false, true);
+
+                m_p25->m_affiliations->touchUnitReg(srcId);
+
+                ::ActivityLog("P25", true, "group affiliation query response from %u to %s %u", srcId, "TG ", dstId);
             }
             break;
             case TSBKO::ISP_U_DEREG_REQ:
@@ -1501,6 +1527,19 @@ void ControlSignaling::writeRF_TSDU_Ext_Func(uint32_t func, uint32_t arg, uint32
 
 void ControlSignaling::writeRF_TSDU_Grp_Aff_Q(uint32_t dstId)
 {
+    if (dstId == 0U) {
+        return;
+    }
+
+    m_groupAffQueryTransactions.erase(dstId);
+    m_groupAffQueryTransactions.emplace(dstId, GroupAffQueryTransaction(GROUP_AFF_QUERY_TIMER_TIMEOUT));
+    writeRF_TSDU_Grp_Aff_Q_Once(dstId);
+}
+
+/* Emits a group affiliation query without changing transaction state. */
+
+void ControlSignaling::writeRF_TSDU_Grp_Aff_Q_Once(uint32_t dstId)
+{
     std::unique_ptr<OSP_GRP_AFF_Q> osp = std::make_unique<OSP_GRP_AFF_Q>();
     osp->setSrcId(WUID_FNE);
     osp->setDstId(dstId);
@@ -1680,6 +1719,25 @@ void ControlSignaling::clock(uint32_t ms)
             ++it;
         }
     }
+
+    // TIA-102.AABD-B 6.7.3 permits the RFSS to repeat the query while waiting
+    // for the response. Nretry is four per Table 17-1.
+    for (auto it = m_groupAffQueryTransactions.begin(); it != m_groupAffQueryTransactions.end(); ) {
+        it->second.responseTimer.clock(ms);
+        if (it->second.responseTimer.isRunning() && it->second.responseTimer.hasExpired()) {
+            if (it->second.retries >= GROUP_AFF_QUERY_MAX_RETRIES) {
+                LogWarning(LOG_RF, P25_TSDU_STR ", group affiliation query response expired, dstId = %u", it->first);
+                it = m_groupAffQueryTransactions.erase(it);
+                continue;
+            }
+
+            ++it->second.retries;
+            writeRF_TSDU_Grp_Aff_Q_Once(it->first);
+            it->second.responseTimer.start();
+        }
+
+        ++it;
+    }
 }
 
 /* Clears all pending unit-to-unit availability transactions. */
@@ -1687,6 +1745,13 @@ void ControlSignaling::clock(uint32_t ms)
 void ControlSignaling::resetU2UAvailabilityTransactions()
 {
     m_u2uAvailabilityTransactions.clear();
+}
+
+/* Clears all pending group-affiliation query transactions. */
+
+void ControlSignaling::resetGroupAffQueryTransactions()
+{
+    m_groupAffQueryTransactions.clear();
 }
 
 /* Write data processed from RF to the network. */
@@ -3056,6 +3121,10 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         m_p25->m_rfTGHang.start();
     }
 
+    if (!net) {
+        m_p25->m_affiliations->touchUnitRegTimer(srcId);
+    }
+
     return true;
 }
 
@@ -3265,6 +3334,7 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
         }
     }
 
+    m_p25->m_affiliations->touchUnitRegTimer(srcId);
     return true;
 }
 
@@ -3283,7 +3353,7 @@ void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 
 /* Helper to write a acknowledge packet. */
 
-void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bool extended, bool noNetwork)
+void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bool extended, bool noNetwork, bool refreshRegistration)
 {
     std::unique_ptr<IOSP_ACK_RSP> iosp = std::make_unique<IOSP_ACK_RSP>();
     iosp->setAIV(true);
@@ -3303,6 +3373,10 @@ void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bo
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), noNetwork);
+
+    if (refreshRegistration) {
+        m_p25->m_affiliations->touchUnitRegTimer(dstId);
+    }
 }
 
 /* Helper to write a deny packet. */
@@ -3327,7 +3401,7 @@ void ControlSignaling::writeRF_TSDU_Deny(uint32_t srcId, uint32_t dstId, uint8_t
     // are deny responses disabled?
     if (!m_p25->m_dedicatedControl && !m_p25->m_controlOnly && m_p25->m_disableDenyResponse) {
         // at least ACK the request to try to silence the sender
-        writeRF_TSDU_ACK_FNE(srcId, service, aiv, false);
+        writeRF_TSDU_ACK_FNE(srcId, service, aiv, false, false);
         return;
     }
 

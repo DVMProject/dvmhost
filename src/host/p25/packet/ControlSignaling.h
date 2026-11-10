@@ -209,6 +209,26 @@ namespace p25
                 }
             };
 
+            /**
+             * @brief Pending group-affiliation query transaction.
+             * @ingroup host_p25
+             */
+            struct GroupAffQueryTransaction {
+                uint8_t retries;                //!< Number of retransmissions already sent.
+                Timer responseTimer;            //!< TACK response timer.
+
+                /**
+                 * @brief Initializes a pending group-affiliation query transaction.
+                 * @param timeoutSeconds Response timeout in seconds.
+                 */
+                explicit GroupAffQueryTransaction(uint32_t timeoutSeconds) :
+                    retries(0U),
+                    responseTimer(1000U, timeoutSeconds)
+                {
+                    responseTimer.start();
+                }
+            };
+
             Control* m_p25;
 
             uint32_t m_patchSuperGroup;
@@ -243,6 +263,7 @@ namespace p25
             bool m_telephoneInterconnect;
             std::unordered_set<uint32_t> m_telIntGrants;
             std::unordered_map<uint64_t, U2UAvailabilityTransaction> m_u2uAvailabilityTransactions;
+            std::unordered_map<uint32_t, GroupAffQueryTransaction> m_groupAffQueryTransactions;
 
             uint8_t m_convFallbackPacketDelay;
             bool m_convFallback;
@@ -290,6 +311,11 @@ namespace p25
              * @brief Clears all pending unit-to-unit availability transactions.
              */
             void resetU2UAvailabilityTransactions();
+
+            /**
+             * @brief Clears all pending group-affiliation query transactions.
+             */
+            void resetGroupAffQueryTransactions();
 
             /**
              * @brief Write data processed from RF to the network.
@@ -417,8 +443,16 @@ namespace p25
              * @param service Service being acknowledged.
              * @param extended Flag indicating this is an extended acknowledgement.
              * @param noNetwork Flag indicating the acknowledgement must not be forwarded to the network.
+             * @param refreshRegistration Flag indicating the acknowledgement confirms a valid WUID transaction.
              */
-            void writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bool extended, bool noNetwork);
+            void writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bool extended, bool noNetwork,
+                bool refreshRegistration = true);
+
+            /**
+             * @brief Emits a group-affiliation query without changing transaction state.
+             * @param dstId Destination Radio ID.
+             */
+            void writeRF_TSDU_Grp_Aff_Q_Once(uint32_t dstId);
             /**
              * @brief Helper to write a deny packet.
              * @param srcId Source Radio ID.
