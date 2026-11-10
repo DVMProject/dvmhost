@@ -58,7 +58,13 @@ void ISP_CAN_SRV_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
 
-    /* stub */
+    ulong64_t tsbkValue = (m_aivFlag ? 0x80U : 0x00U) + (m_service & 0x3FU);         // AIV and Service Type
+    tsbkValue = (tsbkValue << 8) + m_response;                                      // Reason
+    tsbkValue = (tsbkValue << 24) + (m_dstId & 0xFFFFFFU);                          // Additional Information
+    tsbkValue = (tsbkValue << 24) + (m_srcId & 0xFFFFFFU);                          // Source Radio Address
+
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 /* Returns a string that represents the current TSBK. */

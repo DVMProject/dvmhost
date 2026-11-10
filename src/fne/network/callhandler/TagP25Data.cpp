@@ -870,7 +870,8 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
 /* Process a grant request frame from the network. */
 
-bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
+bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint8_t serviceOptions,
+    uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     if (unitToUnit && (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(dstId))) {
         return false;
@@ -925,11 +926,13 @@ bool TagP25Data::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit
                     continue;
                 if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
                     continue;
-                write_TSDU_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
+
+                write_TSDU_Grant(peer.first, srcId, dstId, serviceOptions, !unitToUnit);
             }
         }
     }
 
+    // check if the destination has been granted globally
     if (!m_network->m_globalAff->isGranted(dstId)) {
         if (m_network->m_globalAff->grantCh(dstId, srcId, peerId, fne_lookups::GRANT_TIMER_TIMEOUT, !unitToUnit)) {
             return true;
@@ -2277,7 +2280,7 @@ void TagP25Data::write_TSDU(uint32_t peerId, lc::TSBK* tsbk)
     lc.setDstId(tsbk->getDstId());
 
     uint32_t messageLength = 0U;
-    UInt8Array message = m_network->createP25_TSDUMessage(messageLength, lc, data);
+    UInt8Array message = m_network->createP25_TSDUMessage(messageLength, lc, data, 0U);
     if (message == nullptr) {
         return;
     }

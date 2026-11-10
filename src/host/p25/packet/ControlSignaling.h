@@ -72,9 +72,11 @@ namespace p25
              * @param control Link Control Data.
              * @param lsd Low Speed Data.
              * @param duid Data Unit ID.
+             * @param inbound Flag indicating an inbound service packet received from RF.
              * @returns bool True, if data frame is processed, otherwise false.
              */
-            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, defines::DUID::E& duid);
+            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd,
+                defines::DUID::E& duid, bool inbound = false);
             /** @} */
 
             /**
@@ -414,9 +416,9 @@ namespace p25
              * @param srcId Source Radio ID.
              * @param service Service being acknowledged.
              * @param extended Flag indicating this is an extended acknowledgement.
-             * @param noActivityLog 
+             * @param noNetwork Flag indicating the acknowledgement must not be forwarded to the network.
              */
-            void writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noActivityLog);
+            void writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bool extended, bool noNetwork);
             /**
              * @brief Helper to write a deny packet.
              * @param srcId Source Radio ID.

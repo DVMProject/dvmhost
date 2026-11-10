@@ -41,11 +41,13 @@ void TrafficNetwork::PacketHandler::grantRequest(TrafficNetwork* network, NetPac
             bool unitToUnit = (req->buffer[19U] & 0x80U) == 0x80U;
 
             DVM_STATE state = (DVM_STATE)req->buffer[20U];                  // DVM Mode State
+            uint8_t serviceOptions = req->buffer[21U];                     // Service Options
             switch (state) {
             case STATE_DMR:
                 if (network->m_dmrEnabled) {
                     if (network->m_tagDMR != nullptr) {
-                        network->m_tagDMR->processGrantReq(srcId, dstId, slot, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
+                        network->m_tagDMR->processGrantReq(srcId, dstId, slot, unitToUnit, serviceOptions,
+                            peerId, req->rtpHeader.getSequence(), streamId);
                     } else {
                         network->writePeerNAK(peerId, streamId, TAG_DMR_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                     }
@@ -54,7 +56,8 @@ void TrafficNetwork::PacketHandler::grantRequest(TrafficNetwork* network, NetPac
             case STATE_P25:
                 if (network->m_p25Enabled) {
                     if (network->m_tagP25 != nullptr) {
-                        network->m_tagP25->processGrantReq(srcId, dstId, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
+                        network->m_tagP25->processGrantReq(srcId, dstId, unitToUnit, serviceOptions,
+                            peerId, req->rtpHeader.getSequence(), streamId);
                     } else {
                         network->writePeerNAK(peerId, streamId, TAG_P25_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                     }
@@ -63,7 +66,8 @@ void TrafficNetwork::PacketHandler::grantRequest(TrafficNetwork* network, NetPac
             case STATE_NXDN:
                 if (network->m_nxdnEnabled) {
                     if (network->m_tagNXDN != nullptr) {
-                        network->m_tagNXDN->processGrantReq(srcId, dstId, unitToUnit, peerId, req->rtpHeader.getSequence(), streamId);
+                        network->m_tagNXDN->processGrantReq(srcId, dstId, unitToUnit, serviceOptions,
+                            peerId, req->rtpHeader.getSequence(), streamId);
                     } else {
                         network->writePeerNAK(peerId, streamId, TAG_NXDN_DATA, NET_CONN_NAK_MODE_NOT_ENABLED);
                     }

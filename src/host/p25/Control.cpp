@@ -1503,6 +1503,7 @@ void Control::processNetwork()
     bool grantDenial = (buffer[14U] & network::NET_CTRL_GRANT_DENIAL) == network::NET_CTRL_GRANT_DENIAL;
     bool grantEncrypt = (buffer[14U] & network::NET_CTRL_GRANT_ENCRYPT) == network::NET_CTRL_GRANT_ENCRYPT;
     bool unitToUnit = (buffer[14U] & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
+    bool inbound = (buffer[14U] & network::NET_CTRL_ISP) == network::NET_CTRL_ISP;
 
     // process network message header
     DUID::E duid = (DUID::E)buffer[22U];
@@ -1811,7 +1812,7 @@ void Control::processNetwork()
             break;
 
         case DUID::TSDU:
-            m_control->processNetwork(data.get(), frameLength, control, lsd, duid);
+            m_control->processNetwork(data.get(), frameLength, control, lsd, duid, inbound);
             break;
 
         default:

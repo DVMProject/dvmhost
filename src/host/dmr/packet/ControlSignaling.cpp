@@ -213,7 +213,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                     } else {
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
                         if (m_slot->s_network != nullptr)
-                            m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, true);
+                            m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR,
+                                srcId, dstId, m_slot->m_slotNo, true, isp->getServiceOptions());
                     }
                     break;
                 case ServiceKind::CANCEL_CALL:
@@ -238,7 +239,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                         writeRF_CSBK_Grant(srcId, dstId, isp->getServiceOptions(), true);
                     } else {
                         if (m_slot->s_network != nullptr)
-                            m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, m_slot->m_slotNo, false);
+                            m_slot->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR,
+                                srcId, dstId, m_slot->m_slotNo, false, isp->getServiceOptions());
                     }
                     break;
                 case ServiceKind::IND_DATA_CALL:
@@ -1261,8 +1263,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
         // sites; ask the FNE to demand a site-local grant for the called
         // subscriber rather than forwarding this site's channel number
         if (!net && tscc->s_network != nullptr) {
-            tscc->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR,
-                srcId, dstId, slot, true);
+            tscc->s_network->writeGrantReq(modem::DVM_STATE::STATE_DMR, srcId, dstId, slot, true, serviceOptions);
         }
 
         // if the channel granted isn't the same as the TSCC; remote activate the payload channel

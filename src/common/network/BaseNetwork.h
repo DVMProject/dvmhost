@@ -154,6 +154,7 @@ namespace network
         NET_CTRL_GRANT_DEMAND = 0x80U,              //!< Grant Demand
         NET_CTRL_GRANT_DENIAL = 0x40U,              //!< Grant Denial
         NET_CTRL_SWITCH_OVER = 0x20U,               //!< Call Source RID Switch Over
+        NET_CTRL_ISP = 0x10U,                       //!< P25 inbound service packet direction
         NET_CTRL_GRANT_ENCRYPT = 0x08U,             //!< Grant Encrypt
         NET_CTRL_U2U = 0x01U,                       //!< Unit-to-Unit
     };
@@ -449,7 +450,7 @@ namespace network
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      | Destination ID                | Reserved      |S| Reserverd   |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      | Mode          | Reserved                                      |
+         *      | Mode          | Service Options| Reserved                     |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * \endcode
          * @param mode Digital Mode.
@@ -457,9 +458,11 @@ namespace network
          * @param dstId Destination Radio ID.
          * @param slot DMR slot number (if DMR).
          * @param unitToUnit Flag indicating if this grant is unit-to-unit.
+         * @param serviceOptions Protocol service-options octet for the requested grant.
          * @returns bool True, if grant request was sent, otherwise false. 
          */
-        bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit);
+        bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions);
 
         /**
          * @brief Writes a enc. key request to the network.
@@ -913,9 +916,10 @@ namespace network
          * @brief Writes P25 TSDU frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] data Buffer containing P25 TSDU data to send.
+         * @param[in] controlByte DVM control byte, including the TSBK direction marker.
          * @returns bool True, if message was sent, otherwise false.
          */
-        virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
+        virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte = 0U);
         /**
          * @brief Writes P25 TDULC frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
@@ -1239,9 +1243,10 @@ namespace network
          * @param[out] length Length of network message buffer.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] data Buffer containing P25 TSDU data to send.
+         * @param[in] controlByte DVM control byte, including the TSBK direction marker.
          * @returns UInt8Array Buffer containing the built network message.
          */
-        UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data);
+        UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte);
 
         /**
          * @brief Creates an P25 TDULC frame message.

@@ -23,7 +23,9 @@ using namespace p25::lc::tsbk;
 
 /* Initializes a new instance of the ISP_EMERG_ALRM_REQ class. */
 
-ISP_EMERG_ALRM_REQ::ISP_EMERG_ALRM_REQ() : TSBK()
+ISP_EMERG_ALRM_REQ::ISP_EMERG_ALRM_REQ() : TSBK(),
+    m_specialInfo1(0U),
+    m_specialInfo2(0U)
 {
     m_lco = TSBKO::ISP_EMERG_ALRM_REQ;
 }
@@ -43,33 +45,16 @@ bool ISP_EMERG_ALRM_REQ::decode(const uint8_t* data, bool rawTSBK)
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
-    /*
-    ** bryanb: this is a bit of a hack -- because the EMERG ALRM and DENY have the same
-    ** opcode; the following are used by TSBK_OSP_DENY_RSP; best way to check is for m_response > 0
-    */
-    uint8_t si1 = (uint8_t)((tsbkValue >> 56) & 0xFFU);                             // Emerg. Special Info 1
-    bool manDown = si1 & 0x01U;                                                     // Man Down Flag
-    uint8_t si2 = (uint8_t)((tsbkValue >> 48) & 0xFFU);                             // Emerg. Special Info 2
-
-    // if we have no special info, this is a defacto emergency button press
-    if (si1 == 0U && si2 == 0U) {
-        m_emergency = true;
-    }
-
-    // if we have a man down flag set and no special info 2, this is a man-down emergency
-    if (manDown && si2 == 0U) {
-        m_emergency = true;
-    }
-
-    // all other emergency alarms aren't supported and are ignored (and infact most code will treat that as
-    //  OSP_DENY_RSP)
-
-    m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
-    m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type
-    m_response = (uint8_t)((tsbkValue >> 48) & 0xFFU);                              // Reason
-
-    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Target Radio Address
+    m_specialInfo1 = (uint8_t)((tsbkValue >> 56) & 0xFFU);                          // Emergency Special Information 1
+    m_specialInfo2 = (uint8_t)((tsbkValue >> 48) & 0xFFU);                          // Emergency Special Information 2
+    m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Group Address
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
+
+    // Emergency Alarm Request and Denial Response share an opcode. Retain the
+    // direction discriminator used by network-originated TSBKs; the RF receive
+    // path independently identifies this opcode as an inbound alarm request.
+    m_emergency = (m_specialInfo2 == 0U) &&
+        (m_specialInfo1 == 0U || (m_specialInfo1 & 0x01U) == 0x01U);
 
     return true;
 }
@@ -80,7 +65,14 @@ void ISP_EMERG_ALRM_REQ::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
 
-    /* stub */
+    ulong64_t tsbkValue = m_specialInfo1;                                           // Emergency Special Information 1
+    tsbkValue = (tsbkValue << 8) + m_specialInfo2;                                  // Emergency Special Information 2
+    tsbkValue = (tsbkValue << 8) + 0U;                                              // Reserved
+    tsbkValue = (tsbkValue << 16) + (m_dstId & 0xFFFFU);                            // Group Address
+    tsbkValue = (tsbkValue << 24) + (m_srcId & 0xFFFFFFU);                          // Source Radio Address
+
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 /* Returns a string that represents the current TSBK. */

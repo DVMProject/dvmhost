@@ -166,9 +166,6 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 {
     assert(data != nullptr);
 
-    if (!m_p25->m_enableControl)
-        return false;
-
     DUID::E duid = DUID::HDU;
     if (preDecodedTSBK == nullptr) {
         // Decode the NID
@@ -222,6 +219,17 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
         uint32_t srcId = tsbk->getSrcId();
         uint32_t dstId = tsbk->getDstId();
 
+        // check if control signaling is enabled and if the TSBK is not one of the allowed exceptions
+        // if control signaling is disabled and the TSBK is not an allowed exception, ignore it
+        if (!m_p25->m_enableControl && 
+            tsbk->getLCO() != TSBKO::IOSP_CALL_ALRT &&
+            tsbk->getLCO() != TSBKO::IOSP_ACK_RSP &&
+            tsbk->getLCO() != TSBKO::ISP_EMERG_ALRM_REQ &&
+            tsbk->getLCO() != TSBKO::ISP_CAN_SRV_REQ) {
+            m_p25->m_rfState = prevRfState;
+            return false;
+        }
+
         m_p25->m_affiliations->touchUnitReg(srcId);
         m_lastMFID = tsbk->getMFId();
 
@@ -242,15 +250,16 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 VERIFY_SRCID_AFF(tsbk->toString(true), TSBKO::IOSP_GRP_VCH, srcId, dstId);
 
                 VERBOSE_LOG_TSBK(tsbk->toString(true), srcId, dstId);
-                if (m_p25->m_authoritative) {
-                    uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
-                        (tsbk->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
-                        (tsbk->getPriority() & 0x07U);                                      // Priority
+                uint8_t serviceOptions = (tsbk->getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
+                    (tsbk->getEncrypted() ? 0x40U : 0x00U) +                            // Encrypted Flag
+                    (tsbk->getPriority() & 0x07U);                                      // Priority
 
+                if (m_p25->m_authoritative) {
                     writeRF_TSDU_Grant(srcId, dstId, serviceOptions, true);
                 } else {
                     if (m_p25->m_network != nullptr)
-                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, false);
+                        m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
+                            srcId, dstId, 0U, false, serviceOptions);
                 }
             }
             break;
@@ -287,7 +296,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     }
                     else if (m_p25->m_network != nullptr) {
                         m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
-                            srcId, dstId, 0U, true);
+                            srcId, dstId, 0U, true, serviceOptions);
                     }
                     break;
                 }
@@ -305,7 +314,8 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                         writeRF_TSDU_Grant(srcId, dstId, serviceOptions, false);
                     } else {
                         if (m_p25->m_network != nullptr)
-                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true);
+                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
+                                srcId, dstId, 0U, true, serviceOptions);
                     }
                 }
             }
@@ -356,8 +366,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                         writeRF_TSDU_Grant(srcId, dstId, transaction.serviceOptions, false, false, false, 0U, false, srcId);
                     } else {
                         if (m_p25->m_network != nullptr)
-                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
-                                srcId, dstId, 0U, true);
+                            m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, transaction.serviceOptions);
                     }
 
                     m_u2uAvailabilityTransactions.erase(transactionIt);
@@ -591,6 +600,42 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
                 // the telephone interconnect gateway must release the call
                 uint8_t service = isp->getService();
+                if (service == TSBKO::ISP_EMERG_ALRM_REQ) {
+                    VALID_SRCID(tsbk->toString(true), TSBKO::ISP_CAN_SRV_REQ, srcId);
+
+                    if (m_p25->m_enableControl && !m_p25->m_affiliations->isUnitReg(srcId)) {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, emergency alarm cancellation from unregistered RID, srcId = %u",
+                            tsbk->toString(true).c_str(), srcId);
+                        writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_REQ_UNIT_NOT_AUTH,
+                            TSBKO::ISP_EMERG_ALRM_REQ);
+                        writeRF_TSDU_U_Reg_Cmd(srcId);
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                        return false;
+                    }
+
+                    // validate the emergency alarm cancellation request
+                    const uint32_t additionalInfo = isp->getDstId();
+                    const bool validAlarmCancel = isp->getAIV() && isp->getResponse() == 0U && (additionalInfo & 0x800000U) == 0x800000U;
+
+                    // extract the group ID from the additional info field
+                    const uint32_t groupId = additionalInfo & 0xFFFFU;
+                    if (!validAlarmCancel || !acl::AccessControl::validateTGId(groupId)) {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, invalid emergency alarm cancellation, srcId = %u, dstId = %u",
+                            tsbk->toString(true).c_str(), srcId, groupId);
+                        writeRF_TSDU_Deny(srcId, groupId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::ISP_EMERG_ALRM_REQ, true, true);
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                        return false;
+                    }
+
+                    RF_TO_WRITE_NET(isp);
+
+                    writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_EMERG_ALRM_REQ, false, true);
+
+                    ::ActivityLog("P25", true, "emergency alarm cancellation from %u for TG %u", srcId, groupId);
+                    break;
+                }
+
+                // handle telephone interconnect services
                 if (m_telephoneInterconnect && (service == TSBKO::IOSP_TELE_INT_DIAL || service == TSBKO::ISP_TELE_INT_PSTN_REQ ||
                     service == TSBKO::IOSP_TELE_INT_ANS)) {
                     RF_TO_WRITE_NET(isp);
@@ -659,15 +704,40 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
             case TSBKO::ISP_EMERG_ALRM_REQ:
             {
                 ISP_EMERG_ALRM_REQ* isp = static_cast<ISP_EMERG_ALRM_REQ*>(tsbk.get());
-                if (isp->getEmergency()) {
-                    VERBOSE_LOG_TSBK(tsbk->toString(true), srcId, dstId);
+                isp->setEmergency(true);
 
-                    ::ActivityLog("P25", true, "emergency alarm request request from %u", srcId);
+                // validate the source RID
+                VALID_SRCID(tsbk->toString(true), TSBKO::ISP_EMERG_ALRM_REQ, srcId);
 
-                    // emergency functions are expressly not supported by DVM -- DVM will *ACKNOWLEDGE* the request but will not do any
-                    // further processing with it
-                    writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_EMERG_ALRM_REQ, false, true);
+                // validate the target RID
+                VALID_TGID(tsbk->toString(true), TSBKO::ISP_EMERG_ALRM_REQ, srcId, dstId);
+
+                // check if control is enabled and the source unit is registered
+                if (m_p25->m_enableControl) {
+                    if (!m_p25->m_affiliations->isUnitReg(srcId)) {
+                        LogWarning(LOG_RF, P25_TSDU_STR ", %s denial, emergency alarm from unregistered RID, srcId = %u, dstId = %u",
+                            tsbk->toString(true).c_str(), srcId, dstId);
+
+                        writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, TSBKO::ISP_EMERG_ALRM_REQ, true, true);
+                        writeRF_TSDU_U_Reg_Cmd(srcId);
+                        m_p25->m_rfState = RS_RF_REJECTED;
+                        return false;
+                    }
+
+                    VERIFY_SRCID_AFF(tsbk->toString(true), TSBKO::ISP_EMERG_ALRM_REQ, srcId, dstId);
                 }
+
+                if (m_verbose) {
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, specialInfo1 = $%02X, specialInfo2 = $%02X, srcId = %u, dstId = %u",
+                        tsbk->toString(true).c_str(), isp->getSpecialInfo1(), isp->getSpecialInfo2(), srcId, dstId);
+                }
+
+                RF_TO_WRITE_NET(isp);
+
+                writeRF_TSDU_ACK_FNE(srcId, TSBKO::ISP_EMERG_ALRM_REQ, false, true);
+
+                ::ActivityLog("P25", true, "emergency alarm request from %u for TG %u, specialInfo1 = $%02X, specialInfo2 = $%02X",
+                    srcId, dstId, isp->getSpecialInfo1(), isp->getSpecialInfo2());
             }
             break;
             case TSBKO::IOSP_GRP_AFF:
@@ -865,9 +935,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
 
 /* Process a data frame from the network. */
 
-bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, DUID::E& duid)
+bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd,
+    DUID::E& duid, bool inbound)
 {
-    if (!m_p25->m_enableControl)
+    if (!m_p25->m_enableControl && duid != DUID::TSDU)
         return false;
     if (m_p25->m_rfState != RS_RF_LISTENING && m_p25->m_netState == RS_NET_IDLE)
         return false;
@@ -882,6 +953,23 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     return false;
                 }
 
+                // handle emergency alarm requests and cancellations
+                if (inbound && tsbk->getLCO() == TSBKO::ISP_EMERG_ALRM_REQ) {
+                    tsbk->setEmergency(true);
+                }
+
+                // if control is not enabled, only allow emergency alarm and cancel requests
+                if (!m_p25->m_enableControl) {
+                    const bool ack = inbound && tsbk->getLCO() == TSBKO::IOSP_ACK_RSP;
+                    const bool callAlert = inbound && tsbk->getLCO() == TSBKO::IOSP_CALL_ALRT;
+                    const bool emergencyAlarm = inbound && tsbk->getLCO() == TSBKO::ISP_EMERG_ALRM_REQ;
+                    const bool emergencyCancel = inbound && tsbk->getLCO() == TSBKO::ISP_CAN_SRV_REQ && tsbk->getService() == TSBKO::ISP_EMERG_ALRM_REQ;
+                    if (!ack && !callAlert && !emergencyAlarm && !emergencyCancel) {
+                        return false;
+                    }
+                }
+
+                // reject network unit-to-unit signaling if disallowed by the network
                 if (m_p25->m_network != nullptr && m_p25->m_network->disallowUnitToUnit()) {
                     switch (tsbk->getLCO()) {
                     case TSBKO::IOSP_UU_VCH:
@@ -1044,8 +1132,7 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                                     writeRF_TSDU_Grant(srcId, dstId, transaction.serviceOptions, false, false, false, 0U, false, srcId);
                                 }
                                 else if (m_p25->m_network != nullptr) {
-                                    m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25,
-                                        srcId, dstId, 0U, true);
+                                    m_p25->m_network->writeGrantReq(modem::DVM_STATE::STATE_P25, srcId, dstId, 0U, true, transaction.serviceOptions);
                                 }
 
                                 m_u2uAvailabilityTransactions.erase(transactionIt);
@@ -1223,12 +1310,11 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                     break;
                     case TSBKO::ISP_EMERG_ALRM_REQ:
                     {
-                        // non-emergency mode is a TSBKO::OSP_DENY_RSP
-                        if (!tsbk->getEmergency()) {
-                            break; // the FNE may explicitly send these
-                        } else {
+                        if (inbound) {
                             VERBOSE_LOG_TSBK_NET(tsbk->toString(true), srcId, dstId);
-                            return true; // don't allow this to write to the air
+                            if (m_p25->m_enableControl) {
+                                return true; // do not repeat an inbound request on a trunking control channel
+                            }
                         }
                     }
                     break;
@@ -1633,7 +1719,7 @@ void ControlSignaling::writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool 
     lc.setSrcId(tsbk->getSrcId());
     lc.setDstId(tsbk->getDstId());
 
-    m_p25->m_network->writeP25TSDU(lc, data);
+    m_p25->m_network->writeP25TSDU(lc, data, network::NET_CTRL_ISP);
     if (autoReset)
         m_p25->m_network->resetP25();
 }
@@ -1756,10 +1842,11 @@ void ControlSignaling::writeNet_TDULC(lc::TDULC* lc)
 
 void ControlSignaling::writeRF_TSDU_SBF(lc::TSBK* tsbk, bool noNetwork, bool forceSingle, bool imm)
 {
-    if (!m_p25->m_enableControl)
-        return;
-
     assert(tsbk != nullptr);
+
+    if (!m_p25->m_enableControl && tsbk->getLCO() != TSBKO::IOSP_ACK_RSP &&
+        tsbk->getLCO() != TSBKO::ISP_EMERG_ALRM_REQ)
+        return;
 
     uint8_t data[P25_TSDU_FRAME_LENGTH_BYTES + 2U];
     ::memset(data + 2U, 0x00U, P25_TSDU_FRAME_LENGTH_BYTES);
@@ -3196,10 +3283,13 @@ void ControlSignaling::writeRF_TSDU_UU_Ans_Req(uint32_t srcId, uint32_t dstId)
 
 /* Helper to write a acknowledge packet. */
 
-void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noNetwork)
+void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bool extended, bool noNetwork)
 {
     std::unique_ptr<IOSP_ACK_RSP> iosp = std::make_unique<IOSP_ACK_RSP>();
-    iosp->setSrcId(srcId);
+    iosp->setAIV(true);
+    iosp->setEX(false);
+    iosp->setSrcId(dstId);
+    iosp->setDstId(WUID_SYSTEM);
     iosp->setService(service);
 
     if (extended) {
@@ -3208,8 +3298,8 @@ void ControlSignaling::writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bo
     }
 
     if (m_verbose) {
-        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, EX = %u, serviceType = $%02X, srcId = %u",
-            iosp->toString().c_str(), iosp->getAIV(), iosp->getEX(), iosp->getService(), srcId);
+        LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, AIV = %u, EX = %u, serviceType = $%02X, srcId = %u, dstId = %u",
+            iosp->toString().c_str(), iosp->getAIV(), iosp->getEX(), iosp->getService(), WUID_SYSTEM, dstId);
     }
 
     writeRF_TSDU_SBF_Imm(iosp.get(), noNetwork);

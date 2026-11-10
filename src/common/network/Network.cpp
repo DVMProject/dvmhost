@@ -118,12 +118,12 @@ Network::~Network()
 /* Writes a grant request unless unit-to-unit network traffic is disabled. */
 
 bool Network::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
-    const uint8_t slot, const bool unitToUnit)
+    const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions)
 {
     if (m_disallowUnitToUnit && unitToUnit)
         return false;
 
-    return BaseNetwork::writeGrantReq(mode, srcId, dstId, slot, unitToUnit);
+    return BaseNetwork::writeGrantReq(mode, srcId, dstId, slot, unitToUnit, serviceOptions);
 }
 
 /* Resets the DMR ring buffer for the given slot. */

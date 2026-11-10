@@ -180,10 +180,11 @@ namespace network
          * @param dstId Destination subscriber or talkgroup ID.
          * @param slot DMR slot number, or zero for protocols without slots.
          * @param unitToUnit Flag indicating an individual-call grant request.
+         * @param serviceOptions Protocol service-options octet for the requested grant.
          * @return True if the request was written; otherwise false.
          */
         bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
-            const uint8_t slot, const bool unitToUnit);
+            const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions);
 
         /**
          * @brief Resets the DMR ring buffer for the given slot.

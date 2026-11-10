@@ -60,6 +60,16 @@ namespace p25
                  * @returns std::string String representation of the TSBK.
                  */
                 std::string toString(bool isp = false) override;
+
+            public:
+                /**
+                 * @brief Emergency special-information octet 1.
+                 */
+                DECLARE_PROPERTY(uint8_t, specialInfo1, SpecialInfo1);
+                /**
+                 * @brief Emergency special-information octet 2.
+                 */
+                DECLARE_PROPERTY(uint8_t, specialInfo2, SpecialInfo2);
             };
         } // namespace tsbk
     } // namespace lc

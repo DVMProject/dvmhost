@@ -744,7 +744,8 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
 
 /* Process a grant request frame from the network. */
 
-bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
+bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint8_t serviceOptions,
+    uint32_t peerId, uint16_t pktSeq, uint32_t streamId)
 {
     if (unitToUnit && (!m_network->isUnitToUnitPeerAllowed(peerId) || !m_network->isUnitToUnitRouteAvailable(dstId))) {
         return false;
@@ -799,11 +800,13 @@ bool TagNXDNData::processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUni
                     continue;
                 if (unitToUnit && !m_network->isUnitToUnitPeerAllowed(peer.first))
                     continue;
-                write_Message_Grant(peer.first, srcId, dstId, 4U, !unitToUnit);
+
+                    write_Message_Grant(peer.first, srcId, dstId, serviceOptions, !unitToUnit);
             }
         }
     }
 
+    // check if the destination has been granted globally
     if (!m_network->m_globalAff->isGranted(dstId)) {
         if (m_network->m_globalAff->grantCh(dstId, srcId, peerId, fne_lookups::GRANT_TIMER_TIMEOUT, !unitToUnit)) {
             return true;

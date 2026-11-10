@@ -102,7 +102,8 @@ BaseNetwork::~BaseNetwork()
 
 /* Writes grant request to the network. */
 
-bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit)
+bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+    const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -118,6 +119,7 @@ bool BaseNetwork::writeGrantReq(const uint8_t mode, const uint32_t srcId, const 
         buffer[19U] |= 0x80U;
 
     buffer[20U] = mode;                                                             // DVM Mode State
+    buffer[21U] = serviceOptions;                                                   // Service Options
 
     return writeMaster({ NET_FUNC::GRANT_REQ, NET_SUBFUNC::NOP }, buffer, MSG_HDR_SIZE, RTP_END_OF_CALL_SEQ, 0U);
 }
@@ -903,7 +905,7 @@ bool BaseNetwork::writeP25TDU(const p25::lc::LC& control, const p25::data::LowSp
 
 /* Writes P25 TSDU frame data to the network. */
 
-bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
+bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte)
 {
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
@@ -913,7 +915,7 @@ bool BaseNetwork::writeP25TSDU(const p25::lc::LC& control, const uint8_t* data)
     }
 
     uint32_t messageLength = 0U;
-    UInt8Array message = createP25_TSDUMessage(messageLength, control, data);
+    UInt8Array message = createP25_TSDUMessage(messageLength, control, data, controlByte);
     if (message == nullptr) {
         return false;
     }
@@ -1606,7 +1608,7 @@ UInt8Array BaseNetwork::createP25_TDUMessage(uint32_t& length, const p25::lc::LC
 
 /* Creates an P25 TSDU frame message. */
 
-UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data)
+UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte)
 {
     using namespace p25::defines;
     assert(data != nullptr);
@@ -1617,6 +1619,7 @@ UInt8Array BaseNetwork::createP25_TSDUMessage(uint32_t& length, const p25::lc::L
     // construct P25 message header
     p25::data::LowSpeedData lsd = p25::data::LowSpeedData();
     createP25_MessageHdr(buffer, DUID::TSDU, control, lsd, FrameType::TERMINATOR);
+    buffer[14U] = controlByte;
 
     // pack raw P25 TSDU bytes
     ::memcpy(buffer + 24U, data, P25_TSDU_FRAME_LENGTH_BYTES);

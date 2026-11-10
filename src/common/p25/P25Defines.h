@@ -246,6 +246,8 @@ namespace p25
 
         /** @brief FNE Working Unit ID */
         const uint32_t  WUID_FNE = 0xFFFFFCU;
+        /** @brief System-default Working Unit ID used by FNE call-processing responses. */
+        const uint32_t  WUID_SYSTEM = 0xFFFFFDU;
         /** @brief Registration Working Unit ID */
         const uint32_t  WUID_REG = 0xFFFFFEU;
         /** @brief All-call Working Unit ID */

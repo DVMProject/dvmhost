@@ -192,7 +192,7 @@ bool ControlSignaling::process(FuncChannelType::E fct, ChOption::E option, uint8
                     writeRF_Message_Grant(srcId, dstId, serviceOptions, group);
             } else {
                 if (m_nxdn->m_network != nullptr)
-                    m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, !group);
+                    m_nxdn->m_network->writeGrantReq(modem::DVM_STATE::STATE_NXDN, srcId, dstId, 0U, !group, serviceOptions);
             }
         }
         break;

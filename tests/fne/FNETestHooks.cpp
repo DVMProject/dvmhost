@@ -303,19 +303,19 @@ bool FNETestHooks::validateP25IndividualCall(TrafficNetwork& network, uint32_t p
 /* Processes a synthetic DMR FNE grant request. */
 
 bool FNETestHooks::processDMRGrantRequest(TrafficNetwork& network, uint32_t peerId,
-    uint32_t sourceId, uint32_t destinationId, bool unitToUnit)
+    uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions)
 {
     return network.m_tagDMR->processGrantReq(
-        sourceId, destinationId, 1U, unitToUnit, peerId, 1U, 105U);
+        sourceId, destinationId, 1U, unitToUnit, serviceOptions, peerId, 1U, 105U);
 }
 
 /* Processes a synthetic P25 FNE grant request. */
 
 bool FNETestHooks::processP25GrantRequest(TrafficNetwork& network, uint32_t peerId,
-    uint32_t sourceId, uint32_t destinationId, bool unitToUnit)
+    uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions)
 {
     return network.m_tagP25->processGrantReq(
-        sourceId, destinationId, unitToUnit, peerId, 1U, 107U);
+        sourceId, destinationId, unitToUnit, serviceOptions, peerId, 1U, 107U);
 }
 
 /* Processes a synthetic P25 Phase 2 private voice frame. */
@@ -336,10 +336,10 @@ bool FNETestHooks::processP25P2PrivateFrame(TrafficNetwork& network, uint32_t pe
 /* Processes a synthetic NXDN FNE grant request. */
 
 bool FNETestHooks::processNXDNGrantRequest(TrafficNetwork& network, uint32_t peerId,
-    uint32_t sourceId, uint32_t destinationId, bool unitToUnit)
+    uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions)
 {
     return network.m_tagNXDN->processGrantReq(
-        sourceId, destinationId, unitToUnit, peerId, 1U, 106U);
+        sourceId, destinationId, unitToUnit, serviceOptions, peerId, 1U, 106U);
 }
 
 /* Sets whether unit-to-unit traffic is globally disabled. */

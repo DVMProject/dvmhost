@@ -92,12 +92,14 @@ namespace network
              * @param dstId Destination ID.
              * @param slot DMR slot number.
              * @param unitToUnit Flag indicating whether or not this grant is for unit-to-unit traffic.
+             * @param serviceOptions DMR service-options octet.
              * @param peerId Peer ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
              * @returns bool True, if the grant was processed, otherwise false.
              */
-            bool processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
+            bool processGrantReq(uint32_t srcId, uint32_t dstId, uint8_t slot, bool unitToUnit,
+                uint8_t serviceOptions, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /**
              * @brief Helper to trigger a call takeover from a In-Call control event.

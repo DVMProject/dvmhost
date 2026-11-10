@@ -33,6 +33,79 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         REQUIRE(P25_TSBK_FEC_LENGTH_BITS == (P25_TSBK_FEC_LENGTH_BYTES * 8 - 4)); // 196 bits (Trellis)
     }
 
+    SECTION("Emergency_Alarm_Request_Roundtrip") {
+        ISP_EMERG_ALRM_REQ source;
+        source.setSpecialInfo1(0x01U);
+        source.setSpecialInfo2(0x00U);
+        source.setDstId(0x2345U);
+        source.setSrcId(0x654321U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        source.encode(raw, true, true);
+
+        const uint16_t groupId = GET_UINT16(raw, 5U);
+        const uint32_t srcId = GET_UINT24(raw, 7U);
+        REQUIRE((raw[0U] & 0x3FU) == TSBKO::ISP_EMERG_ALRM_REQ);
+        REQUIRE(raw[2U] == 0x01U);
+        REQUIRE(raw[3U] == 0x00U);
+        REQUIRE(raw[4U] == 0x00U);
+        REQUIRE(groupId == 0x2345U);
+        REQUIRE(srcId == 0x654321U);
+
+        std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+        REQUIRE(decoded != nullptr);
+        ISP_EMERG_ALRM_REQ* alarm = dynamic_cast<ISP_EMERG_ALRM_REQ*>(decoded.get());
+        REQUIRE(alarm != nullptr);
+        CHECK(alarm->getEmergency());
+        CHECK(alarm->getSpecialInfo1() == 0x01U);
+        CHECK(alarm->getSpecialInfo2() == 0x00U);
+        CHECK(alarm->getDstId() == 0x2345U);
+        CHECK(alarm->getSrcId() == 0x654321U);
+    }
+
+    SECTION("Emergency_Alarm_Cancel_Roundtrip") {
+        ISP_CAN_SRV_REQ source;
+        source.setAIV(true);
+        source.setService(TSBKO::ISP_EMERG_ALRM_REQ);
+        source.setResponse(0U);
+        source.setDstId(0x800000U | 0x2345U);
+        source.setSrcId(0x654321U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        source.encode(raw, true, true);
+
+        std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+        REQUIRE(decoded != nullptr);
+        ISP_CAN_SRV_REQ* cancel = dynamic_cast<ISP_CAN_SRV_REQ*>(decoded.get());
+        REQUIRE(cancel != nullptr);
+        CHECK(cancel->getAIV());
+        CHECK(cancel->getService() == TSBKO::ISP_EMERG_ALRM_REQ);
+        CHECK(cancel->getResponse() == 0U);
+        CHECK(cancel->getDstId() == (0x800000U | 0x2345U));
+        CHECK(cancel->getSrcId() == 0x654321U);
+    }
+
+    SECTION("Emergency_Alarm_ACK_Uses_System_Default_Source") {
+        IOSP_ACK_RSP ack;
+        ack.setAIV(true);
+        ack.setEX(false);
+        ack.setService(TSBKO::ISP_EMERG_ALRM_REQ);
+        ack.setDstId(WUID_SYSTEM);
+        ack.setSrcId(0x654321U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        ack.encode(raw, true, true);
+
+        const uint32_t sourceId = GET_UINT24(raw, 4U);
+        const uint32_t targetId = GET_UINT24(raw, 7U);
+        CHECK((raw[2U] & 0xC0U) == 0x80U);
+        CHECK(targetId == 0x654321U);
+        CHECK(sourceId == WUID_SYSTEM);
+    }
+
     SECTION("Standard_Unconfirmed_MBT_TELE_INT_DIAL_REQ") {
         const uint8_t counts[] = { 1U, 10U, 11U, 34U };
         for (uint8_t count : counts) {

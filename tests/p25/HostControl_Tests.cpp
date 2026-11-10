@@ -195,6 +195,46 @@ void buildCancelServiceRequest(uint32_t srcId, uint8_t serviceType, uint8_t* raw
     edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
 }
 
+/**
+ * @brief Builds an independently encoded emergency alarm request ISP TSBK.
+ * @param srcId RID declaring the emergency alarm.
+ * @param dstId Group associated with the emergency alarm.
+ * @param specialInfo1 Emergency Special Information octet 1.
+ * @param specialInfo2 Emergency Special Information octet 2.
+ * @param raw Buffer to store the constructed TSBK.
+ */
+void buildEmergencyAlarmRequest(uint32_t srcId, uint16_t dstId, uint8_t specialInfo1,
+    uint8_t specialInfo2, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::ISP_EMERG_ALRM_REQ;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = specialInfo1;
+    raw[3U] = specialInfo2;
+    SET_UINT16(dstId, raw, 5U);
+    SET_UINT24(srcId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+/**
+ * @brief Builds an independently encoded emergency alarm cancellation ISP TSBK.
+ * @param srcId RID cancelling its emergency alarm.
+ * @param dstId Group associated with the emergency alarm.
+ * @param raw Buffer to store the constructed TSBK.
+ */
+void buildEmergencyAlarmCancel(uint32_t srcId, uint16_t dstId, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::ISP_CAN_SRV_REQ;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = 0x80U | p25::defines::TSBKO::ISP_EMERG_ALRM_REQ;
+    raw[3U] = 0x00U;
+    raw[4U] = 0x80U;
+    SET_UINT16(dstId, raw, 5U);
+    SET_UINT24(srcId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
 /** Builds an independently encoded UU ANS request OSP TSBK. */
 void buildUUAnswerRequest(uint32_t callerId, uint32_t calledId, uint8_t* raw)
 {
@@ -803,6 +843,62 @@ TEST_CASE("P25 active unit-to-unit call continues with a grant instead of anothe
     CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
     CHECK(HostTestHooks::p25U2UGrantSource(*harness.m_control, caller, called) == caller);
     CHECK(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == called);
+}
+
+TEST_CASE("P25 conventional host accepts and acknowledges an emergency alarm TSBK",
+    "[p25][host][control][emergency][conventional]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+    uint8_t response[p25::defines::P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+
+    buildEmergencyAlarmRequest(srcId, dstId, 0x00U, 0x01U, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+
+    CHECK(harness.m_control->getFrame(response) > 0U);
+}
+
+TEST_CASE("P25 trunking host rejects an emergency alarm from an unregistered unit",
+    "[p25][host][control][emergency][trunking]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+    buildEmergencyAlarmRequest(srcId, dstId, 0x00U, 0x00U, raw);
+    CHECK_FALSE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+}
+
+TEST_CASE("P25 conventional host accepts and acknowledges emergency alarm cancellation",
+    "[p25][host][control][emergency][conventional]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+    uint8_t response[p25::defines::P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+
+    buildEmergencyAlarmCancel(srcId, dstId, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(harness.m_control->getFrame(response) > 0U);
+}
+
+TEST_CASE("P25 trunking host accepts an emergency alarm from a registered unit",
+    "[p25][host][control][emergency][trunking]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, srcId);
+    buildEmergencyAlarmRequest(srcId, dstId, 0x01U, 0x00U, raw);
+    CHECK(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
 }
 
 TEST_CASE("P25 unit-to-unit cancellation cleanup releases only private call state",

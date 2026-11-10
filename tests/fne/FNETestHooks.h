@@ -181,10 +181,11 @@ public:
      * @param sourceId Calling subscriber ID.
      * @param destinationId Called subscriber or talkgroup ID.
      * @param unitToUnit Whether the request is an individual call.
+     * @param serviceOptions DMR service-options octet.
      * @return True when the request is accepted.
      */
     static bool processDMRGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
-        uint32_t sourceId, uint32_t destinationId, bool unitToUnit);
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions = 4U);
     /**
      * @brief Processes a synthetic P25 FNE grant request.
      * @param network The TrafficNetwork instance.
@@ -192,10 +193,11 @@ public:
      * @param sourceId Calling subscriber ID.
      * @param destinationId Called subscriber or talkgroup ID.
      * @param unitToUnit Whether the request is an individual call.
+     * @param serviceOptions P25 service-options octet.
      * @return True when the request is accepted.
      */
     static bool processP25GrantRequest(network::TrafficNetwork& network, uint32_t peerId,
-        uint32_t sourceId, uint32_t destinationId, bool unitToUnit);
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions = 4U);
     /**
      * @brief Processes a synthetic P25 Phase 2 private voice frame.
      * @param network The TrafficNetwork instance.
@@ -214,10 +216,11 @@ public:
      * @param sourceId Calling subscriber ID.
      * @param destinationId Called subscriber or talkgroup ID.
      * @param unitToUnit Whether the request is an individual call.
+     * @param serviceOptions NXDN service-options octet.
      * @return True when the request is accepted.
      */
     static bool processNXDNGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
-        uint32_t sourceId, uint32_t destinationId, bool unitToUnit);
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions = 4U);
     /**
      * @brief Sets whether unit-to-unit traffic is globally disabled.
      * @param network The TrafficNetwork instance.
