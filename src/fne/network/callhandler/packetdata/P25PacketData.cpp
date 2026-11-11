@@ -1525,7 +1525,9 @@ bool P25PacketData::processConvDataReg(RxStatus* status)
 
     data::DataHeader responseHeader;
     responseHeader.setFormat(PDUFormatType::CONFIRMED);
-    responseHeader.setMFId(MFG_STANDARD);
+    // echo the subscriber's MFID; a radio that registers with a manufacturer MFID
+    // rejects a standard-MFID response as undeliverable
+    responseHeader.setMFId(status->assembler.dataHeader.getMFId());
     responseHeader.setAckNeeded(true);
     responseHeader.setOutbound(true);
     responseHeader.setSAP(PDUSAP::CONV_DATA_REG);
