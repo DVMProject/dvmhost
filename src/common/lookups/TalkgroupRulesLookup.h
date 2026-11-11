@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
- *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 P. McDonnell, W3AXL
  *
  */
 /**

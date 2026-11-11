@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2022,2024,2025 Bryan Biedenkapp, N2PLL
- *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (c) 2024 P. McDonnell, W3AXL
  *  Copyright (c) 2024 Caleb, KO4UYJ
  *
  */

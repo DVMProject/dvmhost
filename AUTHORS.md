@@ -13,7 +13,7 @@ replace or alter the copyright notice or license in an individual file.
 - C. Lovell (K7CBL / Dev_Ranger)
 - Caleb (K4PHP / firealarmss)
 - Lorenzo L. Romero (K2LLR)
-- Patrick McDonnell (W3AXL)
+- P. McDonnell (W3AXL)
 - Nat Moore / Natalie Moore
 - Charles Bricker (K3NOP)
 - Timothy Sawyer (WD6AWP)
