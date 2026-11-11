@@ -39,6 +39,7 @@
 #include "RtsPttController.h"
 #include "CtsCorController.h"
 
+#include <chrono>
 #include <string>
 #include <mutex>
 
@@ -197,6 +198,7 @@ private:
     uint16_t m_dropTimeMS;
     Timer m_localDropTime;
     Timer m_udpDropTime;
+    std::chrono::steady_clock::time_point m_lastUDPFrame;
 
     bool m_detectAnalogMDC1200;
 

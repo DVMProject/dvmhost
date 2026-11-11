@@ -204,6 +204,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_dropTimeMS(180U),
     m_localDropTime(1000U, 0U, 180U),
     m_udpDropTime(1000U, 0U, 180U),
+    m_lastUDPFrame(),
     m_detectAnalogMDC1200(false),
     m_preambleLeaderTone(false),
     m_preambleTone(2175),
@@ -1591,6 +1592,15 @@ void HostBridge::processUDPAudio()
         if (m_udpRTPFrames && m_udpUseULaw)
             pcmLength = AUDIO_SAMPLES_LENGTH_BYTES / 2U;
 
+        // raw UDP audio contains a four-byte length followed by one complete
+        // PCM frame and, when enabled, two four-byte metadata identifiers;
+        // a partial frame must not keep an active call alive
+        if (!m_udpRTPFrames && !m_udpUsrp && (pcmLength != AUDIO_SAMPLES_LENGTH_BYTES ||
+             length < static_cast<int>(4U + pcmLength + (m_udpMetadata ? 8U : 0U)))) {
+            LogWarning(LOG_NET, "Incomplete UDP PCM frame, dropping");
+            return;
+        }
+
         DECLARE_UINT8_ARRAY(pcm, pcmLength + 1U);
         RTPHeader rtpHeader = RTPHeader();
 
@@ -1670,7 +1680,13 @@ void HostBridge::processUDPAudio()
 
         req->dstId = m_dstId;
 
-        m_udpPackets.push_back(req);
+        // scope is intentional
+        {
+            std::lock_guard<std::mutex> lock(s_audioMutex);
+            m_udpPackets.push_back(req);
+            m_lastUDPFrame = std::chrono::steady_clock::now();
+            m_udpDropTime.start();
+        }
     }
 }
 
@@ -2600,7 +2616,11 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                 if (!bridge->m_udpRTPFrames && bridge->m_udpFrameTiming) {
                     lastFrameTime = now;
                 }
-                
+
+                // own the complete call-state transition and encoding; The
+                // watchdog uses this mutex before inspecting UDP inactivity
+                std::lock_guard<std::mutex> lock(s_audioMutex);
+                bridge->m_lastUDPFrame = std::chrono::steady_clock::now();
                 bridge->m_udpDropTime.start();
 
                 // handle source ID management
@@ -2685,7 +2705,6 @@ void* HostBridge::threadUDPAudioProcess(void* arg)
                 }
 
                 // process the received audio frame
-                std::lock_guard<std::mutex> lock(s_audioMutex);
                 uint8_t pcm[AUDIO_SAMPLES_LENGTH_BYTES];
                 ::memset(pcm, 0x00U, AUDIO_SAMPLES_LENGTH_BYTES);
 
@@ -3263,13 +3282,10 @@ void* HostBridge::threadCallWatchdog(void* arg)
             uint32_t ms = stopWatch.elapsed();
             stopWatch.start();
 
+            std::unique_lock<std::mutex> audioLock(s_audioMutex);
             if (!bridge->m_trafficFromUDP) {
                 if (bridge->m_localDropTime.isRunning())
                     bridge->m_localDropTime.clock(ms);
-            }
-            else {
-                if (bridge->m_udpDropTime.isRunning())
-                    bridge->m_udpDropTime.clock(ms);
             }
 
             // Debounce RTS PTT clear using hold-off after last audio output
@@ -3300,7 +3316,9 @@ void* HostBridge::threadCallWatchdog(void* arg)
                 srcId = bridge->m_udpSrcId;
                 dstId = bridge->m_udpDstId;
 
-                if (bridge->m_udpDropTime.isRunning() && bridge->m_udpDropTime.hasExpired()) {
+                const auto inactiveFor = std::chrono::steady_clock::now() - bridge->m_lastUDPFrame;
+                if (bridge->m_udpDropTime.isRunning() && bridge->m_udpPackets.empty() &&
+                    inactiveFor >= std::chrono::milliseconds(bridge->m_dropTimeMS)) {
                     bridge->callEnd(srcId, dstId);
                 }
             }
@@ -3314,6 +3332,8 @@ void* HostBridge::threadCallWatchdog(void* arg)
                     }
                 }
             }
+
+            audioLock.unlock();
 
             Thread::sleep(5U);
         }
