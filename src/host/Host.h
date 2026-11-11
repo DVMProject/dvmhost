@@ -280,6 +280,12 @@ private:
     void setState(uint8_t state);
 
     /**
+     * @brief Determines whether CW identification may begin without interrupting active traffic.
+     * @returns bool True, if the modem and every enabled protocol are idle and CW identification is permitted.
+     */
+    bool canTransmitCWId() const;
+
+    /**
      * @brief Entry point to RPC clocking thread.
      * @param arg Instance of the thread_t structure.
      * @returns void* (Ignore)

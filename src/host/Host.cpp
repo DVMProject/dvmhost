@@ -999,7 +999,7 @@ int Host::run()
         m_cwIdTimer.clock(ms);
         if (m_cwIdTimer.isRunning() && m_cwIdTimer.hasExpired()) {
             m_mainLoopStage = 9U; // intentional magic number
-            if (!m_modem->hasTX() && !m_p25CtrlChannel && !m_dmrCtrlChannel && !m_nxdnCtrlChannel) {
+            if (canTransmitCWId()) {
                 if (m_dmrBeaconDurationTimer.isRunning() || m_p25BcastDurationTimer.isRunning() ||
                     m_nxdnBcastDurationTimer.isRunning()) {
                     LogDebug(LOG_HOST, "CW, beacon or CC timer running, ceasing");
@@ -1696,7 +1696,7 @@ void Host::setState(uint8_t state)
             m_modem->clearDMRFrame2();
             m_modem->clearP25Frame();
 
-            if (m_state == HOST_STATE_ERROR) {
+            if (m_state == HOST_STATE_ERROR && canTransmitCWId()) {
                 m_modem->sendCWId(m_cwCallsign);
 
                 m_cwIdTimer.setTimeout(m_cwIdTime);
@@ -1752,6 +1752,41 @@ void Host::setState(uint8_t state)
             }
             break;
     }
+}
+
+/* Determines whether CW identification may begin without interrupting active traffic. */
+
+bool Host::canTransmitCWId() const
+{
+    if (m_modem == nullptr || m_isModemDFSI)
+        return false;
+
+    if (m_dmrCtrlChannel || m_p25CtrlChannel || m_nxdnCtrlChannel || m_modem->hasTX())
+        return false;
+
+    const modem::DVM_STATE modemState = m_modem->getState();
+    if (!m_fixedMode) {
+        if (m_state != STATE_IDLE || modemState != STATE_IDLE)
+            return false;
+    }
+    else {
+        modem::DVM_STATE fixedState = modem::STATE_IDLE;
+        if (m_dmr != nullptr)
+            fixedState = modem::STATE_DMR;
+        else if (m_p25 != nullptr)
+            fixedState = modem::STATE_P25;
+        else if (m_nxdn != nullptr)
+            fixedState = modem::STATE_NXDN;
+
+        if (fixedState == modem::STATE_IDLE || m_state != fixedState || modemState != fixedState)
+            return false;
+    }
+
+    if ((m_dmr != nullptr && m_dmr->isBusy()) || (m_p25 != nullptr && m_p25->isBusy()) || (m_nxdn != nullptr && m_nxdn->isBusy())) {
+        return false;
+    }
+
+    return true;
 }
 
 /* Entry point to RPC clock thread. */
