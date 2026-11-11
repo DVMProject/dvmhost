@@ -72,6 +72,7 @@ namespace network
             KEY_KEK_REQ = 0x80U,                    //!< Encryption Key LLA/UKEK Request
             KEY_KEK_RSP = 0x81U,                    //!< Encryption Key LLA/UKEK Response
 
+            SUBSCRIBER_OP = 0x84U,                  //!< Subscriber Operation Query Function
             RADIO_ALIAS_SYNC = 0x85U,               //!< Radio Alias List Sync
 
             KEYS_INVENTORY = 0x8EU,                 //!< Encryption Key Container Inventory
@@ -113,6 +114,9 @@ namespace network
             TRANSFER_SUBFUNC_DIAG = 0x02U,          //!< Diagnostic Log Transfer
             TRANSFER_SUBFUNC_STATUS = 0x03U,        //!< Status Transfer
             TRANSFER_SUBFUNC_PATCH_STATUS = 0x04U,  //!< Console Patch Status Transfer
+
+            SUBSCRIBER_OP_OPERATION = 0x00U,        //!< Subscriber Operation Result Query
+            SUBSCRIBER_OP_P25_STATUS = 0x01U,       //!< P25 Subscriber Status Query
 
             ANNC_SUBFUNC_GRP_AFFIL = 0x00U,         //!< Announce Group Affiliation
             ANNC_SUBFUNC_UNIT_REG = 0x01U,          //!< Announce Unit Registration

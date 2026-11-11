@@ -19,6 +19,7 @@
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/tsbk/IOSP_EXT_FNCT.h"
 #include "host/modem/Modem.h"
 #include "modem/port/IModemPort.h"
 #include "host/HostTestHooks.h"
@@ -640,6 +641,26 @@ TEST_CASE("P25 deny responses retain outbound direction when mirrored to the net
     REQUIRE(harness.network()->tsduWriteCount() == 1U);
     REQUIRE(harness.network()->lastTSDULCO() == p25::defines::TSBKO::OSP_DENY_RSP);
     REQUIRE((harness.network()->lastTSDUControlByte() & network::NET_CTRL_ISP) == 0U);
+}
+
+TEST_CASE("P25 radio-check responses are forwarded to the FNE as inbound TSDUs",
+    "[p25][host][control][subscriber-operations][direction]")
+{
+    P25HostHarness harness(true, true);
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+    harness.m_ridLookup.addEntry(123456U, true, "radio-check responder");
+    p25::lc::tsbk::IOSP_EXT_FNCT response;
+    response.setExtendedFunction(p25::defines::ExtendedFunctions::CHECK_ACK);
+    response.setSrcId(p25::defines::WUID_FNE);
+    response.setDstId(123456U);
+
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES] = { 0U };
+    response.encode(raw, true, true);
+
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(harness.network()->tsduWriteCount() == 1U);
+    CHECK(harness.network()->lastTSDULCO() == p25::defines::TSBKO::IOSP_EXT_FNCT);
+    CHECK((harness.network()->lastTSDUControlByte() & network::NET_CTRL_ISP) != 0U);
 }
 
 TEST_CASE("P25 dedicated control channels silently discard network voice unless voice on control is enabled",

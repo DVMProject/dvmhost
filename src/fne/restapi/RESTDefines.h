@@ -38,6 +38,10 @@
 #define FNE_PUT_RID_ALIAS_ADD           "/rid/alias/add"
 #define FNE_PUT_RID_ALIAS_DELETE        "/rid/alias/delete"
 #define FNE_GET_RID_ALIAS_COMMIT        "/rid/alias/commit"
+#define FNE_GET_RID_OPERATION_BASE      "/rid/operation/"
+#define FNE_GET_RID_OPERATION           "^/rid/operation/([0-9]+)$"
+#define FNE_GET_P25_RID_STATUS_BASE     "/p25/rid/status/"
+#define FNE_GET_P25_RID_STATUS          "^/p25/rid/status/([0-9]+)$"
 
 #define FNE_GET_TGID_QUERY              "/tg/query"
 #define FNE_PUT_TGID_ADD                "/tg/add"

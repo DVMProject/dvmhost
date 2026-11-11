@@ -45,6 +45,7 @@
 #include "fne/network/influxdb/InfluxDB.h"
 #include "fne/network/FNEPeerConnection.h"
 #include "fne/network/SpanningTree.h"
+#include "fne/network/SubscriberOperationStore.h"
 #include "fne/network/UnitRouteRegistry.h"
 #include "fne/network/HAParameters.h"
 #include "fne/PatchStatusRegistry.h"
@@ -253,6 +254,12 @@ namespace network
         callhandler::TagAnalogData* analogTrafficHandler() const { return m_tagAnalog; }
 
         /**
+         * @brief Gets the subscriber operation store.
+         * @returns SubscriberOperationStore& Subscriber operation store.
+         */
+        SubscriberOperationStore& subscriberOperations() { return m_subscriberOperations; }
+
+        /**
          * @brief Sets the instances of the Radio ID, Radio Alias, Talkgroup ID, Peer List, and Crypto lookup tables.
          * @param ridLookup Radio ID Lookup Table Instance
          * @param ridAliasLookup Radio Alias Lookup Table Instance
@@ -414,6 +421,7 @@ namespace network
         mutable std::mutex m_peerAffiliationsMutex;
         mutable std::mutex m_affiliationUpdateMutex;
         UnitRouteRegistry m_unitRouteRegistry;
+        SubscriberOperationStore m_subscriberOperations;
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;

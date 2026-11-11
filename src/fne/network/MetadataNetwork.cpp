@@ -247,6 +247,12 @@ bool MetadataNetwork::writePeerMetadata(FNEPeerConnection* connection, uint32_t 
 {
     if (connection == nullptr)
         return false;
+#if defined(CATCH2_TEST_COMPILATION)
+    if (m_testPeerMetadataWriteHandler) {
+        m_testPeerMetadataWriteHandler(opcode, data, length);
+        return true;
+    }
+#endif
     if (m_status != NET_STAT_MST_RUNNING)
         return false;
     if (m_frameQueue == nullptr)
@@ -324,6 +330,7 @@ void MetadataNetwork::taskNetworkRx(NetPacketRequest* req)
                 { NET_FUNC::KEYS_UPDATE, &MetadataNetwork::PacketHandler::keysUpdate },
 
                 { NET_FUNC::RADIO_ALIAS_SYNC, &MetadataNetwork::PacketHandler::radioAliasSync },
+                { NET_FUNC::SUBSCRIBER_OP, &MetadataNetwork::PacketHandler::subscriberOperation },
 
                 { NET_FUNC::REPL, &MetadataNetwork::PacketHandler::replication },
                 { NET_FUNC::NET_TREE, &MetadataNetwork::PacketHandler::networkTree }

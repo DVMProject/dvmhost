@@ -112,6 +112,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_peerAffiliationsMutex(),
     m_affiliationUpdateMutex(),
     m_unitRouteRegistry(),
+    m_subscriberOperations(),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
     m_peerReplicaKEKKeyQueue(),
@@ -873,6 +874,9 @@ void TrafficNetwork::clock(uint32_t ms)
     }
 
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    // expire any pending subscriber operations and remove retained results
+    m_subscriberOperations.expire();
 
     // check jitter buffer timeouts for all peers
     for (const auto& peer : peersSnapshot()) {

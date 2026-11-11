@@ -59,6 +59,7 @@ public:
     ~FNEHarness()
     {
         FNETestHooks::clearPeerWriteCapture(traffic);
+        FNETestHooks::clearMetadataWriteCapture(metadata);
         FNETestHooks::clearPeers(traffic);
     }
 
@@ -69,6 +70,119 @@ public:
     network::TrafficNetwork traffic;
     network::MetadataNetwork metadata;
 };
+
+TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
+    "[fne][metadata][subscriber-operations]")
+{
+    constexpr uint32_t CONSOLE_PEER_ID = 1001U;
+    constexpr uint32_t RADIO_PEER_ID = 2001U;
+    constexpr uint32_t SUBSCRIBER_ID = 123456U;
+
+    FNEHarness harness;
+    network::FNEPeerConnection& console = FNETestHooks::addPeer(
+        harness.traffic, CONSOLE_PEER_ID, network::NET_STAT_RUNNING, true);
+    console.peerClass(network::PEER_CONN_CLASS_CONSOLE);
+
+    const uint64_t operationId = harness.traffic.subscriberOperations().start(
+        network::SubscriberOperationStore::Protocol::P25,
+        network::SubscriberOperationStore::Kind::STATUS_QUERY, SUBSCRIBER_ID, RADIO_PEER_ID);
+    REQUIRE(operationId != 0U);
+    REQUIRE(harness.traffic.subscriberOperations().addP25Status(
+        SUBSCRIBER_ID, RADIO_PEER_ID, 0x1234U));
+
+    std::vector<uint8_t> responsePayload;
+    uint8_t responseFunction = network::NET_FUNC::ILLEGAL;
+    uint8_t responseSubFunction = network::NET_SUBFUNC::NOP;
+    FNETestHooks::captureMetadataWrite(harness.metadata, responsePayload,
+        responseFunction, responseSubFunction);
+
+    json::object operationRequest = json::object();
+    operationRequest["operationId"].set<uint64_t>(operationId);
+    const std::string operationJson = json::value(operationRequest).serialize();
+    std::vector<uint8_t> requestPayload(11U + operationJson.length(), 0U);
+    ::memcpy(requestPayload.data() + 11U, operationJson.data(), operationJson.length());
+
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION,
+        CONSOLE_PEER_ID, requestPayload);
+
+    REQUIRE(responsePayload.size() > 11U);
+    CHECK(responseFunction == network::NET_FUNC::SUBSCRIBER_OP);
+    CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION);
+    json::value operationResponseValue;
+    REQUIRE(json::parse(operationResponseValue,
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
+            responsePayload.size() - 11U))
+                .empty());
+    REQUIRE(operationResponseValue.is<json::object>());
+    json::object& operationResponse = operationResponseValue.get<json::object>();
+    CHECK(operationResponse["found"].get<bool>());
+    CHECK(operationResponse["operationId"].get<uint64_t>() == operationId);
+    CHECK(operationResponse["state"].get<std::string>() == "succeeded");
+    CHECK(operationResponse["resultValue"].get<uint16_t>() == 0x1234U);
+
+    json::object statusRequest = json::object();
+    statusRequest["subscriberId"].set<uint32_t>(SUBSCRIBER_ID);
+    const std::string statusJson = json::value(statusRequest).serialize();
+    requestPayload.assign(11U + statusJson.length(), 0U);
+    ::memcpy(requestPayload.data() + 11U, statusJson.data(), statusJson.length());
+    responsePayload.clear();
+
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_P25_STATUS,
+        CONSOLE_PEER_ID, requestPayload);
+
+    REQUIRE(responsePayload.size() > 11U);
+    CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_P25_STATUS);
+    json::value statusResponseValue;
+    REQUIRE(json::parse(statusResponseValue,
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
+            responsePayload.size() - 11U))
+                .empty());
+    REQUIRE(statusResponseValue.is<json::object>());
+    json::object& statusResponse = statusResponseValue.get<json::object>();
+    CHECK(statusResponse["found"].get<bool>());
+    CHECK(statusResponse["subscriberId"].get<uint32_t>() == SUBSCRIBER_ID);
+    CHECK(statusResponse["status"].get<uint16_t>() == 0x1234U);
+    CHECK(statusResponse["solicited"].get<bool>());
+}
+
+TEST_CASE("FNE consumes radio-check responses without peer fanout",
+    "[fne][subscriber-operations][routing]")
+{
+    constexpr uint32_t SOURCE_PEER_ID = 1001U;
+    constexpr uint32_t OTHER_PEER_ID = 1002U;
+    constexpr uint32_t SUBSCRIBER_ID = 123456U;
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols = {
+        FNETestHooks::ParrotProtocol::DMR,
+        FNETestHooks::ParrotProtocol::P25
+    };
+
+    for (FNETestHooks::ParrotProtocol protocol : protocols) {
+        CAPTURE(static_cast<int>(protocol));
+        FNEHarness harness;
+        FNETestHooks::addPeer(harness.traffic, SOURCE_PEER_ID, network::NET_STAT_RUNNING, true);
+        FNETestHooks::addPeer(harness.traffic, OTHER_PEER_ID, network::NET_STAT_RUNNING, true);
+
+        const network::SubscriberOperationStore::Protocol storeProtocol =
+            protocol == FNETestHooks::ParrotProtocol::DMR ? network::SubscriberOperationStore::Protocol::DMR : network::SubscriberOperationStore::Protocol::P25;
+        const uint64_t operationId = harness.traffic.subscriberOperations().start(storeProtocol,
+            network::SubscriberOperationStore::Kind::RADIO_CHECK, SUBSCRIBER_ID, SOURCE_PEER_ID);
+        REQUIRE(operationId != 0U);
+
+        std::vector<uint32_t> writes;
+        FNETestHooks::capturePeerWrites(harness.traffic, writes);
+        CHECK_FALSE(FNETestHooks::processRadioCheckResponse(
+            harness.traffic, protocol, SOURCE_PEER_ID, SUBSCRIBER_ID));
+        CHECK(writes.empty());
+
+        network::SubscriberOperationStore::Operation operation;
+        REQUIRE(harness.traffic.subscriberOperations().get(operationId, operation));
+        CHECK(operation.state == network::SubscriberOperationStore::State::SUCCEEDED);
+        CHECK(operation.peerId == SOURCE_PEER_ID);
+    }
+}
 
 TEST_CASE("FNE unit route registry timestamps learned routes", "[fne][routing][u2u][registry]")
 {

@@ -129,6 +129,20 @@ public:
      */
     static void clearPeerWriteCapture(network::TrafficNetwork& network);
     /**
+     * @brief Captures the next metadata response payload and opcodes.
+     * @param metadata Metadata network instance.
+     * @param[out] payload Complete metadata response payload.
+     * @param[out] function Response function opcode.
+     * @param[out] subFunction Response sub-function opcode.
+     */
+    static void captureMetadataWrite(network::MetadataNetwork& metadata, std::vector<uint8_t>& payload,
+        uint8_t& function, uint8_t& subFunction);
+    /**
+     * @brief Clears the metadata response capture callback.
+     * @param metadata Metadata network instance.
+     */
+    static void clearMetadataWriteCapture(network::MetadataNetwork& metadata);
+    /**
      * @brief Queues and plays one synthetic parrot frame through a protocol handler.
      * @param network The TrafficNetwork instance.
      * @param protocol Protocol handler to exercise.
@@ -312,6 +326,16 @@ public:
      */
     static bool processTruncatedFrame(network::TrafficNetwork& network,
         ParrotProtocol protocol, uint32_t peerId);
+    /**
+     * @brief Passes a radio-check response through an FNE protocol handler.
+     * @param network The TrafficNetwork instance.
+     * @param protocol DMR or P25 protocol handler to exercise.
+     * @param peerId Originating site peer ID.
+     * @param subscriberId Responding subscriber ID.
+     * @returns bool Protocol handler result; false indicates the response was consumed.
+     */
+    static bool processRadioCheckResponse(network::TrafficNetwork& network,
+        ParrotProtocol protocol, uint32_t peerId, uint32_t subscriberId);
     /**
      * @brief Adds a peer to the specified TrafficNetwork.
      * @param network The TrafficNetwork instance.
