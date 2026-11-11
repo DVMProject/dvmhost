@@ -57,6 +57,7 @@ Network::Network(const std::string& address, uint16_t port, uint16_t localPort, 
     m_radioAliasSyncStreamId(0U),
     m_salt(nullptr),
     m_kmfPresharedKey(nullptr),
+    m_initRetry(true),
     m_retryTimer(1000U, DEFAULT_RETRY_TIME),
     m_retryCount(0U),
     m_maxRetryCount(MAX_RETRY_BEFORE_RECONNECT),
@@ -488,6 +489,12 @@ bool Network::open()
     if (udp::Socket::lookup(m_address, m_port, m_addr, m_addrLen) != 0) {
         LogInfoEx(LOG_NET, "!!! Could not lookup the address of the master!");
         return false;
+    }
+
+    // if this is the initial connection attempt, clock the retry timer with the default retry time
+    if (m_initRetry) {
+        m_initRetry = false;
+        m_retryTimer.clock(DEFAULT_RETRY_TIME * 1000U);
     }
 
     return true;

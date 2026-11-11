@@ -87,6 +87,22 @@ public:
      * @returns uint8_t The current retry count.
      */
     uint32_t getRemotePeerIdForTest() const { return m_remotePeerId; }
+
+    /**
+     * @brief Checks if the network is ready to attempt a connection based on the retry timer.
+     * @returns bool True if ready to attempt, false otherwise.
+     */
+    bool readyToAttempt() const { return m_retryTimer.isRunning() && m_retryTimer.hasExpired(); }
+    /**
+     * @brief Gets the retry timeout in seconds.
+     * @returns uint32_t The retry timeout in seconds.
+     */
+    uint32_t retrySeconds() const { return m_retryTimer.getTimeout(); }
+    /**
+     * @brief Advances the retry timer by the specified number of milliseconds.
+     * @param ms The number of milliseconds to advance the retry timer.
+     */
+    void retryClock(uint32_t ms) { m_retryTimer.clock(ms); }
 };
 
 // ---------------------------------------------------------------------------
@@ -851,4 +867,45 @@ TEST_CASE("RTPStreamMultiplex detects lost and out-of-order sequences and resets
 
     REQUIRE(mux.verifyStream(0x1234U, RTP_END_OF_CALL_SEQ, NET_FUNC::PROTOCOL, &lastSeq) == MUX_VALID_SUCCESS);
     REQUIRE_FALSE(mux.hasPktSeq(0x1234U));
+}
+
+TEST_CASE("First FNE connection is immediate and reconnect keeps its backoff", "[network][loopback]") 
+{
+    const uint16_t masterPort = reserveLoopbackPort();
+    REQUIRE(masterPort != 0U);
+
+    const uint16_t localPort = reserveLoopbackPort();
+    REQUIRE(localPort != 0U);
+
+    TestableNetwork network("127.0.0.1", masterPort, localPort, 9004U, "loopback-password", true, false, true, false, false, false, true, true, true, true, false, false);
+    network.enable(true);
+    REQUIRE(network.open());
+
+    REQUIRE(network.readyToAttempt());
+    REQUIRE(network.retrySeconds() == 10U);
+    network.close();
+    REQUIRE(network.open());
+    REQUIRE_FALSE(network.readyToAttempt());
+    REQUIRE(network.retrySeconds() == 10U);
+    network.retryClock(9999U);
+    REQUIRE_FALSE(network.readyToAttempt());
+    network.retryClock(1U);
+    REQUIRE(network.readyToAttempt());
+    network.close();
+}
+
+TEST_CASE("Disabled open does not consume the initial connection", "[network][loopback]") 
+{
+    const uint16_t masterPort = reserveLoopbackPort();
+    REQUIRE(masterPort != 0U);
+
+    const uint16_t localPort = reserveLoopbackPort();
+    REQUIRE(localPort != 0U);
+
+    TestableNetwork network("127.0.0.1", masterPort, localPort, 9004U, "loopback-password", true, false, true, false, false, false, true, true, true, true, false, false);
+    network.enable(true);
+    REQUIRE(network.open());
+
+    REQUIRE(network.readyToAttempt());
+    network.close();
 }

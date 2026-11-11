@@ -406,6 +406,7 @@ namespace network
 
         uint8_t* m_kmfPresharedKey;
 
+        bool m_initRetry;
         Timer m_retryTimer;
         uint8_t m_retryCount;
         uint8_t m_maxRetryCount;
