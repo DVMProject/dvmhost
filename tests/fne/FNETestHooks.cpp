@@ -16,7 +16,9 @@
 #include "fne/network/callhandler/TagNXDNData.h"
 #include "fne/network/callhandler/TagAnalogData.h"
 #include "fne/lookups/AffiliationLookup.h"
+#include "common/dmr/lc/csbk/CSBK_EXT_FNCT.h"
 #include "common/p25/data/Assembler.h"
+#include "common/p25/lc/tsbk/IOSP_EXT_FNCT.h"
 #include "common/Utils.h"
 
 #include <cstring>
@@ -95,6 +97,26 @@ void FNETestHooks::capturePeerWrites(TrafficNetwork& network, std::vector<uint32
 void FNETestHooks::clearPeerWriteCapture(TrafficNetwork& network)
 {
     network.m_testPeerWriteHandler = nullptr;
+}
+
+/* Captures the next metadata response payload and opcodes. */
+
+void FNETestHooks::captureMetadataWrite(MetadataNetwork& metadata, std::vector<uint8_t>& payload,
+    uint8_t& function, uint8_t& subFunction)
+{
+    metadata.m_testPeerMetadataWriteHandler = [&payload, &function, &subFunction](FrameQueue::OpcodePair opcode,
+                                                  const uint8_t* data, uint32_t length) {
+        function = opcode.first;
+        subFunction = opcode.second;
+        payload.assign(data, data + length);
+    };
+}
+
+/* Clears the metadata response capture callback. */
+
+void FNETestHooks::clearMetadataWriteCapture(MetadataNetwork& metadata)
+{
+    metadata.m_testPeerMetadataWriteHandler = nullptr;
 }
 
 /* Queues and plays one synthetic parrot frame through a protocol handler. */
@@ -450,6 +472,44 @@ bool FNETestHooks::processTruncatedFrame(TrafficNetwork& network,
     case ParrotProtocol::ANALOG:
         return network.m_tagAnalog->processFrame(
             frame.data(), (uint32_t)frame.size(), peerId, peerId, 1U, STREAM_ID);
+    }
+
+    return false;
+}
+
+/* Passes a radio-check response through an FNE protocol handler. */
+
+bool FNETestHooks::processRadioCheckResponse(TrafficNetwork& network,
+    ParrotProtocol protocol, uint32_t peerId, uint32_t subscriberId)
+{
+    if (protocol == ParrotProtocol::DMR) {
+        dmr::lc::csbk::CSBK_EXT_FNCT response;
+        response.setExtendedFunction(dmr::defines::ExtendedFunctions::CHECK_ACK);
+        response.setSrcId(subscriberId);
+        response.setDstId(dmr::defines::WUID_ALL);
+
+        uint8_t encoded[dmr::defines::DMR_FRAME_LENGTH_BYTES];
+        ::memset(encoded, 0x00U, sizeof(encoded));
+        response.encode(encoded);
+
+        dmr::data::NetData dmrData;
+        dmrData.setDataType(dmr::defines::DataType::CSBK);
+        dmrData.setData(encoded);
+        uint8_t buffer[DMR_PACKET_LENGTH + PACKET_PAD];
+        ::memset(buffer, 0x00U, sizeof(buffer));
+        return network.m_tagDMR->processCSBK(buffer, peerId, dmrData);
+    }
+
+    if (protocol == ParrotProtocol::P25) {
+        p25::lc::tsbk::IOSP_EXT_FNCT response;
+        response.setExtendedFunction(p25::defines::ExtendedFunctions::CHECK_ACK);
+        response.setSrcId(p25::defines::WUID_FNE);
+        response.setDstId(subscriberId);
+
+        uint8_t buffer[24U + p25::defines::P25_TSDU_FRAME_LENGTH_BYTES];
+        ::memset(buffer, 0x00U, sizeof(buffer));
+        response.encode(buffer + 24U);
+        return network.m_tagP25->processTSDUFrom(buffer, peerId, p25::defines::DUID::TSDU);
     }
 
     return false;

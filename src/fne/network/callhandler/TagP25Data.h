@@ -177,6 +177,26 @@ namespace network
              */
             void write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t arg, uint32_t dstId);
             /**
+             * @brief Helper to write a status query.
+             * @param[in] peerId Peer ID.
+             * @param[in] dstId Destination Radio ID.
+             */
+            void write_TSDU_Status_Query(uint32_t peerId, uint32_t dstId);
+            /**
+             * @brief Helper to close a received status query response.
+             * @param[in] peerId Peer ID.
+             * @param[in] srcId Reporting Radio ID.
+             * @param[in] status Reported status value.
+             */
+            void write_TSDU_Status_Update(uint32_t peerId, uint32_t srcId, uint16_t status);
+            /**
+             * @brief Helper to write a coded message update.
+             * @param[in] peerId Peer ID.
+             * @param[in] dstId Destination Radio ID.
+             * @param[in] message Coded message value.
+             */
+            void write_TSDU_Message_Update(uint32_t peerId, uint32_t dstId, uint16_t message);
+            /**
              * @brief Helper to write a group affiliation query packet.
              * @param peerId Peer ID.
              * @param dstId Destination Radio ID.

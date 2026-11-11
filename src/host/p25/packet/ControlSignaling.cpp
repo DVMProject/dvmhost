@@ -522,6 +522,20 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
             }
             break;
+            case TSBKO::ISP_STS_Q_RSP:
+            {
+                VALID_SRCID(tsbk->toString(true), TSBKO::ISP_STS_Q_RSP, srcId);
+
+                ISP_STS_Q_RSP* response = static_cast<ISP_STS_Q_RSP*>(tsbk.get());
+                if (m_verbose) {
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, status = $%04X, srcId = %u",
+                        tsbk->toString(true).c_str(), response->getStatus(), srcId);
+                }
+
+                RF_TO_WRITE_NET(response);
+                ::ActivityLog("P25", true, "status query response from %u", srcId);
+            }
+            break;
             case TSBKO::IOSP_STS_UPDT:
             {
                 // validate the source RID
@@ -727,7 +741,10 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                     break;
                 }
 
-                writeRF_TSDU_SBF(iosp, true);
+                // Forward the original ISP response to the FNE. Re-encoding through the RF
+                // writer would use the shared IOSP codec as an outbound command and would
+                // not preserve the received response layout.
+                writeNetworkRF(iosp, data + 2U, true);
             }
             break;
             case TSBKO::ISP_EMERG_ALRM_REQ:

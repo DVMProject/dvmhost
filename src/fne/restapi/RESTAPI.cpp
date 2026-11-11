@@ -724,6 +724,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_GRANT_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetGrantList, this));
 
     m_dispatcher.match(FNE_GET_SPANNING_TREE).get(REST_API_BIND(RESTAPI::restAPI_GetSpanningTree, this));
+    m_dispatcher.match(FNE_GET_RID_OPERATION, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDOperation, this));
 
     /*
     ** Digital Mobile Radio
@@ -736,6 +737,7 @@ void RESTAPI::initializeEndpoints()
     */
 
     m_dispatcher.match(PUT_P25_RID).put(REST_API_BIND(RESTAPI::restAPI_PutP25RID, this));
+    m_dispatcher.match(FNE_GET_P25_RID_STATUS, true).get(REST_API_BIND(RESTAPI::restAPI_GetP25RIDStatus, this));
 }
 
 /* Helper to invalidate a host token. */
@@ -2788,9 +2790,9 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    uint32_t peerId = req["peerId"].getDefault<uint32_t>(0U);
-    uint32_t dstId = req["dstId"].get<uint32_t>();
-    uint8_t slot = req["slot"].get<uint8_t>();
+    const uint32_t peerId = req["peerId"].getDefault<uint32_t>(0U);
+    const uint32_t dstId = req["dstId"].get<uint32_t>();
+    const uint8_t slot = req["slot"].get<uint8_t>();
 
     if (dstId == 0U) {
         errorPayload(reply, "destination ID was not valid");
@@ -2802,19 +2804,64 @@ void RESTAPI::restAPI_PutDMRRID(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    errorPayload(reply, "OK", HTTPPayload::OK);
-    std::string command = req["command"].get<std::string>();
+    const std::string command = req["command"].get<std::string>();
     if (::strtolower(command) == RID_CMD_PAGE) {
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagDMR->write_Call_Alrt(peerId, slot, WUID_ALL, dstId);
     }
     else if (::strtolower(command) == RID_CMD_CHECK) {
-        m_network->m_tagDMR->write_Ext_Func(peerId, slot, ExtendedFunctions::CHECK, WUID_ALL, dstId);
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
+            SubscriberOperationStore::Kind::RADIO_CHECK, dstId, operationPeerId);
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent radio check is already pending");
+            return;
+        }
+
+        // send the radio check command to the network layer
+        m_network->m_tagDMR->write_Ext_Func(operationPeerId, slot, ExtendedFunctions::CHECK, WUID_ALL, dstId);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
     }
     else if (::strtolower(command) == RID_CMD_INHIBIT) {
-        m_network->m_tagDMR->write_Ext_Func(peerId, slot, ExtendedFunctions::INHIBIT, WUID_STUNI, dstId);
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
+            SubscriberOperationStore::Kind::INHIBIT, dstId, operationPeerId);
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent inhibit operation is already pending");
+            return;
+        }
+
+        // send the inhibit command to the network layer
+        m_network->m_tagDMR->write_Ext_Func(operationPeerId, slot, ExtendedFunctions::INHIBIT, WUID_STUNI, dstId);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
     }
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
-        m_network->m_tagDMR->write_Ext_Func(peerId, slot, ExtendedFunctions::UNINHIBIT, WUID_STUNI, dstId);
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
+            SubscriberOperationStore::Kind::UNINHIBIT, dstId, operationPeerId);
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent uninhibit operation is already pending");
+            return;
+        }
+
+        // send the uninhibit command to the network layer
+        m_network->m_tagDMR->write_Ext_Func(operationPeerId, slot, ExtendedFunctions::UNINHIBIT, WUID_STUNI, dstId);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
     }
     else {
         errorPayload(reply, "invalid command");
@@ -2852,28 +2899,130 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
         return;
     }
 
-    uint32_t peerId = req["peerId"].getDefault<uint32_t>(0U);
-    uint32_t dstId = req["dstId"].get<uint32_t>();
+    const uint32_t peerId = req["peerId"].getDefault<uint32_t>(0U);
+    const uint32_t dstId = req["dstId"].get<uint32_t>();
 
     if (dstId == 0U) {
         errorPayload(reply, "destination ID was not valid");
         return;
     }
 
-    std::string command = req["command"].get<std::string>();
+    const std::string command = req["command"].get<std::string>();
 
-    errorPayload(reply, "OK", HTTPPayload::OK);
     if (::strtolower(command) == RID_CMD_PAGE) {
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagP25->write_TSDU_Call_Alrt(peerId, WUID_FNE, dstId);
     }
     else if (::strtolower(command) == RID_CMD_CHECK) {
-        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::CHECK, WUID_FNE, dstId);
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+            SubscriberOperationStore::Kind::RADIO_CHECK, dstId, operationPeerId);
+
+        // if the operation ID is 0, it means an equivalent operation is already pending
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent radio check is already pending");
+            return;
+        }
+
+        // send the radio check command to the network layer
+        m_network->m_tagP25->write_TSDU_Ext_Func(operationPeerId, ExtendedFunctions::CHECK, WUID_FNE, dstId);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
+    }
+    else if (::strtolower(command) == RID_CMD_STATUS_QUERY) {
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+            SubscriberOperationStore::Kind::STATUS_QUERY, dstId, operationPeerId);
+
+        // if the operation ID is 0, it means an equivalent operation is already pending
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent status query is already pending");
+            return;
+        }
+
+        // send the status query command to the network layer
+        m_network->m_tagP25->write_TSDU_Status_Query(operationPeerId, dstId);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
+    }
+    else if (::strtolower(command) == RID_CMD_MESSAGE_UPDATE) {
+        if (!req["message"].is<uint16_t>()) {
+            errorPayload(reply, "message was not valid");
+            return;
+        }
+
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint16_t message = req["message"].get<uint16_t>();
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        if (operationPeerId == 0U) {
+            errorPayload(reply, "message update requires a known subscriber route or explicit peerId");
+            return;
+        }
+
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+            SubscriberOperationStore::Kind::MESSAGE_UPDATE, dstId, operationPeerId, message);
+
+        // if the operation ID is 0, it means an equivalent operation is already pending
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent message update is already pending");
+            return;
+        }
+
+        // send the message update command to the network layer
+        m_network->m_tagP25->write_TSDU_Message_Update(operationPeerId, dstId, message);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
     }
     else if (::strtolower(command) == RID_CMD_INHIBIT) {
-        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::INHIBIT, WUID_FNE, dstId);
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+            SubscriberOperationStore::Kind::INHIBIT, dstId, operationPeerId);
+
+        // if the operation ID is 0, it means an equivalent operation is already pending
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent inhibit is already pending");
+            return;
+        }
+
+        // send the inhibit command to the network layer
+        m_network->m_tagP25->write_TSDU_Ext_Func(operationPeerId, ExtendedFunctions::INHIBIT, WUID_FNE, dstId);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
     }
     else if (::strtolower(command) == RID_CMD_UNINHIBIT) {
-        m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::UNINHIBIT, WUID_FNE, dstId);
+        // determine the peer ID to use for this operation, either the provided peer ID or the one registered for the destination ID
+        const uint32_t operationPeerId = peerId != 0U ? peerId : m_network->findPeerUnitReg(dstId);
+        const uint64_t operationId = m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+            SubscriberOperationStore::Kind::UNINHIBIT, dstId, operationPeerId);
+
+        // if the operation ID is 0, it means an equivalent operation is already pending
+        if (operationId == 0U) {
+            errorPayload(reply, "an equivalent uninhibit is already pending");
+            return;
+        }
+
+        // send the uninhibit command to the network layer
+        m_network->m_tagP25->write_TSDU_Ext_Func(operationPeerId, ExtendedFunctions::UNINHIBIT, WUID_FNE, dstId);
+        json::object response = json::object();
+        setResponseDefaultStatus(response);
+        response["operationId"].set<uint64_t>(operationId);
+        response["state"].set<std::string>("pending");
+        reply.payload(response);
     }
     else if (::strtolower(command) == RID_CMD_DYN_REGRP) {
         // validate source ID is a integer within the JSON blob
@@ -2882,27 +3031,93 @@ void RESTAPI::restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, 
             return;
         }
 
-        uint32_t tgId = req["tgId"].get<uint32_t>();
+        const uint32_t tgId = req["tgId"].get<uint32_t>();
 
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::DYN_REGRP_REQ, tgId, dstId);
     }
     else if (::strtolower(command) == RID_CMD_DYN_REGRP_CANCEL) {
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::DYN_REGRP_CANCEL, 0U, dstId);
     }
     else if (::strtolower(command) == RID_CMD_DYN_REGRP_LOCK) {
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::DYN_REGRP_LOCK, 0U, dstId);
     }
     else if (::strtolower(command) == RID_CMD_DYN_REGRP_UNLOCK) {
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagP25->write_TSDU_Ext_Func(peerId, ExtendedFunctions::DYN_REGRP_UNLOCK, 0U, dstId);
     }
     else if (::strtolower(command) == RID_CMD_GAQ) {
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagP25->write_TSDU_Grp_Aff_Q(peerId, dstId);
     }
     else if (::strtolower(command) == RID_CMD_UREG) {
+        errorPayload(reply, "OK", HTTPPayload::OK);
         m_network->m_tagP25->write_TSDU_U_Reg_Cmd(peerId, dstId);
     }
     else {
         errorPayload(reply, "invalid command");
         return;
     }
+}
+
+/* REST API endpoint; retrieves a subscriber operation. */
+
+void RESTAPI::restAPI_GetRIDOperation(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    // retrieve the operation ID from the request URL and fetch the corresponding operation from the store
+    const uint64_t operationId = ::strtoull(match[1U].str().c_str(), nullptr, 10);
+    SubscriberOperationStore::Operation operation;
+    if (operationId == 0U || !m_network->subscriberOperations().get(operationId, operation)) {
+        errorPayload(reply, "operation was not found", HTTPPayload::NOT_FOUND);
+        return;
+    }
+
+    // construct the JSON response with the operation details
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+    response["operationId"].set<uint64_t>(operation.id);
+    response["protocol"].set<std::string>(SubscriberOperationStore::protocolName(operation.protocol));
+    response["operation"].set<std::string>(SubscriberOperationStore::kindName(operation.kind));
+    response["state"].set<std::string>(SubscriberOperationStore::stateName(operation.state));
+    response["targetId"].set<uint32_t>(operation.targetId);
+    response["peerId"].set<uint32_t>(operation.peerId);
+    response["requestValue"].set<uint16_t>(operation.requestValue);
+    response["resultValue"].set<uint16_t>(operation.resultValue);
+    response["createdAt"].set<uint64_t>(operation.createdAt);
+    response["completedAt"].set<uint64_t>(operation.completedAt);
+    reply.payload(response);
+}
+
+/* REST API endpoint; retrieves the latest P25 subscriber status. */
+
+void RESTAPI::restAPI_GetP25RIDStatus(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    // retrieve the subscriber ID from the request URL and fetch the corresponding P25 status from the store
+    const uint32_t subscriberId = static_cast<uint32_t>(::strtoul(match[1U].str().c_str(), nullptr, 10));
+    SubscriberOperationStore::Status status;
+    if (subscriberId == 0U || !m_network->subscriberOperations().getP25Status(subscriberId, status)) {
+        errorPayload(reply, "subscriber status was not found", HTTPPayload::NOT_FOUND);
+        return;
+    }
+
+    // construct the JSON response with the P25 subscriber status details
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+    response["protocol"].set<std::string>("p25");
+    response["subscriberId"].set<uint32_t>(status.subscriberId);
+    response["peerId"].set<uint32_t>(status.peerId);
+    response["statusValue"].set<uint16_t>(status.value);
+    response["solicited"].set<bool>(status.solicited);
+    response["observedAt"].set<uint64_t>(status.observedAt);
+    reply.payload(response);
 }

@@ -1229,6 +1229,46 @@ void TagP25Data::write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t ar
     write_TSDU(peerId, iosp.get());
 }
 
+/* Helper to write a status query. */
+
+void TagP25Data::write_TSDU_Status_Query(uint32_t peerId, uint32_t dstId)
+{
+    std::unique_ptr<lc::tsbk::OSP_STS_Q> query = std::make_unique<lc::tsbk::OSP_STS_Q>();
+    query->setSrcId(WUID_FNE);
+    query->setDstId(dstId);
+
+    LogInfoEx(LOG_P25, P25_TSDU_STR ", %s, dstId = %u", query->toString().c_str(), dstId);
+    write_TSDU(peerId, query.get());
+}
+
+/* Helper to close a received status query response. */
+
+void TagP25Data::write_TSDU_Status_Update(uint32_t peerId, uint32_t srcId, uint16_t status)
+{
+    std::unique_ptr<lc::tsbk::IOSP_STS_UPDT> update = std::make_unique<lc::tsbk::IOSP_STS_UPDT>();
+    update->setSrcId(srcId);
+    update->setDstId(WUID_FNE);
+    update->setStatus(status);
+
+    LogInfoEx(LOG_P25, P25_TSDU_STR ", status query closure, status = $%04X, srcId = %u",
+        status, srcId);
+    write_TSDU(peerId, update.get());
+}
+
+/* Helper to write a coded message update. */
+
+void TagP25Data::write_TSDU_Message_Update(uint32_t peerId, uint32_t dstId, uint16_t message)
+{
+    std::unique_ptr<lc::tsbk::IOSP_MSG_UPDT> update = std::make_unique<lc::tsbk::IOSP_MSG_UPDT>();
+    update->setSrcId(WUID_FNE);
+    update->setDstId(dstId);
+    update->setMessage(message);
+
+    LogInfoEx(LOG_P25, P25_TSDU_STR ", %s, message = $%04X, dstId = %u",
+        update->toString().c_str(), message, dstId);
+    write_TSDU(peerId, update.get());
+}
+
 /* Helper to write a group affiliation query packet. */
 
 void TagP25Data::write_TSDU_Grp_Aff_Q(uint32_t peerId, uint32_t dstId)
@@ -1384,6 +1424,50 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
 
             // handle standard P25 reference opcodes
             switch (tsbk->getLCO()) {
+            case TSBKO::ISP_STS_Q_RSP:
+                {
+                    lc::tsbk::ISP_STS_Q_RSP* isp = static_cast<lc::tsbk::ISP_STS_Q_RSP*>(tsbk.get());
+                    const bool solicited = m_network->subscriberOperations().addP25Status(isp->getSrcId(), peerId, isp->getStatus());
+                    if (solicited) {
+                        write_TSDU_Status_Update(peerId, isp->getSrcId(), isp->getStatus());
+                    }
+                }
+                break;
+            case TSBKO::IOSP_STS_UPDT:
+                {
+                    lc::tsbk::IOSP_STS_UPDT* iosp = static_cast<lc::tsbk::IOSP_STS_UPDT*>(tsbk.get());
+                    m_network->subscriberOperations().addP25Status(iosp->getSrcId(), peerId, iosp->getStatus());
+                }
+                break;
+            case TSBKO::IOSP_ACK_RSP:
+                {
+                    lc::tsbk::IOSP_ACK_RSP* iosp = static_cast<lc::tsbk::IOSP_ACK_RSP*>(tsbk.get());
+                    if (iosp->getService() == TSBKO::IOSP_MSG_UPDT && iosp->getDstId() == WUID_FNE) {
+                        m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::MESSAGE_UPDATE, iosp->getSrcId(), peerId);
+                    }
+                }
+                break;
+            case TSBKO::IOSP_EXT_FNCT:
+                {
+                    lc::tsbk::IOSP_EXT_FNCT* iosp = static_cast<lc::tsbk::IOSP_EXT_FNCT*>(tsbk.get());
+                    switch (iosp->getExtendedFunction()) {
+                    // Standard
+                    case ExtendedFunctions::CHECK_ACK:
+                        m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);
+                        return false;
+                    case ExtendedFunctions::INHIBIT_ACK:
+                        m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::INHIBIT, iosp->getDstId(), peerId);
+                        return false;
+                    case ExtendedFunctions::UNINHIBIT_ACK:
+                        m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
+                        return false;
+                    }
+                }
+                break;
             case TSBKO::IOSP_UU_VCH:
             case TSBKO::IOSP_UU_ANS:
                 {

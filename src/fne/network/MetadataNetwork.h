@@ -26,6 +26,9 @@
 #include <mutex>
 #include <string>
 #include <atomic>
+#if defined(CATCH2_TEST_COMPILATION)
+#include <functional>
+#endif
 
 // ---------------------------------------------------------------------------
 //  Class Prototypes
@@ -168,6 +171,9 @@ namespace network
         std::atomic<uint64_t> m_healthTasksCompleted;
         std::atomic<uint64_t> m_healthLastTaskProgress;
         std::atomic<uint64_t> m_healthTaskEnqueueFailures;
+#if defined(CATCH2_TEST_COMPILATION)
+        std::function<void(FrameQueue::OpcodePair, const uint8_t*, uint32_t)> m_testPeerMetadataWriteHandler;
+#endif
 
         /**
          * @brief Finds a packet buffer entry in the map.
@@ -251,6 +257,17 @@ namespace network
              * @param streamId Stream ID of the packet.
              */
             static void radioAliasSync(TrafficNetwork* network, MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId);
+
+            /**
+             * @brief Handles NET_FUNC::SUBSCRIBER_OP packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param mdNetwork Instance of the MetadataNetwork class.
+             * @param req Instance of the NetPacketRequest structure.
+             * @param peerId Peer ID of the packet.
+             * @param ssrc SSRC of the packet.
+             * @param streamId Stream ID of the packet.
+             */
+            static void subscriberOperation(TrafficNetwork* network, MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId);
 
             /**
              * @brief Handles NET_FUNC::KEYS_INVENTORY packets.

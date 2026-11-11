@@ -332,6 +332,31 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         }
     }
 
+    SECTION("Status_Query_Uses_Reserved_Zero_And_Decodes_Response") {
+        OSP_STS_Q query;
+        query.setStatus(0xFFFFU);
+        query.setDstId(0x123456U);
+        query.setSrcId(WUID_FNE);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        query.encode(raw, true, true);
+        const uint16_t reserved = GET_UINT16(raw, 2U);
+        CHECK(reserved == 0U);
+
+        ISP_STS_Q_RSP response;
+        response.setStatus(0x4321U);
+        response.setDstId(WUID_FNE);
+        response.setSrcId(0x123456U);
+        response.encode(raw, true, true);
+
+        std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+        REQUIRE(decoded != nullptr);
+        ISP_STS_Q_RSP* decodedResponse = dynamic_cast<ISP_STS_Q_RSP*>(decoded.get());
+        REQUIRE(decodedResponse != nullptr);
+        CHECK(decodedResponse->getStatus() == 0x4321U);
+        CHECK(decodedResponse->getSrcId() == 0x123456U);
+    }
+
     SECTION("Standard_Unconfirmed_MBT_TELE_INT_DIAL_REQ") {
         const uint8_t counts[] = { 1U, 10U, 11U, 34U };
         for (uint8_t count : counts) {

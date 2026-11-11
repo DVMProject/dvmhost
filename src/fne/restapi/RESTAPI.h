@@ -503,6 +503,14 @@ namespace fne_restapi
          */
         void restAPI_GetSpanningTree(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
+        /**
+         * @brief REST API endpoint; retrieves a subscriber operation.
+         * @param[in] request HTTP request.
+         * @param[out] reply HTTP reply.
+         * @param[in] match HTTP request matcher.
+         */
+        void restAPI_GetRIDOperation(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
         /*
         ** Digital Mobile Radio
         */
@@ -526,6 +534,14 @@ namespace fne_restapi
          * @param match HTTP request matcher.
          */
         void restAPI_PutP25RID(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
+        /**
+         * @brief REST API endpoint; retrieves the latest P25 subscriber status.
+         * @param[in] request HTTP request.
+         * @param[out] reply HTTP reply.
+         * @param[in] match HTTP request matcher.
+         */
+        void restAPI_GetP25RIDStatus(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
     };
 } // namespace fne_restapi
 
