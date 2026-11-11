@@ -833,6 +833,7 @@ namespace p25
             // TSBK Inbound Signalling Packet (ISP) Opcode(s)
                 ISP_TELE_INT_PSTN_REQ = 0x09U,          //!< TELE INT PSTN REQ - Telephone Interconnect Request - Implicit
                 ISP_SNDCP_CH_REQ = 0x12U,               //!< SNDCP CH REQ - SNDCP Data Channel Request
+                ISP_SNDCP_DATA_PAGE_RES = 0x13U,        //!< SNDCP DATA PAGE RES - SNDCP Data Page Response
                 ISP_SNDCP_REC_REQ = 0x14U,              //!< SNDCP REC REQ - SNDCP Reconnect Request
                 ISP_STS_Q_RSP = 0x19U,                  //!< STS Q RSP - Status Query Response
                 ISP_STS_Q_REQ = 0x1CU,                  //!< STS Q REQ - Status Query Request
@@ -850,6 +851,7 @@ namespace p25
                 OSP_GRP_VCH_GRANT_UPD = 0x02U,          //!< GRP VCH GRANT UPD - Group Voice Channel Grant Update
                 OSP_UU_VCH_GRANT_UPD = 0x06U,           //!< UU VCH GRANT UPD - Unit-to-Unit Voice Channel Grant Update
                 OSP_SNDCP_CH_GNT = 0x14U,               //!< SNDCP CH GNT - SNDCP Data Channel Grant
+                OSP_SNDCP_DATA_PAGE_REQ = 0x15U,        //!< SNDCP DATA PAGE REQ - SNDCP Data Page Request
                 OSP_SNDCP_CH_ANN = 0x16U,               //!< SNDCP CH ANN - SNDCP Data Channel Announcement
                 OSP_STS_Q = 0x1AU,                      //!< STS Q - Status Query
                 OSP_QUE_RSP = 0x21U,                    //!< QUE RSP - Queued Response
