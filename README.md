@@ -27,6 +27,8 @@ This project suite generates a few executables:
 - `tged` a TUI utility that allows editing of talkgroup rules configuration files (this tool is only available when project wide TUI support is enabled!).
 - `peered` a TUI utility that allows editing of peer list data files (this tool is only available when project wide TUI support is enabled!).
 
+- `dvmconsole` ([dvmconsole](https://github.com/DVMProject/dvmconsole)) a desktop application that operates similarly to a traditional dispatch console, allowing DVM users to monitor multiple talkgroups on a DVM FNE from a single application.
+
 ![Interconnectivity Possible with DVM](./repo/Basic_P25_Network_Diagram.png)
 
 ## Building
