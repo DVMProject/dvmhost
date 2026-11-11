@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2021 Jonathan Naylor, G4KLX
- *  Copyright (C) 2021,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "modem/port/ModemNullPort.h"
@@ -36,6 +36,7 @@ ModemNullPort::~ModemNullPort() = default;
 
 bool ModemNullPort::open()
 {
+    m_buffer.clear();
     return true;
 }
 
@@ -59,16 +60,50 @@ int ModemNullPort::read(uint8_t* buffer, uint32_t length)
 
 int ModemNullPort::write(const uint8_t* buffer, uint32_t length)
 {
-    switch (buffer[2U]) {
+    if (buffer == nullptr || length < 3U)
+        return 0;
+
+    uint32_t commandOffset = 2U;
+    if (buffer[0U] == DVM_SHORT_FRAME_START) {
+        if (buffer[1U] != length)
+            return 0;
+    }
+    else if (buffer[0U] == DVM_LONG_FRAME_START) {
+        if (length < 4U || ((uint32_t(buffer[1U]) << 8) | buffer[2U]) != length || buffer[3U] != CMD_P25_DATA)
+            return 0;
+        commandOffset = 3U;
+    }
+    else {
+        return 0;
+    }
+    
+    switch (buffer[commandOffset]) {
     case CMD_GET_VERSION:
+        if (length != 3U)
+            return 0;
         getVersion();
         break;
     case CMD_GET_STATUS:
+        if (length != 3U)
+            return 0;
         getStatus();
         break;
     case CMD_SET_CONFIG:
+        if (length != 24U)
+            return 0;
+        writeAck(CMD_SET_CONFIG);
+        break;
     case CMD_SET_MODE:
-        writeAck(buffer[2U]);
+        if (length != 4U)
+            return 0;
+        writeAck(CMD_SET_MODE);
+        break;
+    case CMD_SET_BUFFERS:
+        if (length != 9U) {
+            writeNAK(CMD_SET_BUFFERS, RSN_ILLEGAL_LENGTH);
+            break;
+        }
+        writeAck(CMD_SET_BUFFERS);
         break;
     case CMD_FLSH_READ:
         writeNAK(CMD_FLSH_READ, RSN_NO_INTERNAL_FLASH);
@@ -84,7 +119,7 @@ int ModemNullPort::write(const uint8_t* buffer, uint32_t length)
 
 void ModemNullPort::close()
 {
-    /* stub */
+    m_buffer.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +136,7 @@ void ModemNullPort::getVersion()
     reply[1U] = 0U;
     reply[2U] = CMD_GET_VERSION;
 
-    reply[3U] = 3U;
+    reply[3U] = 4U;
     reply[4U] = 15U;
 
     // Reserve 16 bytes for the UDID
@@ -124,7 +159,7 @@ void ModemNullPort::getStatus()
 
     // Send all sorts of interesting internal values
     reply[0U] = DVM_SHORT_FRAME_START;
-    reply[1U] = 11U;
+    reply[1U] = 12U;
     reply[2U] = CMD_GET_STATUS;
 
     reply[3U] = 0U;
@@ -141,8 +176,9 @@ void ModemNullPort::getStatus()
     reply[9U] = 0U;
 
     reply[10U] = 20U;
+    reply[11U] = 20U;
 
-    m_buffer.addData(reply, 11U);
+    m_buffer.addData(reply, 12U);
 }
 
 /* Helper to write a faked modem acknowledge. */
