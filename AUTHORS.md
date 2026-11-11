@@ -9,9 +9,6 @@ replace or alter the copyright notice or license in an individual file.
 
 ## Project authors and contributors
 
-The following people are identified by copyright notices in project source,
-headers, or tests:
-
 - Bryan Biedenkapp (N2PLL)
 - C. Lovell (K7CBL / Dev_Ranger)
 - Caleb (K4PHP / firealarmss)
@@ -24,9 +21,6 @@ headers, or tests:
 - David Andrzejewski
 
 ## Authors of incorporated and adapted code
-
-Copyright notices also identify the following authors in code incorporated into
-or adapted by the project:
 
 - Jonathan Naylor (G4KLX)
 - Colin Durbridge (G4EML)
