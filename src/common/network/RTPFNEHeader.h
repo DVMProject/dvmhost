@@ -117,6 +117,7 @@ namespace network
 
             SUBSCRIBER_OP_OPERATION = 0x00U,        //!< Subscriber Operation Result Query
             SUBSCRIBER_OP_P25_STATUS = 0x01U,       //!< P25 Subscriber Status Query
+            SUBSCRIBER_OP_START = 0x02U,            //!< Start Subscriber Operation
 
             ANNC_SUBFUNC_GRP_AFFIL = 0x00U,         //!< Announce Group Affiliation
             ANNC_SUBFUNC_UNIT_REG = 0x01U,          //!< Announce Unit Registration

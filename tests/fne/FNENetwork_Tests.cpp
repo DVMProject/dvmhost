@@ -147,6 +147,94 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     CHECK(statusResponse["solicited"].get<bool>());
 }
 
+TEST_CASE("FNE metadata starts subscriber operations before transmission",
+    "[fne][metadata][subscriber-operations]")
+{
+    constexpr uint32_t CONSOLE_PEER_ID = 1001U;
+    constexpr uint32_t RADIO_PEER_ID = 2001U;
+    constexpr uint32_t SUBSCRIBER_ID = 123456U;
+    const uint8_t dmrSlot = 1U;
+
+    FNEHarness harness;
+    network::FNEPeerConnection& console = FNETestHooks::addPeer(
+        harness.traffic, CONSOLE_PEER_ID, network::NET_STAT_RUNNING, true);
+    console.peerClass(network::PEER_CONN_CLASS_CONSOLE);
+    FNETestHooks::addPeer(harness.traffic, RADIO_PEER_ID, network::NET_STAT_RUNNING, true);
+
+    std::vector<uint8_t> responsePayload;
+    uint8_t responseFunction = network::NET_FUNC::ILLEGAL;
+    uint8_t responseSubFunction = network::NET_SUBFUNC::NOP;
+    FNETestHooks::captureMetadataWrite(harness.metadata, responsePayload,
+        responseFunction, responseSubFunction);
+    std::vector<uint32_t> peerWrites;
+    FNETestHooks::capturePeerWrites(harness.traffic, peerWrites);
+
+    json::object request = json::object();
+    request["protocol"].set<std::string>("p25");
+    request["operation"].set<std::string>("radio-check");
+    request["targetId"].set<uint32_t>(SUBSCRIBER_ID);
+    request["peerId"].set<uint32_t>(RADIO_PEER_ID);
+    const std::string requestJson = json::value(request).serialize();
+    std::vector<uint8_t> requestPayload(11U + requestJson.length(), 0U);
+    ::memcpy(requestPayload.data() + 11U, requestJson.data(), requestJson.length());
+
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_START,
+        CONSOLE_PEER_ID, requestPayload);
+
+    REQUIRE(responsePayload.size() > 11U);
+    CHECK(responseFunction == network::NET_FUNC::SUBSCRIBER_OP);
+    CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_START);
+    REQUIRE(peerWrites.size() == 1U);
+    CHECK(peerWrites.front() == RADIO_PEER_ID);
+
+    json::value responseValue;
+    REQUIRE(json::parse(responseValue,
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
+            responsePayload.size() - 11U))
+                .empty());
+    REQUIRE(responseValue.is<json::object>());
+    json::object& response = responseValue.get<json::object>();
+    CHECK(response["found"].get<bool>());
+    CHECK(response["state"].get<std::string>() == "pending");
+    CHECK(response["targetId"].get<uint32_t>() == SUBSCRIBER_ID);
+    CHECK(response["peerId"].get<uint32_t>() == RADIO_PEER_ID);
+
+    const uint64_t operationId = response["operationId"].get<uint64_t>();
+    network::SubscriberOperationStore::Operation operation;
+    REQUIRE(harness.traffic.subscriberOperations().get(operationId, operation));
+    CHECK(operation.kind == network::SubscriberOperationStore::Kind::RADIO_CHECK);
+    CHECK(operation.state == network::SubscriberOperationStore::State::PENDING);
+
+    request["protocol"].set<std::string>("dmr");
+    request["slot"].set<uint8_t>(dmrSlot);
+    const std::string dmrRequestJson = json::value(request).serialize();
+    requestPayload.assign(11U + dmrRequestJson.length(), 0U);
+    ::memcpy(requestPayload.data() + 11U, dmrRequestJson.data(), dmrRequestJson.length());
+    responsePayload.clear();
+    peerWrites.clear();
+
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_START,
+        CONSOLE_PEER_ID, requestPayload);
+
+    REQUIRE(responsePayload.size() > 11U);
+    REQUIRE(peerWrites.size() == 1U);
+    CHECK(peerWrites.front() == RADIO_PEER_ID);
+    REQUIRE(json::parse(responseValue,
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
+            responsePayload.size() - 11U))
+                .empty());
+    REQUIRE(responseValue.is<json::object>());
+    json::object& dmrResponse = responseValue.get<json::object>();
+    CHECK(dmrResponse["found"].get<bool>());
+    const uint64_t dmrOperationId = dmrResponse["operationId"].get<uint64_t>();
+    REQUIRE(harness.traffic.subscriberOperations().get(dmrOperationId, operation));
+    CHECK(operation.protocol == network::SubscriberOperationStore::Protocol::DMR);
+    CHECK(operation.kind == network::SubscriberOperationStore::Kind::RADIO_CHECK);
+    CHECK(operation.state == network::SubscriberOperationStore::State::PENDING);
+}
+
 TEST_CASE("FNE consumes radio-check responses without peer fanout",
     "[fne][subscriber-operations][routing]")
 {

@@ -9,9 +9,13 @@
  * @ingroup fne_network
  */
 #include "fne/Defines.h"
+#include "common/dmr/DMRDefines.h"
 #include "common/Log.h"
+#include "common/p25/P25Defines.h"
 #include "common/json/json.h"
 #include "network/MetadataNetwork.h"
+#include "network/callhandler/TagDMRData.h"
+#include "network/callhandler/TagP25Data.h"
 
 using namespace network;
 
@@ -46,6 +50,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
     // prepare the response object and helper for writing the response
     json::object response = json::object();
     const bool notFound = false;
+    const bool found = true;
     const NET_SUBFUNC::ENUM subFunction = req->fneHeader.getSubFunction();
     const auto writeResponse = [network, mdNetwork, connection, subFunction, streamId](json::object responseObj) {
         json::value responseValue(responseObj);
@@ -89,6 +94,147 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
 
     json::object& request = value.get<json::object>();
     switch (subFunction) {
+    case NET_SUBFUNC::SUBSCRIBER_OP_START:
+        {
+            response["type"].set<std::string>("operation-start");
+            if (!request["protocol"].is<std::string>() || !request["operation"].is<std::string>() ||
+                !request["targetId"].is<uint32_t>()) {
+                response["found"].set<bool>(notFound);
+                response["error"].set<std::string>("invalid operation request");
+                break;
+            }
+
+            const std::string protocolName = request["protocol"].get<std::string>();
+            const std::string operationName = request["operation"].get<std::string>();
+            const uint32_t targetId = request["targetId"].get<uint32_t>();
+            const uint32_t requestedPeerId = request["peerId"].getDefault<uint32_t>(0U);
+            const uint32_t operationPeerId = requestedPeerId != 0U ? requestedPeerId : network->findPeerUnitReg(targetId);
+
+            if (targetId == 0U) {
+                response["found"].set<bool>(notFound);
+                response["error"].set<std::string>("invalid target ID");
+                break;
+            }
+
+            SubscriberOperationStore::Protocol protocol;
+            SubscriberOperationStore::Kind kind;
+            uint16_t requestValue = 0U;
+            if (protocolName == "p25") {
+                protocol = SubscriberOperationStore::Protocol::P25;
+
+                // determine the kind of P25 operation requested
+                if (operationName == "radio-check") {
+                    kind = SubscriberOperationStore::Kind::RADIO_CHECK;
+                } else if (operationName == "status-query") {
+                    kind = SubscriberOperationStore::Kind::STATUS_QUERY;
+                } else if (operationName == "message-update") {
+                    if (!request["value"].is<uint16_t>() || operationPeerId == 0U) {
+                        response["found"].set<bool>(notFound);
+                        response["error"].set<std::string>("message update requires a value and known route or explicit peer ID");
+                        break;
+                    }
+                    kind = SubscriberOperationStore::Kind::MESSAGE_UPDATE;
+                    requestValue = request["value"].get<uint16_t>();
+                } else if (operationName == "inhibit") {
+                    kind = SubscriberOperationStore::Kind::INHIBIT;
+                } else if (operationName == "uninhibit") {
+                    kind = SubscriberOperationStore::Kind::UNINHIBIT;
+                } else {
+                    response["found"].set<bool>(notFound);
+                    response["error"].set<std::string>("unsupported P25 operation");
+                    break;
+                }
+            } else if (protocolName == "dmr") {
+                protocol = SubscriberOperationStore::Protocol::DMR;
+                if (!request["slot"].is<uint8_t>()) {
+                    response["found"].set<bool>(notFound);
+                    response["error"].set<std::string>("invalid DMR slot");
+                    break;
+                }
+
+                // extract and validate the DMR slot from the request
+                const uint8_t slot = request["slot"].get<uint8_t>();
+                if (slot == 0U || slot > 2U) {
+                    response["found"].set<bool>(notFound);
+                    response["error"].set<std::string>("invalid DMR slot");
+                    break;
+                }
+
+                // determine the kind of DMR operation requested
+                if (operationName == "radio-check") {
+                    kind = SubscriberOperationStore::Kind::RADIO_CHECK;
+                } else if (operationName == "inhibit") {
+                    kind = SubscriberOperationStore::Kind::INHIBIT;
+                } else if (operationName == "uninhibit") {
+                    kind = SubscriberOperationStore::Kind::UNINHIBIT;
+                } else {
+                    response["found"].set<bool>(notFound);
+                    response["error"].set<std::string>("unsupported DMR operation");
+                    break;
+                }
+            } else {
+                response["found"].set<bool>(notFound);
+                response["error"].set<std::string>("unsupported protocol");
+                break;
+            }
+
+            // start the subscriber operation and obtain its operation ID
+            const uint64_t operationId = network->subscriberOperations().start(
+                protocol, kind, targetId, operationPeerId, requestValue);
+            if (operationId == 0U) {
+                response["found"].set<bool>(notFound);
+                response["error"].set<std::string>("an equivalent operation is already pending");
+                break;
+            }
+
+            // send the appropriate protocol-specific message based on the operation kind
+            if (protocol == SubscriberOperationStore::Protocol::P25) {
+                switch (kind) {
+                case SubscriberOperationStore::Kind::RADIO_CHECK:
+                    network->p25TrafficHandler()->write_TSDU_Ext_Func(operationPeerId,
+                        p25::defines::ExtendedFunctions::CHECK, p25::defines::WUID_FNE, targetId);
+                    break;
+                case SubscriberOperationStore::Kind::STATUS_QUERY:
+                    network->p25TrafficHandler()->write_TSDU_Status_Query(operationPeerId, targetId);
+                    break;
+                case SubscriberOperationStore::Kind::MESSAGE_UPDATE:
+                    network->p25TrafficHandler()->write_TSDU_Message_Update(operationPeerId, targetId, requestValue);
+                    break;
+                case SubscriberOperationStore::Kind::INHIBIT:
+                    network->p25TrafficHandler()->write_TSDU_Ext_Func(operationPeerId,
+                        p25::defines::ExtendedFunctions::INHIBIT, p25::defines::WUID_FNE, targetId);
+                    break;
+                case SubscriberOperationStore::Kind::UNINHIBIT:
+                    network->p25TrafficHandler()->write_TSDU_Ext_Func(operationPeerId,
+                        p25::defines::ExtendedFunctions::UNINHIBIT, p25::defines::WUID_FNE, targetId);
+                    break;
+                }
+            } else {
+                const uint8_t slot = request["slot"].get<uint8_t>();
+                uint8_t function = dmr::defines::ExtendedFunctions::CHECK;
+                uint32_t argument = dmr::defines::WUID_ALL;
+                if (kind == SubscriberOperationStore::Kind::INHIBIT) {
+                    function = dmr::defines::ExtendedFunctions::INHIBIT;
+                    argument = dmr::defines::WUID_STUNI;
+                } else if (kind == SubscriberOperationStore::Kind::UNINHIBIT) {
+                    function = dmr::defines::ExtendedFunctions::UNINHIBIT;
+                    argument = dmr::defines::WUID_STUNI;
+                }
+
+                network->dmrTrafficHandler()->write_Ext_Func(operationPeerId, slot, function, argument, targetId);
+            }
+
+            response["found"].set<bool>(found);
+            response["operationId"].set<uint64_t>(operationId);
+            response["protocol"].set<std::string>(SubscriberOperationStore::protocolName(protocol));
+            response["operation"].set<std::string>(SubscriberOperationStore::kindName(kind));
+            response["state"].set<std::string>("pending");
+            response["targetId"].set<uint32_t>(targetId);
+            response["peerId"].set<uint32_t>(operationPeerId);
+            response["requestValue"].set<uint16_t>(requestValue);
+        }
+        break;
+
     case NET_SUBFUNC::SUBSCRIBER_OP_OPERATION:
         {
             response["type"].set<std::string>("operation");
