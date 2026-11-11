@@ -29,6 +29,14 @@ This project suite generates a few executables:
 
 - `dvmconsole` ([dvmconsole](https://github.com/DVMProject/dvmconsole)) a desktop application that operates similarly to a traditional dispatch console, allowing DVM users to monitor multiple talkgroups on a DVM FNE from a single application.
 
+### Modem Firmware / Hardware
+
+- `dvmfirmware` ([dvmfirmware](https://github.com/DVMProject/dvmfirmware)) provides the embedded microcontroller implementation of a mixed-mode DMR, P25 and/or NXDN or dedicated-mode DMR, P25 or NXDN repeater system. The firmware; is the portion of a complete Over-The-Air modem implementation that connects directly to an appropriate air interface (usually a analog radio) and performs the actual reception and creation of the digitial waveforms.
+- `dvmfirmware-hs` ([dvmfirmware-hs](https://github.com/DVMProject/dvmfirmware-hs)) provides the embedded microcontroller implementation of a dedicated-mode DMR, P25 or NXDN hotspot system. The firmware; is the portion of a complete Over-The-Air modem implementation that uses an ADF7021 to provide a raw RF interface.
+- `dvmv24` ([dvmv24](https://github.com/DVMProject/dvmv24)) provides the hardware and a embedded microcontroller implementation of the DVM modem allowing interconnection to supported P25 devices for V.24 transport.
+
+- `dvmv1` ([dvmv1](https://github.com/DVMProject/dvmv1)) provides the hardware implementation of a DVM modem.
+
 ![Interconnectivity Possible with DVM](./repo/Basic_P25_Network_Diagram.png)
 
 ## Building
