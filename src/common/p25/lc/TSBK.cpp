@@ -210,6 +210,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
             }
             else {
                 LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                // this intentionally fails open -- some raw TSBK handling does not submit valid CRCs
             }
         }
     }
