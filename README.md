@@ -37,6 +37,8 @@ This project suite generates a few executables:
 
 - `dvmv1` ([dvmv1](https://github.com/DVMProject/dvmv1)) provides the hardware implementation of a DVM modem.
 
+## Generalized Network Topography
+
 ![Interconnectivity Possible with DVM](./repo/Basic_P25_Network_Diagram.png)
 
 ## Building
