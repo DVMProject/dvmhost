@@ -19,6 +19,7 @@
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/lc/tsbk/IOSP_EXT_FNCT.h"
 #include "host/modem/Modem.h"
 #include "modem/port/IModemPort.h"
@@ -568,7 +569,7 @@ public:
      * @param authoritative Indicates whether the host is authoritative.
      */
     explicit P25HostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U,
-        bool disallowUnitToUnit = false, bool tgAcl = false) :
+        bool disallowUnitToUnit = false, bool tgAcl = false, bool duplex = false) :
         m_rpc("127.0.0.1", 1U, 0U, "test", false),
         m_modem(new P25TestModemPort(), false, false, false, false, false, false,
             0U, 0U, 0U, 1024U, 4096U, 1024U, true, true, false, false, false, false),
@@ -584,7 +585,7 @@ public:
         m_modem.setModeParams(false, true, false);
 
         m_control = new p25::Control(authoritative, 0x293U, 1U, 4096U, &m_modem, m_network,
-            5U, 2U, false, &m_chLookup, &m_ridLookup, &m_tidLookup, &m_idenLookup,
+            5U, 2U, duplex, &m_chLookup, &m_ridLookup, &m_tidLookup, &m_idenLookup,
             &m_rssiMapper, false, false, false, true, true);
     }
     /**
@@ -631,6 +632,37 @@ public:
     P25TestNetwork* m_network;
     p25::Control* m_control;
 };
+
+TEST_CASE("P25 group call termination addresses all subscriber units",
+    "[p25][host][control][tdulc][call-termination]")
+{
+    P25HostHarness harness(true, false, 0U, 1U, false, false, true);
+
+    HostTestHooks::p25WriteRFChannelRelease(*harness.m_control, true, 1001U, 2001U);
+
+    uint8_t frame[p25::defines::P25_TDULC_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    REQUIRE(harness.m_control->getFrame(frame) == sizeof(frame));
+    std::unique_ptr<p25::lc::TDULC> tdulc = p25::lc::tdulc::TDULCFactory::createTDULC(frame + 2U);
+    REQUIRE(tdulc != nullptr);
+    CHECK(tdulc->getLCO() == p25::defines::LCO::CALL_TERM);
+    CHECK(tdulc->getDstId() == p25::defines::WUID_ALL);
+}
+
+TEST_CASE("P25 private call termination retains its selected individual target",
+    "[p25][host][control][tdulc][call-termination]")
+{
+    P25HostHarness harness(true, false, 0U, 1U, false, false, true);
+    const uint32_t selectedTarget = 2001U;
+
+    HostTestHooks::p25WriteRFChannelRelease(*harness.m_control, false, 1001U, selectedTarget);
+
+    uint8_t frame[p25::defines::P25_TDULC_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    REQUIRE(harness.m_control->getFrame(frame) == sizeof(frame));
+    std::unique_ptr<p25::lc::TDULC> tdulc = p25::lc::tdulc::TDULCFactory::createTDULC(frame + 2U);
+    REQUIRE(tdulc != nullptr);
+    CHECK(tdulc->getLCO() == p25::defines::LCO::CALL_TERM);
+    CHECK(tdulc->getDstId() == selectedTarget);
+}
 
 TEST_CASE("P25 deny responses retain outbound direction when mirrored to the network", "[p25][host][control][deny][direction]")
 {

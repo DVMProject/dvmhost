@@ -440,6 +440,15 @@ public:
      */
     static void p25VoiceChannelReleaseGrant(p25::Control& control, uint32_t dstId);
     /**
+     * @brief Writes a P25 RF TDULC channel-release frame.
+     * @param control P25 control instance.
+     * @param group True for group traffic, false for private traffic.
+     * @param srcId Source subscriber ID.
+     * @param dstId Selected destination ID.
+     */
+    static void p25WriteRFChannelRelease(p25::Control& control, bool group,
+        uint32_t srcId, uint32_t dstId);
+    /**
      * @brief Gets the last P25 RF destination ID.
      * @param control P25 control instance.
      * @returns uint32_t Last RF destination ID.

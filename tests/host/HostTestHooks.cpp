@@ -667,6 +667,14 @@ void HostTestHooks::p25VoiceChannelReleaseGrant(p25::Control& control, uint32_t 
     control.releaseGrantFromVoiceChannel(dstId);
 }
 
+/* Writes a P25 RF TDULC channel-release frame. */
+
+void HostTestHooks::p25WriteRFChannelRelease(p25::Control& control, bool group,
+    uint32_t srcId, uint32_t dstId)
+{
+    control.m_control->writeRF_TDULC_ChanRelease(group, srcId, dstId);
+}
+
 /* Gets the last P25 RF destination ID. */
 
 uint32_t HostTestHooks::p25RFLastDstId(const p25::Control& control) { return control.m_rfLastDstId; }

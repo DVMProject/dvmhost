@@ -2297,7 +2297,7 @@ void ControlSignaling::writeRF_TDULC_ChanRelease(bool grp, uint32_t srcId, uint3
     }
 
     lc = std::make_unique<lc::tdulc::LC_CALL_TERM>();
-    lc->setDstId(dstId);
+    lc->setDstId(grp ? WUID_ALL : dstId);
     writeRF_TDULC(lc.get(), true);
 
     if (m_p25->m_enableControl) {
