@@ -453,9 +453,10 @@ namespace p25
              * @param srcId Source Radio ID.
              * @param skip Flag indicating normal grant checking is skipped.
              * @param chNo Channel Number.
+             * @param dataServiceOptions Data Service Options of the request being answered, echoed in the grant.
              * @returns True, if granted, otherwise false.
              */
-            bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip = false, uint32_t chNo = 0U);
+            bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip = false, uint32_t chNo = 0U, uint8_t dataServiceOptions = 0U);
             /**
              * @brief Helper to write a unit to unit answer request packet.
              * @param srcId Source Radio ID.

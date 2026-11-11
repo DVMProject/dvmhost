@@ -115,6 +115,14 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         return m_packetData->processFrame(data, len, peerId, pktSeq, streamId, fromUpstream);
     }
 
+    // a control channel relays the SNDCP data channel grants it issues, so packet data
+    // knows the SU is on a data channel; these are never repeated to other peers
+    if (duid == DUID::TSDU && lco == TSBKO::OSP_SNDCP_CH_GNT && MFId == MFG_STANDARD) {
+        if (!fromUpstream && !m_network->m_disablePacketData)
+            m_packetData->processSNDCPChannelGrant(peerId, srcId);
+        return true;
+    }
+
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, duid, dstId, false);
     dstId = GET_UINT24(buffer, 8U);

@@ -162,10 +162,7 @@ bool Assembler::disassemble(const uint8_t* pduBlock, uint32_t blockLength, bool 
             m_dataBlockCnt = 0U;
 
             // process all blocks in the data stream
-            // if the primary header has a header offset ensure data if offset by that amount 
-            if (dataHeader.getHeaderOffset() > 0U) {
-                offset += dataHeader.getHeaderOffset();
-            }
+            // the header offset counts octets of reassembled user data, it does not shift the coded blocks
 
             uint32_t packetLength = dataHeader.getPacketLength();
             uint32_t padLength = dataHeader.getPadLength();
