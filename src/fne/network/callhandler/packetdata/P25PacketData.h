@@ -32,6 +32,10 @@
 #include "network/callhandler/packetdata/p25/IPConvergenceService.h"
 #include "network/callhandler/packetdata/p25/PacketDataState.h"
 
+#include <mutex>
+#include <unordered_map>
+#include <vector>
+
 namespace network
 {
     namespace callhandler
@@ -115,6 +119,13 @@ namespace network
                  * @brief Helper to cleanup any call's left in a dangling state without any further updates.
                  */
                 void cleanupStale();
+
+                /**
+                 * @brief Process a SNDCP data channel grant relayed by a site's control channel.
+                 * @param peerId Peer ID of the control channel that issued the grant.
+                 * @param llId Logical Link ID of the SU.
+                 */
+                void processSNDCPChannelGrant(uint32_t peerId, uint32_t llId);
 
                 /**
                  * @brief Sets the debug flag.
@@ -225,6 +236,81 @@ namespace network
                 p25data::ConventionalDataService m_conventionalDataService;
                 p25data::SCEPService m_scepService;
 
+                /**
+                 * @brief Trunked (SNDCP) packet data state for a subscriber.
+                 */
+                struct SNDCPContext {
+                    bool active = false;            //!< Flag indicating a context has been accepted for the SU.
+                    uint8_t nsapi = 0U;             //!< NSAPI of the context.
+                    uint32_t ccPeerId = 0U;         //!< Control channel peer that last granted a data channel.
+                    uint32_t vcPeerId = 0U;         //!< Data channel peer the SU was last heard on.
+                    uint64_t grantedAt = 0U;        //!< Timestamp of the last data channel grant.
+                    uint64_t onChannelUntil = 0U;   //!< Timestamp until which the SU is taken to be on the data channel.
+                    uint64_t nextPageAt = 0U;       //!< Timestamp of the earliest next data page.
+                    uint8_t pageCount = 0U;         //!< Number of data pages sent for the packet being held.
+                };
+
+                std::mutex m_sndcpContextLock;
+                std::unordered_map<uint32_t, SNDCPContext> m_sndcpContexts;
+
+                /**
+                 * @brief Confirmed trunked (SNDCP) downlink awaiting the subscriber's link-layer ACK.
+                 */
+                struct SNDCPPendingAck {
+                    ::p25::data::DataHeader header;     //!< Header as sent, carrying the N(S).
+                    std::vector<uint8_t> userData;      //!< User data as sent.
+                    uint32_t targetIPAddress = 0U;      //!< Target IP address of the datagram.
+                    uint8_t ns = 0U;                    //!< N(S) the PDU was sent with.
+                    uint64_t sentAt = 0U;               //!< Timestamp of the last send, or of queuing a retransmission.
+                    uint8_t retxCount = 0U;             //!< Number of retransmissions made.
+                    bool resendDue = false;             //!< Flag indicating a retransmission is queued.
+                };
+
+                /**
+                 * @brief Result of checking a downlink that is awaiting its link-layer ACK.
+                 */
+                enum class SNDCPRetransmitResult : uint8_t {
+                    QUEUED,                             //!< A retransmission was queued.
+                    UNACKNOWLEDGED,                     //!< Retransmissions are exhausted, the PDU was dropped.
+                    NEVER_SENT                          //!< A queued retransmission never left the scheduler.
+                };
+
+                /**
+                 * @brief Outcome of a retransmission check for one subscriber.
+                 */
+                struct SNDCPRetransmitEvent {
+                    uint32_t llId;                      //!< Logical Link ID of the SU.
+                    uint8_t ns;                         //!< N(S) of the PDU.
+                    uint8_t attempt;                    //!< Number of retransmissions made.
+                    SNDCPRetransmitResult result;       //!< Result of the check.
+                };
+
+                std::mutex m_sndcpPendingLock;          // never nested with m_sndcpContextLock
+                std::unordered_map<uint32_t, SNDCPPendingAck> m_sndcpPending;
+
+                /**
+                 * @brief Helper to refresh SNDCP state when a PDU is received from a subscriber.
+                 * @param llId Logical Link ID of the SU.
+                 * @param peerId Peer ID the PDU arrived on.
+                 */
+                void touchSNDCPContext(uint32_t llId, uint32_t peerId);
+                /**
+                 * @brief Helper to clear the downlink awaiting a link-layer ACK from a subscriber.
+                 * @param llId Logical Link ID of the SU.
+                 */
+                void clearSNDCPPendingAck(uint32_t llId);
+                /**
+                 * @brief Helper to process a link-layer ACK from a subscriber for a confirmed downlink.
+                 * @param llId Logical Link ID of the SU.
+                 * @param ns N(S) the ACK acknowledges.
+                 */
+                void processSNDCPDownlinkAck(uint32_t llId, uint8_t ns);
+                /**
+                 * @brief Helper to retransmit, or give up on, downlinks that were not acknowledged.
+                 * @param now Current timestamp in milliseconds.
+                 */
+                void processSNDCPRetransmit(uint64_t now);
+
                 bool m_debug;
 
                 /**
@@ -243,8 +329,9 @@ namespace network
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
+                 * @param retransmit Flag indicating a retransmission, sent with the N(S) already in the header.
                  */
-                bool dispatchUserFrameToFNE(::p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
+                bool dispatchUserFrameToFNE(::p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool retransmit = false);
 
                 /**
                  * @brief Helper used to process conventional data registration from PDU data.
@@ -258,6 +345,13 @@ namespace network
                  * @returns bool True, if SNDCP control data was processed, otherwise false.
                  */
                 bool processSNDCPControl(RxStatus* status);
+                /**
+                 * @brief Helper used to process SNDCP user data (SN-Data) from PDU data.
+                 * @param status Instance of the RxStatus class.
+                 * @param peerId Peer ID.
+                 * @returns bool True, if the SNDCP header was stripped leaving an IPv4 datagram, otherwise false.
+                 */
+                bool processSNDCPUserData(RxStatus* status, uint32_t peerId);
 
                 /**
                  * @brief Helper write ARP request to the network.

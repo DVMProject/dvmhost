@@ -45,6 +45,7 @@ namespace network
                 uint64_t dueAt = 0U;               //!< Timestamp indicating when the packet is due.
                 uint8_t retryCount = 0U;           //!< Number of retry attempts for the packet.
                 bool extendedRetry = false;        //!< Indicates if extended retry is enabled.
+                bool retransmit = false;           //!< Link-layer retransmission of a confirmed packet already sent once.
             };
 
             // ---------------------------------------------------------------------------

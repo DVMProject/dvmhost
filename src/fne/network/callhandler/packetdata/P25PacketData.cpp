@@ -12,6 +12,7 @@
 #include "common/p25/data/ConventionalRegistration.h"
 #include "common/p25/data/IPv4Packet.h"
 #include "common/p25/sndcp/SNDCPFactory.h"
+#include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/Sync.h"
 #include "common/edac/CRC.h"
 #include "common/Clock.h"
@@ -54,6 +55,19 @@ const uint32_t INTERPACKET_DELAY = 100U; // milliseconds
 const uint32_t ARP_RETRY_MS = 5000U; // milliseconds
 const uint32_t SUBSCRIBER_READY_RETRY_MS = 1000U; // milliseconds
 const uint32_t CONVENTIONAL_LOCATION_MAX_AGE_MS = 300000U; // 5 minutes
+
+// trunked (SNDCP) downlink paging; kept shorter than the 10 second Ready Timer in the
+// context accept, after which the SU returns to the control channel
+const uint32_t SNDCP_ON_CHANNEL_MS = 8000U;     // milliseconds an SU is taken to stay on the data channel
+const uint32_t SNDCP_PDCH_SETTLE_MS = 1200U;    // milliseconds from a grant to the first outbound PDU
+const uint32_t SNDCP_PAGE_RETRY_MS = 4000U;     // milliseconds between data pages (an SU answers in about 3 seconds)
+const uint32_t SNDCP_PAGE_HOLD_MS = 200U;       // milliseconds between checks while a page is outstanding
+const uint8_t SNDCP_PAGE_MAX = 4U;              // data pages sent before the packet is dropped
+
+// trunked (SNDCP) confirmed downlink retransmission
+const uint32_t SNDCP_LLC_ACK_TIMEOUT_MS = 4500U;    // milliseconds to wait for the link-layer ACK (seen up to 3.1 seconds)
+const uint8_t SNDCP_LLC_RETX_MAX = 2U;              // retransmissions before the PDU is given up on
+const uint32_t SNDCP_LLC_RESEND_STUCK_MS = 30000U;  // milliseconds a queued retransmission may wait to leave
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -371,25 +385,46 @@ void P25PacketData::processPacketFrame(const uint8_t* data, uint32_t len, bool a
         llId, (llId == 0U) ? " (UNRESOLVED - will retry with ARP)" : "");
 
     // assemble a P25 PDU frame header for transport...
+    // a subscriber with an active SNDCP context is sent SN-Data: user data SAP, confirmed,
+    // and a 2-octet SNDCP header (PDU type | NSAPI, PCOMP | DCOMP) ahead of the IPv4 datagram
+    bool sndcp = false;
+    uint8_t nsapi = 0U;
+    {
+        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+        auto ctx = m_sndcpContexts.find(llId);
+        if (ctx != m_sndcpContexts.end() && ctx->second.active) {
+            sndcp = true;
+            nsapi = ctx->second.nsapi;
+        }
+    }
+    const uint32_t sndcpHdrLen = sndcp ? 2U : 0U;
+
     data::DataHeader pktHeader;
-    bool confirmed = route.delivery == DataDeliveryMode::CONFIRMED;
+    bool confirmed = sndcp || route.delivery == DataDeliveryMode::CONFIRMED;
     pktHeader.setFormat(confirmed ? PDUFormatType::CONFIRMED : PDUFormatType::UNCONFIRMED);
     pktHeader.setMFId(MFG_STANDARD);
     pktHeader.setAckNeeded(confirmed);
     pktHeader.setOutbound(true);
-    pktHeader.setSAP(PDUSAP::PACKET_DATA);
+    pktHeader.setSAP(sndcp ? PDUSAP::USER_DATA : PDUSAP::PACKET_DATA);
+    pktHeader.setHeaderOffset((uint8_t)sndcpHdrLen);
     pktHeader.setLLId(llId);
     pktHeader.setBlocksToFollow(1U);
 
-    pktHeader.calculateLength(pktLen);
+    pktHeader.calculateLength(pktLen + sndcpHdrLen);
     uint32_t pduLength = pktHeader.getPDULength();
-    if (pduLength < pktLen) {
+    if (pduLength < pktLen + sndcpHdrLen) {
         LogWarning(LOG_P25, "VTUN, data truncated!");
-        pktLen = pduLength; // don't overflow the buffer
+        pktLen = pduLength - sndcpHdrLen; // don't overflow the buffer
     }
 
     DECLARE_UINT8_ARRAY(pduUserData, pduLength);
-    ::memcpy(pduUserData, data, pktLen);
+    if (sndcp) {
+        pduUserData[0U] = (uint8_t)((SNDCP_PDUType::RF_CONFIRMED << 4) | (nsapi & 0x0FU));
+        pduUserData[1U] = 0x00U; // no header or data compression
+
+        LogInfoEx(LOG_P25, "VTUN -> PDU SNDCP user data, llId = %u, nsapi = %u, length = %u", llId, nsapi, pktLen);
+    }
+    ::memcpy(pduUserData + sndcpHdrLen, data, pktLen);
 //#if DEBUG_P25_PDU_DATA
     Utils::dump(1U, "P25, P25PacketData::processPacketFrame(), pduUserData", pduUserData, pduLength);
 //#endif
@@ -484,6 +519,9 @@ void P25PacketData::clock(uint32_t ms)
     m_conventionalDataService.expire(now);
     m_locationRegistry.expire(now);
 
+    // retransmit trunked downlinks the SU has not acknowledged (this may queue a packet)
+    processSNDCPRetransmit(now);
+
     if (m_packetScheduler.empty()) {
         return;
     }
@@ -493,8 +531,44 @@ void P25PacketData::clock(uint32_t ms)
         return;
 
     std::string targetIP = __IP_FROM_UINT(packet->targetIPAddress);
-    uint8_t protocol = packet->userData.size() >= 20U ? packet->userData[9U] : 0U;
-    if (packet->retryCount >= (packet->extendedRetry ? MAX_PKT_RETRY_CNT * 2U : MAX_PKT_RETRY_CNT)) {
+    const uint32_t ipOffset = packet->header.getHeaderOffset(); // SNDCP header, if any
+    uint8_t protocol = packet->userData.size() >= ipOffset + 20U ? packet->userData[ipOffset + 9U] : 0U;
+
+    // is this a queued retransmission, or a packet waiting behind a downlink still awaiting its ACK?
+    bool retx = false;
+    {
+        bool pending = false;
+        {
+            std::lock_guard<std::mutex> guard(m_sndcpPendingLock);
+            auto it = m_sndcpPending.find(packet->llId);
+            if (it != m_sndcpPending.end()) {
+                pending = true;
+                retx = packet->retransmit && it->second.resendDue &&
+                    it->second.ns == packet->header.getNs() && it->second.userData == packet->userData;
+            }
+        }
+
+        if (packet->retransmit && !retx) {
+            // the ACK arrived (or the record was given up on) while the copy was queued
+            LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP downlink retransmit no longer needed, llId = %u", packet->llId);
+            m_packetScheduler.pop();
+            return;
+        }
+        if (pending && !retx) {
+            // not counted as a retry: the pending record bounds the wait
+            packet->dueAt = now + SUBSCRIBER_READY_RETRY_MS;
+            m_packetScheduler.rotate();
+            return;
+        }
+    }
+
+    // gives up on a queued retransmission that cannot be sent
+    auto abandonRetx = [&]() {
+        clearSNDCPPendingAck(packet->llId);
+        m_dataLinkManager.setReady(packet->llId, true);
+    };
+
+    if (!retx && packet->retryCount >= (packet->extendedRetry ? MAX_PKT_RETRY_CNT * 2U : MAX_PKT_RETRY_CNT)) {
         LogWarning(LOG_P25, P25_PDU_STR ", max packet retry count exceeded, dropping packet, dstIp = %s",
             targetIP.c_str());
         m_dataLinkManager.setReady(packet->llId, true);
@@ -502,11 +576,99 @@ void P25PacketData::clock(uint32_t ms)
         return;
     }
 
+    // trunked (SNDCP) downlink: an SU that has left the data channel is paged on the
+    // control channel, and the PDU is held until the site reports the grant
+    if (packet->llId != WUID_ALL && packet->header.getSAP() == PDUSAP::USER_DATA &&
+        packet->header.getHeaderOffset() == 2U) {
+        bool drop = false, noControlCh = false, page = false;
+        uint32_t ccPeerId = 0U, vcPeerId = 0U;
+        uint8_t nsapi = 0U, pageCount = 0U;
+        uint64_t holdUntil = 0U;
+        {
+            std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+            auto it = m_sndcpContexts.find(packet->llId);
+            if (it != m_sndcpContexts.end()) {
+                SNDCPContext& ctx = it->second;
+                ccPeerId = ctx.ccPeerId;
+                vcPeerId = ctx.vcPeerId;
+                nsapi = ctx.nsapi;
+                if (now >= ctx.onChannelUntil) {
+                    if (ctx.ccPeerId == 0U) {
+                        // no control channel has reported a grant for this SU, so it cannot be paged
+                        drop = true;
+                        noControlCh = true;
+                    } else if (now >= ctx.nextPageAt) {
+                        if (ctx.pageCount >= SNDCP_PAGE_MAX) {
+                            drop = true;
+                            ctx.pageCount = 0U;
+                            ctx.nextPageAt = 0U;
+                        } else {
+                            page = true;
+                            ctx.pageCount++;
+                            ctx.nextPageAt = now + SNDCP_PAGE_RETRY_MS;
+                        }
+                    }
+                    pageCount = ctx.pageCount;
+                    holdUntil = now + SNDCP_PAGE_HOLD_MS;
+                } else if (now < ctx.grantedAt + SNDCP_PDCH_SETTLE_MS) {
+                    holdUntil = ctx.grantedAt + SNDCP_PDCH_SETTLE_MS; // let the SU arrive on the data channel
+                }
+            }
+        }
+
+        if (drop) {
+            if (noControlCh) {
+                LogWarning(LOG_P25, P25_PDU_STR ", SNDCP SU is off the data channel and no control channel is known to page it, dropping packet, dstIp = %s (%u)",
+                    targetIP.c_str(), packet->llId);
+            } else {
+                LogWarning(LOG_P25, P25_PDU_STR ", SNDCP data page unanswered, dropping packet, dstIp = %s (%u)",
+                    targetIP.c_str(), packet->llId);
+            }
+            if (retx)
+                abandonRetx();
+            m_packetScheduler.pop();
+            return;
+        }
+
+        if (page) {
+            std::unique_ptr<lc::tsbk::OSP_SNDCP_DATA_PAGE_REQ> osp = std::make_unique<lc::tsbk::OSP_SNDCP_DATA_PAGE_REQ>();
+            osp->setMFId(MFG_STANDARD);
+            osp->setSrcId(WUID_FNE);
+            osp->setDstId(packet->llId);
+            osp->setDataServiceOptions(nsapi & 0x0FU);
+            m_tag->write_TSDU(ccPeerId, osp.get());
+
+            LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP data page, llId = %u, nsapi = %u, peer = %u, attempt = %u",
+                packet->llId, nsapi, ccPeerId, pageCount);
+        }
+
+        if (holdUntil != 0U) {
+            packet->dueAt = holdUntil;
+            m_packetScheduler.rotate();
+            return;
+        }
+
+        // the SU may have been idle for longer than a learned location is kept; it
+        // is still reached through the data channel peer it was last heard on
+        if (vcPeerId != 0U) {
+            ConventionalLocation location;
+            location.peerId = vcPeerId;
+            location.lastSeen = now;
+            m_locationRegistry.updateConventional(packet->llId, location);
+        }
+    }
+
     if (packet->llId != WUID_ALL) {
         DataRoute route = m_locationRegistry.resolve(packet->llId, AccessMode::CONVENTIONAL, now);
         if (!route.valid) {
             LogWarning(LOG_P25, P25_PDU_STR ", subscriber location unknown, dstIp = %s (%u)",
                 targetIP.c_str(), packet->llId);
+
+            if (retx) {
+                abandonRetx();
+                m_packetScheduler.pop();
+                return;
+            }
 
             UnknownLocationPolicy policy = m_locationRegistry.unknownLocationPolicy();
             if (policy == UnknownLocationPolicy::DROP) {
@@ -523,7 +685,7 @@ void P25PacketData::clock(uint32_t ms)
         }
     }
 
-    if (m_dataLinkManager.hasState(packet->llId) &&
+    if (!retx && m_dataLinkManager.hasState(packet->llId) &&
         !m_dataLinkManager.isReady(packet->llId)) {
         LogWarning(LOG_P25, P25_PDU_STR ", subscriber not ready, dstIp = %s (%u), proto = %02X%s, will retry in %ums",
             targetIP.c_str(), packet->llId, protocol, (protocol == 0x01U) ? " (ICMP)" : "",
@@ -543,10 +705,48 @@ void P25PacketData::clock(uint32_t ms)
     if (confirmed)
         m_dataLinkManager.setReady(packet->llId, false);
 
-    if (dispatchUserFrameToFNE(packet->header, false, false, packet->userData.data())) {
+    // a retransmission keeps the N(S) its header was first sent with
+    if (dispatchUserFrameToFNE(packet->header, false, false, packet->userData.data(), retx)) {
+        if (retx) {
+            std::lock_guard<std::mutex> guard(m_sndcpPendingLock);
+            auto it = m_sndcpPending.find(packet->llId);
+            if (it != m_sndcpPending.end()) {
+                it->second.sentAt = now;
+                it->second.resendDue = false;
+            }
+        } else if (confirmed && packet->llId != WUID_ALL && packet->header.getSAP() == PDUSAP::USER_DATA &&
+            packet->header.getHeaderOffset() == 2U) {
+            // remember the PDU until the SU's link-layer ACK arrives
+            SNDCPPendingAck pending;
+            pending.header = packet->header; // carries the N(S) it was sent with
+            pending.userData = packet->userData;
+            pending.targetIPAddress = packet->targetIPAddress;
+            pending.ns = packet->header.getNs();
+            pending.sentAt = now;
+
+            bool replaced = false;
+            {
+                std::lock_guard<std::mutex> guard(m_sndcpPendingLock);
+                replaced = m_sndcpPending.find(packet->llId) != m_sndcpPending.end();
+                m_sndcpPending[packet->llId] = pending;
+            }
+            if (replaced) {
+                LogWarning(LOG_P25, P25_PDU_STR ", SNDCP downlink still unacknowledged, replacing pending record, llId = %u, n = %u",
+                    packet->llId, uint32_t(pending.ns));
+            }
+        }
+
         m_packetScheduler.pop();
     }
     else {
+        if (retx) {
+            LogWarning(LOG_P25, P25_PDU_STR ", SNDCP downlink retransmit rejected, dropping, llId = %u, n = %u",
+                packet->llId, uint32_t(packet->header.getNs()));
+            abandonRetx();
+            m_packetScheduler.pop();
+            return;
+        }
+
         if (confirmed)
             m_dataLinkManager.setReady(packet->llId, true);
 
@@ -558,6 +758,27 @@ void P25PacketData::clock(uint32_t ms)
             targetIP.c_str(), packet->llId, packet->retryCount);
     }
 #endif // !defined(_WIN32)
+}
+
+/* Process a SNDCP data channel grant relayed by a site's control channel. */
+
+void P25PacketData::processSNDCPChannelGrant(uint32_t peerId, uint32_t llId)
+{
+    if (llId == 0U || llId == WUID_ALL)
+        return;
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    {
+        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+        SNDCPContext& ctx = m_sndcpContexts[llId];
+        ctx.ccPeerId = peerId;
+        ctx.grantedAt = now;
+        ctx.onChannelUntil = now + SNDCP_ON_CHANNEL_MS;
+        ctx.pageCount = 0U;
+        ctx.nextPageAt = 0U;
+    }
+
+    LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP data channel grant, llId = %u, peer = %u", llId, peerId);
 }
 
 /* Helper to cleanup any call's left in a dangling state without any further updates. */
@@ -590,11 +811,142 @@ void P25PacketData::cleanupStale()
             status = nullptr;
         }
     }
+
+    // forget downlinks pending an ACK from an SU that no longer has an SNDCP context
+    std::vector<uint32_t> pendingLlIds;
+    {
+        std::lock_guard<std::mutex> guard(m_sndcpPendingLock);
+        for (const auto& pending : m_sndcpPending)
+            pendingLlIds.push_back(pending.first);
+    }
+    for (uint32_t llId : pendingLlIds) {
+        bool active = false;
+        {
+            std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+            auto ctx = m_sndcpContexts.find(llId);
+            active = ctx != m_sndcpContexts.end() && ctx->second.active;
+        }
+        if (!active)
+            clearSNDCPPendingAck(llId);
+    }
 }
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/* Helper to clear the downlink awaiting a link-layer ACK from a subscriber. */
+
+void P25PacketData::clearSNDCPPendingAck(uint32_t llId)
+{
+    std::lock_guard<std::mutex> guard(m_sndcpPendingLock);
+    m_sndcpPending.erase(llId);
+}
+
+/* Helper to process a link-layer ACK from a subscriber for a confirmed downlink. */
+
+void P25PacketData::processSNDCPDownlinkAck(uint32_t llId, uint8_t ns)
+{
+    std::lock_guard<std::mutex> guard(m_sndcpPendingLock);
+    auto it = m_sndcpPending.find(llId);
+    if (it != m_sndcpPending.end() && it->second.ns == ns)
+        m_sndcpPending.erase(it);
+}
+
+/* Helper to retransmit, or give up on, downlinks that were not acknowledged. */
+
+void P25PacketData::processSNDCPRetransmit(uint64_t now)
+{
+#if !defined(_WIN32)
+    std::vector<SNDCPRetransmitEvent> events;
+    std::vector<ScheduledP25DataPacket> resend;
+
+    {
+        std::lock_guard<std::mutex> guard(m_sndcpPendingLock);
+        for (auto it = m_sndcpPending.begin(); it != m_sndcpPending.end(); ) {
+            SNDCPPendingAck& pending = it->second;
+
+            if (pending.resendDue) {
+                // the retransmission is still queued, waiting for the SU to reach a data channel
+                if (now >= pending.sentAt + SNDCP_LLC_RESEND_STUCK_MS) {
+                    events.push_back({ it->first, pending.ns, pending.retxCount, SNDCPRetransmitResult::NEVER_SENT });
+                    it = m_sndcpPending.erase(it);
+                } else {
+                    ++it;
+                }
+                continue;
+            }
+
+            if (now < pending.sentAt + SNDCP_LLC_ACK_TIMEOUT_MS) {
+                ++it;
+                continue;
+            }
+
+            if (pending.retxCount >= SNDCP_LLC_RETX_MAX) {
+                events.push_back({ it->first, pending.ns, pending.retxCount, SNDCPRetransmitResult::UNACKNOWLEDGED });
+                it = m_sndcpPending.erase(it);
+                continue;
+            }
+
+            pending.retxCount++;
+            pending.sentAt = now;
+            pending.resendDue = true;
+            events.push_back({ it->first, pending.ns, pending.retxCount, SNDCPRetransmitResult::QUEUED });
+
+            // queue the copy, so the SU is paged first if it has left the data channel
+            ScheduledP25DataPacket packet;
+            packet.header = pending.header;
+            packet.userData = pending.userData;
+            packet.llId = it->first;
+            packet.targetIPAddress = pending.targetIPAddress;
+            packet.dueAt = 0U;
+            packet.retransmit = true;
+            resend.push_back(packet);
+            ++it;
+        }
+    }
+
+    for (const SNDCPRetransmitEvent& event : events) {
+        switch (event.result) {
+        case SNDCPRetransmitResult::QUEUED:
+            LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP downlink retransmit, llId = %u, n = %u, attempt = %u",
+                event.llId, uint32_t(event.ns), uint32_t(event.attempt));
+            break;
+        case SNDCPRetransmitResult::UNACKNOWLEDGED:
+            LogWarning(LOG_P25, P25_PDU_STR ", SNDCP downlink unacknowledged, dropping, llId = %u, n = %u",
+                event.llId, uint32_t(event.ns));
+            m_dataLinkManager.setReady(event.llId, true);
+            break;
+        case SNDCPRetransmitResult::NEVER_SENT:
+            LogWarning(LOG_P25, P25_PDU_STR ", SNDCP downlink retransmit never sent, dropping, llId = %u, n = %u",
+                event.llId, uint32_t(event.ns));
+            m_dataLinkManager.setReady(event.llId, true);
+            break;
+        }
+    }
+
+    for (ScheduledP25DataPacket& packet : resend)
+        m_packetScheduler.enqueue(std::move(packet));
+#endif // !defined(_WIN32)
+}
+
+/* Helper to refresh SNDCP state when a PDU is received from a subscriber. */
+
+void P25PacketData::touchSNDCPContext(uint32_t llId, uint32_t peerId)
+{
+    if (llId == 0U || llId == WUID_ALL)
+        return;
+
+    uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+    auto it = m_sndcpContexts.find(llId);
+    if (it == m_sndcpContexts.end())
+        return; // not an SU with trunked packet data state
+
+    it->second.vcPeerId = peerId;
+    it->second.onChannelUntil = now + SNDCP_ON_CHANNEL_MS;
+}
 
 /* Helper to dispatch PDU user data. */
 
@@ -607,6 +959,10 @@ void P25PacketData::dispatch(uint32_t peerId)
         return;
     }
 
+    // anything received from an SU shows it is on the data channel right now
+    touchSNDCPContext(status->assembler.getExtendedAddress() ? status->assembler.dataHeader.getSrcLLId() :
+        status->assembler.dataHeader.getLLId(), peerId);
+
     if (status->assembler.dataHeader.getFormat() == PDUFormatType::RSP) {
         LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, response, peer = %u, fmt = $%02X, rspClass = $%02X, rspType = $%02X, rspStatus = $%02X, llId = %u, srcLlId = %u",
                 peerId, status->assembler.dataHeader.getFormat(), status->assembler.dataHeader.getResponseClass(), status->assembler.dataHeader.getResponseType(), status->assembler.dataHeader.getResponseStatus(),
@@ -617,6 +973,9 @@ void P25PacketData::dispatch(uint32_t peerId)
             m_dataLinkManager.setReady(responseLlId, true);
 
         if (status->assembler.dataHeader.getResponseClass() == PDUAckClass::ACK && status->assembler.dataHeader.getResponseType() == PDUAckType::ACK) {
+            if (responseLlId != 0U)
+                processSNDCPDownlinkAck(responseLlId, status->assembler.dataHeader.getResponseStatus());
+
             LogInfoEx(LOG_P25, P25_PDU_STR ", ISP, response, OSP ACK, peer = %u, llId = %u, all blocks received OK, n = %u",
                 peerId, status->assembler.dataHeader.getLLId(), status->assembler.dataHeader.getResponseStatus());
         } else {
@@ -691,6 +1050,18 @@ void P25PacketData::dispatch(uint32_t peerId)
             location.lastSeen = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::system_clock::now().time_since_epoch()).count();
             m_locationRegistry.updateConventional(inboundLlId, location);
+        }
+    }
+
+    // SNDCP user data (SN-Data) is an IPv4 datagram behind a 2-octet SNDCP header on the
+    // user data SAP; strip the header and handle the datagram as packet data
+    if (sap == PDUSAP::USER_DATA && status->assembler.dataHeader.getHeaderOffset() == 2U &&
+        status->pduUserDataLength > 2U) {
+        const uint8_t sndcpType = (status->pduUserData[0U] >> 4) & 0x0FU;
+        if (sndcpType == SNDCP_PDUType::RF_CONFIRMED || sndcpType == SNDCP_PDUType::RF_UNCONFIRMED) {
+            if (!processSNDCPUserData(status, peerId))
+                return;
+            sap = PDUSAP::PACKET_DATA;
         }
     }
 
@@ -1002,7 +1373,7 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
 
 /* Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to neighbor FNE peers.) */
 
-bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData)
+bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool retransmit)
 {
     uint32_t srcId = (extendedAddress) ? dataHeader.getSrcLLId() : dataHeader.getLLId();
     uint32_t dstId = dataHeader.getLLId();
@@ -1028,12 +1399,15 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
         return false;
     }
 
-    // update V(S) only after a usable RF route has been selected
-    bool synchronize = false;
-    uint8_t sendSequence = m_dataLinkManager.nextSendSequence(srcId, synchronize);
-    if (synchronize)
-        dataHeader.setSynchronize(true);
-    dataHeader.setNs(sendSequence);
+    // update V(S) only after a usable RF route has been selected; a retransmission
+    // keeps the N(S) already in its header, so the SU can discard a duplicate
+    if (!retransmit) {
+        bool synchronize = false;
+        uint8_t sendSequence = m_dataLinkManager.nextSendSequence(srcId, synchronize);
+        if (synchronize)
+            dataHeader.setSynchronize(true);
+        dataHeader.setNs(sendSequence);
+    }
 
     // dispatch the user frame to each resolved RF route
     bool dispatched = false;
@@ -1058,6 +1432,46 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
         }
     }
     return dispatched;
+}
+
+/* Helper used to process SNDCP user data (SN-Data) from PDU data. */
+
+bool P25PacketData::processSNDCPUserData(RxStatus* status, uint32_t peerId)
+{
+    const uint32_t llId = status->assembler.dataHeader.getLLId();
+    const uint8_t sndcpType = (status->pduUserData[0U] >> 4) & 0x0FU;
+    const uint8_t nsapi = status->pduUserData[0U] & 0x0FU;
+
+    // only uncompressed datagrams are supported; the context accept negotiates none
+    if (status->pduUserData[1U] != 0x00U) {
+        LogWarning(LOG_P25, P25_PDU_STR ", SNDCP user data with unsupported compression, llId = %u, pcomp/dcomp = $%02X",
+            llId, status->pduUserData[1U]);
+        return false;
+    }
+
+    LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP user data, llId = %u, pduType = $%02X, nsapi = %u, length = %u",
+        llId, sndcpType, nsapi, status->pduUserDataLength - 2U);
+
+    // adopt the context of an SU the FNE has no record of (the FNE restarted while the
+    // SU kept its context), so the reply is framed as SN-Data and can be routed
+    {
+        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+        SNDCPContext& ctx = m_sndcpContexts[llId];
+        if (!ctx.active) {
+            ctx.active = true;
+            ctx.nsapi = nsapi;
+            ctx.vcPeerId = peerId;
+            ctx.onChannelUntil = now + SNDCP_ON_CHANNEL_MS;
+        }
+    }
+
+    // strip the SNDCP header, leaving a bare IPv4 datagram
+    ::memmove(status->pduUserData, status->pduUserData + 2U, status->pduUserDataLength - 2U);
+    status->pduUserDataLength -= 2U;
+
+    return true;
 }
 
 /* Helper used to process conventional data registration from PDU data. */
@@ -1149,6 +1563,11 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
             LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP context activation request, llId = %u, nsapi = %u, ipAddr = %s, nat = $%02X, dsut = $%02X, mdpco = $%02X", llId,
                 isp->getNSAPI(), __IP_FROM_UINT(isp->getIPAddress()).c_str(), isp->getNAT(), isp->getDSUT(), isp->getMDPCO());
 
+            // the request is a confirmed PDU and needs its own ACK; the accept or reject
+            // that follows is a separate PDU and does not acknowledge it
+            write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK,
+                status->assembler.dataHeader.getNs(), llId, false);
+
             // check if subscriber is provisioned (from RID table)
             lookups::RadioId rid = m_network->m_ridLookup->find(llId);
             if (rid.radioDefault() || !rid.radioEnabled()) {
@@ -1222,7 +1641,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                     osp->setNSAPI(isp->getNSAPI());
                     osp->setPriority(4U);
                     osp->setReadyTimer(SNDCPReadyTimer::TEN_SECONDS);
-                    osp->setStandbyTimer(SNDCPStandbyTimer::ONE_MINUTE);
+                    osp->setStandbyTimer(SNDCPStandbyTimer::FOUR_HOURS);
                     osp->setNAT(SNDCPNAT::IPV4_STATIC_ADDR);
                     osp->setIPAddress(staticIP);
                     osp->setMTU(SNDCP_MTU_510);
@@ -1241,6 +1660,14 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
 
                     m_neighborCache.observe(llId, staticIP);
                     m_dataLinkManager.setReady(llId, true);
+                    {
+                        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+                        SNDCPContext& ctx = m_sndcpContexts[llId];
+                        ctx.active = true;
+                        ctx.nsapi = isp->getNSAPI();
+                    }
+                    // a downlink still awaiting its ACK belongs to the context this one replaces
+                    clearSNDCPPendingAck(llId);
 
                     dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
 
@@ -1287,7 +1714,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                     osp->setNSAPI(isp->getNSAPI());
                     osp->setPriority(4U);
                     osp->setReadyTimer(SNDCPReadyTimer::TEN_SECONDS);
-                    osp->setStandbyTimer(SNDCPStandbyTimer::ONE_MINUTE);
+                    osp->setStandbyTimer(SNDCPStandbyTimer::FOUR_HOURS);
                     osp->setNAT(SNDCPNAT::IPV4_DYN_ADDR);
                     osp->setIPAddress(dynamicIP);
                     osp->setMTU(SNDCP_MTU_510);
@@ -1306,6 +1733,14 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
 
                     m_neighborCache.observe(llId, dynamicIP);
                     m_dataLinkManager.setReady(llId, true);
+                    {
+                        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+                        SNDCPContext& ctx = m_sndcpContexts[llId];
+                        ctx.active = true;
+                        ctx.nsapi = isp->getNSAPI();
+                    }
+                    // a downlink still awaiting its ACK belongs to the context this one replaces
+                    clearSNDCPPendingAck(llId);
 
                     dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
 
@@ -1352,6 +1787,13 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
 
             m_neighborCache.erase(llId);
             m_dataLinkManager.erase(llId);
+            {
+                std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+                auto ctx = m_sndcpContexts.find(llId);
+                if (ctx != m_sndcpContexts.end())
+                    ctx->second.active = false;
+            }
+            clearSNDCPPendingAck(llId);
 
             // send ACK response
             write_PDU_Ack_Response(PDUAckClass::ACK, PDUAckType::ACK, 
