@@ -470,10 +470,31 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 }
 
                 if (m_p25->m_sndcpSupport) {
-                    writeRF_TSDU_SNDCP_Grant(srcId, false);
+                    writeRF_TSDU_SNDCP_Grant(srcId, false, 0U, isp->getDataServiceOptions());
                 }
                 else {
                     writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::ISP_SNDCP_CH_REQ);
+                }
+            }
+            break;
+            case TSBKO::ISP_SNDCP_DATA_PAGE_RES:
+            {
+                // make sure control data is supported
+                IS_SUPPORT_CONTROL_CHECK(tsbk->toString(true), TSBKO::ISP_SNDCP_DATA_PAGE_RES, srcId);
+
+                // validate the source RID
+                VALID_SRCID(tsbk->toString(true), TSBKO::ISP_SNDCP_DATA_PAGE_RES, srcId);
+
+                ISP_SNDCP_DATA_PAGE_RES* isp = static_cast<ISP_SNDCP_DATA_PAGE_RES*>(tsbk.get());
+                if (m_verbose) {
+                    LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, dataServiceOptions = $%02X, answer = $%02X, dataAccessControl = $%04X, srcId = %u",
+                        tsbk->toString(true).c_str(), isp->getDataServiceOptions(), isp->getAnswerResponse(), isp->getDataAccessControl(), srcId);
+                }
+
+                // the SU answered an FNE data page -- when it will proceed, direct it to
+                // a data channel exactly as for an SU request
+                if (m_p25->m_sndcpSupport && isp->getAnswerResponse() == ResponseCode::ANS_PROCEED) {
+                    writeRF_TSDU_SNDCP_Grant(srcId, false, 0U, isp->getDataServiceOptions());
                 }
             }
             break;
@@ -485,14 +506,16 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
                 // validate the source RID
                 VALID_SRCID(tsbk->toString(true), TSBKO::ISP_SNDCP_CH_REQ, srcId);
 
-                ISP_SNDCP_CH_REQ* isp = static_cast<ISP_SNDCP_CH_REQ*>(tsbk.get());
+                // the factory builds an ISP_SNDCP_REC_REQ for this opcode; it is not an
+                // ISP_SNDCP_CH_REQ, and read as one the Data Service Options come out wrong
+                ISP_SNDCP_REC_REQ* isp = static_cast<ISP_SNDCP_REC_REQ*>(tsbk.get());
                 if (m_verbose) {
                     LogInfoEx(LOG_RF, P25_TSDU_STR ", %s, dataServiceOptions = $%02X, dataAccessControl = %u, srcId = %u",
                         tsbk->toString(true).c_str(), isp->getDataServiceOptions(), isp->getDataAccessControl(), srcId);
                 }
 
                 if (m_p25->m_sndcpSupport) {
-                    writeRF_TSDU_SNDCP_Grant(srcId, false);
+                    writeRF_TSDU_SNDCP_Grant(srcId, false, 0U, isp->getDataServiceOptions());
                 }
                 else {
                     writeRF_TSDU_Deny(srcId, WUID_FNE, ReasonCode::DENY_SYS_UNSUPPORTED_SVC, TSBKO::ISP_SNDCP_REC_REQ);
@@ -1380,6 +1403,11 @@ bool ControlSignaling::processNetwork(uint8_t* data, uint32_t len, lc::LC& contr
                         break; // the FNE may explicitly send these
                     case TSBKO::OSP_SNDCP_CH_GNT:
                         return true; // don't allow this to write to the air
+                    case TSBKO::OSP_SNDCP_DATA_PAGE_REQ:
+                        if (m_verbose) {
+                            LogInfoEx(LOG_NET, P25_TSDU_STR ", %s, dstId = %u", tsbk->toString().c_str(), dstId);
+                        }
+                        break; // the FNE pages an SU for outbound packet data
                     default:
                         LogError(LOG_NET, P25_TSDU_STR ", unhandled LCO, mfId = $%02X, lco = $%02X", tsbk->getMFId(), tsbk->getLCO());
                         return false;
@@ -3294,7 +3322,7 @@ void ControlSignaling::writeRF_TSDU_Grant_Update()
 
 /* Helper to write a SNDCP grant packet. */
 
-bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint32_t chNo)
+bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint32_t chNo, uint8_t dataServiceOptions)
 {
     if (!m_p25->m_sndcpSupport)
         return false;
@@ -3304,6 +3332,10 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
     osp->siteIdenEntry(m_p25->m_idenEntry);
     osp->setSrcId(srcId);
     osp->setDstId(srcId);
+
+    // echo the requested Data Service Options; an SU ignores a grant whose
+    // options differ from the request it sent
+    osp->setDataServiceOptions(dataServiceOptions);
 
     // are we skipping checking?
     if (!skip) {
@@ -3405,8 +3437,9 @@ bool ControlSignaling::writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip, uint3
                 osp->toString().c_str(), voiceChData.chId(), osp->getDataChnNo(), osp->getSrcId());
         }
 
-        // transmit group grant
-        writeRF_TSDU_SBF_Imm(osp.get(), true);
+        // transmit group grant -- the first copy is also passed to the network so the
+        // FNE knows the SU has been directed to a data channel and may send to it
+        writeRF_TSDU_SBF_Imm(osp.get(), false);
         if (m_redundantGrant) {
             for (int i = 0; i < 3; i++)
                 writeRF_TSDU_SBF(osp.get(), true);
