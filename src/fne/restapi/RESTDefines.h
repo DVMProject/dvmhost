@@ -40,6 +40,7 @@
 #define FNE_GET_RID_ALIAS_COMMIT        "/rid/alias/commit"
 #define FNE_GET_RID_OPERATION_BASE      "/rid/operation/"
 #define FNE_GET_RID_OPERATION           "^/rid/operation/([0-9]+)$"
+#define FNE_GET_RID_OPERATION_HISTORY   "^/rid/operation/last/([0-9]+)$"
 #define FNE_GET_P25_RID_STATUS_BASE     "/p25/rid/status/"
 #define FNE_GET_P25_RID_STATUS          "^/p25/rid/status/([0-9]+)$"
 

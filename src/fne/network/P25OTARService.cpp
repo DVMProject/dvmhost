@@ -13,6 +13,7 @@
 #include "common/Thread.h"
 #include "common/Utils.h"
 #include "network/TrafficNetwork.h"
+#include "network/SubscriberOperationStore.h"
 #include "network/P25OTARService.h"
 #include "HostFNE.h"
 
@@ -1043,6 +1044,8 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
     switch (frame->getMessageId()) {
         case KMM_MessageType::CHANGEOVER_RSP:
         {
+            m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25, SubscriberOperationStore::Kind::KMM_CHANGEOVER, llId, 0U);
+
             KMMChangeover* kmm = static_cast<KMMChangeover*>(frame.get());
             LogInfoEx(LOG_P25, P25_KMM_STR ", %s, llId = %u, supersededKeysetId = $%02X, activeKeysetId = $%02X", kmm->toString().c_str(),
                 llId, kmm->getSupersededKeysetId(), kmm->getActiveKeysetId());
@@ -1113,6 +1116,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
                         LogInfoEx(LOG_P25, P25_KMM_STR ", %s, no UKEK found for rekey request, llId = %u", kmm->toString().c_str(), llId);
                         return write_KMM_NoService(llId, kmm->getSrcLLId(), payloadSize, auth);
                     } else {
+                        m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25, SubscriberOperationStore::Kind::KMM_REKEY, llId, 0U);
                         if (m_network->m_kmfWarmStart) {
                             // an authenticated Hello proves a common TEK already exists -- otherwise establish
                             // a temporary security context before sending the Rekey Command
@@ -1202,6 +1206,7 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
             m_rsiInboundMessageNumber[kmm->getSrcLLId()] = kmm->KMMFrame::getMessageNumber();
 
             LogInfoEx(LOG_P25, P25_KMM_STR ", Change-RSI MN resynchronization completed, RSI = %u, initialMN = %u", kmm->getSrcLLId(), initialMN);
+            m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25, SubscriberOperationStore::Kind::KMM_CHANGERSI, llId, 0U);
 
             return write_KMM_Rekey_Command(llId, kmm->getSrcLLId(),
                 KMM_HelloFlag::REKEY_REQUEST_UKEK, payloadSize, auth,
@@ -1312,6 +1317,8 @@ UInt8Array P25OTARService::processKMM(const uint8_t* data, uint32_t len, uint32_
 
             // if the rekey process is complete, issue a changeover command
             if (rekeyComplete && m_network->m_kmfChangeoverAfterRekey) {
+                m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25, SubscriberOperationStore::Kind::KMM_REKEY, llId, 0U);
+
                 // bryanb: should these be hardcoded? as this causes whatever SU on a DVM system to swap to keyset 1
                 static constexpr uint8_t SUPERSEDED_KEYSET_ID = 1U;
                 static constexpr uint8_t ACTIVE_KEYSET_ID = 1U;
@@ -2164,6 +2171,8 @@ UInt8Array P25OTARService::write_KMM_ChangeRSI_Command(uint32_t llId, uint32_t k
         it->second.deadline = monotonicMilliseconds() + WARM_START_TIMEOUT_MS;
     }
 
+    m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25, SubscriberOperationStore::Kind::KMM_CHANGERSI, llId, 0U);
+
     if (payloadSize != nullptr)
         *payloadSize = frameLength;
 
@@ -2215,6 +2224,8 @@ UInt8Array P25OTARService::write_KMM_Changeover_Command(uint32_t llId, uint32_t 
         LogError(LOG_P25, P25_KMM_STR ", cannot build Changeover Command; no authorized AES TEK for RSI = %u", kmmRSI);
         return nullptr;
     }
+
+    m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25, SubscriberOperationStore::Kind::KMM_CHANGEOVER, llId, 0U);
 
     const uint16_t mn = reserveOutboundMessageNumbers(llId);
 

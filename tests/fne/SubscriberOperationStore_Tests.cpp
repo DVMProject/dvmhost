@@ -11,6 +11,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <vector>
+
 using namespace network;
 
 TEST_CASE("FNE subscriber operations correlate protocol results", "[fne][subscriber-operations]")
@@ -58,4 +60,25 @@ TEST_CASE("FNE subscriber operations isolate protocols and kinds", "[fne][subscr
     CHECK(dmrOperation.state == SubscriberOperationStore::State::SUCCEEDED);
     CHECK(dmrOperation.peerId == 12U);
     CHECK(p25Operation.state == SubscriberOperationStore::State::PENDING);
+}
+
+TEST_CASE("FNE subscriber operations return recent history newest first", "[fne][subscriber-operations]")
+{
+    SubscriberOperationStore store;
+    const uint64_t firstId = store.start(SubscriberOperationStore::Protocol::DMR,
+        SubscriberOperationStore::Kind::RADIO_CHECK, 1001U, 0U);
+    const uint64_t secondId = store.start(SubscriberOperationStore::Protocol::P25,
+        SubscriberOperationStore::Kind::INHIBIT, 1002U, 0U);
+    const uint64_t thirdId = store.start(SubscriberOperationStore::Protocol::P25,
+        SubscriberOperationStore::Kind::UNINHIBIT, 1003U, 0U);
+
+    REQUIRE(firstId != 0U);
+    REQUIRE(secondId != 0U);
+    REQUIRE(thirdId != 0U);
+
+    const std::vector<SubscriberOperationStore::Operation> operations = store.getLast(2U);
+    REQUIRE(operations.size() == 2U);
+    CHECK(operations[0U].id == thirdId);
+    CHECK(operations[1U].id == secondId);
+    CHECK(store.getLast(0U).empty());
 }

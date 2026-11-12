@@ -9,6 +9,8 @@
  */
 #include "fne/network/SubscriberOperationStore.h"
 
+#include <algorithm>
+
 using namespace network;
 
 // ---------------------------------------------------------------------------
@@ -129,6 +131,32 @@ bool SubscriberOperationStore::get(uint64_t id, Operation& operation)
     return true;
 }
 
+/* Retrieves the most recently started operations. */
+
+std::vector<SubscriberOperationStore::Operation> SubscriberOperationStore::getLast(uint32_t count)
+{
+    const auto now = std::chrono::steady_clock::now();
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    // expire records before taking the history snapshot
+    expireLocked(now);
+
+    std::vector<Operation> operations;
+    operations.reserve(std::min<size_t>(count, m_operations.size()));
+    for (const auto& entry : m_operations) {
+        operations.push_back(entry.second.value);
+    }
+
+    std::sort(operations.begin(), operations.end(), [](const Operation& lhs, const Operation& rhs) {
+        return lhs.id > rhs.id;
+    });
+    if (operations.size() > count) {
+        operations.resize(count);
+    }
+
+    return operations;
+}
+
 /* Retrieves the latest P25 status snapshot. */
 
 bool SubscriberOperationStore::getP25Status(uint32_t subscriberId, Status& status)
@@ -182,6 +210,12 @@ const char* SubscriberOperationStore::kindName(Kind kind)
         return "inhibit";
     case Kind::UNINHIBIT:
         return "uninhibit";
+    case Kind::KMM_REKEY:
+        return "kmm-rekey";
+    case Kind::KMM_CHANGEOVER:
+        return "kmm-changeover";
+    case Kind::KMM_CHANGERSI:
+        return "kmm-changersi";
     }
 
     return "unknown";

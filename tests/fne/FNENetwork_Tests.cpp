@@ -120,6 +120,33 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     CHECK(operationResponse["operationId"].get<uint64_t>() == operationId);
     CHECK(operationResponse["state"].get<std::string>() == "succeeded");
     CHECK(operationResponse["resultValue"].get<uint16_t>() == 0x1234U);
+    REQUIRE(operationResponse["operations"].is<json::array>());
+    json::array& operations = operationResponse["operations"].get<json::array>();
+    REQUIRE(operations.size() == 1U);
+    REQUIRE(operations[0U].is<json::object>());
+    CHECK(operations[0U].get<json::object>()["operationId"].get<uint64_t>() == operationId);
+
+    json::object historyRequest = json::object();
+    const std::string historyJson = json::value(historyRequest).serialize();
+    requestPayload.assign(11U + historyJson.length(), 0U);
+    ::memcpy(requestPayload.data() + 11U, historyJson.data(), historyJson.length());
+    responsePayload.clear();
+
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION,
+        CONSOLE_PEER_ID, requestPayload);
+
+    REQUIRE(responsePayload.size() > 11U);
+    json::value historyResponseValue;
+    REQUIRE(json::parse(historyResponseValue,
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
+            responsePayload.size() - 11U))
+                .empty());
+    REQUIRE(historyResponseValue.is<json::object>());
+    json::object& historyResponse = historyResponseValue.get<json::object>();
+    CHECK(historyResponse["found"].get<bool>());
+    REQUIRE(historyResponse["operations"].is<json::array>());
+    REQUIRE(historyResponse["operations"].get<json::array>().size() == 1U);
 
     json::object statusRequest = json::object();
     statusRequest["subscriberId"].set<uint32_t>(SUBSCRIBER_ID);

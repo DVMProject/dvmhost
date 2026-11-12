@@ -1453,6 +1453,18 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                     lc::tsbk::IOSP_EXT_FNCT* iosp = static_cast<lc::tsbk::IOSP_EXT_FNCT*>(tsbk.get());
                     switch (iosp->getExtendedFunction()) {
                     // Standard
+                    case ExtendedFunctions::CHECK:
+                        m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);
+                        return false;
+                    case ExtendedFunctions::INHIBIT:
+                        m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::INHIBIT, iosp->getDstId(), peerId);
+                        return false;
+                    case ExtendedFunctions::UNINHIBIT:
+                        m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
+                        return false;
                     case ExtendedFunctions::CHECK_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);

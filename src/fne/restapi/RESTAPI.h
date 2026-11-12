@@ -511,6 +511,14 @@ namespace fne_restapi
          */
         void restAPI_GetRIDOperation(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
 
+        /**
+         * @brief REST API endpoint; retrieves recent subscriber operations.
+         * @param[in] request HTTP request.
+         * @param[out] reply HTTP reply.
+         * @param[in] match HTTP request matcher.
+         */
+        void restAPI_GetRIDOperationHistory(const HTTPPayload& request, HTTPPayload& reply, const restapi::RequestMatch& match);
+
         /*
         ** Digital Mobile Radio
         */

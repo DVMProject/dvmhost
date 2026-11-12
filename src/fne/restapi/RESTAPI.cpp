@@ -724,6 +724,7 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(FNE_GET_GRANT_LIST).get(REST_API_BIND(RESTAPI::restAPI_GetGrantList, this));
 
     m_dispatcher.match(FNE_GET_SPANNING_TREE).get(REST_API_BIND(RESTAPI::restAPI_GetSpanningTree, this));
+    m_dispatcher.match(FNE_GET_RID_OPERATION_HISTORY, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDOperationHistory, this));
     m_dispatcher.match(FNE_GET_RID_OPERATION, true).get(REST_API_BIND(RESTAPI::restAPI_GetRIDOperation, this));
 
     /*
@@ -3091,6 +3092,44 @@ void RESTAPI::restAPI_GetRIDOperation(const HTTPPayload& request, HTTPPayload& r
     response["resultValue"].set<uint16_t>(operation.resultValue);
     response["createdAt"].set<uint64_t>(operation.createdAt);
     response["completedAt"].set<uint64_t>(operation.completedAt);
+
+    reply.payload(response);
+}
+
+/* REST API endpoint; retrieves recent subscriber operations. */
+
+void RESTAPI::restAPI_GetRIDOperationHistory(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
+{
+    if (!validateAuth(request, reply)) {
+        return;
+    }
+
+    // retrieve the requested count of recent operations from the URL and limit it to 64 if necessary
+    const uint64_t requestedCount = ::strtoull(match[1U].str().c_str(), nullptr, 10);
+    const uint32_t count = requestedCount > 64U ? 64U : static_cast<uint32_t>(requestedCount);
+    const std::vector<SubscriberOperationStore::Operation> operations = m_network->subscriberOperations().getLast(count);
+
+    // construct the JSON array of recent operations
+    json::array operationHistory = json::array();
+    for (const SubscriberOperationStore::Operation& operation : operations) {
+        json::object operationObj = json::object();
+        operationObj["operationId"].set<uint64_t>(operation.id);
+        operationObj["protocol"].set<std::string>(SubscriberOperationStore::protocolName(operation.protocol));
+        operationObj["operation"].set<std::string>(SubscriberOperationStore::kindName(operation.kind));
+        operationObj["state"].set<std::string>(SubscriberOperationStore::stateName(operation.state));
+        operationObj["targetId"].set<uint32_t>(operation.targetId);
+        operationObj["peerId"].set<uint32_t>(operation.peerId);
+        operationObj["requestValue"].set<uint16_t>(operation.requestValue);
+        operationObj["resultValue"].set<uint16_t>(operation.resultValue);
+        operationObj["createdAt"].set<uint64_t>(operation.createdAt);
+        operationObj["completedAt"].set<uint64_t>(operation.completedAt);
+        operationHistory.push_back(json::value(operationObj));
+    }
+
+    // construct the JSON response with the operation history array
+    json::object response = json::object();
+    setResponseDefaultStatus(response);
+    response["operations"].set<json::array>(operationHistory);
     reply.payload(response);
 }
 

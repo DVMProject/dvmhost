@@ -23,6 +23,10 @@ using namespace network;
 //  Constants
 // ---------------------------------------------------------------------------
 
+#define SOP_DMR "dmr"
+#define SOP_P25 "p25"
+#define SOP_NXDN "nxdn"
+
 const uint32_t SUBSCRIBER_OPERATION_HEADER_LENGTH = 11U;
 
 // ---------------------------------------------------------------------------
@@ -52,6 +56,8 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
     const bool notFound = false;
     const bool found = true;
     const NET_SUBFUNC::ENUM subFunction = req->fneHeader.getSubFunction();
+
+    // helper function to write the response back to the peer
     const auto writeResponse = [network, mdNetwork, connection, subFunction, streamId](json::object responseObj) {
         json::value responseValue(responseObj);
         const std::string responsePayload = responseValue.serialize();
@@ -119,7 +125,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
             SubscriberOperationStore::Protocol protocol;
             SubscriberOperationStore::Kind kind;
             uint16_t requestValue = 0U;
-            if (protocolName == "p25") {
+            if (protocolName == SOP_P25) {
                 protocol = SubscriberOperationStore::Protocol::P25;
 
                 // determine the kind of P25 operation requested
@@ -144,7 +150,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
                     response["error"].set<std::string>("unsupported P25 operation");
                     break;
                 }
-            } else if (protocolName == "dmr") {
+            } else if (protocolName == SOP_DMR) {
                 protocol = SubscriberOperationStore::Protocol::DMR;
                 if (!request["slot"].is<uint8_t>()) {
                     response["found"].set<bool>(notFound);
@@ -238,28 +244,61 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
     case NET_SUBFUNC::SUBSCRIBER_OP_OPERATION:
         {
             response["type"].set<std::string>("operation");
-            if (!request["operationId"].is<uint64_t>()) {
+
+            // check if the request contains an operation ID and validate it
+            const bool hasOperationId = request.find("operationId") != request.end();
+            if (hasOperationId && !request["operationId"].is<uint64_t>()) {
                 response["found"].set<bool>(notFound);
                 response["error"].set<std::string>("invalid operation ID");
                 break;
             }
 
-            const uint64_t operationId = request["operationId"].get<uint64_t>();
-            SubscriberOperationStore::Operation operation;
-            const bool found = operationId != 0U && network->subscriberOperations().get(operationId, operation);
-            response["found"].set<bool>(found);
-            response["operationId"].set<uint64_t>(operationId);
-            if (found) {
-                response["protocol"].set<std::string>(SubscriberOperationStore::protocolName(operation.protocol));
-                response["operation"].set<std::string>(SubscriberOperationStore::kindName(operation.kind));
-                response["state"].set<std::string>(SubscriberOperationStore::stateName(operation.state));
-                response["targetId"].set<uint32_t>(operation.targetId);
-                response["peerId"].set<uint32_t>(operation.peerId);
-                response["requestValue"].set<uint16_t>(operation.requestValue);
-                response["resultValue"].set<uint16_t>(operation.resultValue);
-                response["createdAt"].set<uint64_t>(operation.createdAt);
-                response["completedAt"].set<uint64_t>(operation.completedAt);
+            // if an operation ID was provided, attempt to retrieve the corresponding operation from the store
+            if (hasOperationId) {
+                const uint64_t operationId = request["operationId"].get<uint64_t>();
+                SubscriberOperationStore::Operation operation;
+
+                const bool found = operationId != 0U && network->subscriberOperations().get(operationId, operation);
+                response["found"].set<bool>(found);
+                response["operationId"].set<uint64_t>(operationId);
+                if (found) {
+                    response["protocol"].set<std::string>(SubscriberOperationStore::protocolName(operation.protocol));
+                    response["operation"].set<std::string>(SubscriberOperationStore::kindName(operation.kind));
+                    response["state"].set<std::string>(SubscriberOperationStore::stateName(operation.state));
+                    response["targetId"].set<uint32_t>(operation.targetId);
+                    response["peerId"].set<uint32_t>(operation.peerId);
+                    response["requestValue"].set<uint16_t>(operation.requestValue);
+                    response["resultValue"].set<uint16_t>(operation.resultValue);
+                    response["createdAt"].set<uint64_t>(operation.createdAt);
+                    response["completedAt"].set<uint64_t>(operation.completedAt);
+                }
             }
+
+            // retrieve the last 5 subscriber operations from the store and construct the JSON array
+            json::array operationHistory = json::array();
+            const std::vector<SubscriberOperationStore::Operation> operations = network->subscriberOperations().getLast(5U);
+            for (const SubscriberOperationStore::Operation& historyOperation : operations) {
+                json::object operationObj = json::object();
+                operationObj["operationId"].set<uint64_t>(historyOperation.id);
+                operationObj["protocol"].set<std::string>(SubscriberOperationStore::protocolName(historyOperation.protocol));
+                operationObj["operation"].set<std::string>(SubscriberOperationStore::kindName(historyOperation.kind));
+                operationObj["state"].set<std::string>(SubscriberOperationStore::stateName(historyOperation.state));
+                operationObj["targetId"].set<uint32_t>(historyOperation.targetId);
+                operationObj["peerId"].set<uint32_t>(historyOperation.peerId);
+                operationObj["requestValue"].set<uint16_t>(historyOperation.requestValue);
+                operationObj["resultValue"].set<uint16_t>(historyOperation.resultValue);
+                operationObj["createdAt"].set<uint64_t>(historyOperation.createdAt);
+                operationObj["completedAt"].set<uint64_t>(historyOperation.completedAt);
+                operationHistory.push_back(json::value(operationObj));
+            }
+
+            // if no specific operation ID was requested, indicate whether any history was found
+            if (!hasOperationId) {
+                const bool historyFound = !operations.empty();
+                response["found"].set<bool>(historyFound);
+            }
+
+            response["operations"].set<json::array>(operationHistory);
         }
         break;
 
@@ -272,12 +311,13 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
                 break;
             }
 
+            // retrieve the subscriber ID from the request and fetch the corresponding P25 status from the store
             const uint32_t subscriberId = request["subscriberId"].get<uint32_t>();
             SubscriberOperationStore::Status status;
-            const bool found = subscriberId != 0U &&
-                network->subscriberOperations().getP25Status(subscriberId, status);
+            const bool found = subscriberId != 0U && network->subscriberOperations().getP25Status(subscriberId, status);
+
             response["found"].set<bool>(found);
-            response["protocol"].set<std::string>("p25");
+            response["protocol"].set<std::string>(SOP_P25);
             response["subscriberId"].set<uint32_t>(subscriberId);
             if (found) {
                 response["peerId"].set<uint32_t>(status.peerId);

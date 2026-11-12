@@ -1129,6 +1129,18 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetDat
                 {
                     lc::csbk::CSBK_EXT_FNCT* iosp = static_cast<lc::csbk::CSBK_EXT_FNCT*>(csbk.get());
                     switch (iosp->getExtendedFunction()) {
+                    case ExtendedFunctions::CHECK:
+                        m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
+                            SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);
+                        return false;
+                    case ExtendedFunctions::INHIBIT:
+                        m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
+                            SubscriberOperationStore::Kind::INHIBIT, iosp->getDstId(), peerId);
+                        return false;
+                    case ExtendedFunctions::UNINHIBIT:
+                        m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
+                            SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
+                        return false;
                     case ExtendedFunctions::CHECK_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::DMR,
                             SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);

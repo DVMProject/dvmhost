@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace network
 {
@@ -40,8 +41,8 @@ namespace network
          * @ingroup fne_network
          */
         enum class Protocol : uint8_t {
-            DMR = 0U, //!< Digital Mobile Radio.
-            P25 = 1U  //!< Project 25.
+            DMR = 0U,               //!< Digital Mobile Radio.
+            P25 = 1U                //!< Project 25.
         };
 
         /**
@@ -49,11 +50,15 @@ namespace network
          * @ingroup fne_network
          */
         enum class Kind : uint8_t {
-            RADIO_CHECK = 0U,   //!< Subscriber presence check.
-            STATUS_QUERY = 1U,  //!< Subscriber status query.
-            MESSAGE_UPDATE = 2U,//!< Subscriber coded-message update.
-            INHIBIT = 3U,       //!< Subscriber inhibit request.
-            UNINHIBIT = 4U      //!< Subscriber uninhibit request.
+            RADIO_CHECK = 0U,       //!< Subscriber presence check.
+            STATUS_QUERY = 1U,      //!< Subscriber status query.
+            MESSAGE_UPDATE = 2U,    //!< Subscriber coded-message update.
+            INHIBIT = 3U,           //!< Subscriber inhibit request.
+            UNINHIBIT = 4U,         //!< Subscriber uninhibit request.
+
+            KMM_REKEY = 5U,         //!< Key management rekey request.
+            KMM_CHANGEOVER = 6U,    //!< Key management changeover request.
+            KMM_CHANGERSI = 7U      //!< Key management change RSI request.
         };
 
         /**
@@ -61,10 +66,10 @@ namespace network
          * @ingroup fne_network
          */
         enum class State : uint8_t {
-            PENDING = 0U,   //!< Request has been transmitted and awaits a response.
-            SUCCEEDED = 1U, //!< A matching successful response was received.
-            REJECTED = 2U,  //!< A matching negative response was received.
-            TIMED_OUT = 3U  //!< No matching response arrived before the deadline.
+            PENDING = 0U,           //!< Request has been transmitted and awaits a response.
+            SUCCEEDED = 1U,         //!< A matching successful response was received.
+            REJECTED = 2U,          //!< A matching negative response was received.
+            TIMED_OUT = 3U          //!< No matching response arrived before the deadline.
         };
 
         /**
@@ -72,16 +77,16 @@ namespace network
          * @ingroup fne_network
          */
         struct Operation {
-            uint64_t id;           //!< FNE-local operation identifier.
-            Protocol protocol;     //!< Air-interface protocol.
-            Kind kind;             //!< Requested operation.
-            State state;           //!< Current lifecycle state.
-            uint32_t targetId;     //!< Target subscriber ID.
-            uint32_t peerId;       //!< Requested or responding peer ID.
-            uint16_t requestValue; //!< Optional requested status/message value.
-            uint16_t resultValue;  //!< Optional returned status value.
-            uint64_t createdAt;    //!< Creation time in Unix milliseconds.
-            uint64_t completedAt;  //!< Completion time in Unix milliseconds, or zero.
+            uint64_t id;            //!< FNE-local operation identifier.
+            Protocol protocol;      //!< Air-interface protocol.
+            Kind kind;              //!< Requested operation.
+            State state;            //!< Current lifecycle state.
+            uint32_t targetId;      //!< Target subscriber ID.
+            uint32_t peerId;        //!< Requested or responding peer ID.
+            uint16_t requestValue;  //!< Optional requested status/message value.
+            uint16_t resultValue;   //!< Optional returned status value.
+            uint64_t createdAt;     //!< Creation time in Unix milliseconds.
+            uint64_t completedAt;   //!< Completion time in Unix milliseconds, or zero.
         };
 
         /**
@@ -89,11 +94,11 @@ namespace network
          * @ingroup fne_network
          */
         struct Status {
-            uint32_t subscriberId; //!< Reporting subscriber ID.
-            uint32_t peerId;       //!< Peer that delivered the report.
-            uint16_t value;        //!< Status value.
-            bool solicited;        //!< True when matched to an active query.
-            uint64_t observedAt;   //!< Observation time in Unix milliseconds.
+            uint32_t subscriberId;  //!< Reporting subscriber ID.
+            uint32_t peerId;        //!< Peer that delivered the report.
+            uint16_t value;         //!< Status value.
+            bool solicited;         //!< True when matched to an active query.
+            uint64_t observedAt;    //!< Observation time in Unix milliseconds.
         };
 
         /**
@@ -141,6 +146,12 @@ namespace network
          * @returns bool True if the operation exists, otherwise false.
          */
         bool get(uint64_t id, Operation& operation);
+        /**
+         * @brief Retrieves the most recently started operations.
+         * @param[in] count Maximum number of operations to retrieve.
+         * @returns std::vector<Operation> Operation snapshots ordered newest first.
+         */
+        std::vector<Operation> getLast(uint32_t count);
         /**
          * @brief Retrieves the latest P25 status snapshot.
          * @param[in] subscriberId Subscriber ID.
