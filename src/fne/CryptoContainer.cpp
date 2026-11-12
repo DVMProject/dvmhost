@@ -17,6 +17,7 @@
 #endif // ENABLE_SSL
 #include "CryptoContainer.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -90,18 +91,25 @@ int base64Decode(char* b64message, uint8_t** buffer)
 #endif // ENABLE_SSL
 
 /**
- * @brief 
- * @param buffer 
- * @param len 
- * @param target 
- * @return int 
+ * @brief Finds the beginning of the XML document in a decrypted EKC payload.
+ * @param buffer Decrypted EKC payload.
+ * @param len Length of the decrypted payload in bytes.
+ * @return Offset of the XML document, or -1 if no supported XML marker is found.
  */
-int findFirstChar(const uint8_t* buffer, uint32_t len, char target) 
+int findXmlStart(const uint8_t* buffer, uint32_t len)
 {
-    for (uint32_t i = 0U; i < len; i++) {
-      if (buffer[i] == target) {
-        return (int)i; 
-      }
+    if (buffer == nullptr) {
+        return -1;
+    }
+
+    const char* markers[] = { "<?xml", "<InnerContainer" };
+    for (const char* marker : markers) {
+        const size_t markerLen = ::strlen(marker);
+        const uint8_t* position = std::search(buffer, buffer + len,
+            reinterpret_cast<const uint8_t*>(marker), reinterpret_cast<const uint8_t*>(marker) + markerLen);
+        if (position != buffer + len) {
+            return static_cast<int>(position - buffer);
+        }
     }
 
     return -1;
@@ -630,15 +638,21 @@ bool CryptoContainer::load()
             AES aes = AES(AESKeyLength::AES_256);
             uint8_t* innerContainer = aes.decryptCBC(innerContainerCrypted, innerContainerLen, key, iv);
             free(innerContainerCrypted); // base64Decode allocates memory with malloc()
+            if (innerContainer == nullptr) {
+                ::LogError(LOG_HOST, "Error opening EKC: failed to decrypt inner container");
+                return false;
+            }
 
-            /*
-            ** bryanb: this is probably slightly error prone...
-            */
-
-            int xmlFirstTagChar = findFirstChar(innerContainer, innerContainerLen, '<');
+            int xmlFirstTagChar = findXmlStart(innerContainer, innerContainerLen);
             int xmlLastTagChar = findLastChar(innerContainer, innerContainerLen, '>');
+            if (xmlFirstTagChar < 0 || xmlLastTagChar < xmlFirstTagChar || xmlLastTagChar >= innerContainerLen - 1) {
+                delete[] innerContainer;
+                ::LogError(LOG_HOST, "Error opening EKC: decrypted inner container does not contain valid XML framing");
+                return false;
+            }
+
             // zero all bytes after the last > character
-            ::memset(innerContainer + xmlLastTagChar + 1U, 0x00U, innerContainerLen - xmlLastTagChar);
+            ::memset(innerContainer + xmlLastTagChar + 1U, 0x00U, innerContainerLen - xmlLastTagChar - 1U);
 
             rapidxml::xml_document<> ekcInnerContainer;
             ekcInnerContainer.parse<PARSE_FLAGS>(reinterpret_cast<char*>(innerContainer + xmlFirstTagChar));
