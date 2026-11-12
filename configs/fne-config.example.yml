@@ -58,8 +58,6 @@ log:
     filePath: .
     # Flag indicating file logs should be sent to syslog instead of a file.
     useSyslog: true
-    # Full path for the directory to store the activity log files.
-    activityFilePath: .
     # Log filename prefix.
     fileRoot: DVM
 
@@ -446,6 +444,10 @@ system:
 
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
+    # Flag indicating whether or not activity logs from peers are written to the log file.
+    #   (NOTE: This only disables logging to the actual log file, console logging will still occur based on the 
+    #     displayLevel setting, and metrics logging will still occur if metrics is configured.)
+    logActivityToLog: false
 
     # Flag indicating whether or not REST API is enabled.
     restEnable: false

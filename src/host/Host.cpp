@@ -18,7 +18,6 @@
 #include "common/Utils.h"
 #include "modem/port/specialized/V24UDPPort.h"
 #include "host/Host.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 
 using namespace modem;
@@ -208,11 +207,6 @@ int Host::run()
         ::fatal("unable to open the log file\n");
     }
 
-    ret = ::ActivityLogInitialise(logConf["activityFilePath"].as<std::string>(), logConf["fileRoot"].as<std::string>());
-    if (!ret) {
-        ::fatal("unable to open the activity log file\n");
-    }
-
 #if !defined(_WIN32)
     // handle POSIX process forking
     if (m_daemon) {
@@ -221,12 +215,10 @@ int Host::run()
         if (pid == -1) {
             ::fprintf(stderr, "%s: Couldn't fork() , exiting\n", g_progExe.c_str());
             ::LogFinalise();
-            ::ActivityLogFinalise();
             return EXIT_FAILURE;
         }
         else if (pid != 0) {
             ::LogFinalise();
-            ::ActivityLogFinalise();
             exit(EXIT_SUCCESS);
         }
 
@@ -234,7 +226,6 @@ int Host::run()
         if (::setsid() == -1) {
             ::fprintf(stderr, "%s: Couldn't setsid(), exiting\n", g_progExe.c_str());
             ::LogFinalise();
-            ::ActivityLogFinalise();
             return EXIT_FAILURE;
         }
 
@@ -242,7 +233,6 @@ int Host::run()
         if (::chdir("/") == -1) {
             ::fprintf(stderr, "%s: Couldn't cd /, exiting\n", g_progExe.c_str());
             ::LogFinalise();
-            ::ActivityLogFinalise();
             return EXIT_FAILURE;
         }
 

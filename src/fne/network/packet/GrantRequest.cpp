@@ -13,7 +13,6 @@
 #include "network/callhandler/TagDMRData.h"
 #include "network/callhandler/TagP25Data.h"
 #include "network/callhandler/TagNXDNData.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;

@@ -48,7 +48,7 @@ public:
         talkgroups("", 0U, true, false),
         traffic(&host, "127.0.0.1", 62031U, 999999U, "test-password", "test-fne",
             false, false, false, false, true, true, true, true, true,
-            0U, false, true, true, 5U, 10U, 2U),
+            0U, false, true, true, true, 5U, 10U, 2U),
         metadata(&host, &traffic, "127.0.0.1", 62032U, 2U)
     {
         traffic.setLookups(&radios, nullptr, &talkgroups, nullptr, nullptr, nullptr);

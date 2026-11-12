@@ -20,7 +20,6 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "p25/packet/Voice.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 
 using namespace p25;
@@ -295,7 +294,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         m_p25->m_control->denialInhibit(srcId);
                     }
 
-                    ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_P25, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = srcId;
                 }
 
@@ -316,7 +315,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                             m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_UNIT_NOT_VALID, TSBKO::IOSP_UU_VCH, false, true);
                         }
 
-                        ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_P25, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -336,7 +335,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                             m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_TGT_GROUP_NOT_VALID, TSBKO::IOSP_GRP_VCH, true, true);
                         }
 
-                        ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_P25, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -353,7 +352,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     if (groupVoice.config().strapping() == ::lookups::TG_STRAPPING_STRAPPED) {
                         if (!lc.getEncrypted()) {
                             LogWarning(LOG_RF, "P25, " P25_HDU_STR " denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", srcId, dstId);
-                            ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                            ::ActivityLogEx(LOG_P25, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
 
                             m_p25->m_rfLastDstId = 0U;
                             m_p25->m_rfLastSrcId = 0U;
@@ -380,7 +379,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         m_p25->m_control->writeRF_TSDU_Deny(srcId, dstId, ReasonCode::DENY_REQ_UNIT_NOT_AUTH, TSBKO::IOSP_GRP_VCH, true, true);
                         m_p25->m_control->writeRF_TSDU_U_Reg_Cmd(srcId);
 
-                        ::ActivityLog("P25", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_P25, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                         m_lastRejectId = srcId;
                     }
 
@@ -417,7 +416,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             hduEncrypt = encrypted;
 
             m_lastRejectId = 0U;
-            ::ActivityLog("P25", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
+            ::ActivityLogEx(LOG_P25, true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
             LogInfoEx(LOG_RF, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             uint8_t serviceOptions = (m_rfLC.getEmergency() ? 0x80U : 0x00U) +       // Emergency Flag
@@ -1011,7 +1010,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_inbound = true;
 
             m_lastRejectId = 0U;
-            ::ActivityLog("P25", true, "RF VSELP voice transmission");
+            ::ActivityLogEx(LOG_P25, true, "RF VSELP voice transmission");
 
             m_hadVoice = true;
 
@@ -1192,12 +1191,12 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
         if (m_p25->m_rfState == RS_RF_AUDIO) {
             if (m_p25->m_rssi != 0U) {
-                ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm",
+                ::ActivityLogEx(LOG_P25, true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm",
                     float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits), m_p25->m_minRSSI, m_p25->m_maxRSSI,
                     m_p25->m_aveRSSI / m_p25->m_rssiCount);
             }
             else {
-                ::ActivityLog("P25", true, "RF end of transmission, %.1f seconds, BER: %.1f%%",
+                ::ActivityLogEx(LOG_P25, true, "RF end of transmission, %.1f seconds, BER: %.1f%%",
                     float(m_rfFrames) / 5.56F, float(m_rfErrs * 100U) / float(m_rfBits));
             }
 
@@ -1760,11 +1759,11 @@ void Voice::writeNet_TDU()
     }
 
     if (m_netFrames > 0) {
-        ::ActivityLog("P25", false, "network end of transmission, %.1f seconds, %u%% packet loss",
+        ::ActivityLogEx(LOG_P25, false, "network end of transmission, %.1f seconds, %u%% packet loss",
             float(m_netFrames) / 50.0F, (m_netLost * 100U) / m_netFrames);
     }
     else {
-        ::ActivityLog("P25", false, "network end of transmission, %u frames", m_netFrames);
+        ::ActivityLogEx(LOG_P25, false, "network end of transmission, %u frames", m_netFrames);
     }
 
     if (m_p25->m_network != nullptr)
@@ -1915,7 +1914,7 @@ void Voice::writeNet_LDU1()
 
         m_p25->writeRF_Preamble();
 
-        ::ActivityLog("P25", false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+        ::ActivityLogEx(LOG_P25, false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
         LogInfoEx(LOG_NET, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
         // conventional registration or DVRS support?

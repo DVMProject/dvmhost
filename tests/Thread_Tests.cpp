@@ -8,6 +8,7 @@
  *
  */
 #include "Defines.h"
+#include "common/LogAsync.h"
 #include "common/Thread.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -16,6 +17,34 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <string>
+#include <vector>
+
+using namespace log_internal;
+
+// ---------------------------------------------------------------------------
+//  Global Variables
+// ---------------------------------------------------------------------------
+
+static std::mutex g_logSinkMutex;
+static std::condition_variable g_logSinkChanged;
+static std::vector<std::string> g_logSinkMessages;
+
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+
+/* Captures an asynchronous log message for verification. */
+
+static void captureLogMessage(const char* message)
+{
+    {
+        std::lock_guard<std::mutex> lock(g_logSinkMutex);
+        g_logSinkMessages.emplace_back(message);
+    }
+
+    g_logSinkChanged.notify_all();
+}
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -120,6 +149,62 @@ bool waitForFlag(std::mutex& mutex, std::condition_variable& cond, bool& flag, u
 {
     std::unique_lock<std::mutex> lock(mutex);
     return cond.wait_for(lock, std::chrono::milliseconds(timeoutMs), [&flag]() { return flag; });
+}
+
+TEST_CASE("LogAsync delivers queued messages in order", "[common][logging]")
+{
+    {
+        std::lock_guard<std::mutex> lock(g_logSinkMutex);
+        g_logSinkMessages.clear();
+    }
+
+    LogAsync logger;
+    REQUIRE(logger.start());
+
+    logger.log("first", captureLogMessage);
+    logger.log("second", captureLogMessage);
+    logger.log("third", captureLogMessage);
+
+    std::unique_lock<std::mutex> lock(g_logSinkMutex);
+    REQUIRE(g_logSinkChanged.wait_for(lock, std::chrono::seconds(1), []() { return g_logSinkMessages.size() == 3U; }));
+    REQUIRE(g_logSinkMessages == std::vector<std::string> { "first", "second", "third" });
+}
+
+TEST_CASE("LogAsync stop drains accepted messages", "[common][logging]")
+{
+    {
+        std::lock_guard<std::mutex> lock(g_logSinkMutex);
+        g_logSinkMessages.clear();
+    }
+
+    LogAsync logger;
+    REQUIRE(logger.start());
+
+    logger.log("before-stop-1", captureLogMessage);
+    logger.log("before-stop-2", captureLogMessage);
+    logger.stop();
+
+    std::lock_guard<std::mutex> lock(g_logSinkMutex);
+    REQUIRE(g_logSinkMessages == std::vector<std::string> { "before-stop-1", "before-stop-2" });
+}
+
+TEST_CASE("LogAsync rejects invalid messages and ignores logging while stopped", "[common][logging]")
+{
+    {
+        std::lock_guard<std::mutex> lock(g_logSinkMutex);
+        g_logSinkMessages.clear();
+    }
+
+    LogAsync logger;
+    logger.log("not-started", captureLogMessage);
+    REQUIRE(logger.start());
+    logger.log(std::string(LOG_ASYNC_LENGTH, 'x'), captureLogMessage);
+    logger.log("null-sink", nullptr);
+    logger.stop();
+    logger.log("already-stopped", captureLogMessage);
+
+    std::lock_guard<std::mutex> lock(g_logSinkMutex);
+    REQUIRE(g_logSinkMessages.empty());
 }
 
 TEST_CASE("Thread runs entry once and wait joins", "[common][thread]")

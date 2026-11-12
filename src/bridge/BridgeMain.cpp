@@ -9,7 +9,6 @@
  */
 #include "Defines.h"
 #include "common/Log.h"
-#include "bridge/ActivityLog.h"
 #include "BridgeMain.h"
 #include "HostBridge.h"
 
@@ -318,7 +317,6 @@ int main(int argc, char** argv)
     } while (g_signal == SIGHUP);
 
     ::LogFinalise();
-    ::ActivityLogFinalise();
 
     return ret;
 }

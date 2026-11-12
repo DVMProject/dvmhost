@@ -17,7 +17,6 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "nxdn/packet/ControlSignaling.h"
-#include "ActivityLog.h"
 #include "Host.h"
 
 using namespace nxdn;
@@ -586,7 +585,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
             rcch->toString().c_str(), srcId, dstId);
         if (!net) {
             writeRF_Message_Deny(0U, srcId, CauseResponse::VD_GRP_NOT_PERM, MessageType::RTCH_VCALL);
-            ::ActivityLog("NXDN", true, "group grant request rejection from %u to TG %u", srcId, dstId);
+            ::ActivityLogEx(LOG_NXDN, true, "group grant request rejection from %u to TG %u", srcId, dstId);
             m_nxdn->m_rfState = RS_RF_REJECTED;
         }
         return false;
@@ -599,7 +598,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
                 LogWarning(LOG_RF, "NXDN, %s denied, traffic in progress, dstId = %u", rcch->toString().c_str(), dstId);
                 writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
 
-                ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                ::ActivityLogEx(LOG_NXDN, true, "group grant request from %u to TG %u denied", srcId, dstId);
                 m_nxdn->m_rfState = RS_RF_REJECTED;
             }
 
@@ -611,7 +610,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
                 LogWarning(LOG_RF, "NXDN, %s denied, traffic in progress, dstId = %u", rcch->toString().c_str(), dstId);
                 writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
 
-                ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                ::ActivityLogEx(LOG_NXDN, true, "group grant request from %u to TG %u denied", srcId, dstId);
                 m_nxdn->m_rfState = RS_RF_REJECTED;
             }
 
@@ -655,7 +654,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
                                 LogWarning(LOG_RF, "NXDN, %s denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", rcch->toString().c_str(), srcId, dstId);
                                 writeRF_Message_Deny(0U, srcId, CauseResponse::VD_GRP_NOT_PERM, MessageType::RTCH_VCALL);
 
-                                ::ActivityLog("NXDN", true, "group grant request rejection from %u to TG %u ", srcId, dstId);
+                                ::ActivityLogEx(LOG_NXDN, true, "group grant request rejection from %u to TG %u ", srcId, dstId);
                                 m_nxdn->m_rfState = RS_RF_REJECTED;
                                 return false;
                             }
@@ -679,7 +678,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
                         LogWarning(LOG_RF, "NXDN, %s queued, no channels available, dstId = %u", rcch->toString().c_str(), dstId);
                         writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_CHN_RESOURCE_NOT_AVAIL, MessageType::RTCH_VCALL);
 
-                        ::ActivityLog("NXDN", true, "group grant request from %u to TG %u queued", srcId, dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "group grant request from %u to TG %u queued", srcId, dstId);
                         m_nxdn->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -690,7 +689,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
                         LogWarning(LOG_RF, "NXDN, %s queued, no channels available, dstId = %u", rcch->toString().c_str(), dstId);
                         writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_CHN_RESOURCE_NOT_AVAIL, MessageType::RTCH_VCALL);
 
-                        ::ActivityLog("NXDN", true, "unit-to-unit grant request from %u to %u queued", srcId, dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "unit-to-unit grant request from %u to %u queued", srcId, dstId);
                         m_nxdn->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -713,7 +712,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
                         LogWarning(LOG_RF, "NXDN, %s denied, traffic in progress, dstId = %u", rcch->toString().c_str(), dstId);
                         writeRF_Message_Deny(0U, srcId, CauseResponse::VD_QUE_GRP_BUSY, MessageType::RTCH_VCALL);
 
-                        ::ActivityLog("NXDN", true, "group grant request from %u to TG %u denied", srcId, dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "group grant request from %u to TG %u denied", srcId, dstId);
                         m_nxdn->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -738,7 +737,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
 
     if (grp) {
         if (!net) {
-            ::ActivityLog("NXDN", true, "group grant request from %u to TG %u", srcId, dstId);
+            ::ActivityLogEx(LOG_NXDN, true, "group grant request from %u to TG %u", srcId, dstId);
         }
 
         rcch->setCallType(CallType::CONFERENCE);
@@ -747,7 +746,7 @@ bool ControlSignaling::writeRF_Message_Grant(uint32_t srcId, uint32_t dstId,
     }
     else {
         if (!net) {
-            ::ActivityLog("NXDN", true, "unit-to-unit grant request from %u to %u", srcId, dstId);
+            ::ActivityLogEx(LOG_NXDN, true, "unit-to-unit grant request from %u to %u", srcId, dstId);
         }
 
         rcch->setCallType(CallType::INDIVIDUAL);
@@ -857,21 +856,21 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
     // validate the location ID
     if (locId != m_nxdn->m_siteData.locId()) {
         LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%06X", rcch->toString().c_str(), locId);
-        ::ActivityLog("NXDN", true, "group affiliation request from %u denied", srcId);
+        ::ActivityLogEx(LOG_NXDN, true, "group affiliation request from %u denied", srcId);
         rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
     }
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, srcId = %u", rcch->toString().c_str(), srcId);
-        ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
+        ::ActivityLogEx(LOG_NXDN, true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
     }
 
     // validate the source RID is registered
     if (!m_nxdn->m_affiliations->isUnitReg(srcId) && m_verifyReg) {
         LogWarning(LOG_RF, "NXDN, %s denial, RID not registered, srcId = %u", rcch->toString().c_str(), srcId);
-        ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
+        ::ActivityLogEx(LOG_NXDN, true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
         rcch->setCauseResponse(CauseResponse::MM_REG_REFUSED);
     }
 
@@ -882,7 +881,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
     else {
         if (!acl::AccessControl::validateTGId(dstId)) {
             LogWarning(LOG_RF, "NXDN, %s denial, TGID rejection, dstId = %u", rcch->toString().c_str(), dstId);
-            ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
+            ::ActivityLogEx(LOG_NXDN, true, "group affiliation request from %u to %s %u denied", srcId, "TG ", dstId);
             rcch->setCauseResponse(CauseResponse::MM_LOC_ACPT_GRP_REFUSE);
         }
     }
@@ -890,7 +889,7 @@ bool ControlSignaling::writeRF_Message_Grp_Reg_Rsp(uint32_t srcId, uint32_t dstI
     if (rcch->getCauseResponse() == CauseResponse::MM_REG_ACCEPTED) {
         VERBOSE_LOG_MSG(rcch->toString(), srcId, dstId);
 
-        ::ActivityLog("NXDN", true, "group affiliation request from %u to %s %u", srcId, "TG ", dstId);
+        ::ActivityLogEx(LOG_NXDN, true, "group affiliation request from %u to %s %u", srcId, "TG ", dstId);
         ret = true;
 
         // update dynamic affiliation table
@@ -914,14 +913,14 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId,
     // validate the location ID
     if (locId != ((m_nxdn->m_siteData.locId() >> 12U) << 7U)) {
         LogWarning(LOG_RF, "NXDN, %s denial, LOCID rejection, locId = $%06X", rcch->toString().c_str(), locId);
-        ::ActivityLog("NXDN", true, "unit registration request from %u denied", srcId);
+        ::ActivityLogEx(LOG_NXDN, true, "unit registration request from %u denied", srcId);
         rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
     }
 
     // validate the source RID
     if (!acl::AccessControl::validateSrcId(srcId)) {
         LogWarning(LOG_RF, "NXDN, %s denial, RID rejection, srcId = %u", rcch->toString().c_str(), srcId);
-        ::ActivityLog("NXDN", true, "unit registration request from %u denied", srcId);
+        ::ActivityLogEx(LOG_NXDN, true, "unit registration request from %u denied", srcId);
         rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
     }
 
@@ -932,7 +931,7 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId,
     else {
         if (!acl::AccessControl::validateTGId(dstId)) {
             LogWarning(LOG_RF, "NXDN, %s denial, TGID rejection, dstId = %u", rcch->toString().c_str(), dstId);
-            ::ActivityLog("NXDN", true, "unit registration request from %u to %s %u denied", srcId, "TG ", dstId);
+            ::ActivityLogEx(LOG_NXDN, true, "unit registration request from %u to %s %u denied", srcId, "TG ", dstId);
             rcch->setCauseResponse(CauseResponse::MM_REG_FAILED);
         }
     }
@@ -943,7 +942,7 @@ void ControlSignaling::writeRF_Message_U_Reg_Rsp(uint32_t srcId, uint32_t dstId,
                 rcch->toString().c_str(), srcId, locId);
         }
 
-        ::ActivityLog("NXDN", true, "unit registration request from %u", srcId);
+        ::ActivityLogEx(LOG_NXDN, true, "unit registration request from %u", srcId);
 
         // update dynamic unit registration table
         if (!m_nxdn->m_affiliations->isUnitReg(srcId)) {

@@ -21,7 +21,6 @@
 #include "common/Utils.h"
 #include "dmr/packet/Data.h"
 #include "dmr/Slot.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 
 using namespace dmr;
@@ -90,12 +89,12 @@ bool Data::process(uint8_t* data, uint32_t len)
         }
 
         if (m_slot->m_rssi != 0U) {
-            ::ActivityLog("DMR", true, "Slot %u RF end of voice transmission, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF end of voice transmission, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm",
                 m_slot->m_slotNo, float(m_slot->m_rfFrames) / 16.667F, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits),
                 m_slot->m_minRSSI, m_slot->m_maxRSSI, m_slot->m_aveRSSI / m_slot->m_rssiCount);
         }
         else {
-            ::ActivityLog("DMR", true, "Slot %u RF end of voice transmission, %.1f seconds, BER: %.1f%%",
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF end of voice transmission, %.1f seconds, BER: %.1f%%",
                 m_slot->m_slotNo, float(m_slot->m_rfFrames) / 16.667F, float(m_slot->m_rfErrs * 100U) / float(m_slot->m_rfBits));
         }
 
@@ -260,7 +259,7 @@ bool Data::process(uint8_t* data, uint32_t len)
             m_slot->setShortLC(m_slot->m_slotNo, dstId, gi ? FLCO::GROUP : FLCO::PRIVATE, Slot::SLCO_ACT_TYPE::DATA);
         }
 
-        ::ActivityLog("DMR", true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
+        ::ActivityLogEx(LOG_DMR, true, "Slot %u RF data header from %u to %s%u, %u blocks", m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_rfFrames);
         LogInfoEx(LOG_RF, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
 
         ::memset(m_pduUserData, 0x00U, MAX_PDU_COUNT * DMR_PDU_UNCODED_LENGTH_BYTES + 2U);
@@ -271,7 +270,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                 m_slot->completeUDT(m_rfUDTSource);
             }
 
-            ::ActivityLog("DMR", true, "Slot %u ended RF data transmission", m_slot->m_slotNo);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u ended RF data transmission", m_slot->m_slotNo);
             m_slot->writeEndRF();
         }
 
@@ -419,7 +418,7 @@ void Data::processNetwork(const data::NetData& dmrData)
 
         // We've received the voice header and terminator haven't we?
         m_slot->m_netFrames += 2U;
-        ::ActivityLog("DMR", false, "Slot %u network end of voice transmission, %.1f seconds, %u%% packet loss, BER: %.1f%%",
+        ::ActivityLogEx(LOG_DMR, false, "Slot %u network end of voice transmission, %.1f seconds, %u%% packet loss, BER: %.1f%%",
             m_slot->m_slotNo, float(m_slot->m_netFrames) / 16.667F, (m_slot->m_netLost * 100U) / m_slot->m_netFrames, float(m_slot->m_netErrs * 100U) / float(m_slot->m_netBits));
 
         m_slot->s_dmr->tsccClearActivatedSlot(m_slot->m_slotNo);
@@ -536,7 +535,7 @@ void Data::processNetwork(const data::NetData& dmrData)
                 m_netDataHeader.getFSN(), dstId, srcId, gi);
         }
 
-        ::ActivityLog("DMR", false, "Slot %u network data header from %u to %s%u, %u blocks",
+        ::ActivityLogEx(LOG_DMR, false, "Slot %u network data header from %u to %s%u, %u blocks",
             m_slot->m_slotNo, srcId, gi ? "TG " : "", dstId, m_slot->m_netFrames);
         LogInfoEx(LOG_NET, "DMR Data Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
 
@@ -544,7 +543,7 @@ void Data::processNetwork(const data::NetData& dmrData)
         m_pduDataOffset = 0U;
 
         if (m_slot->m_netFrames == 0U) {
-            ::ActivityLog("DMR", false, "Slot %u ended network data transmission", m_slot->m_slotNo);
+            ::ActivityLogEx(LOG_DMR, false, "Slot %u ended network data transmission", m_slot->m_slotNo);
             m_slot->writeEndNet();
         }
     }

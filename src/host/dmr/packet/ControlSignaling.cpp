@@ -19,7 +19,6 @@
 #include "dmr/lc/csbk/CSBK_DVM_GIT_HASH.h"
 #include "dmr/packet/ControlSignaling.h"
 #include "dmr/Slot.h"
-#include "ActivityLog.h"
 #include "Host.h"
 
 using namespace dmr;
@@ -184,7 +183,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
             } else {
                 handled = true;
 
@@ -323,7 +322,7 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
         {
             VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
 
-            ::ActivityLog("DMR", true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
 
             CSBK_ACK_RSP* ack = static_cast<CSBK_ACK_RSP*>(csbk.get());
             if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_AUTH_RESP)
@@ -345,22 +344,22 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len)
             // generate activity log entry
             switch (isp->getExtendedFunction()) {
             case ExtendedFunctions::CHECK:
-                ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::INHIBIT:
-                ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::UNINHIBIT:
-                ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::CHECK_ACK:
-                ::ActivityLog("DMR", true, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::INHIBIT_ACK:
-                ::ActivityLog("DMR", true, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::UNINHIBIT_ACK:
-                ::ActivityLog("DMR", true, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             default:
                 LogWarning(LOG_RF, "DMR Slot %u, CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction());
@@ -561,7 +560,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
                         m_slot->m_slotNo, csbk->toString().c_str(), srcId, dstId);
                 }
 
-                ::ActivityLog("DMR", false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
             } else {
                 CSBK_RAND* isp = static_cast<CSBK_RAND*>(csbk.get());
                 if (m_verbose) {
@@ -613,7 +612,7 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
         {
             VERBOSE_LOG_CSBK_NET(csbk->toString(), srcId, dstId);
 
-            ::ActivityLog("DMR", false, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
+            ::ActivityLogEx(LOG_DMR, false, "Slot %u ack response from %u to %u", m_slot->m_slotNo, srcId, dstId);
 
             CSBK_ACK_RSP* ack = static_cast<CSBK_ACK_RSP*>(csbk.get());
             if (csbk->getCSBKO() == CSBKO::ACK_RSP_U && ack->getReason() == ReasonCode::MS_ACK_RSN_MSG)
@@ -631,22 +630,22 @@ void ControlSignaling::processNetwork(const data::NetData& dmrData)
             // generate activity log entry
             switch (isp->getExtendedFunction()) {
             case ExtendedFunctions::CHECK:
-                ::ActivityLog("DMR", false, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::INHIBIT:
-                ::ActivityLog("DMR", false, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::UNINHIBIT:
-                ::ActivityLog("DMR", false, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::CHECK_ACK:
-                ::ActivityLog("DMR", false, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u radio check response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::INHIBIT_ACK:
-                ::ActivityLog("DMR", false, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u radio inhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             case ExtendedFunctions::UNINHIBIT_ACK:
-                ::ActivityLog("DMR", false, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u radio uninhibit response from %u to %u", m_slot->m_slotNo, dstId, srcId);
                 break;
             default:
                 LogWarning(LOG_NET, "DMR Slot %u, CSBK, %s, unhandled op, op = $%02X", m_slot->m_slotNo, csbk->toString().c_str(), isp->getExtendedFunction());
@@ -744,13 +743,13 @@ void ControlSignaling::writeRF_Ext_Func(uint32_t func, uint32_t arg, uint32_t ds
 
     // generate activity log entry
     if (func == ExtendedFunctions::CHECK) {
-        ::ActivityLog("DMR", true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, arg, dstId);
+        ::ActivityLogEx(LOG_DMR, true, "Slot %u radio check request from %u to %u", m_slot->m_slotNo, arg, dstId);
     }
     else if (func == ExtendedFunctions::INHIBIT) {
-        ::ActivityLog("DMR", true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
+        ::ActivityLogEx(LOG_DMR, true, "Slot %u radio inhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
     }
     else if (func == ExtendedFunctions::UNINHIBIT) {
-        ::ActivityLog("DMR", true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
+        ::ActivityLogEx(LOG_DMR, true, "Slot %u radio uninhibit request from %u to %u", m_slot->m_slotNo, arg, dstId);
     }
 
     writeRF_CSBK(csbk.get());
@@ -766,7 +765,7 @@ void ControlSignaling::writeRF_Call_Alrt(uint32_t srcId, uint32_t dstId)
     csbk->setDstId(dstId);
 
     VERBOSE_LOG_CSBK(csbk->toString(), srcId, dstId);
-    ::ActivityLog("DMR", true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
+    ::ActivityLogEx(LOG_DMR, true, "Slot %u call alert request from %u to %u", m_slot->m_slotNo, srcId, dstId);
 
     writeRF_CSBK(csbk.get());
 }
@@ -956,7 +955,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
             tscc->m_slotNo, srcId, dstId);
         if (!net) {
             writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_GROUP_NOT_VALID, 1U);
-            ::ActivityLog("DMR", true, "Slot %u group grant request rejection from %u to TG %u", tscc->m_slotNo, srcId, dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request rejection from %u to TG %u", tscc->m_slotNo, srcId, dstId);
             m_slot->m_rfState = RS_RF_REJECTED;
         }
         return false;
@@ -969,7 +968,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
-                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
             }
 
@@ -981,7 +980,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                 LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
-                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
             }
 
@@ -1040,7 +1039,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                             LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", tscc->m_slotNo, srcId, dstId);
                             writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_GROUP_NOT_VALID, (grp) ? 1U : 0U);
 
-                            ::ActivityLog("DMR", true, "Slot %u group grant request rejection from %u to TG %u ", tscc->m_slotNo, srcId, dstId);
+                            ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request rejection from %u to TG %u ", tscc->m_slotNo, srcId, dstId);
                             m_slot->m_rfState = RS_RF_REJECTED;
                             return false;
                         }
@@ -1060,7 +1059,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_VOICE_CALL (Group Voice Call) queued, no channels available, dstId = %u", tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
-                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -1071,7 +1070,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, IND_VOICE_CALL (Individual Voice Call) queued, no channels available, dstId = %u", tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
-                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -1099,7 +1098,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, VOICE_CALL (Voice Call) denied, traffic in progress, dstId = %u", tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
-                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -1127,7 +1126,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
 
     if (grp) {
         if (!net) {
-            ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
         }
 
         // callback RPC to permit the granted TG on the specified voice channel
@@ -1221,7 +1220,7 @@ bool ControlSignaling::writeRF_CSBK_Grant(uint32_t srcId, uint32_t dstId, uint8_
     }
     else {
         if (!net) {
-            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u individual grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
         }
 
         // callback RPC to permit the granted TG on the specified voice channel
@@ -1346,7 +1345,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
-                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
             }
 
@@ -1358,7 +1357,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                 LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, DATA_CALL (Data Call) denied, traffic in progress, dstId = %u", tscc->m_slotNo, dstId);
                 writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_DENY_RSN_TGT_BUSY, (grp) ? 1U : 0U);
 
-                ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u denied", tscc->m_slotNo, srcId, dstId);
                 m_slot->m_rfState = RS_RF_REJECTED;
             }
 
@@ -1388,7 +1387,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, GRP_DATA_CALL (Group Data Call) queued, no channels available, dstId = %u", tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
-                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -1399,7 +1398,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
                         LogWarning(LOG_RF, "DMR Slot %u, CSBK, RAND (Random Access, IND_DATA_CALL (Individual Data Call) queued, no channels available, dstId = %u", tscc->m_slotNo, dstId);
                         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_QUEUED_RSN_NO_RESOURCE, (grp) ? 1U : 0U);
 
-                        ::ActivityLog("DMR", true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request %u to TG %u queued", tscc->m_slotNo, srcId, dstId);
                         m_slot->m_rfState = RS_RF_REJECTED;
                     }
 
@@ -1429,7 +1428,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
 
     if (grp) {
         if (!net) {
-            ::ActivityLog("DMR", true, "Slot %u group grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u group grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
         }
 
         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
@@ -1477,7 +1476,7 @@ bool ControlSignaling::writeRF_CSBK_Data_Grant(uint32_t srcId, uint32_t dstId, u
     }
     else {
         if (!net) {
-            ::ActivityLog("DMR", true, "Slot %u individual grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u individual grant request from %u to TG %u", tscc->m_slotNo, srcId, dstId);
         }
 
         writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, (grp) ? 1U : 0U);
@@ -1576,7 +1575,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
         // validate the source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
             LogWarning(LOG_RF, "DMR Slot %u, CSBK, %s, denial, RID rejection, srcId = %u", tscc->m_slotNo, csbk->toString().c_str(), srcId);
-            ::ActivityLog("DMR", true, "unit registration request from %u denied", srcId);
+            ::ActivityLogEx(LOG_DMR, true, "unit registration request from %u denied", srcId);
             csbk->setReason(ReasonCode::TS_DENY_RSN_REG_DENIED);
         }
 
@@ -1585,7 +1584,7 @@ void ControlSignaling::writeRF_CSBK_U_Reg_Rsp(uint32_t srcId, uint8_t serviceOpt
                 LogInfoEx(LOG_RF, "DMR Slot %u, CSBK, %s, srcId = %u, serviceOptions = $%02X", tscc->m_slotNo, csbk->toString().c_str(), srcId, serviceOptions);
             }
 
-            ::ActivityLog("DMR", true, "unit registration request from %u", srcId);
+            ::ActivityLogEx(LOG_DMR, true, "unit registration request from %u", srcId);
 
             // update dynamic unit registration table
             if (!m_slot->s_affiliations->isUnitReg(srcId)) {

@@ -34,6 +34,7 @@
 
 #include <ctime>
 #include <string>
+#include <cstring>
 
 /**
  * @addtogroup logging
@@ -198,6 +199,13 @@ namespace log_internal
      * @param log Fully formatted log message.
      */
     extern DVM_COMMON_API void LogInternal(uint32_t level, const std::string& log);
+
+    /**
+     * @brief Writes a new entry to the activity log.
+     * @param level Log level for entry.
+     * @param log Fully formatted log message.
+     */
+    extern DVM_COMMON_API void ActivityLogInternal(const std::string& log);
 
     /**
      * @brief Internal helper to get the log file path.
@@ -367,7 +375,7 @@ namespace log_stacktrace
             p.snippet = false;
             p.color_mode = backward::ColorMode::never;
 
-            log_internal::LogInternal(2U, "UNRECOVERABLE FATAL ERROR!");
+            log_internal::LogInternal(5U, "UNRECOVERABLE FATAL ERROR!");
             if (s_foreground > 0) {
                 p.print(st, stderr);
             }
@@ -949,6 +957,94 @@ void Log(uint32_t level, log_internal::SourceLocation sourceLoc, const std::stri
     std::string msg = std::string(buf.get(), buf.get() + size - 1);
 
     LogInternal(level, std::string(prefix + msg));
+}
+
+/**
+ * @brief Writes a new entry to the activity log.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function. This shouldn't be called directly, utilize the LogXXXX macros above, instead.
+ */
+template<typename ... Args>
+void ActivityLog(const std::string& fmt, Args... args)
+{
+    using namespace log_internal;
+
+    int size_s = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1; // Extra space for '\0'
+    if (size_s <= 0) {
+        throw std::runtime_error("Error during formatting.");
+    }
+
+    int prefixLen = 0;
+    char prefixBuf[256];
+
+    time_t now;
+    ::time(&now);
+    struct tm* tm = ::localtime(&now);
+
+    struct timeval nowMillis;
+    ::gettimeofday(&nowMillis, NULL);
+
+    prefixLen = ::sprintf(prefixBuf, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", 
+        tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
+
+    auto size = static_cast<size_t>(size_s);
+    auto buf = std::make_unique<char[]>(size);
+
+    std::snprintf(buf.get(), size, fmt.c_str(), args ...);
+
+    std::string prefix = std::string(prefixBuf, prefixBuf + prefixLen);
+    std::string msg = std::string(buf.get(), buf.get() + size - 1);
+
+    ActivityLogInternal(std::string(prefix + msg));
+}
+
+/**
+ * @brief Writes a new entry to the activity log.
+ * @param mode Activity mode.
+ * @param sourceRf Flag indicating whether or not the activity entry came from RF.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function. This shouldn't be called directly, utilize the LogXXXX macros above, instead.
+ */
+template<typename ... Args>
+void ActivityLogEx(const char* mode, const bool sourceRf, const std::string& fmt, Args... args)
+{
+    using namespace log_internal;
+
+    int size_s = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1; // Extra space for '\0'
+    if (size_s <= 0) {
+        throw std::runtime_error("Error during formatting.");
+    }
+
+    int prefixLen = 0;
+    char prefixBuf[256];
+
+    time_t now;
+    ::time(&now);
+    struct tm* tm = ::localtime(&now);
+
+    struct timeval nowMillis;
+    ::gettimeofday(&nowMillis, NULL);
+
+    if (strcmp(mode, "") == 0) {
+        prefixLen = ::sprintf(prefixBuf, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", 
+            tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
+    }
+    else {
+        prefixLen = ::sprintf(prefixBuf, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", 
+            tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
+    }
+
+    auto size = static_cast<size_t>(size_s);
+    auto buf = std::make_unique<char[]>(size);
+
+    std::snprintf(buf.get(), size, fmt.c_str(), args ...);
+
+    std::string prefix = std::string(prefixBuf, prefixBuf + prefixLen);
+    std::string msg = std::string(buf.get(), buf.get() + size - 1);
+
+    ActivityLogInternal(std::string(prefix + msg));
 }
 
 /** @} */

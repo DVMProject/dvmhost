@@ -17,7 +17,6 @@
 #include "network/callhandler/TagP25P2Data.h"
 #include "network/callhandler/TagNXDNData.h"
 #include "network/callhandler/TagAnalogData.h"
-#include "ActivityLog.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
 
@@ -122,11 +121,6 @@ int HostFNE::run()
         logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U), false, useSyslog);
     if (!ret) {
         ::fatal("unable to open the log file\n");
-    }
-
-    ret = ::ActivityLogInitialise(logConf["activityFilePath"].as<std::string>(), logConf["fileRoot"].as<std::string>());
-    if (!ret) {
-        ::fatal("unable to open the activity log file\n");
     }
 
 #if !defined(_WIN32)
@@ -387,6 +381,7 @@ bool HostFNE::readParams()
 
     m_allowActivityTransfer = systemConf["allowActivityTransfer"].as<bool>(true);
     m_allowDiagnosticTransfer = systemConf["allowDiagnosticTransfer"].as<bool>(true);
+    m_logActivityToLog = systemConf["logActivityToLog"].as<bool>(false);
 
     if (!m_allowActivityTransfer) {
         LogWarning(LOG_HOST, "Peer activity logging is disabled, this severely limits functionality and can prevent proper operations by prohibiting activity logging to this FNE!");
@@ -413,6 +408,7 @@ bool HostFNE::readParams()
     else
         LogInfo(" !! Allow Activity Log Transfer: no");
     LogInfo("    Allow Diagnostic Log Transfer: %s", m_allowDiagnosticTransfer ? "yes" : "no");
+    LogInfo("    Log Activity to Log: %s", m_logActivityToLog ? "yes" : "no");
 
     // attempt to load and populate routing rules
     yaml::Node masterConf = m_conf["master"];
@@ -678,7 +674,7 @@ bool HostFNE::createMasterNetwork()
     m_network = new TrafficNetwork(this, address, port, id, password, identity, debug, kmfDebug, verbose, reportPeerPing,
         m_dmrEnabled, m_p25Enabled, m_p25P2Enabled, m_nxdnEnabled, m_analogEnabled,
         parrotDelay, parrotGrantDemand, m_allowActivityTransfer, m_allowDiagnosticTransfer,
-        m_pingTime, m_updateLookupTime, workerCnt);
+        m_logActivityToLog, m_pingTime, m_updateLookupTime, workerCnt);
     yaml::Node vtunConf = m_conf["vtun"];
     m_network->setPacketDataOptions(vtunConf);
     m_network->setOptions(masterConf, true);

@@ -20,7 +20,6 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "nxdn/Control.h"
-#include "ActivityLog.h"
 #include "Host.h"
 
 using namespace nxdn;
@@ -748,15 +747,15 @@ void Control::clock()
         if (m_networkWatchdog.hasExpired()) {
             if (m_netState == RS_NET_AUDIO) {
                 if (m_voice->m_netFrames > 0U) {
-                    ::ActivityLog("NXDN", false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
+                    ::ActivityLogEx(LOG_NXDN, false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
                         float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
                 }
                 else {
-                    ::ActivityLog("NXDN", false, "network watchdog has expired");
+                    ::ActivityLogEx(LOG_NXDN, false, "network watchdog has expired");
                 }
             }
             else {
-                ::ActivityLog("NXDN", false, "network watchdog has expired");
+                ::ActivityLogEx(LOG_NXDN, false, "network watchdog has expired");
             }
 
             m_networkWatchdog.stop();
@@ -1086,11 +1085,11 @@ void Control::processFrameLoss(RPT_RF_LOSS_TYPE type)
 
     if (m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("NXDN", true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
+            ::ActivityLogEx(LOG_NXDN, true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
                 typeStr.c_str(), float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
         }
         else {
-            ::ActivityLog("NXDN", true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, loss count: %u",
+            ::ActivityLogEx(LOG_NXDN, true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, loss count: %u",
                 typeStr.c_str(), float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
         }
 

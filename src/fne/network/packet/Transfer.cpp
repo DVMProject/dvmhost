@@ -11,7 +11,6 @@
 #include "common/Log.h"
 #include "common/json/json.h"
 #include "network/MetadataNetwork.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;
@@ -63,7 +62,9 @@ void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataN
                             const size_t payloadLength = (size_t)(req->length - TRANSFER_PCKT_HDR_LEN);
                             std::string payload((const char *)(req->buffer + TRANSFER_PCKT_HDR_LEN), payloadLength);
 
-                            ::ActivityLog("%.9u (%8s) %s", pktPeerId, connection->identWithQualifier().c_str(), payload.c_str());
+                            if (network->m_logActivityToLog) {
+                                ::Log(9999U, {nullptr, nullptr, 0U, nullptr}, "%.9u (%8s) %s", pktPeerId, connection->identWithQualifier().c_str(), payload.c_str());
+                            }
 
                             // report activity log to metrics
                             TrafficNetwork::MetricsLogging::logActivity(network, pktPeerId, connection->identity(), payload);

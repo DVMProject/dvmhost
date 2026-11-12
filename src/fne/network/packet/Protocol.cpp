@@ -16,7 +16,6 @@
 #include "network/callhandler/TagNXDNData.h"
 #include "common/nxdn/NXDNDefines.h"
 #include "network/callhandler/TagAnalogData.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;

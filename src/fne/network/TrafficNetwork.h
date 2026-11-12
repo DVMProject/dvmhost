@@ -196,15 +196,16 @@ namespace network
          * @param parrotGrantDemand Flag indicating whether a parrot TG will generate a grant demand.
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
-         * @param pingTime 
-         * @param updateLookupTime 
+         * @param logActivityToLog Flag indicating whether activity logs should be written to the log file.
+         * @param pingTime Peer ping time in seconds.
+         * @param updateLookupTime ACL rule update time in minutes.
          * @param workerCnt Number of worker threads.
          */
         TrafficNetwork(HostFNE* host, const std::string& address, uint16_t port, uint32_t peerId, const std::string& password,
             std::string identity, bool debug, bool kmfDebug, bool verbose, bool reportPeerPing,
             bool dmr, bool p25, bool p25P2, bool nxdn, bool analog,
             uint32_t parrotDelay, bool parrotGrantDemand, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
-            uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
+            bool logActivityToLog, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt);
         /**
          * @brief Finalizes a instance of the TrafficNetwork class.
          */
@@ -541,6 +542,7 @@ namespace network
         uint32_t m_vtunQueueMaxFrames;
         uint32_t m_vtunQueueMaxBytes;
 
+        bool m_logActivityToLog;
         bool m_logDenials;
         bool m_logUpstreamCallStartEnd;
         bool m_reportPeerPing;

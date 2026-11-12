@@ -20,7 +20,6 @@
 #include "network/callhandler/TagNXDNData.h"
 #include "network/callhandler/TagAnalogData.h"
 #include "network/P25OTARService.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 #include "FNEMain.h"
 
@@ -64,7 +63,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     std::string identity, bool debug, bool kmfDebug, bool verbose, bool reportPeerPing,
     bool dmr, bool p25, bool p25P2, bool nxdn, bool analog,
     uint32_t parrotDelay, bool parrotGrantDemand, bool allowActivityTransfer, bool allowDiagnosticTransfer, 
-    uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt) :
+    bool logActivityToLog, uint32_t pingTime, uint32_t updateLookupTime, uint16_t workerCnt) :
     BaseNetwork(peerId, true, debug, true, true, allowActivityTransfer, allowDiagnosticTransfer),
     m_tagDMR(nullptr),
     m_tagP25(nullptr),
@@ -189,6 +188,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_verbosePacketData(false),
     m_vtunQueueMaxFrames(128U),
     m_vtunQueueMaxBytes(262144U),
+    m_logActivityToLog(logActivityToLog),
     m_logDenials(false),
     m_logUpstreamCallStartEnd(true),
     m_reportPeerPing(reportPeerPing),

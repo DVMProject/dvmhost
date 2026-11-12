@@ -13,7 +13,6 @@
 #include "common/Utils.h"
 #include "network/MetadataNetwork.h"
 #include "common/json/json.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;

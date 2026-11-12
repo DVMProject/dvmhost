@@ -17,7 +17,6 @@
 #include "common/nxdn/NXDNUtils.h"
 #include "common/Log.h"
 #include "nxdn/packet/Voice.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 
 using namespace nxdn;
@@ -113,7 +112,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                     LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
-                    ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = srcId;
                 }
 
@@ -129,7 +128,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 if (!acl::AccessControl::validateSrcId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
-                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "RF voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -144,7 +143,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 if (!acl::AccessControl::validateTGId(dstId) || !acl::AccessControl::validateTGAccess(srcId, dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID/RID admission rejection, srcId = %u, dstId = %u", srcId, dstId);
-                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -162,7 +161,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 if (groupVoice.config().strapping() == ::lookups::TG_STRAPPING_STRAPPED) {
                     if (lc.getAlgId() == NXDDEF::CIPHER_TYPE_NONE) {
                         LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", srcId, dstId);
-                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
 
                         m_nxdn->m_rfLastDstId = 0U;
                         m_nxdn->m_rfLastSrcId = 0U;
@@ -279,12 +278,12 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
         if (data[0U] == modem::TAG_EOT) {
             m_rfFrames++;
             if (m_nxdn->m_rssi != 0U) {
-                ::ActivityLog("NXDN", true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm",
+                ::ActivityLogEx(LOG_NXDN, true, "RF end of transmission, %.1f seconds, BER: %.1f%%, RSSI : -%u / -%u / -%u dBm",
                     float(m_rfFrames) / 12.5F, float(m_rfErrs * 100U) / float(m_rfBits), m_nxdn->m_minRSSI, m_nxdn->m_maxRSSI,
                     m_nxdn->m_aveRSSI / m_nxdn->m_rssiCount);
             }
             else {
-                ::ActivityLog("NXDN", true, "RF end of transmission, %.1f seconds, BER: %.1f%%",
+                ::ActivityLogEx(LOG_NXDN, true, "RF end of transmission, %.1f seconds, BER: %.1f%%",
                     float(m_rfFrames) / 12.5F, float(m_rfErrs * 100U) / float(m_rfBits));
             }
 
@@ -310,7 +309,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                     srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
             }
 
-            ::ActivityLog("NXDN", true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+            ::ActivityLogEx(LOG_NXDN, true, "RF %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
             LogInfoEx(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
         }
 
@@ -399,7 +398,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                     LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
-                    ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = srcId;
                 }
 
@@ -415,7 +414,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 if (!acl::AccessControl::validateSrcId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
-                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "RF voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -430,7 +429,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                 if (!acl::AccessControl::validateTGId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", dstId);
-                        ::ActivityLog("NXDN", true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "RF voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -462,7 +461,7 @@ bool Voice::process(FuncChannelType::E fct, ChOption::E option, uint8_t* data, u
                     srcId, dstId, group, m_nxdn->m_rfLC.getEmergency(), encrypted, m_nxdn->m_rfLC.getPriority(), m_nxdn->m_rfLC.getAlgId(), m_nxdn->m_rfLC.getKId());
             }
 
-            ::ActivityLog("NXDN", true, "RF %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
+            ::ActivityLogEx(LOG_NXDN, true, "RF %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
             LogInfoEx(LOG_RF, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             // create a dummy start message
@@ -740,7 +739,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                     LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
-                    ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = srcId;
                 }
 
@@ -753,7 +752,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                 if (!acl::AccessControl::validateSrcId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
-                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "network voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -765,7 +764,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                 if (!acl::AccessControl::validateTGId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", dstId);
-                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -853,7 +852,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
 
         if (type == MessageType::RTCH_TX_REL || type == MessageType::RTCH_TX_REL_EX) {
             m_netFrames++;
-            ::ActivityLog("NXDN", false, "network end of transmission, %.1f seconds",
+            ::ActivityLogEx(LOG_NXDN, false, "network end of transmission, %.1f seconds",
                 float(m_netFrames) / 12.5F);
 
             LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d", m_netFrames);
@@ -870,7 +869,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                     srcId, dstId, group, lc.getEmergency(), encrypted, lc.getPriority(), lc.getAlgId(), lc.getKId());
             }
 
-            ::ActivityLog("NXDN", false, "network %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+            ::ActivityLogEx(LOG_NXDN, false, "network %svoice transmission from %u to %s%u", encrypted ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
             LogInfoEx(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
         }
 
@@ -959,7 +958,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                     LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, srcId = %u", srcId);
-                    ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = srcId;
                 }
 
@@ -972,7 +971,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                 if (!acl::AccessControl::validateSrcId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, RID rejection, dstId = %u", dstId);
-                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "network voice rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -984,7 +983,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                 if (!acl::AccessControl::validateTGId(dstId)) {
                     if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                         LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL " denial, TGID rejection, dstId = %u", dstId);
-                        ::ActivityLog("NXDN", true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                        ::ActivityLogEx(LOG_NXDN, true, "network voice rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                         m_lastRejectId = dstId;
                     }
 
@@ -1008,7 +1007,7 @@ bool Voice::processNetwork(FuncChannelType::E fct, ChOption::E option, lc::RTCH&
                     srcId, dstId, group, m_nxdn->m_netLC.getEmergency(), encrypted, m_nxdn->m_netLC.getPriority(), m_nxdn->m_netLC.getAlgId(), m_nxdn->m_netLC.getKId());
             }
 
-            ::ActivityLog("NXDN", false, "network %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
+            ::ActivityLogEx(LOG_NXDN, false, "network %slate entry from %u to %s%u", encrypted ? "encrypted ": "", srcId, group ? "TG " : "", dstId);
             LogInfoEx(LOG_NET, "NXDN Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
             // create a dummy start message

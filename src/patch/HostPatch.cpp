@@ -27,7 +27,6 @@
 #include "common/Thread.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "patch/ActivityLog.h"
 #include "HostPatch.h"
 #include "PatchMain.h"
 
@@ -158,11 +157,6 @@ int HostPatch::run()
         logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U));
     if (!ret) {
         ::fatal("unable to open the log file\n");
-    }
-
-    ret = ::ActivityLogInitialise(logConf["activityFilePath"].as<std::string>(), logConf["fileRoot"].as<std::string>());
-    if (!ret) {
-        ::fatal("unable to open the activity log file\n");
     }
 
 #if !defined(_WIN32)

@@ -11,7 +11,6 @@
 #include "common/edac/SHA256.h"
 #include "common/Log.h"
 #include "network/TrafficNetwork.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;

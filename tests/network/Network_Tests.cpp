@@ -8,6 +8,7 @@
  *
  */
 #include "Defines.h"
+#include "common/Log.h"
 #include "common/network/FrameQueue.h"
 #include "common/network/Network.h"
 #include "common/network/RTPFNEHeader.h"
@@ -19,6 +20,8 @@
 
 #include <array>
 #include <chrono>
+#include <cstdio>
+#include <ctime>
 #include <cstring>
 #include <string>
 #include <thread>
@@ -838,6 +841,40 @@ TEST_CASE("BaseNetwork emits transfer and status frames over the metadata path w
     REQUIRE(fneHeader.getFunction() == NET_FUNC::TRANSFER);
     REQUIRE(fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG);
     REQUIRE(payload.find("diagnostic-test") != std::string::npos);
+
+    const auto uniqueLogId = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string logRoot = "dvm-log-transfer-test-" + std::to_string(uniqueLogId);
+    REQUIRE(LogInitialise(".", logRoot, 1U, 0U, false, false));
+    LogSetNetwork(&network);
+
+    ActivityLog("activity-wrapper-%u", 42U);
+    REQUIRE(waitForFrameMessage(metadataReceiverQueue, payload, rtpHeader, fneHeader));
+    REQUIRE(fneHeader.getFunction() == NET_FUNC::TRANSFER);
+    REQUIRE(fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY);
+    REQUIRE(payload.find("activity-wrapper-42") != std::string::npos);
+
+    ActivityLogEx("P25", true, "activity-ex-wrapper-%u", 24U);
+    REQUIRE(waitForFrameMessage(metadataReceiverQueue, payload, rtpHeader, fneHeader));
+    REQUIRE(fneHeader.getFunction() == NET_FUNC::TRANSFER);
+    REQUIRE(fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_ACTIVITY);
+    REQUIRE(payload.find("P25 RF activity-ex-wrapper-24") != std::string::npos);
+
+    log_internal::LogInternal(2U, "diagnostic-wrapper-test");
+    REQUIRE(waitForFrameMessage(metadataReceiverQueue, payload, rtpHeader, fneHeader));
+    REQUIRE(fneHeader.getFunction() == NET_FUNC::TRANSFER);
+    REQUIRE(fneHeader.getSubFunction() == NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG);
+    REQUIRE(payload.find("diagnostic-wrapper-test") != std::string::npos);
+
+    LogSetNetwork(nullptr);
+    LogFinalise();
+
+    time_t now;
+    ::time(&now);
+    struct tm* tm = ::localtime(&now);
+    char logFilename[256U];
+    ::snprintf(logFilename, sizeof(logFilename), "./%s-%04d-%02d-%02d.log", logRoot.c_str(),
+        tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+    REQUIRE(::remove(logFilename) == 0);
 
     json::object statusObj;
     REQUIRE(network.writePeerStatus(statusObj));

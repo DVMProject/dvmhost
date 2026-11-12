@@ -20,7 +20,6 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "p25/packet/Data.h"
-#include "ActivityLog.h"
 
 using namespace p25;
 using namespace p25::defines;
@@ -389,7 +388,7 @@ bool Data::process(uint8_t* data, uint32_t len)
 
                     // only repeat the PDU locally if the packet isn't for the FNE
                     if (m_repeatPDU && m_rfAssembler->dataHeader.getLLId() != WUID_FNE) {
-                        ::ActivityLog("P25", true, "RF data transmission from %u to %u, %u blocks", srcId, dstId, m_rfAssembler->dataHeader.getBlocksToFollow());
+                        ::ActivityLogEx(LOG_P25, true, "RF data transmission from %u to %u, %u blocks", srcId, dstId, m_rfAssembler->dataHeader.getBlocksToFollow());
                         LogInfoEx(LOG_RF, "P25 Data Call (Local Repeat), srcId = %u, dstId = %u", srcId, dstId);
 
                         if (m_verbose) {
@@ -397,7 +396,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                         }
 
                         writeRF_PDU_Buffered(); // re-generate buffered PDU and send it on
-                        ::ActivityLog("P25", true, "end of RF data transmission");
+                        ::ActivityLogEx(LOG_P25, true, "end of RF data transmission");
                     }
                     break;
                 }
@@ -599,7 +598,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
                             }
                             break;
                             default:
-                                ::ActivityLog("P25", false, "Net data transmission from %u to %u, %u blocks", srcId, dstId, m_netAssembler->dataHeader.getBlocksToFollow());
+                                ::ActivityLogEx(LOG_P25, false, "Net data transmission from %u to %u, %u blocks", srcId, dstId, m_netAssembler->dataHeader.getBlocksToFollow());
                                 LogInfoEx(LOG_NET, "P25 Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
                                 if (m_verbose) {
@@ -608,7 +607,7 @@ bool Data::processNetwork(uint8_t* data, uint32_t len, uint8_t currentBlock, uin
 
                                 rfAccepted = writeNet_PDU_Buffered(); // re-generate buffered PDU and send it on
 
-                                ::ActivityLog("P25", false, "end of Net data transmission");
+                                ::ActivityLogEx(LOG_P25, false, "end of Net data transmission");
                                 break;
                             }
 

@@ -35,7 +35,7 @@ public:
         host("p25-telephone-fne-test.yml"),
         traffic(&host, "127.0.0.1", 62041U, 999999U, "test-password", "test-fne",
             false, false, false, false, true, true, true, true, true,
-            0U, false, true, true, 5U, 10U, 2U),
+            0U, false, true, true, true, 5U, 10U, 2U),
         peers("p25-telephone-peers.dat", 0U, true, false)
     {
         traffic.setLookups(nullptr, nullptr, nullptr, &peers, nullptr, nullptr);

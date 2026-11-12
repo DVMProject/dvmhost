@@ -68,8 +68,6 @@ log:
     useSyslog: true
     # Full path for the directory to store the log files.
     filePath: .
-    # Full path for the directory to store the activity log files.
-    activityFilePath: .
     # Log filename prefix.
     fileRoot: DVM
 

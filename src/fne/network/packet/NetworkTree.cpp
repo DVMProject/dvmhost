@@ -10,7 +10,6 @@
 #include "fne/Defines.h"
 #include "common/Log.h"
 #include "network/MetadataNetwork.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 using namespace network;

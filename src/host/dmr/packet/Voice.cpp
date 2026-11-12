@@ -19,7 +19,6 @@
 #include "common/Utils.h"
 #include "dmr/packet/Voice.h"
 #include "dmr/Slot.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 
 using namespace dmr;
@@ -97,7 +96,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == srcId) {
                     LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
-                    ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
                 }
 
                 m_slot->m_rfLastDstId = 0U;
@@ -113,7 +112,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId) || !acl::AccessControl::validateTGAccess(m_slot->m_slotNo, srcId, dstId)) {
                     if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == dstId) {
                         LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, TGID/RID admission rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
-                        ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
                     }
 
                     m_slot->m_rfLastDstId = 0U;
@@ -146,7 +145,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             else if (!acl::AccessControl::validateSrcId(dstId)) {
                 LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, destination RID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
 
-                ::ActivityLog("DMR", true, "Slot %u RF private voice rejection from %u to %u ", m_slot->m_slotNo, srcId, dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u RF private voice rejection from %u to %u ", m_slot->m_slotNo, srcId, dstId);
 
                 m_slot->m_rfLastDstId = 0U;
                 m_slot->m_rfLastSrcId = 0U;
@@ -228,7 +227,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getFLCO(), m_slot->m_rfLC->getFID(), m_slot->m_rfLC->getPF());
             }
 
-            ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
             LogInfoEx(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
             return true;
         }
@@ -305,7 +304,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     if (!encrypted) {
                         LogWarning(LOG_RF, "DMR Slot %u, VOICE_SYNC denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
-                        ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
 
                         m_slot->m_rfLastDstId = 0U;
                         m_slot->m_rfLastSrcId = 0U;
@@ -408,7 +407,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
                     if (!encrypted) {
                         LogWarning(LOG_RF, "DMR Slot %u, VOICE_SYNC denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
-                        ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
 
                         m_slot->m_rfLastDstId = 0U;
                         m_slot->m_rfLastSrcId = 0U;
@@ -747,7 +746,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, Slot::SLCO_ACT_TYPE::VOICE);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
                 LogInfoEx(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                 return true;
             }
@@ -870,7 +869,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
                 m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(), m_slot->m_netLC->getFLCO(), m_slot->m_netLC->getFID(), m_slot->m_netLC->getPF());
         }
 
-        ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+        ::ActivityLogEx(LOG_DMR, false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
         LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
     }
     else if (dataType == DataType::VOICE_PI_HEADER) {
@@ -941,7 +940,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), Slot::SLCO_ACT_TYPE::VOICE);
 
-            ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
+            ::ActivityLogEx(LOG_DMR, false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
             LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }
@@ -1058,7 +1057,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), Slot::SLCO_ACT_TYPE::VOICE);
 
-            ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
+            ::ActivityLogEx(LOG_DMR, false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
             LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }

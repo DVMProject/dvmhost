@@ -14,7 +14,6 @@
 #include "common/Utils.h"
 #include "p25/phase2/Slot.h"
 #include "p25/phase2/Control.h"
-#include "ActivityLog.h"
 
 using namespace p25::phase2;
 using namespace p25::defines;

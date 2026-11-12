@@ -135,6 +135,7 @@ private:
 
     bool m_allowActivityTransfer;
     bool m_allowDiagnosticTransfer;
+    bool m_logActivityToLog;
 
     friend class fne_restapi::RESTAPI;
     fne_restapi::RESTAPI* m_RESTAPI;

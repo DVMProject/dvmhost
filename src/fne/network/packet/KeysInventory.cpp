@@ -11,7 +11,6 @@
 #include "common/edac/SHA256.h"
 #include "common/Log.h"
 #include "network/MetadataNetwork.h"
-#include "fne/ActivityLog.h"
 #include "HostFNE.h"
 
 #include <fstream>

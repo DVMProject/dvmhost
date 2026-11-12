@@ -21,7 +21,6 @@
 #include "common/p25/P25Utils.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "bridge/ActivityLog.h"
 #include "HostBridge.h"
 #include "BridgeMain.h"
 

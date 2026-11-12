@@ -19,7 +19,6 @@
 #include "common/Utils.h"
 #include "dmr/Slot.h"
 #include "common/dmr/acl/AccessControl.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 #include "Host.h"
 
@@ -819,12 +818,12 @@ void Slot::clock()
             if (m_netState == RS_NET_AUDIO) {
                 // We've received the voice header haven't we?
                 m_netFrames += 1U;
-                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%",
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%",
                     m_slotNo, float(m_netFrames) / 16.667F, (m_netLost * 100U) / m_netFrames, float(m_netErrs * 100U) / float(m_netBits));
                 writeEndNet(true);
             }
             else {
-                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired", m_slotNo);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u network watchdog has expired", m_slotNo);
                 writeEndNet();
             }
         }
@@ -1376,11 +1375,11 @@ void Slot::processFrameLoss(RPT_RF_LOSS_TYPE type)
 
     if (m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %s, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice transmission lost, %s, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
                 m_slotNo, typeStr.c_str(), float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
         }
         else {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %s, %.1f seconds, BER: %.1f%%, loss count: %u",
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice transmission lost, %s, %.1f seconds, BER: %.1f%%, loss count: %u",
                 m_slotNo, typeStr.c_str(), float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_frameLossCnt);
         }
 
@@ -1414,7 +1413,7 @@ void Slot::processFrameLoss(RPT_RF_LOSS_TYPE type)
     }
 
     if (m_rfState == RS_RF_DATA) {
-        ::ActivityLog("DMR", true, "Slot %u, RF data transmission lost", m_slotNo);
+        ::ActivityLogEx(LOG_DMR, true, "Slot %u, RF data transmission lost", m_slotNo);
         writeEndRF();
     }
 

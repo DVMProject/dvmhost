@@ -10,6 +10,7 @@
  */
 #include "Log.h"
 #include "network/BaseNetwork.h"
+#include "LogAsync.h"
 
 #if defined(CATCH2_TEST_COMPILATION)
 #include <catch2/catch_test_macros.hpp>
@@ -58,9 +59,21 @@ static std::ostream g_outStream { std::cerr.rdbuf() };
 
 bool log_stacktrace::SignalHandling::s_foreground = false;
 
+log_internal::LogAsync g_logAsync;
+
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+
+/* Helper function to log messages asynchronously using the LogAsync instance. */
+
+void LogAsyncSink(const char* message)
+{
+    if (g_fpLog != nullptr) {
+        ::fprintf(g_fpLog, "%s" EOL, message);
+        ::fflush(g_fpLog);
+    }
+}
 
 /* Helper to get the current log file level. */
 
@@ -95,8 +108,11 @@ static bool LogOpen()
                 return true;
         }
         else {
-            if (g_fpLog != nullptr)
+            if (g_fpLog != nullptr) {
+                g_logAsync.stop();
                 ::fclose(g_fpLog);
+                g_fpLog = nullptr;
+            }
         }
 
         char filename[200U];
@@ -104,6 +120,9 @@ static bool LogOpen()
 
         g_fpLog = ::fopen(filename, "a+t");
         g_tm = *tm;
+
+        if (g_fpLog != nullptr)
+            g_logAsync.start();
 
         return g_fpLog != nullptr;
     }
@@ -148,9 +167,6 @@ void* LogGetNetwork()
 
 void LogSetNetwork(void* network)
 {
-#if defined(CATCH2_TEST_COMPILATION)
-    return;
-#endif
     // note: The Network class is passed here as a void so we can avoid including the Network.h
     // header in Log.h. This is dirty and probably terrible...
     g_network = (network::BaseNetwork*)network;
@@ -182,6 +198,7 @@ void LogFinalise()
     return;
 #endif
     if (g_fpLog != nullptr) {
+        g_logAsync.stop();
         ::fclose(g_fpLog);
         g_fpLog = nullptr;
     }
@@ -224,10 +241,7 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
             if (!ret)
                 return;
 
-            if (g_fpLog != nullptr) {
-                ::fprintf(g_fpLog, "%s\n", log.c_str());
-                ::fflush(g_fpLog);
-            }
+            g_logAsync.log(log, LogAsyncSink);
         } else {
 #if !defined(_WIN32)
             // convert our log level into syslog level
@@ -263,14 +277,36 @@ void log_internal::LogInternal(uint32_t level, const std::string& log)
 
     // fatal error (specially allow any log levels above 9999)
     if (level >= 5U && level < 9999U) {
-        if (g_fpLog != nullptr)
+        if (g_fpLog != nullptr) {
+            g_logAsync.stop();
             ::fclose(g_fpLog);
+            g_fpLog = nullptr;
+        }
 #if !defined(_WIN32)
         if (g_useSyslog)
             ::closelog();
 #endif // !defined(_WIN32)
         exit(1);
     }
+}
+
+/* Writes a new entry to the activity log. */
+
+void log_internal::ActivityLogInternal(const std::string& log)
+{
+    if (CurrentLogFileLevel() == 0U)
+        return;
+
+    if (LogGetNetwork() != nullptr) {
+        network::BaseNetwork* network = (network::BaseNetwork*)LogGetNetwork();
+        network->writeActLog(log.c_str());
+    }
+
+#if defined(CATCH2_TEST_COMPILATION)
+    return;
+#endif
+
+    // activity only logs to network -- nothing local
 }
 
 /* Internal helper to get the log file path. */
