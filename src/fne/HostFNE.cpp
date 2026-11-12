@@ -112,16 +112,10 @@ int HostFNE::run()
     if (m_daemon && g_foreground)
         m_daemon = false;
 
-    // initialize system logging
     yaml::Node logConf = m_conf["log"];
     bool useSyslog = logConf["useSyslog"].as<bool>(false);
     if (g_foreground)
         useSyslog = false;
-    ret = ::LogInitialise(logConf["filePath"].as<std::string>(), logConf["fileRoot"].as<std::string>(),
-        logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U), false, useSyslog);
-    if (!ret) {
-        ::fatal("unable to open the log file\n");
-    }
 
 #if !defined(_WIN32)
     // handle POSIX process forking
@@ -130,21 +124,29 @@ int HostFNE::run()
         pid_t pid = ::fork();
         if (pid == -1) {
             ::fprintf(stderr, "%s: Couldn't fork() , exiting\n", g_progExe.c_str());
-            ::LogFinalise();
             return EXIT_FAILURE;
         }
         else if (pid != 0) {
-            ::LogFinalise();
             exit(EXIT_SUCCESS);
         }
 
         // create new session and process group
         if (::setsid() == -1) {
             ::fprintf(stderr, "%s: Couldn't setsid(), exiting\n", g_progExe.c_str());
-            ::LogFinalise();
             return EXIT_FAILURE;
         }
+    }
+#endif // !defined(_WIN32)
 
+    // initialize system logging after forking so the async worker belongs to the daemon child
+    ret = ::LogInitialise(logConf["filePath"].as<std::string>(), logConf["fileRoot"].as<std::string>(),
+        logConf["fileLevel"].as<uint32_t>(0U), logConf["displayLevel"].as<uint32_t>(0U), false, useSyslog);
+    if (!ret) {
+        ::fatal("unable to open the log file\n");
+    }
+
+#if !defined(_WIN32)
+    if (m_daemon) {
         // set the working directory to the root directory
         if (::chdir("/") == -1) {
             ::fprintf(stderr, "%s: Couldn't cd /, exiting\n", g_progExe.c_str());
