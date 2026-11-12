@@ -260,6 +260,7 @@ add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
 project(dvm)
 include(src/CMakeLists.txt)
+include(tools/CMakeLists.txt)
 
 if (ENABLE_TESTS)
     include(CTest)
