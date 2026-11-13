@@ -4,13 +4,14 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "bridge/Defines.h"
 #include "common/dmr/data/EMB.h"
 #include "common/dmr/lc/FullLC.h"
 #include "common/dmr/SlotType.h"
+#include "common/dmr/Sync.h"
 #include "common/p25/dfsi/DFSIDefines.h"
 #include "common/p25/dfsi/LC.h"
 #include "common/json/json.h"
@@ -89,36 +90,33 @@ void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, 
     using namespace dmr;
     using namespace dmr::defines;
 
-    uint8_t n = (uint8_t)((*seqNo - 3U) % 6U);
-    uint32_t fill = 6U - n;
+    // Complete the current six-burst superframe before sending the terminator.
+    uint8_t buffer[DMR_FRAME_LENGTH_BYTES];
+    while (*dmrN != 0U) {
+        // generate DMR AMBE data
+        ::memcpy(buffer, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES);
 
-    uint8_t* buffer = nullptr;
-    if (n > 0U) {
-        for (uint32_t i = 0U; i < fill; i++) {
-            // generate DMR AMBE data
-            buffer = new uint8_t[DMR_FRAME_LENGTH_BYTES];
-            ::memcpy(buffer, SILENCE_DATA, DMR_FRAME_LENGTH_BYTES);
+        uint8_t lcss = embeddedData.getData(buffer, *dmrN);
 
-            uint8_t lcss = embeddedData.getData(buffer, n);
+        // generated embedded signaling data
+        data::EMB emb = data::EMB();
+        emb.setColorCode(0U);
+        emb.setLCSS(lcss);
+        emb.encode(buffer);
 
-            // generated embedded signalling
-            data::EMB emb = data::EMB();
-            emb.setColorCode(0U);
-            emb.setLCSS(lcss);
-            emb.encode(buffer);
+        data.setDataType(DataType::VOICE);
+        data.setN(*dmrN);
+        data.setSeqNo(*seqNo);
+        data.setData(buffer);
 
-            // generate DMR network frame
-            data.setData(buffer);
+        writeDMR(data);
 
-            writeDMR(data);
-
-            seqNo++;
-            dmrN++;
-            delete[] buffer;
-        }
+        (*seqNo)++;
+        *dmrN = (*dmrN + 1U) % 6U;
     }
 
-    buffer = new uint8_t[DMR_FRAME_LENGTH_BYTES];
+    ::memset(buffer, 0x00U, DMR_FRAME_LENGTH_BYTES);
+    Sync::addDMRDataSync(buffer, true);
 
     // generate DMR LC
     lc::LC dmrLC = lc::LC();
@@ -135,12 +133,15 @@ void PeerNetwork::writeDMRTerminator(dmr::data::NetData& data, uint32_t* seqNo, 
     fullLC.encode(dmrLC, buffer, DataType::TERMINATOR_WITH_LC);
 
     // generate DMR network frame
+    data.setDataType(DataType::TERMINATOR_WITH_LC);
+    data.setN(0U);
+    data.setSeqNo(*seqNo);
     data.setData(buffer);
 
     writeDMR(data);
 
-    seqNo = 0;
-    dmrN = 0;
+    *seqNo = 0U;
+    *dmrN = 0U;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +190,10 @@ bool PeerNetwork::writeConfig()
     rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    config["software"].set<std::string>(std::string(software));                 // Software ID
+    uint32_t peerClass = PEER_CONN_CLASS::PEER_CONN_CLASS_STANDARD;
+    config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
+
+    config["software"].set<std::string>(std::string(software));                     // Software ID
 
     json::value v = json::value(config);
     std::string json = v.serialize();

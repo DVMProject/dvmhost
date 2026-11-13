@@ -25,6 +25,7 @@
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/dmr/lc/csbk/CSBK_ACK_RSP.h"
+#include "common/dmr/lc/csbk/CSBK_AHOY.h"
 #include "common/dmr/lc/csbk/CSBK_ALOHA.h"
 #include "common/dmr/lc/csbk/CSBK_BROADCAST.h"
 #include "common/dmr/lc/csbk/CSBK_BSDWNACT.h"
@@ -58,7 +59,7 @@ namespace dmr
              * @brief Helper class to instantiate an instance of a CSBK.
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBKFactory {
+            class DVM_COMMON_API CSBKFactory {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBKFactory class.
@@ -77,14 +78,21 @@ namespace dmr
                  */
                 static std::unique_ptr<CSBK> createCSBK(const uint8_t* data, defines::DataType::E dataType);
 
+                /**
+                 * @brief Sets whether CRC errors warn and allow decoding to continue.
+                 * @param warnCRC Flag indicating CRC errors should be warnings.
+                 */
+                static void setWarnCRC(bool warnCRC) { s_warnCRC = warnCRC; }
+
             private:
+                static bool s_warnCRC;
                 /**
                  * @brief Decode a CSBK.
                  * @param csbk Instance of a CSBK.
                  * @param[in] data Buffer containing CSBK packet data to decode.
                  * @returns CSBK* Instance of a CSBK representing the decoded data.
                  */
-                static std::unique_ptr<CSBK> decode(CSBK* csbk, const uint8_t* data);
+                static std::unique_ptr<CSBK> decode(CSBK* csbk, const uint8_t* data, defines::DataType::E dataType);
             };
         } // namespace csbk
     } // namespace lc

@@ -28,7 +28,7 @@ namespace dmr
      * @brief Helper class for generating DMR sync data.
      * @ingroup dmr
      */
-    class HOST_SW_API Sync {
+    class DVM_COMMON_API Sync {
     public:
         /**
          * @brief Helper to append DMR data sync bytes to the passed buffer.

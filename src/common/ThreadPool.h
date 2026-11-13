@@ -33,7 +33,7 @@
  * @brief Represents a task run by a thread pool worker thread.
  * @ingroup threading
  */
-class HOST_SW_API ThreadPoolTask {
+class DVM_COMMON_API ThreadPoolTask {
 public:
     /**
      * @brief Initializes a new instance of the ThreadPoolTask class.
@@ -77,7 +77,7 @@ ThreadPoolTask* new_pooltask(F&& f, Args&&... args) { return new ThreadPoolTask(
  * @brief Creates and controls a thread pool.
  * @ingroup threading
  */
-class HOST_SW_API ThreadPool {
+class DVM_COMMON_API ThreadPool {
 public:
     /**
      * @brief Initializes a new instance of the Thread class.

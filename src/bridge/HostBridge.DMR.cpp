@@ -17,9 +17,9 @@
 #include "common/dmr/data/NetData.h"
 #include "common/dmr/lc/FullLC.h"
 #include "common/dmr/SlotType.h"
+#include "common/dmr/Sync.h"
 #include "common/Log.h"
 #include "common/Utils.h"
-#include "bridge/ActivityLog.h"
 #include "HostBridge.h"
 #include "BridgeMain.h"
 
@@ -330,6 +330,8 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
     using namespace dmr::defines;
     using namespace dmr::data;
 
+    bool callStart = false;
+
     uint32_t srcId = m_srcId;
     if (m_srcIdOverride != 0 && (m_overrideSrcIdFromMDC))
         srcId = m_srcIdOverride;
@@ -346,12 +348,13 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         srcId = m_srcId;
 
     uint8_t* data = nullptr;
-    m_dmrN = (uint8_t)(m_dmrSeqNo % 6);
     if (m_ambeCount == AMBE_PER_SLOT) {
         // is this the intitial sequence?
         if (m_dmrSeqNo == 0) {
             // send DMR voice header
             data = new uint8_t[DMR_FRAME_LENGTH_BYTES];
+            ::memset(data, 0x00U, DMR_FRAME_LENGTH_BYTES);
+            Sync::addDMRDataSync(data, true);
 
             // generate DMR LC
             lc::LC dmrLC = lc::LC();
@@ -393,6 +396,11 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
                 dmrLC.getSrcId(), dmrLC.getDstId(), dmrData.getFLCO());
 
             m_network->writeDMR(dmrData, false);
+
+            if (m_txStreamId <= 1U) {
+                callStart = true;
+            }
+
             m_txStreamId = m_network->getDMRStreamId(m_slot);
 
             m_dmrSeqNo++;
@@ -401,6 +409,7 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
         // send DMR voice
         data = new uint8_t[DMR_FRAME_LENGTH_BYTES];
+        ::memset(data, 0x00U, DMR_FRAME_LENGTH_BYTES);
 
         ::memcpy(data, m_ambeBuffer, 13U);
         data[13U] = (uint8_t)(m_ambeBuffer[13U] & 0xF0);
@@ -408,8 +417,10 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         ::memcpy(data + 20U, m_ambeBuffer + 14U, 13U);
 
         DataType::E dataType = DataType::VOICE_SYNC;
-        if (m_dmrN == 0)
+        if (m_dmrN == 0) {
             dataType = DataType::VOICE_SYNC;
+            Sync::addDMRAudioSync(data, true);
+        }
         else {
             dataType = DataType::VOICE;
 
@@ -439,9 +450,11 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
         dmrData.setData(data);
 
         m_network->writeDMR(dmrData, false);
+        delete[] data;
         m_txStreamId = m_network->getDMRStreamId(m_slot);
 
         m_dmrSeqNo++;
+        m_dmrN = (m_dmrN + 1U) % 6U;
         ::memset(m_ambeBuffer, 0x00U, 27U);
         m_ambeCount = 0U;
     }
@@ -474,4 +487,39 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
 
     ::memcpy(m_ambeBuffer + (m_ambeCount * 9U), ambe, RAW_AMBE_LENGTH_BYTES);
     m_ambeCount++;
+
+    // is this traffic being duplicated to a raw analog TG?
+    if (m_duplicateToAnalog) {
+        analog::data::NetData analogData;
+        analogData.setSeqNo(m_analogN);
+        analogData.setSrcId(srcId);
+        analogData.setDstId(dstId);
+        analogData.setControl(0U);
+        analogData.setFrameType(AudioFrameType::VOICE);
+        if (callStart) {
+            analogData.setFrameType(AudioFrameType::VOICE_START);
+
+            if (m_grantDemand) {
+                analogData.setControl(0x80U); // analog remote grant demand flag
+            }
+        }
+
+        int pcmIdx = 0;
+        uint8_t outPcm[AUDIO_SAMPLES_LENGTH * 2U];
+        for (uint32_t smpIdx = 0; smpIdx < AUDIO_SAMPLES_LENGTH; smpIdx++) {
+            outPcm[smpIdx] = AnalogAudio::encodeMuLaw(samples[smpIdx]);
+        }
+
+        if (m_trace)
+            Utils::dump(1U, "HostBridge()::encodeDMRAudioFrame(), Encoded uLaw Audio", outPcm, AUDIO_SAMPLES_LENGTH);
+
+        analogData.setAudio(outPcm);
+
+        if (analogData.getFrameType() == AudioFrameType::VOICE) {
+            LogInfoEx(LOG_HOST, ANO_VOICE ", audio, srcId = %u, dstId = %u, seqNo = %u", srcId, dstId, analogData.getSeqNo());
+        }
+
+        m_network->writeAnalog(analogData);
+        m_analogN++;
+    }
 }

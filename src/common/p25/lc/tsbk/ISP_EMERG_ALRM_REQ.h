@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements EMERG ALRM REQ - Emergency Alarm Request
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API ISP_EMERG_ALRM_REQ : public TSBK {
+            class DVM_COMMON_API ISP_EMERG_ALRM_REQ : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the ISP_EMERG_ALRM_REQ class.
@@ -60,6 +60,16 @@ namespace p25
                  * @returns std::string String representation of the TSBK.
                  */
                 std::string toString(bool isp = false) override;
+
+            public:
+                /**
+                 * @brief Emergency special-information octet 1.
+                 */
+                DECLARE_PROPERTY(uint8_t, specialInfo1, SpecialInfo1);
+                /**
+                 * @brief Emergency special-information octet 2.
+                 */
+                DECLARE_PROPERTY(uint8_t, specialInfo2, SpecialInfo2);
             };
         } // namespace tsbk
     } // namespace lc

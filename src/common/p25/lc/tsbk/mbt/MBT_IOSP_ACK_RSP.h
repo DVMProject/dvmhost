@@ -35,7 +35,7 @@ namespace p25
              *  ACK RSP FNE - Acknowledge Response - FNE (OSP) 
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_IOSP_ACK_RSP : public AMBT {
+            class DVM_COMMON_API MBT_IOSP_ACK_RSP : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_IOSP_ACK_RSP class.

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2018,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -18,8 +18,6 @@
 #include "common/p25/P25Defines.h"
 #include "common/p25/P25Utils.h"
 
-#include <random>
-
 namespace p25
 {
     // ---------------------------------------------------------------------------
@@ -30,7 +28,7 @@ namespace p25
      * @brief Represents site data for P25.
      * @ingroup p25
      */
-    class HOST_SW_API SiteData {
+    class DVM_COMMON_API SiteData {
     public:
         /**
          * @brief Initializes a new instance of the SiteData class.
@@ -48,6 +46,7 @@ namespace p25
             m_callsign("CHANGEME"),
             m_chCnt(0U),
             m_netActive(false),
+            m_wuidValidity(0U),
             m_lto(0)
         {
             /* stub */
@@ -77,6 +76,7 @@ namespace p25
             m_callsign("CHANGEME"),
             m_chCnt(0U),
             m_netActive(false),
+            m_wuidValidity(0U),
             m_lto(0)
         {
             // lra clamping
@@ -111,25 +111,6 @@ namespace p25
 
             m_netId = netId;
             m_sysId = sysId;
-
-            uint32_t valueTest = (m_netId >> 8);
-            const uint32_t constValue = 0x5F700U;
-            if (valueTest == (constValue >> 7)) {
-                std::random_device rd;
-                std::mt19937 mt(rd());
-
-                std::uniform_int_distribution<uint32_t> dist(0x01, defines::WACN_STD_DEFAULT);
-                m_netId = dist(mt);
-
-                // netId clamping
-                m_netId = P25Utils::netId(netId);
-
-                dist = std::uniform_int_distribution<uint32_t>(0x01, 0xFFEU);
-                m_sysId = dist(mt);
-
-                // sysId clamping
-                m_sysId = P25Utils::sysId(sysId);
-            }
 
             m_rfssId = rfssId;
             m_siteId = siteId;
@@ -170,7 +151,17 @@ namespace p25
         }
 
         /**
+         * @brief Helper to set the WUID validity period advertised by this site.
+         * @param wuidValidity WUID validity field in 30-minute increments beyond four hours; 0xFF disables expiry.
+         */
+        void setWuidValidity(uint8_t wuidValidity)
+        {
+            m_wuidValidity = wuidValidity;
+        }
+
+        /**
          * @brief Helper to set adjacent site data.
+         * @param lra Location Registration Area.
          * @param sysId P25 System ID.
          * @param rfssId P25 RFSS ID.
          * @param siteId P25 Site ID.
@@ -178,7 +169,7 @@ namespace p25
          * @param channelNo Channel Number.
          * @param serviceClass Service class.
          */
-        void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
+        void setAdjSite(uint8_t lra, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
         {
             // sysId clamping
             sysId = P25Utils::sysId(sysId);
@@ -201,7 +192,7 @@ namespace p25
                 channelNo = 4095U;
             }
 
-            m_lra = 0U;
+            m_lra = lra;
 
             m_netId = 0U;
             m_sysId = sysId;
@@ -219,7 +210,22 @@ namespace p25
             m_callsign = "ADJSITE ";
             m_chCnt = -1; // don't store channel count for adjacent sites
             m_netActive = true; // adjacent sites are explicitly network active
+            m_wuidValidity = 0U;
             m_lto = 0;
+        }
+
+        /**
+         * @brief Helper to set adjacent site data when the Location Registration Area is unavailable.
+         * @param sysId P25 System ID.
+         * @param rfssId P25 RFSS ID.
+         * @param siteId P25 Site ID.
+         * @param channelId Channel ID.
+         * @param channelNo Channel Number.
+         * @param serviceClass Service class.
+         */
+        void setAdjSite(uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, uint8_t serviceClass)
+        {
+            setAdjSite(0U, sysId, rfssId, siteId, channelId, channelNo, serviceClass);
         }
 
         /**
@@ -248,6 +254,8 @@ namespace p25
                 m_chCnt = data.m_chCnt;
 
                 m_netActive = data.m_netActive;
+
+                m_wuidValidity = data.m_wuidValidity;
 
                 m_lto = data.m_lto;
             }
@@ -305,6 +313,10 @@ namespace p25
          * @brief Flag indicating whether this site is a linked active network member.
          */
         DECLARE_RO_PROPERTY_PLAIN(bool, netActive);
+        /**
+         * @brief WUID validity field in 30-minute increments beyond four hours; 0xFF disables expiry.
+         */
+        DECLARE_RO_PROPERTY_PLAIN(uint8_t, wuidValidity);
         /**
          * @brief Local Time Offset.
          */

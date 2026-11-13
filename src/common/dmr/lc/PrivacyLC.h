@@ -30,7 +30,7 @@ namespace dmr
          * @brief Represents DMR privacy indicator link control data.
          * @ingroup dmr_lc
          */
-        class HOST_SW_API PrivacyLC {
+        class DVM_COMMON_API PrivacyLC {
         public:
             /**
              * @brief Initializes a new instance of the PrivacyLC class.

@@ -45,7 +45,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMInventoryResponseListKeyIDs : public KMMInventoryResponseHeader {
+        /**
+         * @brief Represents a KMM inventory response listing key IDs.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMInventoryResponseListKeyIDs : public KMMInventoryResponseHeader {
         public:
             /**
              * @brief Initializes a new instance of the KMMInventoryResponseListKeyIDs class.

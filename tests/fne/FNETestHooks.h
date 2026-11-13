@@ -1,0 +1,632 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Test Suite
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
+ *
+ */
+#if !defined(__FNE_TEST_HOOKS_H__)
+#define __FNE_TEST_HOOKS_H__
+
+#include "fne/network/MetadataNetwork.h"
+#include "fne/network/TrafficNetwork.h"
+#include "common/p25/lc/LC.h"
+#include "common/p25/lc/TSBK.h"
+
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Test hooks for the FNE network components.
+ */
+class FNETestHooks {
+public:
+    /**
+     * @brief Protocol handled by an FNE traffic call handler.
+     */
+    enum class ParrotProtocol {
+        DMR,    //!< DMR traffic.
+        P25,    //!< P25 Phase 1 traffic.
+        P25P2,  //!< P25 Phase 2 traffic.
+        NXDN,   //!< NXDN traffic.
+        ANALOG  //!< Analog traffic.
+    };
+
+    /**
+     * @brief Starts the shared traffic worker pool for ordered-task tests.
+     * @param network The TrafficNetwork instance.
+     */
+    static void startTrafficWorkerPool(network::TrafficNetwork& network);
+    /**
+     * @brief Stops and joins the shared traffic worker pool after an ordered-task test.
+     * @param network The TrafficNetwork instance.
+     */
+    static void stopTrafficWorkerPool(network::TrafficNetwork& network);
+    /**
+     * @brief Installs a callback invoked for ordered protocol frames instead of decoding them.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param handler Callback receiving the complete ordered frame metadata.
+     */
+    static void setOrderedFrameHandler(network::TrafficNetwork& network, ParrotProtocol protocol,
+        std::function<void(const uint8_t*, uint32_t, uint32_t, uint32_t, uint16_t, uint32_t, bool)> handler);
+    /**
+     * @brief Clears an ordered protocol frame callback.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     */
+    static void clearOrderedFrameHandler(network::TrafficNetwork& network, ParrotProtocol protocol);
+    /**
+     * @brief Enqueues a synthetic ordered protocol frame.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Peer ID identifying the packet origin.
+     * @param ssrc RTP synchronization source ID.
+     * @param streamId Call stream ID.
+     * @param pktSeq RTP packet sequence.
+     * @param fromUpstream Flag indicating traffic is from an upstream master.
+     * @returns bool True if the frame was queued, otherwise false.
+     */
+    static bool enqueueOrderedFrame(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint16_t pktSeq = 1U,
+        bool fromUpstream = false);
+
+    /**
+     * @brief Tests whether a P25 frame is classified as telephone interconnect traffic.
+     * @param network The TrafficNetwork instance.
+     * @param control Link control associated with the frame.
+     * @param duid Data unit identifier.
+     * @param tsbk Optional trunking signalling block for a TSDU.
+     * @return True when the frame is telephone interconnect traffic.
+     */
+    static bool isP25TelIntTraffic(network::TrafficNetwork& network, p25::lc::LC& control,
+        p25::defines::DUID::E duid, const p25::lc::TSBK* tsbk = nullptr);
+    /**
+     * @brief Tests whether telephone interconnect traffic may be routed between two peers.
+     * @param network The TrafficNetwork instance.
+     * @param srcPeerId Originating peer ID.
+     * @param dstPeerId Destination peer ID.
+     * @param dstId Subscriber radio ID carried by the call.
+     * @return True when routing to the destination peer is permitted.
+     */
+    static bool isP25TelIntPeerPermitted(network::TrafficNetwork& network, uint32_t srcPeerId,
+        uint32_t dstPeerId, uint32_t dstId);
+    /**
+     * @brief Adds a unit registration owned by a site peer.
+     * @param network The TrafficNetwork instance.
+     * @param sitePeerId Site peer that owns the registration.
+     * @param unitId Registered subscriber radio ID.
+     */
+    static void registerP25Unit(network::TrafficNetwork& network, uint32_t sitePeerId, uint32_t unitId);
+    /**
+     * @brief Adds a talkgroup affiliation owned by a site peer.
+     * @param network The TrafficNetwork instance.
+     * @param sitePeerId Site peer that owns the affiliation.
+     * @param unitId Subscriber radio ID affiliated to the talkgroup.
+     * @param talkgroupId Affiliated talkgroup ID.
+     */
+    static void addGroupAffiliation(network::TrafficNetwork& network, uint32_t sitePeerId,
+        uint32_t unitId, uint32_t talkgroupId);
+    /**
+     * @brief Captures peer IDs selected by subsequent test writes.
+     * @param network The TrafficNetwork instance.
+     * @param[out] peerIds Destination peer IDs selected for writes.
+     */
+    static void capturePeerWrites(network::TrafficNetwork& network, std::vector<uint32_t>& peerIds);
+    /**
+     * @brief Clears the test peer-write capture callback.
+     * @param network The TrafficNetwork instance.
+     */
+    static void clearPeerWriteCapture(network::TrafficNetwork& network);
+    /**
+     * @brief Captures the next metadata response payload and opcodes.
+     * @param metadata Metadata network instance.
+     * @param[out] payload Complete metadata response payload.
+     * @param[out] function Response function opcode.
+     * @param[out] subFunction Response sub-function opcode.
+     */
+    static void captureMetadataWrite(network::MetadataNetwork& metadata, std::vector<uint8_t>& payload,
+        uint8_t& function, uint8_t& subFunction);
+    /**
+     * @brief Clears the metadata response capture callback.
+     * @param metadata Metadata network instance.
+     */
+    static void clearMetadataWriteCapture(network::MetadataNetwork& metadata);
+    /**
+     * @brief Queues and plays one synthetic parrot frame through a protocol handler.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param sourcePeerId Peer that originated the parrot frame.
+     * @param sourceId Source subscriber ID.
+     * @param talkgroupId Destination talkgroup ID.
+     */
+    static void playbackParrotFrame(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t sourcePeerId, uint32_t sourceId, uint32_t talkgroupId);
+    /**
+     * @brief Evaluates a call handler's peer-routing policy.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Destination peer ID.
+     * @param destinationId Destination talkgroup or radio ID.
+     * @param group Whether the call is group traffic.
+     * @param fromUpstream Whether the traffic arrived from an upstream network.
+     * @param slotNo Protocol slot number.
+     * @return True when the peer is permitted to receive the traffic.
+     */
+    static bool isPeerPermitted(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t peerId, uint32_t destinationId, bool group = true,
+        bool fromUpstream = false, uint8_t slotNo = 1U);
+    /**
+     * @brief Evaluates a call handler's group-call validation policy.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Originating peer ID.
+     * @param sourceId Source subscriber ID.
+     * @param talkgroupId Destination talkgroup ID.
+     * @param slotNo Protocol slot number.
+     * @return True when the call passes validation.
+     */
+    static bool validateGroupCall(network::TrafficNetwork& network, ParrotProtocol protocol,
+        uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo = 1U);
+    /**
+     * @brief Validates P25 individual traffic whose current LCO is not private.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Source subscriber ID.
+     * @param destinationId Target subscriber ID.
+     * @return True when the explicit individual-call flag is honored.
+     */
+    static bool validateP25IndividualCall(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId);
+    /**
+     * @brief Processes a synthetic DMR FNE grant request.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the request is an individual call.
+     * @param serviceOptions DMR service-options octet.
+     * @return True when the request is accepted.
+     */
+    static bool processDMRGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions = 4U);
+    /**
+     * @brief Processes a synthetic P25 FNE grant request.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the request is an individual call.
+     * @param serviceOptions P25 service-options octet.
+     * @return True when the request is accepted.
+     */
+    static bool processP25GrantRequest(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions = 4U);
+    /**
+     * @brief Processes a synthetic P25 Phase 2 private voice frame.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber ID.
+     * @param streamId Call stream ID.
+     * @return True when the frame is accepted.
+     */
+    static bool processP25P2PrivateFrame(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, uint32_t streamId);
+    /**
+     * @brief Processes a synthetic NXDN FNE grant request.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Originating peer ID.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the request is an individual call.
+     * @param serviceOptions NXDN service-options octet.
+     * @return True when the request is accepted.
+     */
+    static bool processNXDNGrantRequest(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, uint8_t serviceOptions = 4U);
+    /**
+     * @brief Processes a synthetic FNE grant release.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Peer requesting the release.
+     * @param sourceId Calling subscriber ID.
+     * @param destinationId Called subscriber or talkgroup ID.
+     * @param unitToUnit Whether the grant is an individual call.
+     * @param failed Whether the owning site failed to commit the grant locally.
+     * @return True if a matching grant was released.
+     */
+    static bool processGrantRelease(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t sourceId, uint32_t destinationId, bool unitToUnit, bool failed = false);
+    /**
+     * @brief Sets whether unit-to-unit traffic is globally disabled.
+     * @param network The TrafficNetwork instance.
+     * @param disabled Whether unit-to-unit traffic is disabled.
+     */
+    static void disallowU2U(network::TrafficNetwork& network, bool disabled);
+    /**
+     * @brief Configures private-call route policy for a test.
+     * @param network The TrafficNetwork instance.
+     * @param enabled Whether private-call routing is enabled.
+     * @param unknownDestination Policy for an unregistered destination.
+     * @param learnFromTraffic Whether validated traffic may create routes.
+     * @param routeLifetimeMs Lifetime of learned routes in milliseconds.
+     */
+    static void configurePrivateCallRouting(network::TrafficNetwork& network, bool enabled,
+        const std::string& unknownDestination, bool learnFromTraffic, uint64_t routeLifetimeMs);
+    /**
+     * @brief Learns a subscriber route through the production traffic-learning path.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Immediate next-hop peer ID.
+     * @param unitId Subscriber unit ID.
+     * @param ssrc Advertised route origin.
+     */
+    static void learnUnitRoute(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t unitId, uint32_t ssrc);
+    /**
+     * @brief Resolves the current next-hop peer for a subscriber.
+     * @param network The TrafficNetwork instance.
+     * @param unitId Subscriber unit ID.
+     * @return Current next-hop peer ID, or zero when no route exists.
+     */
+    static uint32_t findUnitRoute(network::TrafficNetwork& network, uint32_t unitId);
+    /**
+     * @brief Tests destination availability under the current private-call policy.
+     * @param network The TrafficNetwork instance.
+     * @param unitId Destination subscriber unit ID.
+     * @return True when the destination is routable or flooding is enabled.
+     */
+    static bool isUnitRouteAvailable(network::TrafficNetwork& network, uint32_t unitId);
+    /**
+     * @brief Replaces one peer's explicit unit-registration snapshot.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Immediate next-hop peer ID.
+     * @param unitIds Complete registration snapshot.
+     * @param ssrc Advertised route origin.
+     * @return True when the snapshot was accepted.
+     */
+    static bool replaceUnitRegistrations(network::TrafficNetwork& network, uint32_t peerId,
+        const std::vector<uint32_t>& unitIds, uint32_t ssrc);
+    /**
+     * @brief Sets whether conventional sites bypass affiliation requirements.
+     * @param network The TrafficNetwork instance.
+     * @param enabled Whether the conventional-site override is enabled.
+     */
+    static void allowConventionalAffiliationOverride(network::TrafficNetwork& network, bool enabled);
+    /**
+     * @brief Sets whether P25 terminators are filtered by destination policy.
+     * @param network The TrafficNetwork instance.
+     * @param enabled Whether terminator filtering is enabled.
+     */
+    static void filterTerminators(network::TrafficNetwork& network, bool enabled);
+    /**
+     * @brief Evaluates P25 TDU peer-routing policy.
+     * @param network The TrafficNetwork instance.
+     * @param peerId Destination peer ID.
+     * @param talkgroupId Destination talkgroup ID.
+     * @return True when the peer is permitted to receive the terminator.
+     */
+    static bool isP25TerminatorPeerPermitted(network::TrafficNetwork& network,
+        uint32_t peerId, uint32_t talkgroupId);
+    /**
+     * @brief Passes a deliberately truncated frame to a protocol handler.
+     * @param network The TrafficNetwork instance.
+     * @param protocol Protocol handler to exercise.
+     * @param peerId Originating peer ID.
+     * @return The protocol handler's processing result.
+     */
+    static bool processTruncatedFrame(network::TrafficNetwork& network,
+        ParrotProtocol protocol, uint32_t peerId);
+    /**
+     * @brief Passes a radio-check response through an FNE protocol handler.
+     * @param network The TrafficNetwork instance.
+     * @param protocol DMR or P25 protocol handler to exercise.
+     * @param peerId Originating site peer ID.
+     * @param subscriberId Responding subscriber ID.
+     * @returns bool Protocol handler result; false indicates the response was consumed.
+     */
+    static bool processRadioCheckResponse(network::TrafficNetwork& network,
+        ParrotProtocol protocol, uint32_t peerId, uint32_t subscriberId);
+    /**
+     * @brief Adds a peer to the specified TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to add.
+     * @param state The connection state of the peer.
+     * @param connected Whether the peer is connected.
+     * @return Reference to the added FNEPeerConnection.
+     */
+    static network::FNEPeerConnection& addPeer(network::TrafficNetwork& network, uint32_t peerId,
+        network::NET_CONN_STATUS state, bool connected = false);
+    /**
+     * @brief Checks if the specified peer exists in the TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to check.
+     * @return True if the peer exists, false otherwise.
+     */
+    static bool hasPeer(const network::TrafficNetwork& network, uint32_t peerId);
+    /**
+     * @brief Retrieves the number of peers in the TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     * @return The number of peers.
+     */
+    static size_t peerCount(const network::TrafficNetwork& network);
+    /**
+     * @brief Retrieves the connection state of the specified peer.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer.
+     * @return The connection state of the peer.
+     */
+    static network::NET_CONN_STATUS peerState(const network::TrafficNetwork& network, uint32_t peerId);
+    /**
+     * @brief Retains a shared reference to the specified peer connection.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to retain.
+     * @return Shared peer connection, or nullptr if the peer does not exist.
+     */
+    static std::shared_ptr<network::FNEPeerConnection> retainPeer(
+        const network::TrafficNetwork& network, uint32_t peerId);
+    /**
+     * @brief Removes a peer from the specified TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to remove.
+     */
+    static void removePeer(network::TrafficNetwork& network, uint32_t peerId);
+    /**
+     * @brief Runs production peer teardown, including route and affiliation cleanup.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The ID of the peer to tear down.
+     */
+    static void teardownPeer(network::TrafficNetwork& network, uint32_t peerId);
+    /**
+     * @brief Clears all peers from the TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     */
+    static void clearPeers(network::TrafficNetwork& network);
+    /**
+     * @brief Replaces a replicated active peer list for testing.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The replica peer ID.
+     * @param peers The active peer list to store.
+     */
+    static void updateReplicatedPeers(network::TrafficNetwork& network, uint32_t peerId, const json::array& peers);
+    /**
+     * @brief Gets a snapshot of the replicated active peer lists.
+     * @param network The TrafficNetwork instance.
+     * @return Map of replica peer IDs to active peer lists.
+     */
+    static std::unordered_map<uint32_t, json::array> replicatedPeersSnapshot(const network::TrafficNetwork& network);
+    /**
+     * @brief Removes a replicated active peer list for testing.
+     * @param network The TrafficNetwork instance.
+     * @param peerId The replica peer ID.
+     */
+    static void eraseReplicatedPeers(network::TrafficNetwork& network, uint32_t peerId);
+
+    /**
+     * @brief Dispatches a traffic packet to the specified peer in the TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     * @param function The network function.
+     * @param subFunction The network sub-function.
+     * @param peerId The ID of the peer.
+     * @param packet The packet data.
+     */
+    static void dispatchTraffic(network::TrafficNetwork& network, network::NET_FUNC::ENUM function,
+        network::NET_SUBFUNC::ENUM subFunction, uint32_t peerId, const std::vector<uint8_t>& packet);
+    /**
+     * @brief Dispatches a metadata packet to the specified peer in the TrafficNetwork.
+     * @param network The TrafficNetwork instance.
+     * @param metadata The MetadataNetwork instance.
+     * @param function The network function.
+     * @param subFunction The network sub-function.
+     * @param peerId The ID of the peer.
+     * @param packet The packet data.
+     */
+    static void dispatchMetadata(network::TrafficNetwork& network, network::MetadataNetwork& metadata,
+        network::NET_FUNC::ENUM function, network::NET_SUBFUNC::ENUM subFunction, uint32_t peerId,
+        const std::vector<uint8_t>& packet);
+
+    /**
+     * @brief Passes an encoded KMM through the FNE OTAR message dispatcher.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param packet Encoded KMM bytes.
+     * @param llId Logical Link ID associated with the message.
+     * @param[out] payloadSize Size of the returned KMM, or zero when no response is required.
+     * @return Encoded response, or nullptr when the dispatcher produces no response.
+     */
+    static std::unique_ptr<uint8_t[]> processOTARKMM(network::TrafficNetwork& network,
+        const std::vector<uint8_t>& packet, uint32_t llId, uint32_t& payloadSize,
+        uint8_t outerAlgoId = P25DEF::ALGO_UNENCRYPT, uint16_t outerKId = 0U,
+        bool dataLinkIndependent = false);
+    /**
+     * @brief Builds an OTAR rekey command for the specified logical link ID and KMM RSI.
+     * @param network The TrafficNetwork instance.
+     * @param llId The logical link ID.
+     * @param kmmRSI The KMM RSI value.
+     * @return A vector of vectors containing the OTAR rekey frames.
+     */
+    static std::vector<std::vector<uint8_t>> buildOTARRekey(network::TrafficNetwork& network,
+        uint32_t llId, uint32_t kmmRSI);
+    /**
+     * @brief Builds an OTAR Changeover Command without dispatching it.
+     * @param network The TrafficNetwork instance.
+     * @param llId Logical Link ID used for message-number tracking.
+     * @param kmmRSI Destination KMM RSI.
+     * @param supersededKeysetId Keyset ID being superseded.
+     * @param activeKeysetId Keyset ID becoming active.
+     * @return Encoded command, or an empty vector when it cannot be built.
+     */
+    static std::vector<uint8_t> buildOTARChangeover(network::TrafficNetwork& network,
+        uint32_t llId, uint32_t kmmRSI, uint8_t supersededKeysetId, uint8_t activeKeysetId);
+    /** 
+     * @brief Builds and records an OTAR Warm-Start Command. 
+     * @param network The TrafficNetwork instance.
+     * @param llId Logical Link ID used for message-number tracking.
+     * @param kmmRSI Destination KMM RSI.
+     * @return Encoded command, or an empty vector when it cannot be built.
+     * 
+     */
+    static std::vector<uint8_t> buildOTARWarmStart(network::TrafficNetwork& network,
+        uint32_t llId, uint32_t kmmRSI);
+    /** 
+     * @brief Retrieves an active Warm-Start temporary key for transaction tests. 
+     * @param network The TrafficNetwork instance.
+     * @param rsi The RSI for which to retrieve the temporary key.
+     * @param kid Output parameter for the key ID of the temporary key.
+     * @param key Output parameter for the temporary key bytes.
+     * @return True if an active Warm-Start temporary key exists, false otherwise.
+     *
+     */
+    static bool getOTARWarmStartTEK(network::TrafficNetwork& network, uint32_t rsi,
+        uint16_t& kid, std::vector<uint8_t>& key);
+    /** 
+     * @brief Returns whether an active Warm-Start transaction exists.
+     * @param network The TrafficNetwork instance.
+     * @param rsi The RSI for which to check the Warm-Start transaction.
+     * @return True if an active Warm-Start transaction exists, false otherwise.
+     */
+    static bool hasOTARWarmStart(network::TrafficNetwork& network, uint32_t rsi);
+    /** 
+     * @brief Injects and verifies an upstream TEK response in the OTAR cache.
+     * @param network The TrafficNetwork instance.
+     * @param key The key item to cache.
+     * @param algId The algorithm ID of the key.
+     * @param keyLength The length of the key in bytes.
+     * @return True if the key was successfully cached, false otherwise.
+     */
+    static bool cacheOTARTEK(network::TrafficNetwork& network,
+        const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength);
+    /**
+     * @brief Injects and verifies an upstream UKEK response in the OTAR cache.
+     * @param network The TrafficNetwork instance.
+     * @param rsi The RSI for which to cache the UKEK.
+     * @param key The key item to cache.
+     * @param algId The algorithm ID of the key.
+     * @param keyLength The length of the key in bytes.
+     * @return True if the key was successfully cached, false otherwise.
+     */
+    static bool cacheOTARUKEK(network::TrafficNetwork& network, uint32_t rsi,
+        const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength);
+    /**
+     * @brief Resolves the outer security context selected for a generated response.
+     * @param network The TrafficNetwork instance.
+     * @param packet The OTAR response packet data.
+     * @param encrypted Output flag indicating if the packet is encrypted.
+     * @param algoId Output parameter for the algorithm ID used for encryption.
+     * @param kid Output parameter for the key ID used for encryption.
+     * @return True if the security parameters were successfully resolved, false otherwise.
+     */
+    static bool resolveOTARResponseSecurity(network::TrafficNetwork& network,
+        const std::vector<uint8_t>& packet, bool& encrypted, uint8_t& algoId, uint16_t& kid);
+    /**
+     * @brief Passes a DLD KMM through the public P25 OTAR bearer entry point.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param packet Encoded DLD bytes.
+     * @param llId Logical Link ID associated with the message.
+     * @param n Sequence number of the DLD packet.
+     * @param encrypted Whether the packet is encrypted.
+     * @param algoId The algorithm ID used for encryption.
+     * @param kid The key ID used for encryption.
+     * @param mi The message integrity value.
+     * @return True if the packet was successfully processed, false otherwise.
+     */
+    static bool processOTARDLD(network::TrafficNetwork& network, const std::vector<uint8_t>& packet,
+        uint32_t llId, uint8_t n, bool encrypted = false, uint8_t algoId = P25DEF::ALGO_UNENCRYPT,
+        uint16_t kid = 0U, const uint8_t* mi = nullptr);
+    /** 
+     * @brief Encodes and injects a complete DLD KMM through the P25 PDU assembler path.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param packet Encoded DLD bytes.
+     * @param llId Logical Link ID associated with the message.
+     * @param encrypted Whether the packet is encrypted.
+     * @param algoId The algorithm ID used for encryption.
+     * @param kid The key ID used for encryption.
+     * @param mi The message integrity value.
+     * @return True if the packet was successfully processed, false otherwise.
+     */
+    static bool processOTARDLDPDU(network::TrafficNetwork& network, const std::vector<uint8_t>& packet,
+        uint32_t llId, bool encrypted = false, uint8_t algoId = P25DEF::ALGO_UNENCRYPT,
+        uint16_t kid = 0U, const uint8_t* mi = nullptr);
+    /**
+     * @brief Injects a one-block PDU response through the FNE packet-data receiver.
+     * @param network The TrafficNetwork that owns the packet-data receiver.
+     * @param llId Logical Link ID associated with the response.
+     * @param responseStatus Response status/N(R) value.
+     * @return True if the response was processed successfully.
+     */
+    static bool processP25PDUResponse(network::TrafficNetwork& network, uint32_t llId,
+        uint8_t responseStatus);
+    /**
+     * @brief Passes a complete Version-0 DLI datagram through the network receive task.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param datagram Encoded DLI bytes.
+     */
+    static void processOTARDLI(network::TrafficNetwork& network, const std::vector<uint8_t>& datagram);
+    /** 
+     * @brief Opens the real DLI UDP endpoint for an integration test.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param address The IP address of the DLI UDP endpoint.
+     * @param port The port number of the DLI UDP endpoint.
+     * @return True if the endpoint was successfully opened, false otherwise.
+     */
+    static bool openOTARDLI(network::TrafficNetwork& network, const std::string& address, uint16_t port);
+    /** 
+     * @brief Polls the real DLI UDP endpoint.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param ms The number of milliseconds to wait.
+     */
+    static void clockOTARDLI(network::TrafficNetwork& network, uint32_t ms = 1U);
+    /** 
+     * @brief Closes the real DLI UDP endpoint.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     */
+    static void closeOTARDLI(network::TrafficNetwork& network);
+    /** 
+     * @brief Applies the OTAR outer encryption/decryption implementation.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param algoId The algorithm ID used for encryption/decryption.
+     * @param kid The key ID used for encryption/decryption.
+     * @param mi The message integrity value.
+     * @param packet The packet data to be encrypted/decrypted.
+     * @param encrypt True to encrypt, false to decrypt.
+     * @return The resulting encrypted/decrypted packet.
+     */
+    static std::vector<uint8_t> cryptOTARKMM(network::TrafficNetwork& network, uint8_t algoId,
+        uint16_t kid, uint8_t* mi, const std::vector<uint8_t>& packet, bool encrypt);
+    /**
+     * @brief Checks if the specified inbound message number exists for the given RSI.
+     * @param network The TrafficNetwork that owns the OTAR service.
+     * @param rsi The RSI to check.
+     * @param mn The message number to check.
+     * @return True if the inbound message number exists and matches, false otherwise.
+     */
+    static bool hasOTARInboundMessageNumber(network::TrafficNetwork& network, uint32_t rsi, uint16_t mn);
+    /**
+     * @brief Enables or disables KMF services for the specified TrafficNetwork.
+     * @param network The TrafficNetwork that owns the KMF services.
+     * @param enabled True to enable KMF services, false to disable.
+     */
+    static void setKMFServicesEnabled(network::TrafficNetwork& network, bool enabled);
+    /**
+     * @brief Adds a cryptographic key to the network's crypto lookup.
+     * @param network The TrafficNetwork instance.
+     * @param key The cryptographic key to add.
+     */
+    static void addCryptoKey(network::TrafficNetwork& network, const EKCKeyItem& key);
+    /** 
+     * @brief Adds a UKEK to the test crypto container.
+     * @param network The TrafficNetwork instance.
+     * @param key The UKEK key item to add.
+     */
+    static void addCryptoUKEK(network::TrafficNetwork& network, const EKCKeyItem& key);
+};
+
+#endif // __FNE_TEST_HOOKS_H__

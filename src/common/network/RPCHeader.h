@@ -47,7 +47,7 @@ namespace network
          * 8 bytes
          * \endcode
          */
-        class HOST_SW_API RPCHeader {
+        class DVM_COMMON_API RPCHeader {
         public:
             /**
              * @brief Initializes a new instance of the RPCHeader class.

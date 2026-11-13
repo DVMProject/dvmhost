@@ -32,7 +32,7 @@ namespace compress
      * @brief zlib Compression Helper.
      * @ingroup compression
      */
-    class HOST_SW_API Compression {
+    class DVM_COMMON_API Compression {
     public:
         /**
          * @brief Compress the given input buffer using zlib compression.

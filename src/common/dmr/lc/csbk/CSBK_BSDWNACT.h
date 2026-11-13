@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements BS DWN ACT - BS Outbound Activation
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_BSDWNACT : public CSBK {
+            class DVM_COMMON_API CSBK_BSDWNACT : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_BSDWNACT class.

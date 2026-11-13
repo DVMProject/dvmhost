@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -115,7 +115,16 @@ namespace nxdn
         const uint8_t   CALLSIGN_LENGTH_BYTES = 8U;
 
         const uint32_t  MI_LENGTH_BYTES = 8U;
+        const uint32_t  RAW_AMBE_LENGTH_BYTES = 9U;
+        const uint8_t   AMBE_LENGTH_BITS = 49U;
+
         const uint32_t  PCKT_INFO_LENGTH_BYTES = 3U;
+
+        const uint8_t   EHR_KEY_LENGTH_BYTES = 2U;
+        const uint8_t   DES_KEY_LENGTH_BYTES = 8U;
+        const uint8_t   AES_KEY_LENGTH_BYTES = 32U;
+        const uint8_t   EHR_WORDS_PER_SESSION = 16U;
+        const uint8_t   BLOCK_WORDS_PER_SESSION = 32U;
         /** @} */
 
         /** @name Thresholds */
@@ -127,6 +136,17 @@ namespace nxdn
         const uint32_t  MAX_NXDN_VOICE_ERRORS = 144U;
         /** @brief Maximum voice frame errors with FACCH stealing */
         const uint32_t  MAX_NXDN_VOICE_ERRORS_STEAL = 94U;
+        /** @} */
+
+        /** @name Encryption Algorithms */
+        /** @brief Unencrypted */
+        const uint8_t   CIPHER_TYPE_NONE = 0x00U;
+        /** @brief EHR */
+        const uint8_t   CIPHER_TYPE_EHR = 0x01U;
+        /** @brief DES-OFB */
+        const uint8_t   CIPHER_TYPE_DES = 0x02U;
+        /** @brief AES-256 */
+        const uint8_t   CIPHER_TYPE_AES = 0x03U;
         /** @} */
 
         /** @brief Link Information Channel - RF Channel Type */
@@ -189,10 +209,6 @@ namespace nxdn
                 SR_1_4 = 3U                             //!< 1/4 SACCH Header
             };
         }
-
-        /** @name Encryption Algorithms */
-        const uint8_t   CIPHER_TYPE_NONE = 0x00U;       //!< Unencrypted
-        /** @} */
 
         /** @brief Location Category */
         namespace LocationCategory {
@@ -369,8 +385,11 @@ namespace nxdn
                 RTCH_SDCALL_RESP = 0x3BU,               //!< SDCALL_RESP - Short Data Call Response
 
             // Control Channel Message Types
+                RCCH_VCALL_REQ = 0x01U,                 //!< VCALL_REQ (ISP) / VCALL_RESP (OSP)
+                RCCH_VCALL_REC = 0x02U,                 //!< VCALL_REC_RESP (ISP) / VCALL_REC_REQ (OSP)
                 RCCH_VCALL_CONN = 0x03U,                //!< VCALL_CONN - Voice Call Connection Request (ISP) / Voice Call Connection Response (OSP)
                 RCCH_VCALL_ASSGN = 0x04U,               //!< VCALL_ASSGN - Voice Call Assignment
+                RCCH_VCALL_ASSGN_DUP = 0x05U,           //!< VCALL_ASSGN_DUP - Voice Call Assignment Duplicate
                 RCCH_DCALL_ASSGN = 0x14U,               //!< DCALL_ASSGN - Data Call Assignment
                 RCCH_SITE_INFO = 0x18U,                 //!< SITE_INFO - Site Information
                 RCCH_REG = 0x20U,                       //!< REG - Registration Request (ISP) / Registration Response (OSP)

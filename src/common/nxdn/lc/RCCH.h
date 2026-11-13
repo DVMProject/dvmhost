@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *   Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *   Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -32,7 +32,7 @@ namespace nxdn
          * @brief Represents link control data for control channel NXDN calls.
          * @ingroup nxdn_lc
          */
-        class HOST_SW_API RCCH {
+        class DVM_COMMON_API RCCH {
         public:
             /**
              * @brief Initializes a new instance of the RCCH class.
@@ -68,6 +68,13 @@ namespace nxdn
              * @returns std::string String representation of the RCCH.
              */
             virtual std::string toString(bool isp = false);
+
+            /**
+             * @brief Returns a copy of the raw decoded RCCH bytes.
+             * This will only return data for a *decoded* RCCH, not a created or copied RCCH.
+             * @returns uint8_t* Raw decoded RCCH bytes.
+             */
+            uint8_t* getDecodedRaw() const;
 
             /**
              * @brief Gets the flag indicating verbose log output.
@@ -207,6 +214,9 @@ namespace nxdn
             void encode(uint8_t* data, const uint8_t* rcch, uint32_t length, uint32_t offset = 0U);
 
             DECLARE_PROTECTED_COPY(RCCH);
+
+        private:
+            uint8_t* m_raw;
         };
     } // namespace lc
 } // namespace nxdn

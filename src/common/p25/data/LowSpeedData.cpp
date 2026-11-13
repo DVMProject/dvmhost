@@ -133,7 +133,7 @@ void LowSpeedData::encode(uint8_t* data) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Helper to encode a single byte using the CCS parity table. */
 
 uint8_t LowSpeedData::encode(uint8_t in) const
 {

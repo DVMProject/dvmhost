@@ -199,7 +199,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
     if (rawTSBK) {
         ::memcpy(tsbk, data, P25_TSBK_LENGTH_BYTES);
 
-        bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
+        bool ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES, true);
         if (!ret) {
             if (s_warnCRC) {
                 // if we're already warning instead of erroring CRC, don't announce invalid CRC in the 
@@ -210,6 +210,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
             }
             else {
                 LogError(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");
+                // this intentionally fails open -- some raw TSBK handling does not submit valid CRCs
             }
         }
     }
@@ -226,7 +227,7 @@ bool TSBK::decode(const uint8_t* data, uint8_t* payload, bool rawTSBK)
             }
 
             if (ret) {
-                ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES);
+                ret = edac::CRC::checkCCITT162(tsbk, P25_TSBK_LENGTH_BYTES, true);
                 if (!ret) {
                     if (s_warnCRC) {
                         LogWarning(LOG_P25, "TSBK::decode(), failed CRC CCITT-162 check");

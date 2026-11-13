@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -49,10 +49,12 @@ void OSP_MOT_CC_BSI::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 
     m_mfId = MFG_MOT;
 
-    tsbkValue = (s_siteCallsign[0] - 43U) & 0x3F;                                   // Character 0
-    for (uint8_t i = 1; i < MOT_CALLSIGN_LENGTH_BYTES; i++) {
-        tsbkValue = (tsbkValue << 6) + ((s_siteCallsign[i] - 43U) & 0x3F);          // Character 1 - 7
+    // encode the site callsign into the TSBK value using six-bit codes
+    for (uint8_t i = 0U; i < MOT_CALLSIGN_LENGTH_BYTES; i++) {
+        const uint8_t code = s_siteCallsign[i] == 0U || s_siteCallsign[i] == ' ' ? 0U : (s_siteCallsign[i] - 43U) & 0x3FU;
+        tsbkValue = (tsbkValue << 6) + code;
     }
+
     tsbkValue = (tsbkValue << 4) + s_siteData.channelId();                          // Channel ID
     tsbkValue = (tsbkValue << 12) + s_siteData.channelNo();                         // Channel Number
 

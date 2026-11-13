@@ -25,6 +25,7 @@ using namespace restapi::http;
 
 HTTPLexer::HTTPLexer(bool clientLexer) :
     m_headers(),
+    m_status(0U),
     m_clientLexer(clientLexer),
     m_consumed(0U),
     m_state(METHOD_START)
@@ -38,6 +39,8 @@ HTTPLexer::HTTPLexer(bool clientLexer) :
 
 void HTTPLexer::reset()
 {
+    m_status = 0U;
+    m_consumed = 0U;
     m_state = METHOD_START;
     if (m_clientLexer) {
         m_state = HTTP_VERSION_H;

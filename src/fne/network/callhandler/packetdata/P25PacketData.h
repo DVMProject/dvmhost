@@ -9,16 +9,15 @@
  */
 /**
  * @file P25PacketData.h
- * @ingroup fne_callhandler
+ * @ingroup fne_packetdata
  * @file P25PacketData.cpp
- * @ingroup fne_callhandler
+ * @ingroup fne_packetdata
  */
 #if !defined(__PACKETDATA__P25_PACKET_DATA_H__)
 #define __PACKETDATA__P25_PACKET_DATA_H__
 
 #include "fne/Defines.h"
 #include "common/Clock.h"
-#include "common/concurrent/deque.h"
 #include "common/concurrent/unordered_map.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/Assembler.h"
@@ -27,8 +26,15 @@
 #include "network/TrafficNetwork.h"
 #include "network/PeerNetwork.h"
 #include "network/callhandler/TagP25Data.h"
+#include "network/callhandler/packetdata/DataRouting.h"
+#include "network/callhandler/packetdata/P25PacketScheduler.h"
+#include "network/callhandler/packetdata/p25/ConventionalDataService.h"
+#include "network/callhandler/packetdata/p25/IPConvergenceService.h"
+#include "network/callhandler/packetdata/p25/PacketDataState.h"
 
-#include <deque>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
 
 namespace network
 {
@@ -42,7 +48,7 @@ namespace network
 
             /**
              * @brief Implements the P25 packet data handler.
-             * @ingroup fne_callhandler
+             * @ingroup fne_packetdata
              */
             class HOST_SW_API P25PacketData {
             public:
@@ -96,8 +102,12 @@ namespace network
                  * @param len Length of data.
                  * @param llId Logical Link ID.
                  * @param encrypted Flag indicating whether or not the KMM frame is encrypted.
+                 * @param algId Encryption Algorithm ID.
+                 * @param kId Encryption Key ID.
+                 * @param mi 9-byte Encryption Message Indicator.
                  */
-                void write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted);
+                bool write_PDU_KMM(const uint8_t* data, uint32_t len, uint32_t llId, bool encrypted,
+                    uint8_t algId = P25DEF::ALGO_UNENCRYPT, uint16_t kId = 0U, const uint8_t* mi = nullptr);
 
                 /**
                  * @brief Updates the timer by the passed number of milliseconds.
@@ -110,43 +120,41 @@ namespace network
                  */
                 void cleanupStale();
 
+                /**
+                 * @brief Process a SNDCP data channel grant relayed by a site's control channel.
+                 * @param peerId Peer ID of the control channel that issued the grant.
+                 * @param llId Logical Link ID of the SU.
+                 */
+                void processSNDCPChannelGrant(uint32_t peerId, uint32_t llId);
+
+                /**
+                 * @brief Sets the debug flag.
+                 * @param debug Debug flag.
+                 */
+                void setDebug(bool debug) { m_debug = debug; }
+
             private:
                 TrafficNetwork* m_network;
                 TagP25Data* m_tag;
 
-                p25::data::Assembler* m_assembler;
+                ::p25::data::Assembler* m_assembler;
 
                 /**
                  * @brief Represents the data required for a PDU assembler custom writer context.
                  * @ingroup fne_network
                  */
                 struct UserContext {
-                    void* obj;                      //!< Instance of the P25PacketData class.
-                    uint32_t peerId;                //!< Peer ID for this request.
-                    uint32_t srcPeerId;             //!< Source Peer ID for this request.
-                    network::PeerNetwork* peerNet;  //!< Instance of the peer network for an upstream peer.
-                    p25::data::DataHeader* header;  //!< PDU data header.
-                    uint16_t pktSeq;                //!< Packet sequence.
-                    uint32_t streamId;              //!< Stream ID.
+                    void* obj;                                  //!< Instance of the P25PacketData class.
+                    uint32_t peerId;                            //!< Peer ID for this request.
+                    uint32_t srcPeerId;                         //!< Source Peer ID for this request.
+                    network::PeerNetwork* peerNet;              //!< Instance of the peer network for an upstream peer.
+                    ::p25::data::DataHeader* header;            //!< PDU data header.
+                    uint16_t pktSeq;                            //!< Packet sequence.
+                    uint32_t streamId;                          //!< Stream ID.
+                    bool success;                               //!< Flag indicating every network block was accepted.
                 };
 
-                /**
-                 * @brief Represents a queued data frame from the VTUN.
-                 */
-                class QueuedDataFrame {
-                public:
-                    p25::data::DataHeader* header;  //!< Instance of a PDU data header.
-                    uint32_t llId;                  //!< Logical Link ID
-                    uint32_t tgtProtoAddr;          //!< Target Protocol Address
-
-                    uint8_t* userData;              //!< Raw data buffer
-                    uint32_t userDataLen;           //!< Length of raw data buffer
-
-                    uint64_t timestamp;             //!< Timestamp in milliseconds
-                    uint8_t retryCnt;               //!< Packet Retry Counter
-                    bool extendRetry;               //!< Flag indicating whether or not to extend the retry count for this packet.
-                };
-                concurrent::deque<QueuedDataFrame*> m_queuedFrames;
+                P25PacketScheduler m_packetScheduler;
 
                 /**
                  * @brief Represents the receive status of a call.
@@ -160,7 +168,7 @@ namespace network
                     uint32_t peerId;                            //!< Peer ID
 
                     std::unordered_map<uint16_t, uint8_t*> receivedBlocks;
-                    p25::data::Assembler assembler;             //!< PDU Assembler Instance
+                    ::p25::data::Assembler assembler;           //!< PDU Assembler Instance
                     bool hasRxHeader;                           //!< Flag indicating whether or not a valid Rx header has been received
                     uint16_t dataBlockCnt;                      //!< Number of data blocks received
                     uint16_t totalBlocks;                       //!< Total number of blocks expected
@@ -221,12 +229,87 @@ namespace network
                 typedef std::pair<const uint32_t, RxStatus*> StatusMapPair;
                 concurrent::unordered_map<uint32_t, RxStatus*> m_status;
 
-                typedef std::pair<const uint32_t, uint32_t> ArpTablePair;
-                std::unordered_map<uint32_t, uint32_t> m_arpTable;
-                typedef std::pair<const uint32_t, bool> ReadyForNextPktPair;
-                std::unordered_map<uint32_t, bool> m_readyForNextPkt;
-                std::unordered_map<uint32_t, uint8_t> m_suSendSeq;      // V(S) send state variable per LLId
-                std::unordered_map<uint32_t, uint8_t> m_suRecvSeq;      // V(R) receive state variable per LLId
+                RouteNeighborCache m_neighborCache;
+                p25data::DataBindingRegistry m_bindingRegistry;
+                DataLocationRegistry m_locationRegistry;
+                p25data::DataLinkManager m_dataLinkManager;
+                p25data::ConventionalDataService m_conventionalDataService;
+                p25data::SCEPService m_scepService;
+
+                /**
+                 * @brief Trunked (SNDCP) packet data state for a subscriber.
+                 */
+                struct SNDCPContext {
+                    bool active = false;            //!< Flag indicating a context has been accepted for the SU.
+                    uint8_t nsapi = 0U;             //!< NSAPI of the context.
+                    uint32_t ccPeerId = 0U;         //!< Control channel peer that last granted a data channel.
+                    uint32_t vcPeerId = 0U;         //!< Data channel peer the SU was last heard on.
+                    uint64_t grantedAt = 0U;        //!< Timestamp of the last data channel grant.
+                    uint64_t onChannelUntil = 0U;   //!< Timestamp until which the SU is taken to be on the data channel.
+                    uint64_t nextPageAt = 0U;       //!< Timestamp of the earliest next data page.
+                    uint8_t pageCount = 0U;         //!< Number of data pages sent for the packet being held.
+                };
+
+                std::mutex m_sndcpContextLock;
+                std::unordered_map<uint32_t, SNDCPContext> m_sndcpContexts;
+
+                /**
+                 * @brief Confirmed trunked (SNDCP) downlink awaiting the subscriber's link-layer ACK.
+                 */
+                struct SNDCPPendingAck {
+                    ::p25::data::DataHeader header;     //!< Header as sent, carrying the N(S).
+                    std::vector<uint8_t> userData;      //!< User data as sent.
+                    uint32_t targetIPAddress = 0U;      //!< Target IP address of the datagram.
+                    uint8_t ns = 0U;                    //!< N(S) the PDU was sent with.
+                    uint64_t sentAt = 0U;               //!< Timestamp of the last send, or of queuing a retransmission.
+                    uint8_t retxCount = 0U;             //!< Number of retransmissions made.
+                    bool resendDue = false;             //!< Flag indicating a retransmission is queued.
+                };
+
+                /**
+                 * @brief Result of checking a downlink that is awaiting its link-layer ACK.
+                 */
+                enum class SNDCPRetransmitResult : uint8_t {
+                    QUEUED,                             //!< A retransmission was queued.
+                    UNACKNOWLEDGED,                     //!< Retransmissions are exhausted, the PDU was dropped.
+                    NEVER_SENT                          //!< A queued retransmission never left the scheduler.
+                };
+
+                /**
+                 * @brief Outcome of a retransmission check for one subscriber.
+                 */
+                struct SNDCPRetransmitEvent {
+                    uint32_t llId;                      //!< Logical Link ID of the SU.
+                    uint8_t ns;                         //!< N(S) of the PDU.
+                    uint8_t attempt;                    //!< Number of retransmissions made.
+                    SNDCPRetransmitResult result;       //!< Result of the check.
+                };
+
+                std::mutex m_sndcpPendingLock;          // never nested with m_sndcpContextLock
+                std::unordered_map<uint32_t, SNDCPPendingAck> m_sndcpPending;
+
+                /**
+                 * @brief Helper to refresh SNDCP state when a PDU is received from a subscriber.
+                 * @param llId Logical Link ID of the SU.
+                 * @param peerId Peer ID the PDU arrived on.
+                 */
+                void touchSNDCPContext(uint32_t llId, uint32_t peerId);
+                /**
+                 * @brief Helper to clear the downlink awaiting a link-layer ACK from a subscriber.
+                 * @param llId Logical Link ID of the SU.
+                 */
+                void clearSNDCPPendingAck(uint32_t llId);
+                /**
+                 * @brief Helper to process a link-layer ACK from a subscriber for a confirmed downlink.
+                 * @param llId Logical Link ID of the SU.
+                 * @param ns N(S) the ACK acknowledges.
+                 */
+                void processSNDCPDownlinkAck(uint32_t llId, uint8_t ns);
+                /**
+                 * @brief Helper to retransmit, or give up on, downlinks that were not acknowledged.
+                 * @param now Current timestamp in milliseconds.
+                 */
+                void processSNDCPRetransmit(uint64_t now);
 
                 bool m_debug;
 
@@ -246,8 +329,9 @@ namespace network
                  * @param extendedAddress Flag indicating whether or not to extended addressing is in use.
                  * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
+                 * @param retransmit Flag indicating a retransmission, sent with the N(S) already in the header.
                  */
-                void dispatchUserFrameToFNE(p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
+                bool dispatchUserFrameToFNE(::p25::data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool retransmit = false);
 
                 /**
                  * @brief Helper used to process conventional data registration from PDU data.
@@ -261,6 +345,13 @@ namespace network
                  * @returns bool True, if SNDCP control data was processed, otherwise false.
                  */
                 bool processSNDCPControl(RxStatus* status);
+                /**
+                 * @brief Helper used to process SNDCP user data (SN-Data) from PDU data.
+                 * @param status Instance of the RxStatus class.
+                 * @param peerId Peer ID.
+                 * @returns bool True, if the SNDCP header was stripped leaving an IPv4 datagram, otherwise false.
+                 */
+                bool processSNDCPUserData(RxStatus* status, uint32_t peerId);
 
                 /**
                  * @brief Helper write ARP request to the network.
@@ -286,7 +377,7 @@ namespace network
                  * @param auxiliaryES Flag indicating whether or not an auxiliary ES is included.
                  * @param pduUserData Buffer containing user data to transmit.
                  */
-                void write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, p25::data::DataHeader& dataHeader,
+                bool write_PDU_User(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, ::p25::data::DataHeader& dataHeader,
                     bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData);
 
                 /**
@@ -301,7 +392,7 @@ namespace network
                  * @param pktSeq RTP packet sequence.
                  * @param streamId Stream ID.
                  */
-                bool writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const p25::data::DataHeader& dataHeader, const uint8_t currentBlock, 
+                bool writeNetwork(uint32_t peerId, uint32_t srcPeerId, network::PeerNetwork* peerNet, const ::p25::data::DataHeader& dataHeader, const uint8_t currentBlock,
                     const uint8_t* data, uint32_t len, uint16_t pktSeq, uint32_t streamId);
 
                 /**

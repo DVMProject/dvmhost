@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016 Jonathan Naylor, G4KLX
- *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -34,6 +34,7 @@
 
 #include <ctime>
 #include <string>
+#include <cstring>
 
 /**
  * @addtogroup logging
@@ -132,15 +133,15 @@
 /**
  * @brief (Global) Display log level.
  */
-extern uint32_t g_logDisplayLevel;
+extern DVM_COMMON_API uint32_t g_logDisplayLevel;
 /**
  * @brief (Global) Flag for displaying timestamps on log entries (does not apply to syslog logging).
  */
-extern bool g_disableTimeDisplay;
+extern DVM_COMMON_API bool g_disableTimeDisplay;
 /**
  * @brief (Global) Flag indicating whether or not logging goes to the syslog.
  */
-extern bool g_useSyslog;
+extern DVM_COMMON_API bool g_useSyslog;
 /**
  * @brief (Global) Flag indicating whether or not network logging is disabled.
  */
@@ -191,29 +192,36 @@ namespace log_internal
      * @brief Internal helper to set an output stream to direct logging to.
      * @param stream 
      */
-    extern HOST_SW_API void SetInternalOutputStream(std::ostream& stream);
+    extern DVM_COMMON_API void SetInternalOutputStream(std::ostream& stream);
     /**
      * @brief Writes a new entry to the diagnostics log.
      * @param level Log level for entry.
      * @param log Fully formatted log message.
      */
-    extern HOST_SW_API void LogInternal(uint32_t level, const std::string& log);
+    extern DVM_COMMON_API void LogInternal(uint32_t level, const std::string& log);
+
+    /**
+     * @brief Writes a new entry to the activity log.
+     * @param level Log level for entry.
+     * @param log Fully formatted log message.
+     */
+    extern DVM_COMMON_API void ActivityLogInternal(const std::string& log);
 
     /**
      * @brief Internal helper to get the log file path.
      * @returns std::string Configured log file path.
      */
-    extern HOST_SW_API std::string GetLogFilePath();
+    extern DVM_COMMON_API std::string GetLogFilePath();
     /**
      * @brief Internal helper to get the log file root name.
      * @returns std::string Configured log file root name.
      */
-    extern HOST_SW_API std::string GetLogFileRoot();
+    extern DVM_COMMON_API std::string GetLogFileRoot();
     /**
      * @brief Internal helper to get the log file handle pointer.
      * @returns FILE* Pointer to the open log file.
      */
-    extern HOST_SW_API FILE* GetLogFile();
+    extern DVM_COMMON_API FILE* GetLogFile();
 } // namespace log_internal
 
 namespace log_stacktrace
@@ -228,7 +236,7 @@ namespace log_stacktrace
      * @brief Backward backtrace signal handling class.
      * @ingroup logger
      */
-    class HOST_SW_API SignalHandling {
+    class DVM_COMMON_API SignalHandling {
     public:
         /**
          * @brief Helper to generate a default list of POSIX signals to handle.
@@ -367,7 +375,7 @@ namespace log_stacktrace
             p.snippet = false;
             p.color_mode = backward::ColorMode::never;
 
-            log_internal::LogInternal(2U, "UNRECOVERABLE FATAL ERROR!");
+            log_internal::LogInternal(5U, "UNRECOVERABLE FATAL ERROR!");
             if (s_foreground > 0) {
                 p.print(st, stderr);
             }
@@ -440,7 +448,7 @@ namespace log_stacktrace
      * @brief Backward backtrace signal handling class.
      * @ingroup logger
      */
-    class HOST_SW_API SignalHandling {
+    class DVM_COMMON_API SignalHandling {
     public:
         /**
          * @brief Initializes a new instance of the SignalHandling class
@@ -724,7 +732,7 @@ namespace log_stacktrace
      * @brief Backward backtrace signal handling class.
      * @ingroup logger
      */
-    class HOST_SW_API SignalHandling {
+    class DVM_COMMON_API SignalHandling {
     public:
         /**
          * @brief Initializes a new instance of the SignalHandling class
@@ -756,29 +764,29 @@ namespace log_stacktrace
  * @brief Helper to get the current log file level.
  * @returns uint32_t Current log file level.
  */
-extern HOST_SW_API uint32_t CurrentLogFileLevel();
+extern DVM_COMMON_API uint32_t CurrentLogFileLevel();
 
 /**
  * @brief Helper to get the current log file path.
  * @returns std::string Current log file path.
  */
-extern HOST_SW_API std::string LogGetFilePath();
+extern DVM_COMMON_API std::string LogGetFilePath();
 /**
  * @brief Helper to get the current log file root.
  * @returns std::string Current log file root.
  */
-extern HOST_SW_API std::string LogGetFileRoot();
+extern DVM_COMMON_API std::string LogGetFileRoot();
 
 /**
  * @brief Gets the instance of the Network class to transfer the activity log with.
  * @returns void* 
  */
-extern HOST_SW_API void* LogGetNetwork();
+extern DVM_COMMON_API void* LogGetNetwork();
 /**
  * @brief Sets the instance of the Network class to transfer the activity log with.
  * @param network 
  */
-extern HOST_SW_API void LogSetNetwork(void* network);
+extern DVM_COMMON_API void LogSetNetwork(void* network);
 
 /**
  * @brief Initializes the diagnostics log.
@@ -790,12 +798,12 @@ extern HOST_SW_API void LogSetNetwork(void* network);
  * @param syslog Flag indicating whether or not logs will be sent to syslog.
  * @returns 
  */
-extern HOST_SW_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, 
+extern DVM_COMMON_API bool LogInitialise(const std::string& filePath, const std::string& fileRoot, 
     uint32_t fileLevel, uint32_t displayLevel, bool disableTimeDisplay = false, bool useSyslog = false);
 /**
  * @brief Finalizes the diagnostics log.
  */
-extern HOST_SW_API void LogFinalise();
+extern DVM_COMMON_API void LogFinalise();
 
 /**
  * @brief Writes a new entry to the diagnostics log.
@@ -806,7 +814,7 @@ extern HOST_SW_API void LogFinalise();
  * This is a variable argument function. This shouldn't be called directly, utilize the LogXXXX macros above, instead.
  */
 template<typename ... Args>
-HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, const std::string& fmt, Args... args)
+void Log(uint32_t level, log_internal::SourceLocation sourceLoc, const std::string& fmt, Args... args)
 {
     using namespace log_internal;
 
@@ -839,22 +847,22 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
                 if (sourceLoc.filename != nullptr && sourceLoc.line > 0) {
                     // if we have a function name add that to the log entry
                     if (sourceLoc.funcname != nullptr) {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s)[%s:%u][%s] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s)[%s:%u][%s] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.module, sourceLoc.filename, sourceLoc.line, sourceLoc.funcname);
                     }
                     else {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s)[%s:%u] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s)[%s:%u] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.module, sourceLoc.filename, sourceLoc.line);
                     }
                 } else {
-                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
+                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
                         tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                         sourceLoc.module);
                 }
             } else {
-                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
+                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu (%s) ", LOG_LEVELS[level], 
                     tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                     sourceLoc.module);
             }
@@ -866,21 +874,21 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
                 if (sourceLoc.filename != nullptr && sourceLoc.line > 0) {
                     // if we have a function name add that to the log entry
                     if (sourceLoc.funcname != nullptr) {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu [%s:%u][%s] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu [%s:%u][%s] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.filename, sourceLoc.line, sourceLoc.funcname);
                     }
                     else {
-                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu [%s:%u] ", LOG_LEVELS[level], 
+                        prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu [%s:%u] ", LOG_LEVELS[level], 
                             tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, 
                             sourceLoc.filename, sourceLoc.line);
                     }
                 } else {
-                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LOG_LEVELS[level], tm->tm_year + 1900, 
+                    prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu ", LOG_LEVELS[level], tm->tm_year + 1900, 
                         tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
                 }
             } else {
-                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", LOG_LEVELS[level], 
+                prefixLen = ::sprintf(prefixBuf, "%c: %04d-%02d-%02dT%02d:%02d:%02d.%03lu ", LOG_LEVELS[level], 
                     tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
             }
         }
@@ -949,6 +957,94 @@ HOST_SW_API void Log(uint32_t level, log_internal::SourceLocation sourceLoc, con
     std::string msg = std::string(buf.get(), buf.get() + size - 1);
 
     LogInternal(level, std::string(prefix + msg));
+}
+
+/**
+ * @brief Writes a new entry to the activity log.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function. This shouldn't be called directly, utilize the LogXXXX macros above, instead.
+ */
+template<typename ... Args>
+void ActivityLog(const std::string& fmt, Args... args)
+{
+    using namespace log_internal;
+
+    int size_s = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1; // Extra space for '\0'
+    if (size_s <= 0) {
+        throw std::runtime_error("Error during formatting.");
+    }
+
+    int prefixLen = 0;
+    char prefixBuf[256];
+
+    time_t now;
+    ::time(&now);
+    struct tm* tm = ::localtime(&now);
+
+    struct timeval nowMillis;
+    ::gettimeofday(&nowMillis, NULL);
+
+    prefixLen = ::sprintf(prefixBuf, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", 
+        tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
+
+    auto size = static_cast<size_t>(size_s);
+    auto buf = std::make_unique<char[]>(size);
+
+    std::snprintf(buf.get(), size, fmt.c_str(), args ...);
+
+    std::string prefix = std::string(prefixBuf, prefixBuf + prefixLen);
+    std::string msg = std::string(buf.get(), buf.get() + size - 1);
+
+    ActivityLogInternal(std::string(prefix + msg));
+}
+
+/**
+ * @brief Writes a new entry to the activity log.
+ * @param mode Activity mode.
+ * @param sourceRf Flag indicating whether or not the activity entry came from RF.
+ * @param fmt String format.
+ * 
+ * This is a variable argument function. This shouldn't be called directly, utilize the LogXXXX macros above, instead.
+ */
+template<typename ... Args>
+void ActivityLogEx(const char* mode, const bool sourceRf, const std::string& fmt, Args... args)
+{
+    using namespace log_internal;
+
+    int size_s = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1; // Extra space for '\0'
+    if (size_s <= 0) {
+        throw std::runtime_error("Error during formatting.");
+    }
+
+    int prefixLen = 0;
+    char prefixBuf[256];
+
+    time_t now;
+    ::time(&now);
+    struct tm* tm = ::localtime(&now);
+
+    struct timeval nowMillis;
+    ::gettimeofday(&nowMillis, NULL);
+
+    if (strcmp(mode, "") == 0) {
+        prefixLen = ::sprintf(prefixBuf, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu ", 
+            tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U);
+    }
+    else {
+        prefixLen = ::sprintf(prefixBuf, "A: %04d-%02d-%02d %02d:%02d:%02d.%03lu %s %s ", 
+            tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, nowMillis.tv_usec / 1000U, mode, (sourceRf) ? "RF" : "Net");
+    }
+
+    auto size = static_cast<size_t>(size_s);
+    auto buf = std::make_unique<char[]>(size);
+
+    std::snprintf(buf.get(), size, fmt.c_str(), args ...);
+
+    std::string prefix = std::string(prefixBuf, prefixBuf + prefixLen);
+    std::string msg = std::string(buf.get(), buf.get() + size - 1);
+
+    ActivityLogInternal(std::string(prefix + msg));
 }
 
 /** @} */

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -102,7 +102,7 @@ namespace network
      * fast path for in-order packets. Out-of-order packets are buffered briefly
      * to allow reordering, with adaptive timeout based on observed jitter.
      */
-    class HOST_SW_API AdaptiveJitterBuffer {
+    class DVM_COMMON_API AdaptiveJitterBuffer {
     public:
         /**
          * @brief Initializes a new instance of the AdaptiveJitterBuffer class.
@@ -175,13 +175,29 @@ namespace network
          * @brief Sets the maximum buffer size.
          * @param maxBufferSize Maximum number of frames to buffer.
          */
-        void setMaxBufferSize(uint16_t maxBufferSize) { m_maxBufferSize = maxBufferSize; }
+        void setMaxBufferSize(uint16_t maxBufferSize) 
+        {
+            if (maxBufferSize < MIN_JITTER_MAX_SIZE)
+                maxBufferSize = MIN_JITTER_MAX_SIZE;
+            if (maxBufferSize > MAX_JITTER_MAX_SIZE)
+                maxBufferSize = MAX_JITTER_MAX_SIZE;
+
+            m_maxBufferSize = maxBufferSize; 
+        }
 
         /**
          * @brief Sets the maximum wait time for out-of-order frames.
          * @param maxWaitTime Maximum wait time in microseconds.
          */
-        void setMaxWaitTime(uint32_t maxWaitTime) { m_maxWaitTime = maxWaitTime; }
+        void setMaxWaitTime(uint32_t maxWaitTime) 
+        {
+            if (maxWaitTime < MIN_JITTER_MAX_WAIT)
+                maxWaitTime = MIN_JITTER_MAX_WAIT;
+            if (maxWaitTime > MAX_JITTER_MAX_WAIT)
+                maxWaitTime = MAX_JITTER_MAX_WAIT;
+
+            m_maxWaitTime = maxWaitTime; 
+        }
 
     private:
         std::map<uint16_t, BufferedFrame*> m_buffer;

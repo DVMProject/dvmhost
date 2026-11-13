@@ -604,10 +604,9 @@ void MBEEncoder::encodeBits(uint8_t* bits, uint8_t* codeword)
         uint8_t rawAmbe[9U];
         ::memset(rawAmbe, 0x00U, 9U);
 
-        for (int i = 0; i < 9; ++i) {
-            for (int j = 0; j < 8; ++j) {
-                rawAmbe[i] |= (bits[(i * 8) + j] << (7 - j));
-            }
+        // Only 49 input entries are provided; the remaining packed bits stay zero.
+        for (uint32_t i = 0U; i < 49U; i++) {
+            WRITE_BIT(rawAmbe, i, (bits[i] & 1U) != 0U);
         }
 
         // build DMR AMBE bytes
@@ -714,4 +713,24 @@ void MBEEncoder::encode(int16_t* samples, uint8_t* codeword)
         encodeDmrAMBE(rawAmbe, dmrAMBE);
         ::memcpy(codeword, dmrAMBE, 9U);
     }
+}
+
+/* Encodes PCM samples to a deinterleaved 49-bit AMBE payload. */
+
+void MBEEncoder::encodeBits(int16_t* samples, uint8_t bits[])
+{
+    assert(samples != nullptr);
+    assert(bits != nullptr);
+
+    if (m_mbeMode != ENCODE_DMR_AMBE) {
+        ::memset(bits, 0x00U, 49U);
+        return;
+    }
+
+    int16_t frameVector[8];
+    m_vocoder.imbe_encode(frameVector, samples);
+
+    int b[9];
+    encodeAMBE(m_vocoder.param(), b, &m_curMBEParms, &m_prevMBEParms, m_gainAdjust);
+    encode49bit(bits, b);
 }

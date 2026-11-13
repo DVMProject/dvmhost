@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements RAND - Random Access
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_RAND : public CSBK {
+            class DVM_COMMON_API CSBK_RAND : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_RAND class.

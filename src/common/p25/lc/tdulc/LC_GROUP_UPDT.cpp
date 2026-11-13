@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -34,7 +34,21 @@ bool LC_GROUP_UPDT::decode(const uint8_t* data)
 {
     assert(data != nullptr);
 
-    /* stub */
+    uint8_t rs[P25_TDULC_LENGTH_BYTES + 1U];
+    ::memset(rs, 0x00U, P25_TDULC_LENGTH_BYTES);
+
+    bool ret = TDULC::decode(data, rs);
+    if (!ret)
+        return false;
+
+    ulong64_t rsValue = TDULC::toValue(rs);
+
+    m_implicit = true;
+    m_group = true;
+    m_grpVchNo = (uint32_t)((rsValue >> 48) & 0xFFFU);                              // Group A - Channel Number
+    m_dstId = (uint32_t)((rsValue >> 32) & 0xFFFFU);                                // Group A - Talkgroup Address
+    m_grpVchNoB = (uint32_t)((rsValue >> 16) & 0xFFFU);                             // Group B - Channel Number
+    m_dstIdB = (uint32_t)(rsValue & 0xFFFFU);                                       // Group B - Talkgroup Address
 
     return true;
 }
@@ -53,8 +67,8 @@ void LC_GROUP_UPDT::encode(uint8_t* data)
     rsValue = (rsValue << 12) + m_grpVchNo;                                         // Group A - Channel Number
     rsValue = (rsValue << 16) + m_dstId;                                            // Group A - Talkgroup Address
     rsValue = (rsValue << 4) + s_siteData.channelId();                              // Group B - Channel ID
-    rsValue = (rsValue << 12) + m_grpVchNo;                                         // Group B - Channel Number
-    rsValue = (rsValue << 16) + m_dstId;                                            // Group B - Talkgroup Address
+    rsValue = (rsValue << 12) + m_grpVchNoB;                                        // Group B - Channel Number
+    rsValue = (rsValue << 16) + m_dstIdB;                                           // Group B - Talkgroup Address
 
     std::unique_ptr<uint8_t[]> rs = TDULC::fromValue(rsValue);
     TDULC::encode(data, rs.get());

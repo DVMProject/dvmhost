@@ -22,7 +22,9 @@
 #include "common/Utils.h"
 
 #include <array>
+#include <chrono>
 #include <memory>
+#include <limits>
 #include <utility>
 #include <iterator>
 
@@ -70,9 +72,13 @@ namespace restapi
                 m_socket(std::move(socket)),
                 m_connectionManager(manager),
                 m_requestHandler(handler),
+                m_deadline(m_socket.get_executor()),
                 m_lexer(HTTPLexer(false)),
                 m_continue(false),
                 m_contResult(HTTPLexer::INDETERMINATE),
+                m_headerBytes(0U),
+                m_stopped(false),
+                m_waitingForHandler(false),
                 m_persistent(persistent),
                 m_debug(debug)
             {
@@ -82,12 +88,20 @@ namespace restapi
             /**
              * @brief Start the first asynchronous operation for the connection.
              */
-            void start() { read(); }
+            void start()
+            {
+                armDeadline(REQUEST_TIMEOUT_SECONDS, "request");
+                read();
+            }
             /**
              * @brief Stop all asynchronous operations associated with the connection.
              */
             void stop()
             {
+                m_stopped = true;
+                m_waitingForHandler = false;
+                asio::error_code ignoredError;
+                m_deadline.cancel(ignoredError);
                 try
                 {
                     if (m_socket.is_open()) {
@@ -103,11 +117,8 @@ namespace restapi
              */
             void read()
             {
-                if (!m_persistent) {
-                    auto self(this->shared_from_this());
-                }
-
-                m_socket.async_read_some(asio::buffer(m_buffer), [=](asio::error_code ec, std::size_t recvLength) {
+                auto self = this->shared_from_this();
+                m_socket.async_read_some(asio::buffer(m_buffer), [this, self](asio::error_code ec, std::size_t recvLength) {
                     if (!ec) {
                         HTTPLexer::ResultType result = HTTPLexer::GOOD;
                         char* content;
@@ -116,28 +127,40 @@ namespace restapi
                         try
                         {
                             if (!m_continue) {
-                                std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + recvLength);
+                                m_headerBytes += recvLength;
+                                if (m_headerBytes > MAX_HTTP_HEADER_LENGTH) {
+                                    result = HTTPLexer::BAD;
+                                } else {
+                                    std::tie(result, content) = m_lexer.parse(m_request, m_buffer.data(), m_buffer.data() + recvLength);
 
-                                m_request.content = std::string();
-                                std::string contentLength = m_request.headers.find("Content-Length");
-                                if (contentLength != "" && (::strlen(content) != 0)) {
-                                    size_t length = (size_t)::strtoul(contentLength.c_str(), NULL, 10);
-                                    m_request.contentLength = length;
-                                    m_request.content = std::string(content, length);
-                                }
+                                    if (result == HTTPLexer::GOOD) {
+                                        size_t length = 0U;
+                                        const std::string contentLength = m_request.headers.find("Content-Length");
+                                        if (!contentLength.empty() && !parseContentLength(contentLength, length)) {
+                                            result = HTTPLexer::BAD;
+                                        } else {
+                                            m_request.contentLength = length;
+                                            m_request.content.clear();
 
-                                m_request.headers.add("RemoteHost", m_socket.remote_endpoint().address().to_string());
+                                            const size_t available = static_cast<size_t>((m_buffer.data() + recvLength) - content);
+                                            if (available > length) {
+                                                // HTTP pipelining and bytes beyond the declared body are not supported.
+                                                result = HTTPLexer::BAD;
+                                            } else {
+                                                m_request.content.assign(content, available);
+                                                m_request.headers.add("RemoteHost", m_socket.remote_endpoint().address().to_string());
 
-                                uint32_t consumed = m_lexer.consumed();
-                                if (result == HTTPLexer::GOOD && consumed == recvLength && 
-                                    ((m_request.method == HTTP_POST) || (m_request.method == HTTP_PUT))) {
-                                    if (m_debug) {
-                                        LogDebug(LOG_REST, "HTTP Partial Request, recvLength = %u, consumed = %u, result = %u", recvLength, consumed, result);
-                                        Utils::dump(1U, "ServerConnection::read(), m_buffer", (uint8_t*)m_buffer.data(), recvLength);
+                                                if (available < length) {
+                                                    if (m_debug) {
+                                                        LogDebug(LOG_REST, "HTTP Partial Request, recvLength = %zu, body = %zu/%zu", recvLength,
+                                                            available, length);
+                                                    }
+                                                    m_contResult = result = HTTPLexer::CONTINUE;
+                                                    m_continue = true;
+                                                }
+                                            }
+                                        }
                                     }
-
-                                    m_contResult = result = HTTPLexer::INDETERMINATE;
-                                    m_continue = true;
                                 }
                             } else {
                                 if (m_debug) {
@@ -145,15 +168,18 @@ namespace restapi
                                     Utils::dump(1U, "ServerConnection::read(), m_buffer", (uint8_t*)m_buffer.data(), recvLength);
                                 }
 
-                                if (m_contResult == HTTPLexer::INDETERMINATE) {
-                                    m_request.content = std::string(m_buffer.data(), recvLength);
+                                const size_t received = m_request.content.size();
+                                const size_t remaining = m_request.contentLength - received;
+                                if (recvLength > remaining) {
+                                    result = HTTPLexer::BAD;
                                 } else {
-                                    m_request.content.append(std::string(m_buffer.data(), recvLength));
-                                }
+                                    m_request.content.append(m_buffer.data(), recvLength);
 
-                                if (m_request.contentLength != 0 && recvLength < m_request.contentLength) {
-                                    m_contResult = result = HTTPLexer::CONTINUE;
-                                    m_continue = true;
+                                    if (m_request.content.size() < m_request.contentLength) {
+                                        m_contResult = result = HTTPLexer::CONTINUE;
+                                    } else {
+                                        result = HTTPLexer::GOOD;
+                                    }
                                 }
                             }
 
@@ -164,17 +190,29 @@ namespace restapi
 
                                 m_continue = false;
                                 m_contResult = HTTPLexer::INDETERMINATE;
-                                m_requestHandler.handleRequest(m_request, m_reply);
+                                m_headerBytes = 0U;
+                                armDeadline(HANDLER_TIMEOUT_SECONDS, "handler");
+                                m_waitingForHandler = true;
+                                dispatchRequest(m_requestHandler, m_request,
+                                    [this, self](HTTPPayload reply) mutable {
+                                        asio::post(m_socket.get_executor(), [this, self, reply]() mutable {
+                                            if (m_stopped || !m_waitingForHandler || !m_socket.is_open())
+                                                return;
 
-                                if (m_debug) {
-                                    Utils::dump(1U, "ServerConnection::read(), HTTP Reply Content", (uint8_t*)m_reply.content.c_str(), m_reply.content.length());
-                                }
-
-                                write();
+                                            m_waitingForHandler = false;
+                                            cancelDeadline();
+                                            m_reply = std::move(reply);
+                                            if (m_debug) {
+                                                Utils::dump(1U, "ServerConnection::read(), HTTP Reply Content", (uint8_t*)m_reply.content.c_str(), m_reply.content.length());
+                                            }
+                                            write();
+                                        });
+                                    }, 0);
                             }
                             else if (result == HTTPLexer::BAD) {
                                 m_continue = false;
                                 m_contResult = HTTPLexer::INDETERMINATE;
+                                m_headerBytes = 0U;
                                 m_reply = HTTPPayload::statusPayload(HTTPPayload::BAD_REQUEST);
                                 write();
                             }
@@ -183,18 +221,23 @@ namespace restapi
                             }
                         }
                         catch(const std::exception& e) { 
-                            ::LogError(LOG_REST, "ServerConnection::read(), %s", ec.message().c_str());
+                            ::LogError(LOG_REST, "ServerConnection::read(), %s %s", e.what(), ec.message().c_str());
                             m_continue = false;
                             m_contResult = HTTPLexer::INDETERMINATE;
+                            m_headerBytes = 0U;
+
+                            m_reply = HTTPPayload::statusPayload(HTTPPayload::INTERNAL_SERVER_ERROR);
+                            write();
                         }
                     }
                     else if (ec != asio::error::operation_aborted) {
                         if (ec) {
                             ::LogError(LOG_REST, "ServerConnection::read(), %s, code = %u", ec.message().c_str(), ec.value());
                         }
-                        m_connectionManager.stop(this->shared_from_this());
+                        m_connectionManager.stop(self);
                         m_continue = false;
                         m_contResult = HTTPLexer::INDETERMINATE;
+                        m_headerBytes = 0U;
                     }
                 });
             }
@@ -204,20 +247,25 @@ namespace restapi
              */
             void write()
             {
-                if (!m_persistent) {
-                    auto self(this->shared_from_this());
-                } else {
+                auto self = this->shared_from_this();
+
+                armDeadline(WRITE_TIMEOUT_SECONDS, "write");
+
+                if (m_persistent) {
                     m_reply.headers.add("Connection", "keep-alive");
                 }
 
                 auto buffers = m_reply.toBuffers();
-                asio::async_write(m_socket, buffers, [=](asio::error_code ec, std::size_t) {
+                asio::async_write(m_socket, buffers, [this, self](asio::error_code ec, std::size_t) {
+                    cancelDeadline();
                     if (m_persistent) {
                         m_lexer.reset();
                         m_reply.headers = HTTPHeaders();
                         m_reply.status = HTTPPayload::OK;
                         m_reply.content = "";
                         m_request = HTTPPayload();
+                        m_headerBytes = 0U;
+                        armDeadline(REQUEST_TIMEOUT_SECONDS, "request");
                         read();
                     }
                     else {
@@ -235,16 +283,111 @@ namespace restapi
                             if (ec) {
                                 ::LogError(LOG_REST, "ServerConnection::write(), %s, code = %u", ec.message().c_str(), ec.value());
                             }
-                            m_connectionManager.stop(this->shared_from_this());
+                            m_connectionManager.stop(self);
                         }
                     }
                 });
+            }
+
+            /**
+             * @brief Dispatches through an asynchronous request-handler interface when available.
+             * @tparam Handler Request-handler type.
+             * @tparam CompletionHandler Completion-handler type.
+             * @param handler Request handler.
+             * @param request HTTP request.
+             * @param completionHandler Handler invoked with the completed reply.
+             * @param priority Overload priority selector.
+             */
+            template<typename Handler, typename CompletionHandler>
+            static auto dispatchRequest(Handler& handler, const HTTPPayload& request, CompletionHandler completionHandler, int priority)
+                -> decltype(handler.handleRequestAsync(request, completionHandler), void())
+            {
+                (void)priority;
+                handler.handleRequestAsync(request, completionHandler);
+            }
+
+            /**
+             * @brief Dispatches through the legacy synchronous request-handler interface.
+             * @tparam Handler Request-handler type.
+             * @tparam CompletionHandler Completion-handler type.
+             * @param handler Request handler.
+             * @param request HTTP request.
+             * @param completionHandler Handler invoked with the completed reply.
+             */
+            template<typename Handler, typename CompletionHandler>
+            static void dispatchRequest(Handler& handler, const HTTPPayload& request, CompletionHandler completionHandler, long)
+            {
+                HTTPPayload reply;
+                handler.handleRequest(request, reply);
+                completionHandler(std::move(reply));
+            }
+
+            /**
+             * @brief Arms the connection deadline for the current operation.
+             * @param timeoutSeconds Deadline duration in seconds.
+             * @param operation Operation name used for diagnostics.
+             */
+            void armDeadline(uint32_t timeoutSeconds, const char* operation)
+            {
+                auto self = this->shared_from_this();
+                m_deadline.expires_from_now(std::chrono::seconds(timeoutSeconds));
+                m_deadline.async_wait([this, self, operation](asio::error_code ec) {
+                    if (!ec && !m_stopped) {
+                        ::LogError(LOG_REST, "HTTP connection timed out during %s", operation);
+                        if (m_waitingForHandler) {
+                            m_waitingForHandler = false;
+                            m_reply = HTTPPayload::statusPayload(HTTPPayload::SERVICE_UNAVAILABLE, "application/json");
+                            write();
+                        }
+                        else {
+                            m_connectionManager.stop(self);
+                        }
+                    }
+                });
+            }
+
+            /**
+             * @brief Cancels the active connection deadline.
+             */
+            void cancelDeadline()
+            {
+                asio::error_code ignoredError;
+                m_deadline.cancel(ignoredError);
+            }
+
+            /**
+             * @brief Parses the Content-Length header value.
+             * @param value The string value of the Content-Length header.
+             * @param length The parsed content length.
+             * @return True if the content length was successfully parsed and is within the allowed limit, false otherwise.
+             */
+            static bool parseContentLength(const std::string& value, size_t& length)
+            {
+                if (value.empty())
+                    return false;
+
+                size_t parsed = 0U;
+                for (char c : value) {
+                    if (c < '0' || c > '9')
+                        return false;
+
+                    const size_t digit = static_cast<size_t>(c - '0');
+                    if (parsed > (std::numeric_limits<size_t>::max() - digit) / 10U)
+                        return false;
+                    parsed = parsed * 10U + digit;
+                    if (parsed > MAX_HTTP_CONTENT_LENGTH)
+                        return false;
+                }
+
+                length = parsed;
+                return true;
             }
 
             asio::ip::tcp::socket m_socket;
 
             ConnectionManagerType& m_connectionManager;
             RequestHandlerType& m_requestHandler;
+            asio::steady_timer m_deadline;
 
             std::array<char, 8192> m_buffer;
 
@@ -254,6 +397,15 @@ namespace restapi
 
             bool m_continue;
             HTTPLexer::ResultType m_contResult;
+            size_t m_headerBytes;
+            bool m_stopped;
+            bool m_waitingForHandler;
+
+            static constexpr size_t MAX_HTTP_HEADER_LENGTH = 32768U;
+            static constexpr size_t MAX_HTTP_CONTENT_LENGTH = 1048576U;
+            static constexpr uint32_t REQUEST_TIMEOUT_SECONDS = 30U;
+            static constexpr uint32_t HANDLER_TIMEOUT_SECONDS = 60U;
+            static constexpr uint32_t WRITE_TIMEOUT_SECONDS = 30U;
 
             bool m_persistent;
             bool m_debug;

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,7 +21,9 @@
 #include "nxdn/Control.h"
 
 #include <cstdio>
+#include <chrono>
 #include <string>
+#include <unordered_map>
 
 namespace nxdn
 {
@@ -67,6 +69,11 @@ namespace nxdn
             bool processNetwork(defines::FuncChannelType::E fct, defines::ChOption::E option, lc::RTCH& netLC, uint8_t* data, uint32_t len);
             /** @} */
 
+            /**
+             * @brief Expires pending Type-C call setup transactions.
+             */
+            void clock();
+
         protected:
             friend class nxdn::packet::Data;
             friend class nxdn::packet::Voice;
@@ -86,6 +93,19 @@ namespace nxdn
             bool m_verifyReg;
 
             bool m_disableGrantSrcIdCheck;
+
+            /**
+             * @brief Pending Type-C individual-call availability transaction.
+             * @ingroup host_nxdn
+             */
+            struct U2UTransaction {
+                uint16_t callerId;                              //!< Calling subscriber ID.
+                uint16_t calledId;                              //!< Called subscriber ID.
+                uint8_t serviceOptions;                         //!< Original voice service options.
+                std::chrono::steady_clock::time_point expires;  //!< Availability-response deadline.
+            };
+            std::unordered_map<uint16_t, U2UTransaction> m_u2uTransactions;
+            std::chrono::steady_clock::time_point m_lastGrantUpdate;
 
             uint16_t m_lastRejectId;
 
@@ -145,7 +165,9 @@ namespace nxdn
              * @param chNo Channel Number.
              * @returns True, if granted, otherwise false.
              */
-            bool writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
+            bool writeRF_Message_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions,
+                bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U,
+                bool update = false);
             /**
              * @brief Helper to write a deny packet.
              * @param srcId Source Radio ID.
@@ -181,6 +203,29 @@ namespace nxdn
              * @brief Helper to write a CC IDLE broadcast packet on the RF interface.
              */
             void writeRF_CC_Message_Idle();
+
+            /**
+             * @brief Starts a Type-C individual-call availability check.
+             * @param callerId Calling subscriber ID.
+             * @param calledId Called subscriber ID.
+             * @param serviceOptions Voice service options.
+             * @return True when the transaction was accepted.
+             */
+            bool beginU2UAvailability(uint16_t callerId, uint16_t calledId, uint8_t serviceOptions);
+            /**
+             * @brief Completes a Type-C individual-call availability check.
+             * @param calledId Responding subscriber ID.
+             * @param callerId Calling subscriber ID.
+             * @param accepted Whether the called subscriber is available.
+             * @return True when a matching transaction was found.
+             */
+            bool completeU2UAvailability(uint16_t calledId, uint16_t callerId, bool accepted);
+            /**
+             * @brief Cancels pending individual-call state involving a subscriber.
+             * @param unitId Subscriber requesting cancellation.
+             * @return True when state was cancelled.
+             */
+            bool cancelU2U(uint16_t unitId);
         };
     } // namespace packet
 } // namespace nxdn

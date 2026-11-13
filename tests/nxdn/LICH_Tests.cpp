@@ -208,3 +208,47 @@ TEST_CASE("LICH golden test for voice call", "[nxdn][lich][golden]") {
     REQUIRE(decoded.getOption() == ChOption::STEAL_FACCH);
     REQUIRE(decoded.getOutbound() == false);
 }
+
+TEST_CASE("LICH rejects invalid parity", "[nxdn][lich]") {
+    uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U];
+    ::memset(data, 0x00U, sizeof(data));
+
+    LICH lich;
+    lich.setRFCT(RFChannelType::RDCH);
+    lich.setFCT(FuncChannelType::USC_SACCH_NS);
+    lich.setOption(ChOption::DATA_NORMAL);
+    lich.setOutbound(true);
+    lich.encode(data);
+
+    WRITE_BIT(data, NXDN_FSW_LENGTH_BITS, !READ_BIT(data, NXDN_FSW_LENGTH_BITS));
+
+    LICH decoded;
+    REQUIRE_FALSE(decoded.decode(data));
+}
+
+TEST_CASE("LICH uses even parity over every RFCT and FCT combination", "[nxdn][lich][golden]") {
+    for (uint8_t rfct = 0U; rfct < 4U; rfct++) {
+        for (uint8_t fct = 0U; fct < 4U; fct++) {
+            uint8_t data[NXDN_FRAME_LENGTH_BYTES + 2U] = {};
+
+            LICH lich;
+            lich.setRFCT(static_cast<RFChannelType::E>(rfct));
+            lich.setFCT(static_cast<FuncChannelType::E>(fct));
+            lich.setOption(ChOption::DATA_NORMAL);
+            lich.setOutbound(false);
+            lich.encode(data);
+
+            uint8_t encodedLICH[1U] = {};
+            for (uint32_t bit = 0U; bit < 8U; bit++) {
+                const uint32_t offset = NXDN_FSW_LENGTH_BITS + bit * 2U;
+                WRITE_BIT(encodedLICH, bit, READ_BIT(data, offset));
+                REQUIRE(READ_BIT(data, offset + 1U));
+            }
+
+            const uint8_t highNibble = static_cast<uint8_t>((rfct << 2U) | fct);
+            const bool expectedParity = ((highNibble >> 3U) ^ (highNibble >> 2U) ^
+                (highNibble >> 1U) ^ highNibble) & 0x01U;
+            REQUIRE((encodedLICH[0U] & 0x01U) == (expectedParity ? 0x01U : 0x00U));
+        }
+    }
+}

@@ -133,7 +133,7 @@ inline uint32_t __IP_FROM_STR(const std::string& value) {
     return (ip[0U] << 24) | (ip[1U] << 16) | (ip[2U] << 8)  | (ip[3U] << 0);
 }
 #else
-extern HOST_SW_API uint32_t __IP_FROM_STR(const std::string& value);
+extern DVM_COMMON_API uint32_t __IP_FROM_STR(const std::string& value);
 #endif // !defined(_WIN32)
 
 /**
@@ -168,7 +168,7 @@ inline std::string strtoupper(const std::string value) {
  * @brief Various helper utilities.
  * @ingroup utils
  */
-class HOST_SW_API Utils {
+class DVM_COMMON_API Utils {
 public:
     /**
      * @brief Helper to dump the input buffer and display the hexadecimal output in the log.

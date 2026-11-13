@@ -136,3 +136,84 @@ TEST_CASE("DataHeader handles maximum blocks to follow", "[dmr][dataheader]") {
     REQUIRE(decoded.decode(frame + 2U));
     REQUIRE(decoded.getBlocksToFollow() == 127U);
 }
+
+TEST_CASE("DataHeader encodes and decodes defined raw data", "[dmr][dataheader]") {
+    uint8_t frame[DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(frame, 0x00U, sizeof(frame));
+
+    DataHeader hdr;
+    hdr.setDPF(DPF::DEFINED_RAW);
+    hdr.setSAP(0x03U);
+    hdr.setGI(true);
+    hdr.setSrcId(1234U);
+    hdr.setDstId(5678U);
+    hdr.setBlocksToFollow(2U);
+    hdr.setFullMesage(true);
+    hdr.setSynchronize(false);
+    hdr.setSrcPort(3U);
+    hdr.setDstPort(5U);
+
+    hdr.encode(frame + 2U);
+
+    DataHeader decoded;
+    REQUIRE(decoded.decode(frame + 2U));
+    REQUIRE(decoded.getDPF() == DPF::DEFINED_RAW);
+    REQUIRE(decoded.getSrcPort() == 3U);
+    REQUIRE(decoded.getDstPort() == 5U);
+    REQUIRE(decoded.getFullMesage() == true);
+    REQUIRE(decoded.getSynchronize() == false);
+}
+
+TEST_CASE("DataHeader copy and assignment preserve fields", "[dmr][dataheader]") {
+    DataHeader original;
+    original.setDPF(DPF::CONFIRMED_DATA);
+    original.setSAP(0x0AU);
+    original.setGI(false);
+    original.setSrcId(111U);
+    original.setDstId(222U);
+    original.setBlocksToFollow(4U);
+    original.setFullMesage(true);
+    original.setSynchronize(true);
+    original.setNs(5U);
+    original.setFSN(9U);
+
+    DataHeader copied(original);
+    REQUIRE(copied.getDPF() == original.getDPF());
+    REQUIRE(copied.getSAP() == original.getSAP());
+    REQUIRE(copied.getGI() == original.getGI());
+    REQUIRE(copied.getSrcId() == original.getSrcId());
+    REQUIRE(copied.getDstId() == original.getDstId());
+    REQUIRE(copied.getBlocksToFollow() == original.getBlocksToFollow());
+    REQUIRE(copied.getFullMesage() == original.getFullMesage());
+    REQUIRE(copied.getSynchronize() == original.getSynchronize());
+    REQUIRE(copied.getNs() == original.getNs());
+    REQUIRE(copied.getFSN() == original.getFSN());
+
+    DataHeader assigned;
+    assigned = original;
+    REQUIRE(assigned.getDPF() == original.getDPF());
+    REQUIRE(assigned.getSAP() == original.getSAP());
+    REQUIRE(assigned.getGI() == original.getGI());
+    REQUIRE(assigned.getSrcId() == original.getSrcId());
+    REQUIRE(assigned.getDstId() == original.getDstId());
+}
+
+TEST_CASE("DataHeader preserves all six defined-short data format bits", "[dmr][dataheader]") {
+    const uint8_t formats[] = {0x01U, 0x15U, 0x2AU, 0x3FU};
+
+    for (uint8_t format : formats) {
+        uint8_t frame[DMR_FRAME_LENGTH_BYTES] = {};
+        DataHeader header;
+        header.setDPF(DPF::DEFINED_SHORT);
+        header.setSAP(0x0AU);
+        header.setSrcId(123U);
+        header.setDstId(456U);
+        header.setBlocksToFollow(1U);
+        header.setDataFormat(format);
+        header.encode(frame);
+
+        DataHeader decoded;
+        REQUIRE(decoded.decode(frame));
+        REQUIRE(decoded.getDataFormat() == format);
+    }
+}

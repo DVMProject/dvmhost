@@ -154,9 +154,6 @@ bool Host::readParams()
         */
         yaml::Node rfssConfig = systemConf["config"];
         m_authoritative = rfssConfig["authoritative"].as<bool>(true);
-        if (m_authoritative) {
-            m_supervisor = rfssConfig["supervisor"].as<bool>(false);
-        }
 
         m_channelLookup = new ChannelLookup();
         m_channelId = (uint8_t)rfssConfig["channelId"].as<uint32_t>(0U);
@@ -168,6 +165,10 @@ bool Host::readParams()
         if (entry.baseFrequency() == 0U) {
             ::LogError(LOG_HOST, "Channel Id %u has an invalid base frequency.", m_channelId);
             return false;
+        }
+
+        if (entry.baseFrequency() > 762000000U && entry.baseFrequency() < 804000000U) {
+            ::fatal("I would bet real money, that you aren't licensed for this -- error 70");
         }
 
         m_channelNo = (uint32_t)::strtoul(rfssConfig["channelNo"].as<std::string>("1").c_str(), NULL, 16);
@@ -188,6 +189,14 @@ bool Host::readParams()
 
         m_txFrequency = (uint32_t)((entry.baseFrequency() + ((calcSpace * 125) * m_channelNo)));
         m_rxFrequency = (uint32_t)(m_txFrequency + (int32_t)calcTxOffset);
+
+        if (m_txFrequency >= 762000000U && m_txFrequency <= 775000000U) {
+            ::fatal("error 70");
+        }
+
+        if (m_rxFrequency >= 797000000U && m_rxFrequency <= 805000000U) {
+            ::fatal("error 70");
+        }
 
         if (calcTxOffset < 0.0f && m_rxFrequency < entry.baseFrequency()) {
             ::LogWarning(LOG_HOST, "Channel Id %u Channel No $%04X has an invalid frequency. Rx Frequency (%u) is less then the base frequency (%u), this may result in incorrect trunking behavior.", m_channelId, m_channelNo,
@@ -279,9 +288,8 @@ bool Host::readParams()
             uint16_t rpcApiPort = (uint16_t)channel["rpcPort"].as<uint32_t>(RPC_DEFAULT_PORT);
             std::string rpcApiPassword = channel["rpcPassword"].as<std::string>();
 
-            // if we are both non-authoritative and non-supervisory then check if the voice channel
-            // configuration seems sane
-            if (!m_authoritative && !m_supervisor) {
+            // A non-authoritative traffic channel must not point its voice-channel entry at its own RPC listener.
+            if (!m_authoritative) {
                 if ((rpcApiAddress == m_rpcAddress) && rpcApiPort == m_rpcPort) {
                     ::LogWarning(LOG_HOST, "Detected possible misconfiguration! Voice Channel RPC Address/Port and the configured RPC Address/Port are the same!");
                 }
@@ -292,13 +300,13 @@ bool Host::readParams()
 
                 VoiceChData data = VoiceChData(chId, chNo, rxChId, rxChNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
                 m_channelLookup->setRFChData(chNo, data);
-                m_channelLookup->addRFCh(chNo);
+                m_channelLookup->initializeRFCh(chNo);
             } else {
                 ::LogInfoEx(LOG_HOST, "Voice Channel Id %u Channel No $%04X (%u-%u) RPC Address %s:%u", chId, chNo, chId, chNo, rpcApiAddress.c_str(), rpcApiPort);
 
                 VoiceChData data = VoiceChData(chId, chNo, rpcApiAddress, rpcApiPort, rpcApiPassword);
                 m_channelLookup->setRFChData(chNo, data);
-                m_channelLookup->addRFCh(chNo);
+                m_channelLookup->initializeRFCh(chNo);
             }
         }
 
@@ -344,7 +352,15 @@ bool Host::readParams()
 
         m_p25NetId = (uint32_t)::strtoul(rfssConfig["netId"].as<std::string>("BB800").c_str(), NULL, 16);
         m_p25NetId = p25::P25Utils::netId(m_p25NetId);
-        if (m_p25NetId == 0xBEE00) {
+
+        /*
+        ** By disabling these checks, you are a giant toolbag and you are being highly irresponsible and negligent ..
+        ** These protections are not to stop you from using BEExx as a WACN on the trunked systems you build with this, it 
+        ** is to prevent poorly programmed subscribers of business, or public safety members from ROAMING to your trunked system
+        ** potentially cutting off their communications and possibly endangering their lives if they roam while in an 
+        ** emergency situation. I implore you to reconsider using BEExx as a WACN and to respect the safety of others.
+        */
+        if (m_p25NetId >= 0xBEE00 && m_p25NetId <= 0xBEEFF) {
             ::fatal("error 4\n");
         }
 
@@ -358,9 +374,6 @@ bool Host::readParams()
 
         LogInfo("System Config Parameters");
         LogInfo("    Authoritative: %s", m_authoritative ? "yes" : "no");
-        if (m_authoritative) {
-            LogInfo("    Supervisor: %s", m_supervisor ? "yes" : "no");
-        }
         LogInfo("    RX Frequency: %uHz", m_rxFrequency);
         LogInfo("    TX Frequency: %uHz", m_txFrequency);
         LogInfo("    Base Frequency: %uHz", entry.baseFrequency());
@@ -385,7 +398,6 @@ bool Host::readParams()
         LogInfo("    NXDN RAN: %u", m_nxdnRAN);
 
         if (!m_authoritative) {
-            m_supervisor = false;
             LogWarning(LOG_HOST, "Host is non-authoritative! This requires a second instance configured in site controller mode.");
             LogWarning(LOG_HOST, "RPC is required to handle permit TG for VCs!");
         }
@@ -858,6 +870,7 @@ bool Host::createNetwork()
     bool allowStatusTransfer = networkConf["allowStatusTransfer"].as<bool>(true);
     bool updateLookup = networkConf["updateLookups"].as<bool>(false);
     bool saveLookup = networkConf["saveLookups"].as<bool>(false);
+    bool disallowUnitToUnit = networkConf["disallowUnitToUnit"].as<bool>(false);
     bool packetDump = networkConf["packetDump"].as<bool>(false);
     bool debug = networkConf["debug"].as<bool>(false);
 
@@ -892,6 +905,44 @@ bool Host::createNetwork()
         else {
             LogWarning(LOG_HOST, "Invalid  network preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
             encrypted = false;
+        }
+    }
+
+    bool kmfEncrypted = false;
+    uint8_t kmfPresharedKey[AES_WRAPPED_PCKT_KEY_LEN];
+    ::memset(kmfPresharedKey, 0x00U, AES_WRAPPED_PCKT_KEY_LEN);
+
+    // scope is intentional
+    {
+        std::string key = networkConf["kmfPresharedKey"].as<std::string>();
+        if (!key.empty()) {
+            if (key.size() == 32) {
+                // bryanb: shhhhhhh....dirty nasty hacks
+                key = key.append(key); // since the key is 32 characters (16 hex pairs), double it on itself for 64 characters (32 hex pairs)
+                LogWarning(LOG_HOST, "Half-length KMF preshared encryption key detected, doubling key on itself.");
+            }
+
+            if (key.size() == 64) {
+                if ((key.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos)) {
+                    const char* keyPtr = key.c_str();
+
+                    for (uint8_t i = 0; i < AES_WRAPPED_PCKT_KEY_LEN; i++) {
+                        char t[4] = {keyPtr[0], keyPtr[1], 0};
+                        kmfPresharedKey[i] = (uint8_t)::strtoul(t, NULL, 16);
+                        keyPtr += 2 * sizeof(char);
+                    }
+
+                    kmfEncrypted = true;
+                }
+                else {
+                    LogWarning(LOG_HOST, "Invalid characters in the KMF preshared encryption key. Encryption disabled.");
+                    kmfEncrypted = false;
+                }
+            }
+            else {
+                LogWarning(LOG_HOST, "Invalid KMF preshared encryption key length, key should be 32 hex pairs, or 64 characters. Encryption disabled.");
+                kmfEncrypted = false;
+            }
         }
     }
 
@@ -945,8 +996,10 @@ bool Host::createNetwork()
         LogInfo("    Allow Status Transfer: %s", m_allowStatusTransfer ? "yes" : "no");
         LogInfo("    Update Lookups: %s", updateLookup ? "yes" : "no");
         LogInfo("    Save Network Lookups: %s", saveLookup ? "yes" : "no");
+        LogInfo("    Disallow Network Unit-to-Unit Calls: %s", disallowUnitToUnit ? "yes" : "no");
 
         LogInfo("    Encrypted: %s", encrypted ? "yes" : "no");
+        LogInfo("    KMF Encrypted: %s", kmfEncrypted ? "yes" : "no");
 
         if (packetDump) {
             LogInfo("    Packet Dump: yes");
@@ -973,7 +1026,7 @@ bool Host::createNetwork()
     // initialize networking
     if (netEnable) {
         m_network = new Network(address, port, local, id, password, m_duplex, debug, m_dmrEnabled, m_p25Enabled, m_nxdnEnabled, false, slot1, slot2, 
-            allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup);
+            allowActivityTransfer, allowDiagnosticTransfer, updateLookup, saveLookup, disallowUnitToUnit);
 
         m_network->setPacketDump(packetDump);
         m_network->setLookups(m_ridLookup, m_tidLookup);
@@ -994,6 +1047,10 @@ bool Host::createNetwork()
             m_network->setPresharedKey(presharedKey);
         }
 
+        if (kmfEncrypted) {
+            m_network->setKMFPresharedKey(kmfPresharedKey);
+        }
+
         m_network->enable(true);
         bool ret = m_network->open();
         if (!ret) {
@@ -1010,7 +1067,7 @@ bool Host::createNetwork()
     if (restApiEnable) {
         m_restAddress = restApiAddress;
         m_restPort = restApiPort;
-        m_RESTAPI = new RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
+        m_RESTAPI = new host_restapi::RESTAPI(restApiAddress, restApiPort, restApiPassword, restApiSSLKey, restApiSSLCert, restApiEnableSSL, this, restApiDebug);
         m_RESTAPI->setLookups(m_ridLookup, m_tidLookup);
         bool ret = m_RESTAPI->open();
         if (!ret) {

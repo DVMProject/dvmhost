@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements AUTH RESP M - Authentication Response Mutual
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_ISP_AUTH_RESP_M : public AMBT {
+            class DVM_COMMON_API MBT_ISP_AUTH_RESP_M : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_ISP_AUTH_RESP_M class.

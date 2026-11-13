@@ -28,7 +28,8 @@ KMMDeregistrationResponse::KMMDeregistrationResponse() : KMMFrame(),
     m_status(KMM_Status::CMD_PERFORMED)
 {
     m_messageId = KMM_MessageType::DEREG_RSP;
-    m_respKind = KMM_ResponseKind::IMMEDIATE;
+    // TIA-102.AACA Table 2: response messages use Response Kind 1 (None).
+    m_respKind = KMM_ResponseKind::NONE;
 }
 
 /* Finalizes a instance of the KMMDeregistrationResponse class. */

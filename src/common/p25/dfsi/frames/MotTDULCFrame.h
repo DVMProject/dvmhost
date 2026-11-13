@@ -53,7 +53,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotTDULCFrame {
+            class DVM_COMMON_API MotTDULCFrame {
             public:
                 /**
                  * @brief Initializes a copy instance of the MotTDULCFrame class.

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -35,8 +35,8 @@ namespace p25
         //  Class Prototypes
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API LC;
-        class HOST_SW_API TSBK;
+        class LC;
+        class TSBK;
 
         // ---------------------------------------------------------------------------
         //  Class Declaration
@@ -46,7 +46,7 @@ namespace p25
          * @brief Represents link control data for TDULC packets.
          * @ingroup p25_lc
          */
-        class HOST_SW_API TDULC {
+        class DVM_COMMON_API TDULC {
         public:
             /**
              * @brief Initializes a copy instance of the TDULC class.
@@ -133,6 +133,14 @@ namespace p25
              * @brief Voice channel number.
              */
             DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNo, GrpVchNo);
+            /**
+             * @brief Voice channel number for the second group in a group update.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, grpVchNoB, GrpVchNoB);
+            /**
+             * @brief Destination ID for the second group in a group update.
+             */
+            DECLARE_PROTECTED_PROPERTY(uint32_t, dstIdB, DstIdB);
 
             /**
              * @brief Flag indicating explicit addressing.

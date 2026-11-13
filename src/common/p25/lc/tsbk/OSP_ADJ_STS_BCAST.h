@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements ADJ STS BCAST - Adjacent Site Status Broadcast
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_ADJ_STS_BCAST : public TSBK {
+            class DVM_COMMON_API OSP_ADJ_STS_BCAST : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_ADJ_STS_BCAST class.
@@ -63,6 +63,10 @@ namespace p25
 
             public:
                 // Adjacent Site Data
+                /**
+                 * @brief Adjacent site location registration area.
+                 */
+                DECLARE_PROPERTY(uint8_t, adjLRA, AdjSiteLRA);
                 /**
                  * @brief Adjacent site CFVA flags.
                  */

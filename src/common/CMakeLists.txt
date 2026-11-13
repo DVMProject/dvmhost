@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB common_SRC
+file(GLOB common_SRC CONFIGURE_DEPENDS
     # DMR module
     "src/common/dmr/*.cpp"
     "src/common/dmr/acl/*.cpp"
@@ -24,6 +24,7 @@ file(GLOB common_SRC
     "src/common/p25/dfsi/frames/*.cpp"
     "src/common/p25/dfsi/frames/fsc/*.cpp"
     "src/common/p25/lc/*.cpp"
+    "src/common/p25/lc/mac/*.cpp"
     "src/common/p25/lc/tdulc/*.cpp"
     "src/common/p25/lc/tsbk/*.cpp"
     "src/common/p25/lc/tsbk/mbt/*.cpp"
@@ -47,7 +48,7 @@ file(GLOB common_SRC
     "src/common/edac/*.cpp"
     "src/common/lookups/*.cpp"
     "src/common/network/*.cpp"
-    "src/common/network/sip/*.cpp"
+    "src/common/network/packet/*.cpp"
     "src/common/network/tcp/*.cpp"
     "src/common/network/udp/*.cpp"
     "src/common/network/viface/*.cpp"
@@ -59,7 +60,7 @@ file(GLOB common_SRC
     "src/common/*.cpp"
 )
 
-file(GLOB common_INCLUDE
+file(GLOB common_INCLUDE CONFIGURE_DEPENDS
     # DMR module
     "src/common/dmr/*.h"
     "src/common/dmr/acl/*.h"
@@ -76,6 +77,7 @@ file(GLOB common_INCLUDE
     "src/common/p25/dfsi/frames/*.h"
     "src/common/p25/dfsi/frames/fsc/*.h"
     "src/common/p25/lc/*.h"
+    "src/common/p25/lc/mac/*.h"
     "src/common/p25/lc/tdulc/*.h"
     "src/common/p25/lc/tsbk/*.h"
     "src/common/p25/lc/tsbk/mbt/*.h"
@@ -102,8 +104,8 @@ file(GLOB common_INCLUDE
     "src/common/json/*.h"
     "src/common/lookups/*.h"
     "src/common/network/*.h"
+    "src/common/network/packet/*.h"
     "src/common/network/json/*.h"
-    "src/common/network/sip/*.h"
     "src/common/network/tcp/*.h"
     "src/common/network/udp/*.h"
     "src/common/network/viface/*.h"

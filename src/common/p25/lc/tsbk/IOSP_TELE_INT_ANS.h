@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Common Library
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
+ *
+ */
+/**
+ * @file IOSP_TELE_INT_ANS.h
+ * @ingroup p25_tsbk
+ * @file IOSP_TELE_INT_ANS.cpp
+ * @ingroup p25_tsbk
+ */
+#if !defined(__P25_LC_TSBK__IOSP_TELE_INT_ANS_H__)
+#define  __P25_LC_TSBK__IOSP_TELE_INT_ANS_H__
+
+#include "common/Defines.h"
+#include "common/p25/lc/TSBK.h"
+
+namespace p25
+{
+    namespace lc
+    {
+        namespace tsbk
+        {
+            // ---------------------------------------------------------------------------
+            //  Class Declaration
+            // ---------------------------------------------------------------------------
+
+            /**
+             * @brief Implements TELE INT ANS RSP - Telephone Interconnect Answer Response (ISP) and
+             *  TELE INT ANS REQ - Telephone Interconnect Answer Request (OSP)
+             * @ingroup p25_tsbk
+             */
+            class DVM_COMMON_API IOSP_TELE_INT_ANS : public TSBK {
+            public:
+                /**
+                 * @brief Maximum number of digits carried by the OSP.
+                 */
+                static const uint32_t MAX_DIGITS = 10U;
+
+                /**
+                 * @brief Initializes a new instance of the IOSP_TELE_INT_ANS class.
+                 */
+                IOSP_TELE_INT_ANS();
+
+                /**
+                 * @brief Decode a trunking signalling block.
+                 * @param[in] data Buffer containing a TSBK to decode.
+                 * @param rawTSBK Flag indicating whether or not the passed buffer is raw.
+                 * @returns bool True, if TSBK decoded, otherwise false.
+                 */
+                bool decode(const uint8_t* data, bool rawTSBK = false) override;
+                /**
+                 * @brief Encode a trunking signalling block.
+                 * @param[out] data Buffer to encode a TSBK.
+                 * @param rawTSBK Flag indicating whether or not the output buffer is raw.
+                 * @param noTrellis Flag indicating whether or not the encoded data should be Trellis encoded.
+                 */
+                void encode(uint8_t* data, bool rawTSBK = false, bool noTrellis = false) override;
+
+                /**
+                 * @brief Returns a string that represents the current TSBK.
+                 * @returns std::string String representation of the TSBK.
+                 */
+                std::string toString(bool isp = false) override;
+
+            public:
+                /**
+                 * @brief Telephone digits presented to the called unit (OSP only); 0-9, '*', '#' and A-D.
+                 */
+                DECLARE_PROPERTY(std::string, digits, Digits);
+
+                DECLARE_COPY(IOSP_TELE_INT_ANS);
+            };
+        } // namespace tsbk
+    } // namespace lc
+} // namespace p25
+
+#endif // __P25_LC_TSBK__IOSP_TELE_INT_ANS_H__

@@ -88,7 +88,7 @@
                                 }
                             },
                             "rid_permitted": {
-                                "description": "List of radio IDs permitted to transmit on the talkgroup.",
+                                "description": "List of radio IDs admitted to affiliate with and originate traffic on the talkgroup. An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.",
                                 "type": "array",
                                 "items": {
                                     "description": "Radio ID.",

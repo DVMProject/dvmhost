@@ -1,0 +1,2057 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Digital Voice Modem - Test Suite
+ * GPLv2 Open Source. Use is subject to license terms.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
+ *
+ */
+#include "host/Defines.h"
+#include "common/lookups/ChannelLookup.h"
+#include "common/lookups/IdenTableLookup.h"
+#include "common/lookups/RSSIInterpolator.h"
+#include "common/lookups/RadioIdLookup.h"
+#include "common/lookups/TalkgroupRulesLookup.h"
+#include "common/network/NetRPC.h"
+#include "common/network/Network.h"
+#include "common/edac/CRC.h"
+#include "common/p25/P25Defines.h"
+#include "common/p25/data/LowSpeedData.h"
+#include "common/p25/lc/LC.h"
+#include "common/p25/lc/tdulc/TDULCFactory.h"
+#include "common/p25/lc/tsbk/IOSP_EXT_FNCT.h"
+#include "host/modem/Modem.h"
+#include "modem/port/IModemPort.h"
+#include "host/HostTestHooks.h"
+
+#include <catch2/catch_test_macros.hpp>
+#include <chrono>
+#include <cstring>
+#include <thread>
+#include <vector>
+
+extern network::NetRPC* g_RPC;
+#include "host/p25/Control.h"
+
+// ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+// LDU1_1K payload bytes from firmware calibration constants (without leading control byte).
+static const uint8_t CAL_P25_LDU1_1K[p25::defines::P25_LDU_FRAME_LENGTH_BYTES] = {
+    0x55U, 0x75U, 0xF5U, 0xFFU, 0x77U, 0xFFU, 0x29U, 0x35U, 0x54U, 0x7BU, 0xCBU, 0x19U, 0x4DU, 0x0DU, 0xCEU, 0x24U, 0xA1U, 0x24U,
+    0x0DU, 0x43U, 0x3CU, 0x0BU, 0xE1U, 0xB9U, 0x18U, 0x44U, 0xFCU, 0xC1U, 0x62U, 0x96U, 0x27U, 0x60U, 0xE4U, 0xE2U, 0x4AU, 0x10U,
+    0x90U, 0xD4U, 0x33U, 0xC0U, 0xBEU, 0x1BU, 0x91U, 0x84U, 0x4CU, 0xFCU, 0x16U, 0x29U, 0x62U, 0x76U, 0x0EU, 0xC0U, 0x00U, 0x00U,
+    0x00U, 0x00U, 0x03U, 0x89U, 0x28U, 0x49U, 0x0DU, 0x43U, 0x3CU, 0x02U, 0xF8U, 0x6EU, 0x46U, 0x11U, 0x3FU, 0xC1U, 0x62U, 0x94U,
+    0x89U, 0xD8U, 0x39U, 0x00U, 0x00U, 0x00U, 0x00U, 0x1CU, 0x38U, 0x24U, 0xA1U, 0x24U, 0x35U, 0x0CU, 0xF0U, 0x2FU, 0x86U, 0xE4U,
+    0x18U, 0x44U, 0xFFU, 0x05U, 0x8AU, 0x58U, 0x9DU, 0x83U, 0xB0U, 0x00U, 0x00U, 0x00U, 0x00U, 0x70U, 0xE2U, 0x4AU, 0x12U, 0x40U,
+    0xD4U, 0x33U, 0xC0U, 0xBEU, 0x1BU, 0x91U, 0x84U, 0x4FU, 0xF0U, 0x16U, 0x29U, 0x62U, 0x76U, 0x0EU, 0x6DU, 0xE5U, 0xD5U, 0x48U,
+    0xADU, 0xE3U, 0x89U, 0x28U, 0x49U, 0x0DU, 0x43U, 0x3CU, 0x08U, 0xF8U, 0x6EU, 0x46U, 0x11U, 0x3FU, 0xC1U, 0x62U, 0x96U, 0x24U,
+    0xD8U, 0x3BU, 0xA1U, 0x41U, 0xC2U, 0xD2U, 0xBAU, 0x38U, 0x90U, 0xA1U, 0x24U, 0x35U, 0x0CU, 0xF0U, 0x2FU, 0x86U, 0xE4U, 0x60U,
+    0x44U, 0xFFU, 0x05U, 0x8AU, 0x58U, 0x9DU, 0x83U, 0x94U, 0xC8U, 0xFBU, 0x02U, 0x35U, 0xA4U, 0xE2U, 0x4AU, 0x12U, 0x43U, 0x50U,
+    0x33U, 0xC0U, 0xBEU, 0x1BU, 0x91U, 0x84U, 0x4FU, 0xF0U, 0x58U, 0x29U, 0x62U, 0x76U, 0x0EU, 0xC0U, 0x00U, 0x00U, 0x00U, 0x0CU,
+    0x89U, 0x28U, 0x49U, 0x0DU, 0x43U, 0x3CU, 0x0BU, 0xE1U, 0xB8U, 0x46U, 0x11U, 0x3FU, 0xC1U, 0x62U, 0x96U, 0x27U, 0x60U, 0xE4U
+};
+
+// LDU2_1K payload bytes from firmware calibration constants (without leading control byte).
+static const uint8_t CAL_P25_LDU2_1K[p25::defines::P25_LDU_FRAME_LENGTH_BYTES] = {
+    0x55U, 0x75U, 0xF5U, 0xFFU, 0x77U, 0xFFU, 0x29U, 0x3AU, 0xB8U, 0xA4U, 0xEFU, 0xB0U, 0x9AU, 0x8AU, 0xCEU, 0x24U, 0xA1U, 0x24U,
+    0x0DU, 0x43U, 0x3CU, 0x0BU, 0xE1U, 0xB9U, 0x18U, 0x44U, 0xFCU, 0xC1U, 0x62U, 0x96U, 0x27U, 0x60U, 0xECU, 0xE2U, 0x4AU, 0x10U,
+    0x90U, 0xD4U, 0x33U, 0xC0U, 0xBEU, 0x1BU, 0x91U, 0x84U, 0x4CU, 0xFCU, 0x16U, 0x29U, 0x62U, 0x76U, 0x0EU, 0x40U, 0x00U, 0x00U,
+    0x00U, 0x00U, 0x03U, 0x89U, 0x28U, 0x49U, 0x0DU, 0x43U, 0x3CU, 0x02U, 0xF8U, 0x6EU, 0x46U, 0x11U, 0x3FU, 0xC1U, 0x62U, 0x94U,
+    0x89U, 0xD8U, 0x3BU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x38U, 0x24U, 0xA1U, 0x24U, 0x35U, 0x0CU, 0xF0U, 0x2FU, 0x86U, 0xE4U,
+    0x18U, 0x44U, 0xFFU, 0x05U, 0x8AU, 0x58U, 0x9DU, 0x83U, 0x90U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0xE2U, 0x4AU, 0x12U, 0x40U,
+    0xD4U, 0x33U, 0xC0U, 0xBEU, 0x1BU, 0x91U, 0x84U, 0x4FU, 0xF0U, 0x16U, 0x29U, 0x62U, 0x76U, 0x0EU, 0xE0U, 0xE0U, 0x00U, 0x00U,
+    0x00U, 0x03U, 0x89U, 0x28U, 0x49U, 0x0DU, 0x43U, 0x3CU, 0x08U, 0xF8U, 0x6EU, 0x46U, 0x11U, 0x3FU, 0xC1U, 0x62U, 0x96U, 0x24U,
+    0xD8U, 0x39U, 0xAEU, 0x8BU, 0x48U, 0xB6U, 0x49U, 0x38U, 0x90U, 0xA1U, 0x24U, 0x35U, 0x0CU, 0xF0U, 0x2FU, 0x86U, 0xE4U, 0x60U,
+    0x44U, 0xFFU, 0x05U, 0x8AU, 0x58U, 0x9DU, 0x83U, 0xB9U, 0xA8U, 0xF4U, 0xF1U, 0xFDU, 0x60U, 0xE2U, 0x4AU, 0x12U, 0x43U, 0x50U,
+    0x33U, 0xC0U, 0xBEU, 0x1BU, 0x91U, 0x84U, 0x4FU, 0xF0U, 0x58U, 0x29U, 0x62U, 0x76U, 0x0EU, 0x40U, 0x00U, 0x00U, 0x00U, 0x0CU,
+    0x89U, 0x28U, 0x49U, 0x0DU, 0x43U, 0x3CU, 0x0BU, 0xE1U, 0xB8U, 0x46U, 0x11U, 0x3FU, 0xC1U, 0x62U, 0x96U, 0x27U, 0x60U, 0xECU
+};
+
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+namespace {
+
+/**
+ * @brief Builds one P25 talkgroup rule for controller admission tests.
+ * @param tgId Talkgroup ID.
+ * @param permittedRIDs RIDs admitted to the talkgroup.
+ * @returns TalkgroupRuleGroupVoice Test rule.
+ */
+lookups::TalkgroupRuleGroupVoice admissionRule(uint32_t tgId, const std::vector<uint32_t>& permittedRIDs)
+{
+    lookups::TalkgroupRuleGroupVoiceSource source;
+    source.tgId(tgId);
+    source.tgSlot(0U);
+
+    lookups::TalkgroupRuleConfig config;
+    config.active(true);
+    config.permittedRIDs(permittedRIDs);
+
+    lookups::TalkgroupRuleGroupVoice rule;
+    rule.source(source);
+    rule.config(config);
+    return rule;
+}
+
+/**
+ * @brief Helper function to calculate the number of timer ticks needed to expire a given timer.
+ * @param timer The timer for which to calculate the expiration ticks.
+ * @returns uint32_t The number of timer ticks needed to expire the timer.
+ */
+uint32_t expireTimerTicks(const Timer& timer)
+{
+    return (timer.getTimeout() + 1U) * 1000U;
+}
+
+/**
+ * @brief Finds an available loopback UDP port.
+ * @returns uint16_t A free UDP port, or 0 on failure.
+ */
+uint16_t reserveLoopbackPort()
+{
+#if defined(_WIN32)
+    SOCKET fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == INVALID_SOCKET)
+        return 0U;
+#else
+    int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0)
+        return 0U;
+#endif // defined(_WIN32)
+
+    sockaddr_in address = {};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(0U);
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+    if (::bind(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) < 0) {
+#if defined(_WIN32)
+        ::closesocket(fd);
+#else
+        ::close(fd);
+#endif // defined(_WIN32)
+        return 0U;
+    }
+
+    socklen_t addrLen = sizeof(address);
+    if (::getsockname(fd, reinterpret_cast<sockaddr*>(&address), &addrLen) < 0) {
+#if defined(_WIN32)
+        ::closesocket(fd);
+#else
+        ::close(fd);
+#endif // defined(_WIN32)
+        return 0U;
+    }
+
+#if defined(_WIN32)
+    ::closesocket(fd);
+#else
+    ::close(fd);
+#endif // defined(_WIN32)
+
+    return ntohs(address.sin_port);
+}
+
+/**
+ * @brief Builds a P25 RF frame.
+ * @param payload The payload data to include in the frame.
+ * @param frame The buffer to store the constructed frame.
+ */
+void buildP25RFFrame(const uint8_t* payload, uint8_t* frame)
+{
+    frame[0U] = modem::TAG_DATA;
+    frame[1U] = 0x01U;
+    ::memcpy(frame + 2U, payload, p25::defines::P25_LDU_FRAME_LENGTH_BYTES);
+}
+
+/** 
+ * @brief Builds an independently encoded UU VCH request TSBK.
+ * @param srcId The ID of the source.
+ * @param dstId The ID of the destination.
+ * @param raw The buffer to store the constructed TSBK.
+ */
+void buildUUVchRequest(uint32_t srcId, uint32_t dstId, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::IOSP_UU_VCH;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = 0x04U;
+    SET_UINT24(dstId, raw, 4U);
+    SET_UINT24(srcId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+/** 
+ * @brief Builds an independently encoded UU ANS response ISP TSBK. 
+ * @param responderId The ID of the responder.
+ * @param callerId The ID of the caller.
+ * @param response The response code.
+ * @param raw The buffer to store the constructed TSBK.
+ */
+void buildUUAnswerResponse(uint32_t responderId, uint32_t callerId, uint8_t response, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::IOSP_UU_ANS;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = 0x04U;
+    raw[3U] = response;
+    SET_UINT24(callerId, raw, 4U);
+    SET_UINT24(responderId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+/**
+ * @brief Builds an independently encoded cancel service request ISP TSBK.
+ * @param srcId RID cancelling the service.
+ * @param serviceType Service opcode being cancelled.
+ * @param raw The buffer to store the constructed TSBK.
+ */
+void buildCancelServiceRequest(uint32_t srcId, uint8_t serviceType, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::ISP_CAN_SRV_REQ;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = serviceType & 0x3FU;
+    SET_UINT24(srcId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+/**
+ * @brief Builds an independently encoded emergency alarm request ISP TSBK.
+ * @param srcId RID declaring the emergency alarm.
+ * @param dstId Group associated with the emergency alarm.
+ * @param specialInfo1 Emergency Special Information octet 1.
+ * @param specialInfo2 Emergency Special Information octet 2.
+ * @param raw Buffer to store the constructed TSBK.
+ */
+void buildEmergencyAlarmRequest(uint32_t srcId, uint16_t dstId, uint8_t specialInfo1,
+    uint8_t specialInfo2, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::ISP_EMERG_ALRM_REQ;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = specialInfo1;
+    raw[3U] = specialInfo2;
+    SET_UINT16(dstId, raw, 5U);
+    SET_UINT24(srcId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+/**
+ * @brief Builds an independently encoded emergency alarm cancellation ISP TSBK.
+ * @param srcId RID cancelling its emergency alarm.
+ * @param dstId Group associated with the emergency alarm.
+ * @param raw Buffer to store the constructed TSBK.
+ */
+void buildEmergencyAlarmCancel(uint32_t srcId, uint16_t dstId, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::ISP_CAN_SRV_REQ;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = 0x80U | p25::defines::TSBKO::ISP_EMERG_ALRM_REQ;
+    raw[3U] = 0x00U;
+    raw[4U] = 0x80U;
+    SET_UINT16(dstId, raw, 5U);
+    SET_UINT24(srcId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+/** Builds an independently encoded UU ANS request OSP TSBK. */
+void buildUUAnswerRequest(uint32_t callerId, uint32_t calledId, uint8_t* raw)
+{
+    ::memset(raw, 0x00U, p25::defines::P25_TSBK_LENGTH_BYTES);
+    raw[0U] = 0x80U | p25::defines::TSBKO::IOSP_UU_ANS;
+    raw[1U] = p25::defines::MFG_STANDARD;
+    raw[2U] = 0x04U;
+    SET_UINT24(calledId, raw, 4U);
+    SET_UINT24(callerId, raw, 7U);
+    edac::CRC::addCCITT162(raw, p25::defines::P25_TSBK_LENGTH_BYTES);
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Dummy implementation of a modem port for testing purposes.
+ */
+class P25TestModemPort final : public modem::port::IModemPort {
+public:
+    /**
+     * @brief Finalizes the instance of the P25TestModemPort class.
+     */
+    ~P25TestModemPort() override = default;
+
+    /**
+     * @brief Opens the modem port.
+     * @returns bool True if the modem port was successfully opened, false otherwise.
+     */
+    bool open() override { return true; }
+
+    /**
+     * @brief Reads data from the modem port.
+     * @param buffer The buffer to store the read data.
+     * @param length The number of bytes to read.
+     * @returns int The number of bytes actually read.
+     */
+    int read(uint8_t* buffer, uint32_t length) override 
+    { 
+        (void)buffer; 
+        (void)length; 
+        return 0; 
+    }
+
+    /**
+     * @brief Writes data to the modem port.
+     * @param buffer The buffer containing the data to write.
+     * @param length The number of bytes to write.
+     * @returns int The number of bytes actually written.
+     */
+    int write(const uint8_t* buffer, uint32_t length) override 
+    { 
+        (void)buffer; 
+        return static_cast<int>(length); 
+    }
+    
+    /**
+     * @brief Closes the modem port.
+     */
+    void close() override {}
+};
+
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Lightweight network test double that records P25 reset calls.
+ */
+class P25TestNetwork final : public network::Network {
+public:
+    /**
+     * @brief Initializes a new instance of the P25TestNetwork class.
+     * @param localPort The local port number.
+     * @param peerId The peer ID.
+     */
+    P25TestNetwork(uint16_t localPort = 0U, uint32_t peerId = 1U, bool disallowUnitToUnit = false) :
+        network::Network("127.0.0.1", 1U, localPort, peerId, "test", true, true, false, true, false, false, true, true, false, false, false, false, disallowUnitToUnit),
+        m_resetP25Count(0U),
+        m_lastTSDUControlByte(0U),
+        m_lastTSDULCO(0U),
+        m_tsduWriteCount(0U)
+    {
+        // keep protocol gates deterministic for this P25-focused harness
+        m_dmrEnabled = false;
+        m_p25Enabled = true;
+        m_nxdnEnabled = false;
+        m_analogEnabled = false;
+    }
+
+    /** @brief Marks the test network as ready to accept outbound frames. */
+    void activateForTest() { m_status = network::NET_STAT_RUNNING; }
+
+    /** @brief Gets the next outbound packet sequence value. */
+    uint16_t outboundSequence() const { return m_pktSeq; }
+
+    /**
+     * @brief Queues a P25 voice frame directly into the receive ring buffer.
+     * @param control Link control carried by the frame.
+     * @param duid P25 data-unit identifier to queue.
+     */
+    void queueVoice(const p25::lc::LC& control, p25::defines::DUID::E duid)
+    {
+        p25::data::LowSpeedData lsd;
+        uint32_t length = 0U;
+        UInt8Array message = duid == p25::defines::DUID::LDU1 ?
+            createP25_LDU1Message(length, control, lsd, CAL_P25_LDU1_1K,
+                p25::defines::FrameType::DATA_UNIT, 0U) :
+            createP25_LDU2Message(length, control, lsd, CAL_P25_LDU2_1K, 0U);
+        REQUIRE(message != nullptr);
+        REQUIRE(length > 0U);
+
+        if (length >= 254U) {
+            const uint8_t marker = 254U;
+            const uint8_t remainder = static_cast<uint8_t>(length - 254U);
+            m_rxP25Data.addData(&marker, 1U);
+            m_rxP25Data.addData(&remainder, 1U);
+        }
+        else {
+            const uint8_t frameLength = static_cast<uint8_t>(length);
+            m_rxP25Data.addData(&frameLength, 1U);
+        }
+        m_rxP25Data.addData(message.get(), length);
+    }
+
+    /**
+     * @brief Activates the loopback network connection.
+     * @param remoteAddress The remote address to connect to.
+     * @param remotePort The remote port to connect to.
+     * @returns bool True if the loopback network connection was successfully activated, false otherwise.
+     */
+    bool activateLoopback(const std::string& remoteAddress, uint16_t remotePort)
+    {
+        if (network::udp::Socket::lookup(remoteAddress, remotePort, m_addr, m_addrLen) != 0) {
+            return false;
+        }
+
+        if (!m_socket->open(m_addr.ss_family)) {
+            return false;
+        }
+
+        m_enabled = true;
+        m_status = network::NET_STAT_RUNNING;
+        return true;
+    }
+
+    /**
+     * @brief Sends a P25 LDU1 frame.
+     * @param targetPeerId The target peer ID.
+     * @param streamId The stream ID.
+     * @param seq The sequence number.
+     * @param srcId The source ID.
+     * @param dstId The destination ID.
+     * @returns bool True if the frame was successfully sent, false otherwise.
+     */
+    bool sendP25LDU1Frame(uint32_t targetPeerId, uint32_t streamId, uint16_t seq, uint32_t srcId, uint32_t dstId)
+    {
+        p25::lc::LC control;
+        control.setLCO(p25::defines::LCO::GROUP);
+        control.setMFId(p25::defines::MFG_STANDARD);
+        control.setSrcId(srcId);
+        control.setDstId(dstId);
+
+        p25::data::LowSpeedData lsd;
+
+        uint32_t messageLength = 0U;
+        UInt8Array message = createP25_LDU1Message(messageLength, control, lsd, CAL_P25_LDU1_1K, p25::defines::FrameType::DATA_UNIT, 0x00U);
+        if (message == nullptr || messageLength == 0U) {
+            return false;
+        }
+
+        return m_frameQueue->write(message.get(), messageLength, streamId, targetPeerId, m_peerId,
+            { network::NET_FUNC::PROTOCOL, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, seq, m_addr, m_addrLen);
+    }
+
+    /**
+     * @brief Sends a P25 LDU2 frame.
+     * @param targetPeerId The target peer ID.
+     * @param streamId The stream ID.
+     * @param seq The sequence number.
+     * @param srcId The source ID.
+     * @param dstId The destination ID.
+     * @returns bool True if the frame was successfully sent, false otherwise.
+     */
+    bool sendP25LDU2Frame(uint32_t targetPeerId, uint32_t streamId, uint16_t seq, uint32_t srcId, uint32_t dstId)
+    {
+        p25::lc::LC control;
+        control.setLCO(p25::defines::LCO::GROUP);
+        control.setMFId(p25::defines::MFG_STANDARD);
+        control.setSrcId(srcId);
+        control.setDstId(dstId);
+
+        p25::data::LowSpeedData lsd;
+
+        uint32_t messageLength = 0U;
+        UInt8Array message = createP25_LDU2Message(messageLength, control, lsd, CAL_P25_LDU2_1K, 0x00U);
+        if (message == nullptr || messageLength == 0U) {
+            return false;
+        }
+
+        return m_frameQueue->write(message.get(), messageLength, streamId, targetPeerId, m_peerId,
+            { network::NET_FUNC::PROTOCOL, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, seq, m_addr, m_addrLen);
+    }
+
+    /**
+     * @brief Sends a P25 TDU frame.
+     * @param targetPeerId The target peer ID.
+     * @param streamId The stream ID.
+     * @param seq The sequence number.
+     * @param srcId The source ID.
+     * @param dstId The destination ID.
+     * @returns bool True if the frame was successfully sent, false otherwise.
+     */
+    bool sendP25TDUFrame(uint32_t targetPeerId, uint32_t streamId, uint16_t seq, uint32_t srcId, uint32_t dstId)
+    {
+        p25::lc::LC control;
+        control.setLCO(p25::defines::LCO::GROUP);
+        control.setMFId(p25::defines::MFG_STANDARD);
+        control.setSrcId(srcId);
+        control.setDstId(dstId);
+
+        p25::data::LowSpeedData lsd;
+
+        uint32_t messageLength = 0U;
+        UInt8Array message = createP25_TDUMessage(messageLength, control, lsd, 0x00U);
+        if (message == nullptr || messageLength == 0U) {
+            return false;
+        }
+
+        return m_frameQueue->write(message.get(), messageLength, streamId, targetPeerId, m_peerId,
+            { network::NET_FUNC::PROTOCOL, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, seq, m_addr, m_addrLen);
+    }
+
+    /**
+     * @brief 
+     */
+    void resetP25() override
+    {
+        ++m_resetP25Count;
+        network::Network::resetP25();
+    }
+
+    /**
+     * @brief Returns the number of times the P25 subsystem has been reset.
+     * @returns uint32_t The number of times the P25 subsystem has been reset.
+     */
+    uint32_t resetP25Count() const
+    {
+        return m_resetP25Count;
+    }
+
+    /**
+     * @brief Returns the currently locked incoming P25 stream ID.
+     * @returns uint32_t Active incoming stream lock ID, or 0 when unlocked.
+     */
+    uint32_t rxP25StreamId() const
+    {
+        return m_rxP25StreamId;
+    }
+
+    /**
+     * @brief Records a P25 TSDU write without using the UDP transport.
+     * @param control Link control for the TSDU.
+     * @param data Encoded TSDU data.
+     * @param controlByte Network direction flags.
+     * @returns bool Always true.
+     */
+    bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte = 0U) override
+    {
+        REQUIRE(data != nullptr);
+        m_lastTSDUControlByte = controlByte;
+        m_lastTSDULCO = control.getLCO();
+        ++m_tsduWriteCount;
+        return true;
+    }
+
+    /** @brief Gets the direction flags from the last P25 TSDU write. */
+    uint8_t lastTSDUControlByte() const { return m_lastTSDUControlByte; }
+
+    /** @brief Gets the LCO from the last P25 TSDU write. */
+    uint8_t lastTSDULCO() const { return m_lastTSDULCO; }
+
+    /** @brief Gets the number of P25 TSDU writes. */
+    uint32_t tsduWriteCount() const { return m_tsduWriteCount; }
+
+private:
+    uint32_t m_resetP25Count;
+    uint8_t m_lastTSDUControlByte;
+    uint8_t m_lastTSDULCO;
+    uint32_t m_tsduWriteCount;
+};
+
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Harness class for testing P25 host control functionality.
+ */
+class P25HostHarness {
+public:
+    /**
+     * @brief Initializes a new instance of the P25HostHarness class.
+     * @param authoritative Indicates whether the host is authoritative.
+     */
+    explicit P25HostHarness(bool authoritative = true, bool withNetwork = false, uint16_t networkLocalPort = 0U, uint32_t networkPeerId = 1U,
+        bool disallowUnitToUnit = false, bool tgAcl = false, bool duplex = false) :
+        m_rpc("127.0.0.1", 1U, 0U, "test", false),
+        m_modem(new P25TestModemPort(), false, false, false, false, false, false,
+            0U, 0U, 0U, 1024U, 4096U, 1024U, true, true, false, false, false, false),
+        m_chLookup(),
+        m_ridLookup("", 0U, false, false),
+        m_tidLookup("", 0U, tgAcl, false),
+        m_idenLookup("", 0U),
+        m_rssiMapper(),
+        m_network(withNetwork ? new P25TestNetwork(networkLocalPort, networkPeerId, disallowUnitToUnit) : nullptr),
+        m_control(nullptr)
+    {
+        g_RPC = &m_rpc;
+        m_modem.setModeParams(false, true, false);
+
+        m_control = new p25::Control(authoritative, 0x293U, 1U, 4096U, &m_modem, m_network,
+            5U, 2U, duplex, &m_chLookup, &m_ridLookup, &m_tidLookup, &m_idenLookup,
+            &m_rssiMapper, false, false, false, true, true);
+    }
+    /**
+     * @brief Finalizes an instance of the P25HostHarness class.
+     */
+    ~P25HostHarness()
+    {
+        delete m_control;
+        delete m_network;
+        g_RPC = nullptr;
+    }
+
+    P25TestNetwork* network() const
+    {
+        return m_network;
+    }
+
+    /**
+     * @brief Starts a network voice call with the specified source and destination IDs.
+     * @param srcId The source ID for the network voice call.
+     * @param dstId The destination ID for the network voice call.
+     */
+    void startNetworkVoiceCall(uint32_t srcId = 1001U, uint32_t dstId = 2001U)
+    {
+        p25::lc::LC control;
+        control.setLCO(p25::defines::LCO::GROUP);
+        control.setMFId(p25::defines::MFG_STANDARD);
+        control.setSrcId(srcId);
+        control.setDstId(dstId);
+
+        p25::data::LowSpeedData lsd;
+
+        HostTestHooks::p25StartNetCall(*m_control, control, lsd);
+    }
+
+public:
+    network::NetRPC m_rpc;
+    modem::Modem m_modem;
+    lookups::ChannelLookup m_chLookup;
+    lookups::RadioIdLookup m_ridLookup;
+    lookups::TalkgroupRulesLookup m_tidLookup;
+    lookups::IdenTableLookup m_idenLookup;
+    lookups::RSSIInterpolator m_rssiMapper;
+    P25TestNetwork* m_network;
+    p25::Control* m_control;
+};
+
+TEST_CASE("P25 group call termination addresses all subscriber units",
+    "[p25][host][control][tdulc][call-termination]")
+{
+    P25HostHarness harness(true, false, 0U, 1U, false, false, true);
+
+    HostTestHooks::p25WriteRFChannelRelease(*harness.m_control, true, 1001U, 2001U);
+
+    uint8_t frame[p25::defines::P25_TDULC_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    REQUIRE(harness.m_control->getFrame(frame) == sizeof(frame));
+    std::unique_ptr<p25::lc::TDULC> tdulc = p25::lc::tdulc::TDULCFactory::createTDULC(frame + 2U);
+    REQUIRE(tdulc != nullptr);
+    CHECK(tdulc->getLCO() == p25::defines::LCO::CALL_TERM);
+    CHECK(tdulc->getDstId() == p25::defines::WUID_ALL);
+}
+
+TEST_CASE("P25 private call termination retains its selected individual target",
+    "[p25][host][control][tdulc][call-termination]")
+{
+    P25HostHarness harness(true, false, 0U, 1U, false, false, true);
+    const uint32_t selectedTarget = 2001U;
+
+    HostTestHooks::p25WriteRFChannelRelease(*harness.m_control, false, 1001U, selectedTarget);
+
+    uint8_t frame[p25::defines::P25_TDULC_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    REQUIRE(harness.m_control->getFrame(frame) == sizeof(frame));
+    std::unique_ptr<p25::lc::TDULC> tdulc = p25::lc::tdulc::TDULCFactory::createTDULC(frame + 2U);
+    REQUIRE(tdulc != nullptr);
+    CHECK(tdulc->getLCO() == p25::defines::LCO::CALL_TERM);
+    CHECK(tdulc->getDstId() == selectedTarget);
+}
+
+TEST_CASE("P25 deny responses retain outbound direction when mirrored to the network", "[p25][host][control][deny][direction]")
+{
+    P25HostHarness harness(true, true);
+
+    HostTestHooks::p25WriteDenyResponse(*harness.m_control, 1001U, 2001U);
+
+    REQUIRE(harness.network()->tsduWriteCount() == 1U);
+    REQUIRE(harness.network()->lastTSDULCO() == p25::defines::TSBKO::OSP_DENY_RSP);
+    REQUIRE((harness.network()->lastTSDUControlByte() & network::NET_CTRL_ISP) == 0U);
+}
+
+TEST_CASE("P25 radio-check responses are forwarded to the FNE as inbound TSDUs",
+    "[p25][host][control][subscriber-operations][direction]")
+{
+    P25HostHarness harness(true, true);
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+    harness.m_ridLookup.addEntry(123456U, true, "radio-check responder");
+    p25::lc::tsbk::IOSP_EXT_FNCT response;
+    response.setExtendedFunction(p25::defines::ExtendedFunctions::CHECK_ACK);
+    response.setSrcId(p25::defines::WUID_FNE);
+    response.setDstId(123456U);
+
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES] = { 0U };
+    response.encode(raw, true, true);
+
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(harness.network()->tsduWriteCount() == 1U);
+    CHECK(harness.network()->lastTSDULCO() == p25::defines::TSBKO::IOSP_EXT_FNCT);
+    CHECK((harness.network()->lastTSDUControlByte() & network::NET_CTRL_ISP) != 0U);
+}
+
+TEST_CASE("P25 dedicated control channels silently discard network voice unless voice on control is enabled",
+    "[p25][host][control][dedicated][network-voice]")
+{
+    P25HostHarness harness(false, true);
+    harness.network()->activateForTest();
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, true);
+
+    REQUIRE(HostTestHooks::p25CheckNetworkVoiceAdmission(*harness.m_control, 1001U, 2001U));
+
+    HostTestHooks::p25SetVoiceOnControl(*harness.m_control, true);
+    harness.m_control->permittedTG(2001U);
+    REQUIRE_FALSE(HostTestHooks::p25CheckNetworkVoiceAdmission(*harness.m_control, 1001U, 2001U));
+}
+
+TEST_CASE("P25 blocks inbound and outbound unit-to-unit network voice", "[p25][host][network][u2u][u2u-block]")
+{
+    P25HostHarness harness(true, true, 0U, 1U, true);
+    harness.network()->activateForTest();
+
+    HostTestHooks::p25WriteRFVoiceToNetwork(*harness.m_control, 1001U, 2001U, false);
+    REQUIRE(harness.network()->outboundSequence() == 0U);
+
+    p25::lc::LC privateCall;
+    privateCall.setLCO(p25::defines::LCO::PRIVATE);
+    privateCall.setSrcId(1001U);
+    privateCall.setDstId(2001U);
+    harness.network()->queueVoice(privateCall, p25::defines::DUID::LDU1);
+    HostTestHooks::p25ProcessNetworkQueue(*harness.m_control);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+
+    harness.network()->queueVoice(privateCall, p25::defines::DUID::LDU2);
+    HostTestHooks::p25ProcessNetworkQueue(*harness.m_control);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+}
+
+TEST_CASE("P25 active talkgroup updates preserve the working TGID", "[p25][active_tg]")
+{
+    P25HostHarness harness;
+    const uint32_t workingDstId = 2001U;
+    uint8_t index = 0U;
+    uint32_t dstIdB = 0U;
+    bool hasDstIdB = false;
+
+    const std::vector<uint32_t> activeTG = { workingDstId, 2002U, 2003U, 2004U, 2005U };
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2002U);
+    REQUIRE(dstIdB != workingDstId);
+
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2003U);
+    REQUIRE(dstIdB != workingDstId);
+
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2004U);
+    REQUIRE(dstIdB != workingDstId);
+
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, activeTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE(hasDstIdB);
+    REQUIRE(dstIdB == 2005U);
+    REQUIRE(dstIdB != workingDstId);
+
+    const std::vector<uint32_t> onlyWorkingTG = { workingDstId, workingDstId };
+    REQUIRE(HostTestHooks::p25NextActiveTalkgroups(*harness.m_control, onlyWorkingTG, index,
+        workingDstId, dstIdB, hasDstIdB));
+    REQUIRE_FALSE(hasDstIdB);
+    REQUIRE(dstIdB == 0U);
+}
+
+TEST_CASE("P25 enhanced conventional RF grants steer without replacing RF ownership", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+    REQUIRE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+}
+
+TEST_CASE("P25 enhanced conventional RF grant preempts a different network grant", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, 1001U, 2001U, true));
+    HostTestHooks::p25SetNetState(*harness.m_control, RS_NET_AUDIO, 1001U, 2001U);
+
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2002U);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+}
+
+TEST_CASE("P25 RF grant steering overrides hang only on non-dedicated control", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, 2001U));
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2002U);
+
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, 2002U));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, true);
+    harness.m_control->grantTG(1003U, 2003U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2003U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2002U);
+}
+
+TEST_CASE("P25 disabled RF grant steering preserves conventional hang ownership", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, 2001U));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, false, false);
+
+    harness.m_control->grantTG(1002U, 2002U, true);
+    REQUIRE_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, 2002U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+    REQUIRE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 enhanced conventional RF grant cannot replace matching network ownership", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, 1001U, 2001U, true));
+
+    harness.m_control->grantTG(1002U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 0U);
+}
+
+TEST_CASE("P25 enhanced conventional RF grant permits only the owning source to retry", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+
+    harness.m_control->grantTG(1001U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+
+    harness.m_control->grantTG(1002U, 2001U, true);
+    REQUIRE(HostTestHooks::p25IsGranted(*harness.m_control, 2001U));
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 2001U);
+}
+
+TEST_CASE("P25 unit-to-unit grant admits either participant as first talker",
+    "[p25][host][control][u2u]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t callingUnit = 5519008U;
+    const uint32_t calledUnit = 5519007U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    REQUIRE(HostTestHooks::p25SeedU2UGrant(*harness.m_control, callingUnit, calledUnit));
+
+    // TIA-102.AABD permits either party to be the first talker after the
+    // availability-check procedure. Voice admission therefore must recognize
+    // the same private call when its direction is reversed.
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, calledUnit));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, callingUnit));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, callingUnit, calledUnit));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, calledUnit, callingUnit));
+
+    // A VC terminator ends one talkspurt, not the message-trunked private call.
+    HostTestHooks::p25VoiceChannelReleaseGrant(*harness.m_control, callingUnit);
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, callingUnit, calledUnit));
+
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, callingUnit));
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, callingUnit, calledUnit));
+}
+
+TEST_CASE("P25 non-authoritative unit-to-unit permit admits either participant direction",
+    "[p25][host][control][u2u][permit]")
+{
+    P25HostHarness harness(false);
+    const uint32_t caller = 5519007U;
+    const uint32_t called = 5519001U;
+
+    harness.m_control->permittedTG(called, false, false, caller, true);
+
+    CHECK(harness.m_control->isPermitted(caller, called, false));
+    CHECK(harness.m_control->isPermitted(called, caller, false));
+    CHECK_FALSE(harness.m_control->isPermitted(caller, 5519002U, false));
+    CHECK_FALSE(harness.m_control->isPermitted(caller, called, true));
+
+    harness.m_control->permittedTG(0U);
+    CHECK_FALSE(harness.m_control->isPermitted(caller, called, false));
+}
+
+TEST_CASE("P25 voice-channel release still releases group grants immediately",
+    "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t srcId = 1001U;
+    const uint32_t dstId = 2001U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, srcId, dstId, false));
+
+    HostTestHooks::p25VoiceChannelReleaseGrant(*harness.m_control, dstId);
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, dstId));
+}
+
+TEST_CASE("P25 active unit-to-unit call continues with a grant instead of another answer request",
+    "[p25][host][control][u2u][procedure][continuation]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519007U;
+    const uint32_t called = 5519001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+
+    // The post-answer grant is answering unit -> original caller.
+    REQUIRE(HostTestHooks::p25SeedU2UGrant(*harness.m_control, called, caller));
+    HostTestHooks::p25VoiceChannelReleaseGrant(*harness.m_control, caller);
+    REQUIRE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    REQUIRE(HostTestHooks::p25U2UGrantSource(*harness.m_control, caller, called) == called);
+    REQUIRE(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == caller);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    CHECK(HostTestHooks::p25U2UGrantSource(*harness.m_control, caller, called) == caller);
+    CHECK(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == called);
+}
+
+TEST_CASE("P25 MFID transactions are isolated by subscriber pair and LCO",
+    "[p25][host][control][mfid]")
+{
+    P25HostHarness harness;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    const uint8_t u2uLco = p25::defines::TSBKO::IOSP_UU_VCH;
+    const uint8_t alertLco = p25::defines::TSBKO::IOSP_CALL_ALRT;
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, caller, called, u2uLco, 0x90U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, caller, called, alertLco, 0xA4U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, called, caller, u2uLco, 0xB0U, 10U);
+
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, caller, called, u2uLco, 0x00U) == 0x90U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, caller, called, alertLco, 0x00U) == 0xA4U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, called, caller, u2uLco, 0x00U) == 0xB0U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, caller, called + 1U, u2uLco, 0x55U) == 0x55U);
+}
+
+TEST_CASE("P25 MFID transaction replacement does not disturb legacy fallback state",
+    "[p25][host][control][mfid][regression]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint32_t dstId = 2001U;
+    const uint8_t lco = p25::defines::TSBKO::IOSP_GRP_VCH;
+
+    HostTestHooks::p25SetLastMFId(*harness.m_control, 0x90U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco,
+        HostTestHooks::p25LastMFId(*harness.m_control)) == 0x90U);
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, srcId, dstId, lco, 0xA4U, 10U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco, 0x90U) == 0xA4U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, srcId, dstId, lco, 0xB0U, 10U);
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco, 0x90U) == 0xB0U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+}
+
+TEST_CASE("P25 MFID transaction cleanup is exact and subscriber scoped",
+    "[p25][host][control][mfid][cleanup]")
+{
+    P25HostHarness harness;
+    const uint8_t u2uLco = p25::defines::TSBKO::IOSP_UU_VCH;
+    const uint8_t alertLco = p25::defines::TSBKO::IOSP_CALL_ALRT;
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1001U, 2001U, u2uLco, 0x90U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1002U, 2002U, u2uLco, 0xA4U, 10U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1001U, 2001U, alertLco, 0xB0U, 10U);
+
+    HostTestHooks::p25ClearMFId(*harness.m_control, 1001U, 2001U, u2uLco);
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1002U, 2002U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, alertLco));
+
+    HostTestHooks::p25StoreMFId(*harness.m_control, 1001U, 2001U, u2uLco, 0x90U, 10U);
+    HostTestHooks::p25ClearMFIds(*harness.m_control, u2uLco, 2001U);
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1002U, 2002U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, alertLco));
+
+    HostTestHooks::p25ClearMFIds(*harness.m_control, u2uLco);
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1002U, 2002U, u2uLco));
+    CHECK(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, 1001U, 2001U, alertLco));
+}
+
+TEST_CASE("P25 orphaned MFID transactions expire without changing legacy fallback",
+    "[p25][host][control][mfid][expiry][regression]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint32_t dstId = 2001U;
+    const uint8_t lco = p25::defines::TSBKO::IOSP_CALL_ALRT;
+
+    HostTestHooks::p25SetLastMFId(*harness.m_control, 0x90U);
+    HostTestHooks::p25StoreMFId(*harness.m_control, srcId, dstId, lco, 0xA4U, 1U);
+    REQUIRE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, srcId, dstId, lco));
+
+    HostTestHooks::p25ClockU2U(*harness.m_control, 2000U);
+
+    CHECK_FALSE(HostTestHooks::p25HasMFIdTransaction(*harness.m_control, srcId, dstId, lco));
+    CHECK(HostTestHooks::p25TransactionMFId(*harness.m_control, srcId, dstId, lco,
+        HostTestHooks::p25LastMFId(*harness.m_control)) == 0x90U);
+    CHECK(HostTestHooks::p25LastMFId(*harness.m_control) == 0x90U);
+}
+
+TEST_CASE("P25 conventional host accepts and acknowledges an emergency alarm TSBK",
+    "[p25][host][control][emergency][conventional]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+    uint8_t response[p25::defines::P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+
+    buildEmergencyAlarmRequest(srcId, dstId, 0x00U, 0x01U, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+
+    CHECK(harness.m_control->getFrame(response) > 0U);
+}
+
+TEST_CASE("P25 trunking host rejects an emergency alarm from an unregistered unit",
+    "[p25][host][control][emergency][trunking]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+    buildEmergencyAlarmRequest(srcId, dstId, 0x00U, 0x00U, raw);
+    CHECK_FALSE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+}
+
+TEST_CASE("P25 conventional host accepts and acknowledges emergency alarm cancellation",
+    "[p25][host][control][emergency][conventional]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+    uint8_t response[p25::defines::P25_TSDU_FRAME_LENGTH_BYTES + 2U];
+
+    buildEmergencyAlarmCancel(srcId, dstId, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(harness.m_control->getFrame(response) > 0U);
+}
+
+TEST_CASE("P25 trunking host accepts an emergency alarm from a registered unit",
+    "[p25][host][control][emergency][trunking]")
+{
+    P25HostHarness harness;
+    const uint32_t srcId = 1001U;
+    const uint16_t dstId = 2001U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, srcId);
+    buildEmergencyAlarmRequest(srcId, dstId, 0x01U, 0x00U, raw);
+    CHECK(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+}
+
+TEST_CASE("P25 unit-to-unit cancellation cleanup releases only private call state",
+    "[p25][host][control][u2u][procedure][cancel]")
+{
+    P25HostHarness harness;
+    const uint32_t privateChannelNo = 1U;
+    const uint32_t groupChannelNo = 2U;
+    const uint32_t caller = 5519007U;
+    const uint32_t called = 5519001U;
+    const uint32_t groupSrcId = 1001U;
+    const uint32_t groupDstId = 2001U;
+    harness.m_chLookup.setRFChData(privateChannelNo, lookups::VoiceChData(1U, privateChannelNo, "", 0U, ""));
+    harness.m_chLookup.setRFChData(groupChannelNo, lookups::VoiceChData(1U, groupChannelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(privateChannelNo));
+    REQUIRE(harness.m_chLookup.initializeRFCh(groupChannelNo));
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    REQUIRE(HostTestHooks::p25SeedU2UGrant(*harness.m_control, caller, called));
+    REQUIRE(HostTestHooks::p25SeedGrant(*harness.m_control, groupSrcId, groupDstId, false));
+
+    REQUIRE(HostTestHooks::p25ReleaseU2UGrant(*harness.m_control, caller));
+
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    CHECK(HostTestHooks::p25U2UGrantSource(*harness.m_control, caller, called) == 0U);
+    CHECK(HostTestHooks::p25U2UGrantTarget(*harness.m_control, caller, called) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, groupDstId));
+}
+
+TEST_CASE("P25 cancel service request clears pending unit-to-unit setup",
+    "[p25][host][control][u2u][procedure][cancel]")
+{
+    P25HostHarness harness;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    buildCancelServiceRequest(called, p25::defines::TSBKO::IOSP_UU_ANS, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 unit-to-unit availability-check procedure grants only after proceed",
+    "[p25][host][control][u2u][procedure]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_WAIT, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, called, caller));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+
+    // A duplicate final response is no longer correlated and must not create
+    // another grant or pending transaction.
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 unit-to-unit deny consumes the availability transaction without a grant",
+    "[p25][host][control][u2u][procedure]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_DENY, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 unit-to-unit rejects unsolicited and mismatched answer responses",
+    "[p25][host][control][u2u][procedure]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    const uint32_t unrelatedCaller = 5519006U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, unrelatedCaller);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    buildUUAnswerResponse(called, unrelatedCaller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, unrelatedCaller));
+}
+
+TEST_CASE("P25 unit-to-unit availability transaction expires before a late response",
+    "[p25][host][control][u2u][procedure]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    HostTestHooks::p25ClockU2U(*harness.m_control, 16000U);
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 unit-to-unit without availability check grants the request immediately",
+    "[p25][host][control][u2u][procedure]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    // A manual-answer SU may respond after the unchecked grant has expired.
+    // The response is correlated to the original request and must re-establish
+    // the same private call without accepting an unsolicited answer response.
+    REQUIRE(HostTestHooks::p25ReleaseGrant(*harness.m_control, called));
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+}
+
+TEST_CASE("P25 unit-to-unit network answer completes the originating-site transaction",
+    "[p25][host][control][u2u][procedure][network]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, caller);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+
+    buildUUVchRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessNetworkRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 unit-to-unit target site correlates a network answer request with the RF response",
+    "[p25][host][control][u2u][procedure][network]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    HostTestHooks::p25RegisterUnit(*harness.m_control, called);
+
+    buildUUAnswerRequest(caller, called, raw);
+    REQUIRE(HostTestHooks::p25ProcessNetworkRawTSBK(*harness.m_control, raw));
+    REQUIRE(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 1U);
+
+    buildUUAnswerResponse(called, caller, p25::defines::ResponseCode::ANS_PROCEED, raw);
+    REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK(HostTestHooks::p25IsGranted(*harness.m_control, caller));
+    CHECK_FALSE(HostTestHooks::p25IsGranted(*harness.m_control, called));
+    CHECK(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 network answer request is ignored outside the target unit site",
+    "[p25][host][control][u2u][procedure][network]")
+{
+    P25HostHarness harness;
+    const uint32_t caller = 5519008U;
+    const uint32_t called = 5519007U;
+    uint8_t raw[p25::defines::P25_TSBK_LENGTH_BYTES];
+
+    HostTestHooks::p25ConfigureU2U(*harness.m_control, true);
+    buildUUAnswerRequest(caller, called, raw);
+
+    REQUIRE(HostTestHooks::p25ProcessNetworkRawTSBK(*harness.m_control, raw));
+    CHECK(HostTestHooks::p25PendingU2UCount(*harness.m_control) == 0U);
+    CHECK_FALSE(HostTestHooks::p25IsU2UGranted(*harness.m_control, caller, called));
+}
+
+TEST_CASE("P25 host preserves encrypted network call parameters", "[p25][host][control][crypto]")
+{
+    P25HostHarness harness;
+    p25::lc::LC control;
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setMFId(p25::defines::MFG_STANDARD);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+    control.setEncrypted(true);
+    control.setAlgId(p25::defines::ALGO_AES_256);
+    control.setKId(0x1234U);
+    const uint8_t mi[p25::defines::MI_LENGTH_BYTES] = {
+        0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xABU, 0xCDU, 0xEFU, 0x10U
+    };
+    control.setMI(mi);
+    p25::data::LowSpeedData lsd;
+
+    HostTestHooks::p25StartNetCall(*harness.m_control, control, lsd);
+    HostTestHooks::p25UpdateNetEncryption(*harness.m_control, control, lsd);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetAlgId(*harness.m_control) == p25::defines::ALGO_AES_256);
+    REQUIRE(HostTestHooks::p25NetKId(*harness.m_control) == 0x1234U);
+
+    uint8_t actualMI[p25::defines::MI_LENGTH_BYTES] = {};
+    HostTestHooks::p25NetMI(*harness.m_control, actualMI);
+    REQUIRE(::memcmp(actualMI, mi, sizeof(mi)) == 0);
+}
+
+TEST_CASE("P25 host arms the network watchdog when network voice starts", "[p25][host][control]")
+{
+    P25HostHarness harness;
+
+    harness.startNetworkVoiceCall();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+    REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).hasExpired());
+}
+
+TEST_CASE("P25 host watchdog expiry returns network voice to idle", "[p25][host][control]")
+{
+    P25HostHarness harness;
+    harness.startNetworkVoiceCall();
+
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::p25TailOnIdle(*harness.m_control));
+    REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 watchdog expiry resets network stream state", "[p25][host][control][net][stream]")
+{
+    P25HostHarness harness(true, true);
+    harness.startNetworkVoiceCall();
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->resetP25Count() == 1U);
+}
+
+TEST_CASE("P25 host net hang expiry clears active network voice state", "[p25][host][control]")
+{
+    P25HostHarness harness;
+    harness.startNetworkVoiceCall();
+
+    HostTestHooks::p25NetTGHang(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::p25TailOnIdle(*harness.m_control));
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == 0U);
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == 0U);
+    REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 net hang expiry resets network stream state", "[p25][host][control][net][stream]")
+{
+    P25HostHarness harness(true, true);
+    harness.startNetworkVoiceCall();
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    HostTestHooks::p25NetTGHang(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->resetP25Count() == 1U);
+}
+
+TEST_CASE("P25 recovers inconsistent net state via network reset", "[p25][host][control][net][stream]")
+{
+    P25HostHarness harness(true, true);
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    // Simulate a stream lockup/inconsistency: non-idle net state with no last dst and stopped watchdog.
+    HostTestHooks::p25SetNetState(*harness.m_control, RS_NET_AUDIO, 0U, 0U);
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).stop();
+
+    p25::lc::LC control;
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+
+    (void)HostTestHooks::p25TerminateNetCall(*harness.m_control, control, p25::defines::DUID::TDU);
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->resetP25Count() == 1U);
+}
+
+TEST_CASE("P25 host e2e loopback handles missed frames without dropping active call", "[p25][host][control][net][e2e]")
+{
+    P25HostHarness harness;
+    harness.startNetworkVoiceCall(1001U, 2001U);
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == 1001U);
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == 2001U);
+
+    // Follow-on network traffic on the same call should keep the call active.
+    harness.startNetworkVoiceCall(1001U, 2001U);
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == 1001U);
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == 2001U);
+}
+
+TEST_CASE("P25 host e2e loopback handles out-of-order frames without dropping active call", "[p25][host][control][net][e2e]")
+{
+    P25HostHarness harness;
+    harness.startNetworkVoiceCall(1501U, 2501U);
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == 1501U);
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == 2501U);
+
+    // Re-entrant same-destination network audio remains active.
+    harness.startNetworkVoiceCall(1501U, 2501U);
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == 1501U);
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == 2501U);
+}
+
+TEST_CASE("P25 host e2e loopback handles dropped call terminator and returns idle", "[p25][host][control][net][e2e]")
+{
+    P25HostHarness harness;
+    harness.startNetworkVoiceCall(1101U, 2101U);
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+
+    p25::lc::LC control;
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setSrcId(1101U);
+    control.setDstId(2101U);
+    REQUIRE(HostTestHooks::p25TerminateNetCall(*harness.m_control, control, p25::defines::DUID::TDU));
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::p25TailOnIdle(*harness.m_control));
+    REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 host e2e loopback times out stale call and resets stream state", "[p25][host][control][net][e2e]")
+{
+    P25HostHarness harness(true, true);
+    harness.startNetworkVoiceCall(1201U, 2201U);
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->resetP25Count() == 1U);
+}
+
+TEST_CASE("P25 host e2e loopback times out a stream before call state starts", "[p25][host][control][net][e2e]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 6007U;
+    const uint32_t staleStream = 0x500101U;
+    const uint32_t nextStream = 0x500102U;
+
+    P25HostHarness harness(true, true, hostPort, hostPeerId);
+    P25TestNetwork sender(senderPort, 6008U);
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, staleStream, 400U, 1301U, 2301U));
+
+    for (uint32_t i = 0U; i < 40U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (harness.network()->rxP25StreamId() == staleStream) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(harness.network()->rxP25StreamId() == staleStream);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->rxP25StreamId() == 0U);
+
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, nextStream, 500U, 1301U, 2301U));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, nextStream, 501U, 1301U, 2301U));
+
+    for (uint32_t i = 0U; i < 40U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(harness.network()->rxP25StreamId() == nextStream);
+}
+
+TEST_CASE("P25 host e2e loopback preserves a continuing network stream across an RF collision", "[p25][host][control][net][e2e]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 6009U;
+    const uint32_t streamId = 0x500201U;
+
+    P25HostHarness harness(true, true, hostPort, hostPeerId);
+    P25TestNetwork sender(senderPort, 6010U);
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    HostTestHooks::p25SetRFCall(*harness.m_control, 1401U, 2401U);
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, streamId, 600U, 1501U, 2501U));
+
+    for (uint32_t i = 0U; i < 40U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (harness.network()->rxP25StreamId() == streamId &&
+            HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning()) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->rxP25StreamId() == streamId);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).hasExpired());
+    REQUIRE(harness.network()->rxP25StreamId() == streamId);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    HostTestHooks::p25ClearRFCall(*harness.m_control);
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, streamId, 601U, 1501U, 2501U));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, streamId, 602U, 1501U, 2501U));
+
+    for (uint32_t i = 0U; i < 40U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(harness.network()->rxP25StreamId() == streamId);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+}
+
+TEST_CASE("P25 host e2e loopback clears a stopped network stream after an RF collision", "[p25][host][control][net][e2e]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 6011U;
+    const uint32_t streamId = 0x500202U;
+
+    P25HostHarness harness(true, true, hostPort, hostPeerId);
+    P25TestNetwork sender(senderPort, 6012U);
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    HostTestHooks::p25SetRFCall(*harness.m_control, 1401U, 2401U);
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, streamId, 700U, 1501U, 2501U));
+
+    for (uint32_t i = 0U; i < 40U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (harness.network()->rxP25StreamId() == streamId &&
+            HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning()) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->rxP25StreamId() == streamId);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25NetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).hasExpired());
+    REQUIRE(harness.network()->rxP25StreamId() == streamId);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+
+    HostTestHooks::p25ClearRFCall(*harness.m_control);
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+    REQUIRE(harness.network()->rxP25StreamId() == 0U);
+    REQUIRE(harness.network()->resetP25Count() == 1U);
+}
+
+TEST_CASE("P25 host e2e loopback enforces stream lock until active stream terminates", "[p25][host][control][net][e2e]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 6007U;
+    const uint32_t streamA = 0x500101U;
+    const uint32_t streamB = 0x500102U;
+
+    P25HostHarness harness(true, true, hostPort, hostPeerId);
+    P25TestNetwork sender(senderPort, 6008U);
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    // Start call on stream A.
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, streamA, 400U, 1301U, 2301U));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, streamA, 401U, 1301U, 2301U));
+
+    for (uint32_t i = 0U; i < 40U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == 1301U);
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == 2301U);
+    REQUIRE(harness.network()->rxP25StreamId() == streamA);
+
+    // Competing stream B should be ignored while stream A is active and locked.
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, streamB, 500U, 1301U, 2301U));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, streamB, 501U, 1301U, 2301U));
+
+    for (uint32_t i = 0U; i < 30U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == 1301U);
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == 2301U);
+    REQUIRE(harness.network()->rxP25StreamId() == streamA);
+
+    // End stream A; stream lock should be released.
+    REQUIRE(sender.sendP25TDUFrame(hostPeerId, streamA, RTP_END_OF_CALL_SEQ, 1301U, 2301U));
+
+    for (uint32_t i = 0U; i < 50U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(harness.network()->rxP25StreamId() == 0U);
+
+    // Now stream B should be admitted after stream A terminates.
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, streamB, 502U, 1301U, 2301U));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, streamB, 503U, 1301U, 2301U));
+
+    for (uint32_t i = 0U; i < 40U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(harness.network()->rxP25StreamId() == streamB);
+}
+
+TEST_CASE("P25 host network terminator clears active network voice state", "[p25][host][control]")
+{
+    P25HostHarness harness;
+    harness.startNetworkVoiceCall();
+
+    p25::lc::LC control;
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+
+    REQUIRE(HostTestHooks::p25TerminateNetCall(*harness.m_control, control));
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::p25TailOnIdle(*harness.m_control));
+    REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 non-authoritative unpermit clears active network state", "[p25][host][control]")
+{
+    P25HostHarness harness(false);
+    harness.m_control->permittedTG(2001U);
+    harness.startNetworkVoiceCall();
+
+    harness.m_control->permittedTG(0U);
+
+    REQUIRE(HostTestHooks::p25PermittedDstId(*harness.m_control) == 0U);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 telephone interconnect permit survives voice hang until explicitly released", "[p25][host][control][telephone]")
+{
+    P25HostHarness harness(false);
+    harness.m_control->permittedTG(2001U, false, true);
+    HostTestHooks::p25SetRFCall(*harness.m_control, 1001U, 2001U);
+
+    HostTestHooks::p25RFTGHang(*harness.m_control).start();
+    HostTestHooks::p25RFTGHang(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::p25RFTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
+    REQUIRE(HostTestHooks::p25PermittedDstId(*harness.m_control) == 2001U);
+
+    harness.m_control->permittedTG(0U);
+    REQUIRE(HostTestHooks::p25PermittedDstId(*harness.m_control) == 0U);
+}
+
+TEST_CASE("P25 ordinary permit is cleared when voice hang expires", "[p25][host][control][telephone]")
+{
+    P25HostHarness harness(false);
+    harness.m_control->permittedTG(2001U);
+    HostTestHooks::p25SetRFCall(*harness.m_control, 1001U, 2001U);
+
+    HostTestHooks::p25RFTGHang(*harness.m_control).start();
+    HostTestHooks::p25RFTGHang(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::p25RFTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
+    REQUIRE(HostTestHooks::p25PermittedDstId(*harness.m_control) == 0U);
+}
+
+TEST_CASE("P25 clearRFReject returns rejected RF state to listening", "[p25][host][control][rf]")
+{
+    P25HostHarness harness;
+    HostTestHooks::p25SetRFRejected(*harness.m_control);
+
+    harness.m_control->clearRFReject();
+
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
+}
+
+TEST_CASE("P25 processFrame accepts calibration-based RF LDU1 frame", "[p25][host][rf]")
+{
+    P25HostHarness harness;
+    harness.m_control->reset();
+
+    uint8_t frame[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+    buildP25RFFrame(CAL_P25_LDU1_1K, frame);
+    HostTestHooks::p25StampRFFrameNID(*harness.m_control, frame, p25::defines::DUID::LDU1);
+
+    REQUIRE(harness.m_control->processFrame(frame, sizeof(frame)));
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
+    REQUIRE(harness.m_control->getLastSrcId() == 1U);
+    REQUIRE(harness.m_control->getLastDstId() == 1U);
+}
+
+TEST_CASE("P25 controller enforces TG admission without applying it to U2U", "[p25][host][control][rf][talkgroup-admission]")
+{
+    SECTION("restricted group traffic is rejected") {
+        P25HostHarness harness(true, false, 0U, 1U, false, true);
+        harness.m_tidLookup.addEntry(admissionRule(1U, { 2U }));
+
+        uint8_t frame[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        buildP25RFFrame(CAL_P25_LDU1_1K, frame);
+        HostTestHooks::p25StampRFFrameNID(*harness.m_control, frame, p25::defines::DUID::LDU1);
+
+        REQUIRE_FALSE(harness.m_control->processFrame(frame, sizeof(frame)));
+        REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_REJECTED);
+    }
+
+    SECTION("admitted group traffic is accepted") {
+        P25HostHarness harness(true, false, 0U, 1U, false, true);
+        harness.m_tidLookup.addEntry(admissionRule(1U, { 1U }));
+
+        uint8_t frame[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        buildP25RFFrame(CAL_P25_LDU1_1K, frame);
+        HostTestHooks::p25StampRFFrameNID(*harness.m_control, frame, p25::defines::DUID::LDU1);
+
+        REQUIRE(harness.m_control->processFrame(frame, sizeof(frame)));
+        REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
+    }
+
+    SECTION("U2U grant bypasses talkgroup admission") {
+        P25HostHarness harness(true, false, 0U, 1U, false, true);
+        const uint32_t channelNo = 1U;
+        harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+        REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+        HostTestHooks::p25ConfigureU2U(*harness.m_control, false);
+        HostTestHooks::p25RegisterUnit(*harness.m_control, 1001U);
+        HostTestHooks::p25RegisterUnit(*harness.m_control, 2001U);
+
+        uint8_t request[p25::defines::P25_TSBK_LENGTH_BYTES];
+        buildUUVchRequest(1001U, 2001U, request);
+
+        REQUIRE(HostTestHooks::p25ProcessRawTSBK(*harness.m_control, request));
+        REQUIRE(HostTestHooks::p25IsU2UGranted(*harness.m_control, 1001U, 2001U));
+    }
+}
+
+TEST_CASE("P25 processFrame accepts calibration-based RF LDU2 frame after LDU1", "[p25][host][rf]")
+{
+    P25HostHarness harness;
+    harness.m_control->reset();
+
+    uint8_t ldu1[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+    uint8_t ldu2[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+    buildP25RFFrame(CAL_P25_LDU1_1K, ldu1);
+    buildP25RFFrame(CAL_P25_LDU2_1K, ldu2);
+    HostTestHooks::p25StampRFFrameNID(*harness.m_control, ldu1, p25::defines::DUID::LDU1);
+    HostTestHooks::p25StampRFFrameNID(*harness.m_control, ldu2, p25::defines::DUID::LDU2);
+
+    REQUIRE(harness.m_control->processFrame(ldu1, sizeof(ldu1)));
+    REQUIRE(harness.m_control->processFrame(ldu2, sizeof(ldu2)));
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
+    REQUIRE(harness.m_control->getLastSrcId() == 1U);
+    REQUIRE(harness.m_control->getLastDstId() == 1U);
+}
+
+TEST_CASE("P25 rfTGHang expiry ends active RF call and returns to listening", "[p25][host][control][rf]")
+{
+    P25HostHarness harness;
+    harness.m_control->reset();
+
+    uint8_t ldu1[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+    buildP25RFFrame(CAL_P25_LDU1_1K, ldu1);
+    HostTestHooks::p25StampRFFrameNID(*harness.m_control, ldu1, p25::defines::DUID::LDU1);
+
+    REQUIRE(harness.m_control->processFrame(ldu1, sizeof(ldu1)));
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
+
+    HostTestHooks::p25RFTGHang(*harness.m_control).start();
+    HostTestHooks::p25RFTGHang(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25RFTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
+    REQUIRE_FALSE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+    REQUIRE_FALSE(HostTestHooks::p25RFLossWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 rfTGHang zero fallback arms rfLossWatchdog and recovers RF state", "[p25][host][control][rf]")
+{
+    P25HostHarness harness;
+    harness.m_control->reset();
+
+    uint8_t ldu1[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+    uint8_t ldu2[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+    buildP25RFFrame(CAL_P25_LDU1_1K, ldu1);
+    buildP25RFFrame(CAL_P25_LDU2_1K, ldu2);
+    HostTestHooks::p25StampRFFrameNID(*harness.m_control, ldu1, p25::defines::DUID::LDU1);
+    HostTestHooks::p25StampRFFrameNID(*harness.m_control, ldu2, p25::defines::DUID::LDU2);
+
+    REQUIRE(harness.m_control->processFrame(ldu1, sizeof(ldu1)));
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
+
+    HostTestHooks::p25RFTGHang(*harness.m_control).setTimeout(0U);
+    REQUIRE_FALSE(HostTestHooks::p25RFLossWatchdog(*harness.m_control).isRunning());
+
+    REQUIRE(harness.m_control->processFrame(ldu2, sizeof(ldu2)));
+    REQUIRE(HostTestHooks::p25RFLossWatchdog(*harness.m_control).isRunning());
+
+    HostTestHooks::p25RFLossWatchdog(*harness.m_control).clock(expireTimerTicks(HostTestHooks::p25RFLossWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_LISTENING);
+    REQUIRE_FALSE(HostTestHooks::p25RFLossWatchdog(*harness.m_control).isRunning());
+}
+
+TEST_CASE("P25 grant authority follows configuration and FNE availability",
+    "[p25][host][control][grant-authority]")
+{
+    P25HostHarness delegated(false, true);
+    REQUIRE(delegated.m_control->isGrantAuthoritative());
+
+    delegated.network()->activateForTest();
+    REQUIRE_FALSE(delegated.m_control->isGrantAuthoritative());
+
+    P25HostHarness local(true, true);
+    local.network()->activateForTest();
+    REQUIRE(local.m_control->isGrantAuthoritative());
+}

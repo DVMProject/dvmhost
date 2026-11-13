@@ -69,6 +69,7 @@
 #define TAG_TRANSFER_ACT_LOG    "TRNSLOG"
 #define TAG_TRANSFER_DIAG_LOG   "TRNSDIAG"
 #define TAG_TRANSFER_STATUS     "TRNSSTS"
+#define TAG_TRANSFER_PATCH_STAT "TRNSPTCH"
 
 #define TAG_ANNOUNCE            "ANNC"
 #define TAG_PEER_REPLICA        "REPL"
@@ -93,10 +94,13 @@ namespace network
     const uint32_t  P25_TSDU_PACKET_LENGTH = 69U;   // 24 byte header + TSDU data
     const uint32_t  P25_TDULC_PACKET_LENGTH = 78U;  // 24 byte header + TDULC data
     const uint32_t  P25_P2_PACKET_LENGTH = 66U;     // 24 byte header + P25_P2_FRAME_LENGTH_BYTES + 2 byte trailer
-    const uint32_t  NXDN_PACKET_LENGTH = 70U;       // 20 byte header + NXDN_FRAME_LENGTH_BYTES + 2 byte trailer
+    const uint32_t  NXDN_PACKET_LENGTH = 74U;       // 24 byte header + NXDN CAI frame + 2 byte trailer
     const uint32_t  ANALOG_PACKET_LENGTH = 344U;    // 20 byte header + AUDIO_SAMPLES_LENGTH_BYTES + 4 byte trailer
 
     const uint32_t  HA_PARAMS_ENTRY_LEN = 20U;
+
+    /** @brief KMM Decryption Instruction - Encrypted Peer Key Response */
+    const uint8_t   KMM_DECRYPT_PEER_ENC = 0x80U;
 
     /**
      * @brief Network Peer Connection Status
@@ -150,8 +154,38 @@ namespace network
         NET_CTRL_GRANT_DEMAND = 0x80U,              //!< Grant Demand
         NET_CTRL_GRANT_DENIAL = 0x40U,              //!< Grant Denial
         NET_CTRL_SWITCH_OVER = 0x20U,               //!< Call Source RID Switch Over
+        NET_CTRL_ISP = 0x10U,                       //!< P25 inbound service packet direction
         NET_CTRL_GRANT_ENCRYPT = 0x08U,             //!< Grant Encrypt
         NET_CTRL_U2U = 0x01U,                       //!< Unit-to-Unit
+    };
+
+    /**
+     * @brief Grant-release status flags.
+     * @note These flags indicate the status of a grant release operation.
+     * @ingroup network_core
+     */
+    enum GRANT_RELEASE_FLAGS : uint8_t {
+        NET_GRANT_RELEASE_FAILED = 0x01U,           //!< Local RF grant commit failed
+    };
+
+    /**
+     * @brief Peer Connection Class Enumerations
+     * @note These values define which connection class a peer connection belongs to. This is used for determining how 
+     *  to handle traffic from the peer.
+     * @ingroup network_core
+     */
+    enum PEER_CONN_CLASS {
+        PEER_CONN_CLASS_UNKNOWN,            //!< Unknown
+
+        PEER_CONN_CLASS_NEIGHBOR,           //!< Neighbor FNE Peer
+
+        PEER_CONN_CLASS_STANDARD,           //!< Standard Peer
+
+        PEER_CONN_CLASS_SYSVIEW,            //!< SysView Peer
+        PEER_CONN_CLASS_CONSOLE,            //!< Console Peer
+
+        // this should always be last
+        PEER_CONN_CLASS_INVALID
     };
 
     /**
@@ -173,7 +207,7 @@ namespace network
      * @brief Handles dealing with maintaining RTP sequencing for multiple multiplexed RTP streams.
      * @ingroup fne_network
      */
-    class HOST_SW_API RTPStreamMultiplex {
+    class DVM_COMMON_API RTPStreamMultiplex {
     public:
         auto operator=(RTPStreamMultiplex&) -> RTPStreamMultiplex& = delete;
         auto operator=(RTPStreamMultiplex&&) -> RTPStreamMultiplex& = delete;
@@ -370,7 +404,7 @@ namespace network
      * @brief Implements the base networking logic.
      * @ingroup network_core
      */
-    class HOST_SW_API BaseNetwork {
+    class DVM_COMMON_API BaseNetwork {
     public:
         /**
          * @brief Initializes a new instance of the BaseNetwork class.
@@ -425,7 +459,7 @@ namespace network
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          *      | Destination ID                | Reserved      |S| Reserverd   |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         *      | Mode          | Reserved                                      |
+         *      | Mode          | Service Opts  | Reserved                      |
          *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          * \endcode
          * @param mode Digital Mode.
@@ -433,17 +467,53 @@ namespace network
          * @param dstId Destination Radio ID.
          * @param slot DMR slot number (if DMR).
          * @param unitToUnit Flag indicating if this grant is unit-to-unit.
+         * @param serviceOptions Protocol service-options octet for the requested grant.
          * @returns bool True, if grant request was sent, otherwise false. 
          */
-        bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId, const uint8_t slot, const bool unitToUnit);
+        bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions);
+
+        /**
+         * @brief Writes a release for a grant previously assigned by the network.
+         * @param mode Digital mode owning the grant.
+         * @param srcId Source radio ID associated with the grant.
+         * @param dstId Destination radio or talkgroup ID associated with the grant.
+         * @param slot DMR or P25 Phase 2 slot number, or zero when not applicable.
+         * @param unitToUnit Flag indicating an individual-call grant.
+         * @param failed Flag indicating local RF grant commit failed.
+         * @returns bool True if the grant release was sent; otherwise false.
+         */
+        bool writeGrantRelease(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit, const bool failed = false);
 
         /**
          * @brief Writes a enc. key request to the network.
          * @param kId Key ID.
          * @param algId Algorithm ID.
+         * @param srcId Source Radio ID.
          * @returns bool True, if request was sent, otherwise false. 
          */
-        bool writeKeyReq(const uint16_t kId, const uint8_t algId);
+        bool writeKeyReq(const uint16_t kId, const uint8_t algId, const uint32_t srcId = 0U);
+
+        /**
+         * @brief Writes a LLA enc. key request to the network.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if request was sent, otherwise false. 
+         */
+        bool writeLLAKeyReq(const uint32_t srcId);
+
+        /**
+         * @brief Writes a UKEK enc. key request to the network.
+         * @param rsi Source Radio ID.
+         * @returns bool True, if request was sent, otherwise false.
+         */
+        bool writeUKEKReq(const uint32_t rsi);
+
+        /**
+         * @brief Requests the current radio alias table from the upstream master.
+         * @returns bool True, if the request was sent, otherwise false.
+         */
+        bool writeRadioAliasSyncRequest();
 
         /**
          * @brief Writes the local activity log to the network.
@@ -662,6 +732,27 @@ namespace network
         virtual bool announceAffiliationUpdate(const std::unordered_map<uint32_t, uint32_t> affs);
 
         /**
+         * @brief Writes a complete update of the peer's unit registration list to the network.
+         * \code{.unparsed}
+         *  Below is the representation of the data layout for the repeater/end point login message.
+         *  The message is variable bytes in length.
+         * 
+         *  Each unit registration update entry is 3 bytes.
+         * 
+         *  Byte 0               1               2               3
+         *  Bit  7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Number of entries                                             |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         *      | Entry: Source ID                                |
+         *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         * \endcode
+         * @param regs Complete list of unit registrations.
+         * @returns bool True, if unit registration update announcement was sent, otherwise false. 
+         */
+        virtual bool announceUnitRegUpdate(const std::vector<uint32_t> regs);
+
+        /**
          * @brief Writes a complete update of the peer's voice channel list to the network.
          * \code{.unparsed}
          *  Below is the representation of the data layout for the repeater/end point login message.
@@ -796,6 +887,25 @@ namespace network
          */
         virtual UInt8Array readP25(bool& ret, uint32_t& frameLength);
         /**
+         * @brief Helper to test if the given buffer contains a complete set of P25 LDU voice vectors for the given DUID type.
+         * @param[in] data Buffer containing the data to check.
+         * @param len Length of the data buffer.
+         * @param[in] duid P25 DUID type.
+         * @returns bool True, if the buffer contains P25 LDU voice vectors for the given DUID type, otherwise false.
+         */
+        static bool hasLDUVectors(const uint8_t* data, uint32_t len, P25DEF::DUID::E duid);
+        /**
+         * @brief Helper to reconstruct P25 LDU voice vectors from the given DFSI data.
+         * @param[in] dfsiData Buffer containing the DFSI data to reconstruct from.
+         * @param len Length of the DFSI data buffer.
+         * @param[in] dfsiLC Instance of p25::dfsi::LC containing the DFSI link control data.
+         * @param[in] duid P25 DUID type.
+         * @param[out] outLDU Buffer to write the reconstructed LDU voice vectors to.
+         * @returns uint8_t Number of missing frames, 9 if reconstruction failed, otherwise the number of missing frames.
+         */
+        static uint8_t reconstructLDUVectors(const uint8_t* dfsiData, uint32_t len, p25::dfsi::LC* dfsiLC, P25DEF::DUID::E duid, 
+            uint8_t* outLDU);
+        /**
          * @brief Writes P25 LDU1 frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] lsd Instance of p25::data::LowSpeedData containing low speed data.
@@ -828,9 +938,10 @@ namespace network
          * @brief Writes P25 TSDU frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] data Buffer containing P25 TSDU data to send.
+         * @param[in] controlByte DVM control byte, including the TSBK direction marker.
          * @returns bool True, if message was sent, otherwise false.
          */
-        virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data);
+        virtual bool writeP25TSDU(const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte = 0U);
         /**
          * @brief Writes P25 TDULC frame data to the network.
          * @param[in] control Instance of p25::lc::LC containing link control data.
@@ -862,12 +973,13 @@ namespace network
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] duid P25 Phase 2 DUID type.
          * @param[in] slot P25 Phase 2 slot number.
+         * @param[in] scramblerOffset Scrambler offset for the P25 Phase 2 frame.
          * @param[in] data Buffer containing P25 Phase 2 data to send.
          * @param[in] controlByte DVM control byte.
          * @returns bool True, if message was sent, otherwise false.
          */
-        virtual bool writeP25P2(const p25::lc::LC& control, p25::defines::P2_DUID::E duid, uint8_t slot, const uint8_t* data,
-            const uint8_t controlByte = 0U);
+        virtual bool writeP25P2(const p25::lc::LC& control, p25::defines::P2_DUID::E duid, uint8_t slot, const uint16_t scramblerOffset, 
+            const uint8_t* data, const uint8_t controlByte = 0U);
 
         /**
          * @brief Helper to test if the P25 ring buffer has data.
@@ -1153,9 +1265,10 @@ namespace network
          * @param[out] length Length of network message buffer.
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param[in] data Buffer containing P25 TSDU data to send.
+         * @param[in] controlByte DVM control byte, including the TSBK direction marker.
          * @returns UInt8Array Buffer containing the built network message.
          */
-        UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data);
+        UInt8Array createP25_TSDUMessage(uint32_t& length, const p25::lc::LC& control, const uint8_t* data, const uint8_t controlByte);
 
         /**
          * @brief Creates an P25 TDULC frame message.
@@ -1221,13 +1334,14 @@ namespace network
          * @param[in] control Instance of p25::lc::LC containing link control data.
          * @param duid P25 Phase 2 DUID.
          * @param[in] slot P25 Phase 2 slot (clear Slot 1, set Slot 2).
+         * @param[in] scramblerOffset Scrambler offset for the P25 Phase 2 frame.
          * @param[in] data Buffer containing P25 LDU2 data to send.
          * @param[in] controlByte DVM Network Control Byte.
          * @param data Instance of the dmr::data::Data class containing the DMR message.
          * @returns UInt8Array Buffer containing the built network message.
          */
         UInt8Array createP25P2_Message(uint32_t& length, const p25::lc::LC& control, p25::defines::P2_DUID::E duid, 
-            const bool slot, const uint8_t* data, uint8_t controlByte = 0U);
+            const bool slot, const uint16_t scramblerOffset, const uint8_t* data, uint8_t controlByte = 0U);
 
         /**
          * @brief Creates an NXDN frame message.

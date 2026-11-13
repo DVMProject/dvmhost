@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements CAN SRV REQ - Cancel Service Request
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API ISP_CAN_SRV_REQ : public TSBK {
+            class DVM_COMMON_API ISP_CAN_SRV_REQ : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the ISP_CAN_SRV_REQ class.

@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2011-2021 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2021 Nat Moore
  *
  */
@@ -28,6 +28,7 @@
 
 #include "Defines.h"
 #include "common/RingBuffer.h"
+#include "common/p25/P25Defines.h"
 #include "common/Timer.h"
 #include "modem/port/IModemPort.h"
 #include "restapi/RESTAPI.h"
@@ -74,10 +75,10 @@
 
 class HOST_SW_API Host;
 class HOST_SW_API HostCal;
-class HOST_SW_API RESTAPI;
+namespace host_restapi { class HOST_SW_API RESTAPI; }
 
 class HOST_SW_API HostSetup;
-#if defined(ENABLE_SETUP_TUI)        
+#if defined(ENABLE_SETUP_TUI)
 class HOST_SW_API SetupApplication;
 class HOST_SW_API SetupMainWnd;
 
@@ -119,6 +120,8 @@ namespace modem
         STATE_P25 = 2U,                     //!< Project 25
         // NXDN
         STATE_NXDN = 3U,                    //!< NXDN
+        // Project 25 Phase 2
+        STATE_P25_P2 = 4U,                  //!< Project 25 Phase 2
 
         // CW
         STATE_CW = 10U,                     //!< Continuous Wave
@@ -171,6 +174,13 @@ namespace modem
         CMD_P25_DATA = 0x31U,               //!< Project 25 Data
         CMD_P25_LOST = 0x32U,               //!< Project 25 Data Lost
         CMD_P25_CLEAR = 0x33U,              //!< Project 25 Clear Buffer
+
+        CMD_P25_P2_DATA1 = 0x34U,            //!< Project 25 Phase 2 Data Slot 1
+        CMD_P25_P2_LOST1 = 0x35U,            //!< Project 25 Phase 2 Data Lost Slot 1
+        CMD_P25_P2_DATA2 = 0x36U,            //!< Project 25 Phase 2 Data Slot 2
+        CMD_P25_P2_LOST2 = 0x37U,            //!< Project 25 Phase 2 Data Lost Slot 2
+        CMD_P25_P2_CLEAR1 = 0x38U,           //!< Project 25 Phase 2 Clear Slot 1 Buffer
+        CMD_P25_P2_CLEAR2 = 0x39U,           //!< Project 25 Phase 2 Clear Slot 2 Buffer
 
         CMD_NXDN_DATA = 0x41U,              //!< NXDN Data
         CMD_NXDN_LOST = 0x42U,              //!< NXDN Data Lost
@@ -470,6 +480,28 @@ namespace modem
          */
         uint32_t readP25Frame(uint8_t* data);
         /**
+         * @brief Get the frame data length for the next P25 Phase 2 Slot 1 frame.
+         * @returns uint32_t Length of frame data retrieved.
+         */
+        uint32_t peekP25P2Frame1Length();
+        /**
+         * @brief Reads P25 Phase 2 Slot 1 frame data.
+         * @param[out] data Buffer to write frame data to.
+         * @returns uint32_t Length of data read from ring buffer.
+         */
+        uint32_t readP25P2Frame1(uint8_t* data);
+        /**
+         * @brief Get the frame data length for the next P25 Phase 2 Slot 2 frame.
+         * @returns uint32_t Length of frame data retrieved.
+         */
+        uint32_t peekP25P2Frame2Length();
+        /**
+         * @brief Reads P25 Phase 2 Slot 2 frame data.
+         * @param[out] data Buffer to write frame data to.
+         * @returns uint32_t Length of data read from ring buffer.
+         */
+        uint32_t readP25P2Frame2(uint8_t* data);
+        /**
          * @brief Get the frame data length for the next frame in the NXDN ring buffer.
          * @returns uint32_t Length of frame data retrieved.
          */
@@ -511,6 +543,26 @@ namespace modem
          * @return uint32_t Size in bytes available for the P25 ring buffer.
          */
         uint32_t getP25Space() const { return m_p25Space; }
+        /**
+         * @brief Helper to test if the P25 Phase 2 Slot 1 ring buffer has free space.
+         * @returns bool True, if the P25 Phase 2 Slot 1 ring buffer has free space, otherwise false.
+         */
+        bool hasP25P2Space1() const;
+        /**
+         * @brief Helper to return the currently reported available P25 Phase 2 Slot 1 ring buffer free space.
+         * @return uint32_t Size in bytes available for the P25 Phase 2 Slot 1 ring buffer.
+         */
+        uint32_t getP25P2Space1() const { return m_p25P2Space1; }
+        /**
+         * @brief Helper to test if the P25 Phase 2 Slot 2 ring buffer has free space.
+         * @returns bool True, if the P25 Phase 2 Slot 2 ring buffer has free space, otherwise false.
+         */
+        bool hasP25P2Space2() const;
+        /**
+         * @brief Helper to return the currently reported available P25 Phase 2 Slot 2 ring buffer free space.
+         * @return uint32_t Size in bytes available for the P25 Phase 2 Slot 2 ring buffer.
+         */
+        uint32_t getP25P2Space2() const { return m_p25P2Space2; }
         /**
          * @brief Helper to test if the NXDN ring buffer has free space.
          * @returns bool True, if the NXDN ring buffer has free space, otherwise false.
@@ -569,6 +621,14 @@ namespace modem
          */
         void clearP25Frame();
         /**
+         * @brief Clears any buffered P25 Phase 2 Slot 1 frame data to be sent to the air interface modem.
+         */
+        void clearP25P2Frame1();
+        /**
+         * @brief Clears any buffered P25 Phase 2 Slot 2 frame data to be sent to the air interface modem.
+         */
+        void clearP25P2Frame2();
+        /**
          * @brief Clears any buffered NXDN frame data to be sent to the air interface modem.
          */
         void clearNXDNFrame();
@@ -591,6 +651,18 @@ namespace modem
          * @param length Length of data to write.
          */
         void injectP25Frame(const uint8_t* data, uint32_t length);
+        /**
+         * @brief Internal helper to inject P25 Phase 2 Slot 1 frame data.
+         * @param[in] data Data to write to ring buffer.
+         * @param length Length of data to write.
+         */
+        void injectP25P2Frame1(const uint8_t* data, uint32_t length);
+        /**
+         * @brief Internal helper to inject P25 Phase 2 Slot 2 frame data.
+         * @param[in] data Data to write to ring buffer.
+         * @param length Length of data to write.
+         */
+        void injectP25P2Frame2(const uint8_t* data, uint32_t length);
         /**
          * @brief Internal helper to inject NXDN frame data as if it came from the air interface modem.
          * @param[in] data Data to write to ring buffer.
@@ -622,6 +694,22 @@ namespace modem
          * @returns bool True, if data is written, otherwise false.
          */
         bool writeP25Frame(const uint8_t* data, uint32_t length, bool imm = false);
+        /**
+         * @brief Write P25 Phase 2 Slot 1 frame data to the P25 Phase 2 Slot 1 ring buffer.
+         * @param[in] data Data to write to ring buffer.
+         * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
+         * @returns bool True, if data is written, otherwise false.
+         */
+        bool writeP25P2Frame1(const uint8_t* data, uint32_t length, bool imm = false);
+        /**
+         * @brief Writes P25 Phase 2 Slot 2 frame data to the P25 Phase 2 Slot 2 ring buffer.
+         * @param[in] data Data to write to ring buffer.
+         * @param length Length of data to write.
+         * @param imm Flag indicating whether the frame is immediate.
+         * @returns bool True, if data is written, otherwise false.
+         */
+        bool writeP25P2Frame2(const uint8_t* data, uint32_t length, bool imm = false);
         /**
          * @brief Writes NXDN frame data to the NXDN ring buffer.
          * @param[in] data Data to write to ring buffer.
@@ -698,10 +786,10 @@ namespace modem
     protected:
         friend class ::Host;
         friend class ::HostCal;
-        friend class ::RESTAPI;
+        friend class ::host_restapi::RESTAPI;
 
         friend class ::HostSetup;
-#if defined(ENABLE_SETUP_TUI)        
+#if defined(ENABLE_SETUP_TUI)
         friend class ::SetupApplication;
         friend class ::SetupMainWnd;
 
@@ -791,6 +879,7 @@ namespace modem
         uint32_t m_dacOverFlowCount;    // dedicated modem - DAC overflow count
 
         bool m_v24Connected;
+        bool m_p25P2Capable;
         DVM_STATE m_modemState;
 
         uint8_t* m_buffer;
@@ -807,6 +896,8 @@ namespace modem
         RingBuffer<uint8_t> m_rxDMRQueue1;
         RingBuffer<uint8_t> m_rxDMRQueue2;
         RingBuffer<uint8_t> m_rxP25Queue;
+        RingBuffer<uint8_t> m_rxP25P2Queue1;
+        RingBuffer<uint8_t> m_rxP25P2Queue2;
         RingBuffer<uint8_t> m_rxNXDNQueue;
 
         Timer m_statusTimer;
@@ -815,6 +906,8 @@ namespace modem
         uint32_t m_dmrSpace1;
         uint32_t m_dmrSpace2;
         uint32_t m_p25Space;
+        uint32_t m_p25P2Space1;
+        uint32_t m_p25P2Space2;
         uint32_t m_nxdnSpace;
 
         bool m_tx;
@@ -825,6 +918,8 @@ namespace modem
         std::mutex m_dmr1ReadLock;
         std::mutex m_dmr2ReadLock;
         std::mutex m_p25ReadLock;
+        std::mutex m_p25P2ReadLock1;
+        std::mutex m_p25P2ReadLock2;
         std::mutex m_nxdnReadLock;
 
         bool m_ignoreModemConfigArea;

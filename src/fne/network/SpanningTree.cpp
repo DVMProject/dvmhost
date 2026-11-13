@@ -392,13 +392,19 @@ void SpanningTree::internalErasePeer(const uint32_t peerId)
             }
 
             if (tree->hasChildren()) {
+                // Recursive deletion removes each child from this vector. Snapshot the
+                // IDs first so recursion cannot invalidate an active vector iterator.
+                std::vector<uint32_t> children;
+                children.reserve(tree->m_children.size());
                 for (auto child : tree->m_children) {
                     if (child != nullptr) {
-                        internalErasePeer(child->id());
+                        children.push_back(child->id());
                     }
                 }
 
-                tree->m_children.clear();
+                for (auto childId : children) {
+                    internalErasePeer(childId);
+                }
             }
 
             delete tree;

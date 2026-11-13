@@ -25,6 +25,8 @@ using namespace dmr::lc;
 //  Static Class Members
 // ---------------------------------------------------------------------------
 
+bool CSBK::s_warnCRC = false;
+
 bool CSBK::s_verbose = false;
 
 SiteData CSBK::s_siteData = SiteData();
@@ -115,6 +117,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
@@ -136,6 +140,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
             break;
@@ -150,6 +156,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
@@ -166,6 +174,8 @@ bool CSBK::regenerate(uint8_t* data, uint8_t dataType)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::regenerate(), unhandled dataType = $%02X", dataType);
@@ -245,6 +255,8 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::decode(), unhandled dataType = $%02X", m_dataType);
             break;
@@ -252,8 +264,13 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
 
     bool valid = edac::CRC::checkCCITT162(csbk, DMR_CSBK_LENGTH_BYTES);
     if (!valid) {
-        LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
-        return false;
+        if (s_warnCRC) {
+            LogWarning(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
+        }
+        else {
+            LogError(LOG_DMR, "CSBK::decode(), failed CRC CCITT-162 check");
+            return false;
+        }
     }
 
     // restore the checksum
@@ -265,6 +282,8 @@ bool CSBK::decode(const uint8_t* data, uint8_t* payload)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::decode(), unhandled dataType = $%02X", m_dataType);
@@ -318,6 +337,8 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
             break;
+        case DataType::MBC_DATA:
+            break;
         default:
             LogError(LOG_DMR, "CSBK::encoded(), unhandled dataType = $%02X", m_dataType);
             break;
@@ -333,6 +354,8 @@ void CSBK::encode(uint8_t* data, const uint8_t* payload)
         case DataType::MBC_HEADER:
             csbk[10U] ^= CSBK_MBC_CRC_MASK[0U];
             csbk[11U] ^= CSBK_MBC_CRC_MASK[1U];
+            break;
+        case DataType::MBC_DATA:
             break;
         default:
             LogError(LOG_DMR, "CSBK::encode(), unhandled dataType = $%02X", m_dataType);
@@ -377,7 +400,7 @@ void CSBK::copy(const CSBK& data)
     m_proxy = data.m_proxy;
 
     m_response = data.m_response;
-    m_response = data.m_reason;
+    m_reason = data.m_reason;
 
     m_siteOffsetTiming = data.m_siteOffsetTiming;
 

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -44,7 +44,7 @@ bool IOSP_MSG_UPDT::decode(const uint8_t* data, bool rawTSBK)
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
-    m_messageValue = (uint8_t)((tsbkValue >> 56) & 0xFFU);                          // Message Value
+    m_messageValue = (uint16_t)((tsbkValue >> 48) & 0xFFFFU);                       // Message Value
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
 

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -21,6 +21,8 @@
 #include "common/dmr/data/EmbeddedData.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/PrivacyLC.h"
+#include "common/nxdn/lc/RTCH.h"
+#include "common/nxdn/Crypto.h"
 #include "common/p25/Crypto.h"
 #include "common/network/udp/Socket.h"
 #include "common/network/RTPHeader.h"
@@ -37,6 +39,7 @@
 #include "RtsPttController.h"
 #include "CtsCorController.h"
 
+#include <chrono>
 #include <string>
 #include <mutex>
 
@@ -67,6 +70,7 @@ const uint8_t HALF_RATE_MODE = 0x01U;
 const uint8_t TX_MODE_DMR = 1U;
 const uint8_t TX_MODE_P25 = 2U;
 const uint8_t TX_MODE_ANALOG = 3U;
+const uint8_t TX_MODE_NXDN = 4U;
 
 
 // ---------------------------------------------------------------------------
@@ -168,6 +172,7 @@ private:
     bool m_grantDemand;
 
     uint8_t m_txMode;
+    bool m_duplicateToAnalog;
 
     float m_rxAudioGain;
     float m_vocoderDecoderAudioGain;
@@ -184,6 +189,8 @@ private:
     bool m_requestedTek;
 
     p25::crypto::P25Crypto* m_p25Crypto;
+    nxdn::crypto::NXDNCrypto* m_nxdnCrypto;
+    uint8_t m_nxdnCipherType;
 
     bool m_localAudio;
 
@@ -191,6 +198,7 @@ private:
     uint16_t m_dropTimeMS;
     Timer m_localDropTime;
     Timer m_udpDropTime;
+    std::chrono::steady_clock::time_point m_lastUDPFrame;
 
     bool m_detectAnalogMDC1200;
 
@@ -255,6 +263,20 @@ private:
     uint8_t m_p25N;
 
     /*
+    ** NXDN
+    */
+
+    nxdn::lc::RTCH m_rxNXDNLC;
+    nxdn::lc::RTCH m_rxNXDNSACCHLC;
+    uint8_t m_rxNXDNSACCHData[9U];
+    uint8_t m_rxNXDNSACCHMask;
+    bool m_rxNXDNPendingMI;
+    uint8_t m_rxNXDNNextMI[nxdn::defines::MI_LENGTH_BYTES];
+    uint8_t* m_nxdnAMBE;
+    uint32_t m_nxdnSeqNo;
+    uint8_t m_nxdnN;
+
+    /*
     ** Analog
     */
 
@@ -307,19 +329,45 @@ private:
     static std::mutex s_audioMutex;
     static std::mutex s_networkMutex;
 
-#if defined(_WIN32)
     void* m_decoderState;
     uint16_t m_dcMode;
     void* m_encoderState;
     uint16_t m_ecMode;
 
-    HINSTANCE m_ambeDLL;
     bool m_useExternalVocoder;
 
     int m_frameLengthInBits;
     int m_frameLengthInBytes;
 
+#if defined(_WIN32)
+    HINSTANCE m_ambeDLL;
+
     typedef void(__cdecl* Tambe_init_dec)(void* state, short mode);
+    typedef short(__cdecl* Tambe_get_dec_mode)(void* state);
+    typedef uint32_t(__cdecl* Tambe_voice_dec)(short* samples, short sampleLength, short* packedCodeword, short bitSteal, uint16_t cmode, short n, void* state);
+    typedef void(__cdecl* Tambe_init_enc)(void* state, short mode, short initialize);
+    typedef short(__cdecl* Tambe_get_enc_mode)(void* state);
+    typedef uint32_t(__cdecl* Tambe_voice_enc)(short* packedCodeword, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short, void* state);
+
+    /**
+     * @brief Helper to initialize the use of the external AMBE.DLL binary for DVSI USB-3000.
+     */
+    void initializeAMBEDLL();
+#else
+    void* m_ambeHandle;
+
+    typedef void(*Tambe_init_dec)(void* state, short mode);
+    typedef short(*Tambe_get_dec_mode)(void* state);
+    typedef uint32_t(*Tambe_voice_dec)(short* samples, short sampleLength, short* packedCodeword, short bitSteal, uint16_t cmode, short n, void* state);
+    typedef void(*Tambe_init_enc)(void* state, short mode, short initialize);
+    typedef short(*Tambe_get_enc_mode)(void* state);
+    typedef uint32_t(*Tambe_voice_enc)(short* packedCodeword, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short, void* state);
+
+    /**
+     * @brief Helper to initialize the use of the external AMBE binary for DVSI USB-3000.
+     */
+    void initializeAMBELib();
+#endif // defined(_WIN32)
     /**
      * @brief Initialize the AMBE decoder.
      * @param[out] state Buffer containing the decoder state to initialize.
@@ -327,7 +375,6 @@ private:
      */
     Tambe_init_dec ambe_init_dec;
 
-    typedef short(__cdecl* Tambe_get_dec_mode)(void* state);
     /**
      * @brief Get the current operating state of the AMBE decoder.
      * @param[out] state Buffer containing the decoder state.
@@ -335,7 +382,6 @@ private:
      */
     Tambe_get_dec_mode ambe_get_dec_mode;
 
-    typedef uint32_t(__cdecl* Tambe_voice_dec)(short* samples, short sampleLength, short* packedCodeword, short bitSteal, uint16_t cmode, short n, void* state);
     /**
      * @brief Decode AMBE codeword into PCM samples.
      * @param[out] samples Audio Output (in short samples)
@@ -349,7 +395,6 @@ private:
      */
     Tambe_voice_dec ambe_voice_dec;
 
-    typedef void(__cdecl* Tambe_init_enc)(void* state, short mode, short initialize);
     /**
      * @brief Initialize the AMBE decoder.
      * @param[out] state Buffer containing the ebncoder state to initialize.
@@ -358,7 +403,6 @@ private:
      */
     Tambe_init_enc ambe_init_enc;
 
-    typedef short(__cdecl* Tambe_get_enc_mode)(void* state);
     /**
      * @brief Get the current operating state of the AMBE encoder.
      * @param[out] state Buffer containing the decoder state.
@@ -366,7 +410,6 @@ private:
      */
     Tambe_get_enc_mode ambe_get_enc_mode;
 
-    typedef uint32_t(__cdecl* Tambe_voice_enc)(short* packedCodeword, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short, void* state);
     /**
      * @brief Decode AMBE codeword into PCM samples.
      * @param[out] packedCodeword AMBE codewords.
@@ -380,11 +423,6 @@ private:
      * @returns uint32_t
      */
     Tambe_voice_enc ambe_voice_enc;
-
-    /**
-     * @brief Helper to initialize the use of the external AMBE.DLL binary for DVSI USB-3000.
-     */
-    void initializeAMBEDLL();
 
     /**
      * @brief Helper to unpack the codeword bytes into codeword bits for use with the AMBE decoder.
@@ -435,7 +473,6 @@ private:
      * @returns int
      */
     void ambeEncode(const short* samples, uint32_t sampleLength, uint8_t* codeword);
-#endif // defined(_WIN32)
 
     /**
      * @brief Reads basic configuration parameters from the INI.
@@ -552,8 +589,8 @@ private:
 
     /**
      * @brief Helper to send silence audio frames.
-     * @param srcId
-     * @param dstId
+     * @param srcId Source ID.
+     * @param dstId Destination ID.
      */
     void padSilenceAudio(uint32_t srcId, uint32_t dstId);
 
@@ -615,6 +652,29 @@ private:
      * @param forcedDstId 
      */
     void encodeP25AudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
+
+    // NXDN (HostBridge.NXDN.cpp)
+    /**
+     * @brief Helper to process NXDN network traffic.
+     * @param buffer
+     * @param length
+     */
+    void processNXDNNetwork(uint8_t* buffer, uint32_t length);
+    /**
+     * @brief Helper to decode NXDN network traffic audio frames.
+     * @param frame
+     * @param srcId
+     * @param dstId
+     * @param nxdnN
+     */
+    void decodeNXDNAudioFrame(uint8_t* frame, uint32_t srcId, uint32_t dstId, uint8_t nxdnN);
+    /**
+     * @brief Helper to encode NXDN network traffic audio frames.
+     * @param pcm
+     * @param forcedSrcId
+     * @param forcedDstId
+     */
+    void encodeNXDNAudioFrame(uint8_t* pcm, uint32_t forcedSrcId = 0U, uint32_t forcedDstId = 0U);
 
     // Analog (HostBridge.Analog.cpp)
     /**

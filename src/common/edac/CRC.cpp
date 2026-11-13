@@ -183,7 +183,7 @@ void CRC::encodeFiveBit(const bool* in, uint32_t& tcrc)
 
 /* Check 16-bit CRC CCITT-162. */
 
-bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
+bool CRC::checkCCITT162(const uint8_t *in, uint32_t length, bool fuzzy)
 {
     assert(in != nullptr);
     assert(length > 2U);
@@ -200,10 +200,28 @@ bool CRC::checkCCITT162(const uint8_t *in, uint32_t length)
 
     crc16 = ~crc16;
 
-#if DEBUG_CRC_CHECK
     uint16_t inCrc = (in[length - 2U] << 8) | (in[length - 1U] << 0);
-    LogDebugEx(LOG_HOST, "CRC::checkCCITT162()", "crc = $%04X, in = $%04X, len = %u", crc16, inCrc, length);
+#if DEBUG_CRC_CHECK
+    LogDebugEx(LOG_HOST, "CRC::checkCCITT162()", "crc = $%04X, in = $%04X, len = %u, fuzzy = %u", crc16, inCrc, length, fuzzy);
 #endif
+
+    // if fuzzy checking is enabled, allow for up to 3 bit errors in the CRC comparison
+    if (fuzzy) {
+        uint16_t diff = crc16 ^ inCrc;
+        if (diff == 0U)
+            return true;
+        else {
+            uint8_t count = 0U;
+            while (diff) {
+                diff &= (diff - 1U); // clear the least significant bit set
+                count++;
+            }
+
+            if (count <= 3U)
+                LogWarning(LOG_HOST, "CRC-CCITT162, fuzzy CRC match: %u bit errors", count);
+            return count <= 3U;
+        }
+    }
 
     return crc8[0U] == in[length - 1U] && crc8[1U] == in[length - 2U];
 }

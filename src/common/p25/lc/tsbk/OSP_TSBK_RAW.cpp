@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -34,7 +34,7 @@ OSP_TSBK_RAW::OSP_TSBK_RAW() : TSBK(),
 OSP_TSBK_RAW::~OSP_TSBK_RAW()
 {
     if (m_tsbk != nullptr) {
-        delete m_tsbk;
+        delete[] m_tsbk;
     }
 }
 
@@ -78,6 +78,9 @@ void OSP_TSBK_RAW::setTSBK(const uint8_t* tsbk)
     m_lco = tsbk[0U] & 0x3F;                                                        // LCO
     m_lastBlock = (tsbk[0U] & 0x80U) == 0x80U;                                      // Last Block Marker
     m_mfId = tsbk[1U];                                                              // Mfg Id.
+
+    if (m_tsbk != nullptr)
+        delete[] m_tsbk;
 
     m_tsbk = new uint8_t[P25_TSBK_LENGTH_BYTES];
     ::memset(m_tsbk, 0x00U, P25_TSBK_LENGTH_BYTES);

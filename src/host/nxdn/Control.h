@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -46,6 +46,14 @@
 #include <cstdio>
 #include <string>
 #include <mutex>
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 namespace nxdn
 {
@@ -104,7 +112,6 @@ namespace nxdn
         /**
          * @brief Helper to set NXDN configuration options.
          * @param conf Instance of the yaml::Node class.
-         * @param supervisor Flag indicating whether the DMR has supervisory functions.
          * @param cwCallsign CW callsign of this host.
          * @param controlChData Control Channel data.
          * @param siteId NXDN Site Code.
@@ -113,7 +120,7 @@ namespace nxdn
          * @param channelNo Channel Number.
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
-        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, lookups::VoiceChData controlChData,
+        void setOptions(yaml::Node& conf, const std::string cwCallsign, lookups::VoiceChData controlChData,
             uint16_t siteId, uint32_t sysId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /** @name CC Control */
@@ -178,17 +185,16 @@ namespace nxdn
         void clockSiteData(uint32_t ms);
         /** @} */
 
-        /** @name Supervisory Control */
-        /**
-         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
-         * @param supervisor Flag indicating whether control has supervisory functions.
-         */
-        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /**
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
          */
         void permittedTG(uint32_t dstId);
+        /**
+         * @brief Determines whether this control channel currently owns grant decisions.
+         * @return True for configured authority or disconnected-network fallback.
+         */
+        bool isGrantAuthoritative() const;
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -260,6 +266,9 @@ namespace nxdn
 
     private:
         friend class packet::Voice;
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::HostTestHooks;
+#endif
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
@@ -267,7 +276,6 @@ namespace nxdn
         packet::ControlSignaling* m_control;
 
         bool m_authoritative;
-        bool m_supervisor;
 
         uint32_t m_ran;
         uint32_t m_timeout;
@@ -278,6 +286,7 @@ namespace nxdn
         bool m_duplex;
         bool m_enableControl;
         bool m_dedicatedControl;
+        bool m_unitToUnitAvailCheck;
         bool m_ignoreAffiliationCheck;
         bool m_legacyGroupReg;
 
@@ -315,10 +324,10 @@ namespace nxdn
         bool m_ccPrevRunning;
         bool m_ccHalted;
 
-        Timer m_rfTimeout;
+        Timer m_rfTimeoutTimer;
         Timer m_rfTGHang;
         Timer m_rfLossWatchdog;
-        Timer m_netTimeout;
+        Timer m_netTimeoutTimer;
         Timer m_netTGHang;
         Timer m_networkWatchdog;
 
@@ -343,6 +352,9 @@ namespace nxdn
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
 
+        bool m_rfTimeout;
+        bool m_netTimeout;
+
         bool m_dumpRCCH;
 
         bool m_notifyCC;
@@ -366,8 +378,9 @@ namespace nxdn
         void processNetwork();
         /**
          * @brief Helper to process loss of frame stream from modem.
+         * @param type Type of RF frame loss.
          */
-        void processFrameLoss();
+        void processFrameLoss(RPT_RF_LOSS_TYPE type);
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.
@@ -386,7 +399,7 @@ namespace nxdn
          */
         void notifyCC_TouchGrant(uint32_t dstId);
 
-        /** @name Supervisory Control */
+        /** @name Traffic Permit Control */
         /**
          * @brief (RPC Handler) Permits a TGID on a non-authoritative host.
          * @param req JSON request.

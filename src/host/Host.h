@@ -67,7 +67,7 @@ extern network::NetRPC* g_RPC;
 //  Class Prototypes
 // ---------------------------------------------------------------------------
 
-class HOST_SW_API RESTAPI;
+namespace host_restapi { class HOST_SW_API RESTAPI; }
 
 // ---------------------------------------------------------------------------
 //  Class Declaration
@@ -187,7 +187,6 @@ private:
     uint32_t m_nxdnQueueSizeBytes;
 
     bool m_authoritative;
-    bool m_supervisor;
 
     uint32_t m_dmr1RejCnt;
     uint32_t m_dmr2RejCnt;
@@ -232,10 +231,10 @@ private:
     static uint8_t m_activeTickDelay;
     static uint8_t m_idleTickDelay;
 
-    friend class RESTAPI;
+    friend class host_restapi::RESTAPI;
     std::string m_restAddress;
     uint16_t m_restPort;
-    RESTAPI* m_RESTAPI;
+    host_restapi::RESTAPI* m_RESTAPI;
 
     std::string m_rpcAddress;
     uint16_t m_rpcPort;
@@ -279,6 +278,12 @@ private:
      * @param state Host running state.
      */
     void setState(uint8_t state);
+
+    /**
+     * @brief Determines whether CW identification may begin without interrupting active traffic.
+     * @returns bool True, if the modem and every enabled protocol are idle and CW identification is permitted.
+     */
+    bool canTransmitCWId() const;
 
     /**
      * @brief Entry point to RPC clocking thread.

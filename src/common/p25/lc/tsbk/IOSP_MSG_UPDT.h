@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -34,7 +34,7 @@ namespace p25
              *  MSG UPDT - Message Update (OSP)
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API IOSP_MSG_UPDT : public TSBK {
+            class DVM_COMMON_API IOSP_MSG_UPDT : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the IOSP_MSG_UPDT class.
@@ -66,7 +66,7 @@ namespace p25
                 /**
                  * @brief Status value.
                  */
-                DECLARE_PROPERTY(uint8_t, messageValue, Message);
+                DECLARE_PROPERTY(uint16_t, messageValue, Message);
 
                 DECLARE_COPY(IOSP_MSG_UPDT);
             };

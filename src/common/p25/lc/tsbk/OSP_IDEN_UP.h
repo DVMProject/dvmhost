@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements IDEN UP - Channel Identifier Update
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_IDEN_UP : public TSBK {
+            class DVM_COMMON_API OSP_IDEN_UP : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_IDEN_UP class.

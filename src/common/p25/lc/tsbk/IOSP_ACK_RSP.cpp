@@ -44,6 +44,11 @@ bool IOSP_ACK_RSP::decode(const uint8_t* data, bool rawTSBK)
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
     m_aivFlag = (((tsbkValue >> 56) & 0xFFU) & 0x80U) == 0x80U;                     // Additional Info. Flag
+    m_extendedAddrFlag = (((tsbkValue >> 56) & 0xFFU) & 0x40U) == 0x40U;            // Extended Addressing Flag
+    if (m_aivFlag && m_extendedAddrFlag) {
+        m_netId = (uint32_t)((tsbkValue >> 36) & 0xFFFFFU);                         // Network ID
+        m_sysId = (uint16_t)((tsbkValue >> 24) & 0xFFFU);                           // System ID
+    }
     m_service = (uint8_t)((tsbkValue >> 56) & 0x3FU);                               // Service Type
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address

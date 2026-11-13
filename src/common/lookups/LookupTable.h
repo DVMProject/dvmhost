@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2018-2022,2024 Bryan Biedenkapp, N2PLL
- *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (c) 2024 P. McDonnell, W3AXL
  *
  */
 /**
@@ -43,7 +43,7 @@ namespace lookups
      * @ingroup lookups
      */
     template <class T>
-    class HOST_SW_API LookupTable : public Thread {
+    class LookupTable : public Thread {
     public:
         /**
          * @brief Initializes a new instance of the LookupTable class.

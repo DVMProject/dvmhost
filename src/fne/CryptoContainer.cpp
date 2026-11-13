@@ -17,6 +17,7 @@
 #endif // ENABLE_SSL
 #include "CryptoContainer.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -71,10 +72,16 @@ int base64Decode(char* b64message, uint8_t** buffer)
     int decodeLen = calcDecodeLength(b64message), len = 0;
     
     *buffer = (uint8_t*)malloc(decodeLen + 1);
+
+#if defined(_WIN32)
+    BIO* b64 = BIO_new(BIO_f_base64());
+    BIO* bio = BIO_new_mem_buf(b64message, (int)::strlen(b64message));
+#else
     FILE* stream = ::fmemopen(b64message, ::strlen(b64message), "r");
-  
+
     BIO* b64 = BIO_new(BIO_f_base64());
     BIO* bio = BIO_new_fp(stream, BIO_NOCLOSE);
+#endif // defined(_WIN32)
     bio = BIO_push(b64, bio);
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // do not use newlines to flush buffer
     len = BIO_read(bio, *buffer, ::strlen(b64message));
@@ -83,25 +90,34 @@ int base64Decode(char* b64message, uint8_t** buffer)
     (*buffer)[len] = '\0';
   
     BIO_free_all(bio);
+#if !defined(_WIN32)
     ::fclose(stream);
+#endif // !defined(_WIN32)
 
     return decodeLen;
 }
 #endif // ENABLE_SSL
 
 /**
- * @brief 
- * @param buffer 
- * @param len 
- * @param target 
- * @return int 
+ * @brief Finds the beginning of the XML document in a decrypted EKC payload.
+ * @param buffer Decrypted EKC payload.
+ * @param len Length of the decrypted payload in bytes.
+ * @return Offset of the XML document, or -1 if no supported XML marker is found.
  */
-int findFirstChar(const uint8_t* buffer, uint32_t len, char target) 
+int findXmlStart(const uint8_t* buffer, uint32_t len)
 {
-    for (uint32_t i = 0U; i < len; i++) {
-      if (buffer[i] == target) {
-        return (int)i; 
-      }
+    if (buffer == nullptr) {
+        return -1;
+    }
+
+    const char* markers[] = { "<?xml", "<InnerContainer" };
+    for (const char* marker : markers) {
+        const size_t markerLen = ::strlen(marker);
+        const uint8_t* position = std::search(buffer, buffer + len,
+            reinterpret_cast<const uint8_t*>(marker), reinterpret_cast<const uint8_t*>(marker) + markerLen);
+        if (position != buffer + len) {
+            return static_cast<int>(position - buffer);
+        }
     }
 
     return -1;
@@ -134,6 +150,7 @@ int findLastChar(const uint8_t* buffer, uint32_t len, char target)
 // ---------------------------------------------------------------------------
 
 std::mutex CryptoContainer::s_mutex;
+std::mutex CryptoContainer::s_loadMutex;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -141,9 +158,12 @@ std::mutex CryptoContainer::s_mutex;
 
 /* Initializes a new instance of the CryptoContainer class. */
 
-CryptoContainer::CryptoContainer(const std::string& filename, const std::string& password, uint32_t reloadTime, bool enabled) : Thread(),
+CryptoContainer::CryptoContainer(const std::string& filename, const std::string& password, 
+    const std::string& remotePassword, bool remoteAccessEnabled, uint32_t reloadTime, bool enabled) : Thread(),
     m_file(filename),
     m_password(password),
+    m_remotePassword(remotePassword),
+    m_remoteAccessEnabled(remoteAccessEnabled),
     m_reloadTime(reloadTime),
     m_lastLoadTime(0U),
 #if !defined(ENABLE_SSL)
@@ -152,7 +172,9 @@ CryptoContainer::CryptoContainer(const std::string& filename, const std::string&
     m_enabled(enabled),
 #endif // !ENABLE_SSL
     m_stop(false),
-    m_keys()
+    m_keys(),
+    m_ukeks(),
+    m_llas()
 {
     /* stub */
 }
@@ -223,6 +245,8 @@ void CryptoContainer::clear()
 {
     std::lock_guard<std::mutex> lock(s_mutex);
     m_keys.clear();
+    m_ukeks.clear();
+    m_llas.clear();
 }
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
@@ -247,6 +271,26 @@ void CryptoContainer::addEntry(EKCKeyItem key)
     }
     else {
         m_keys.push_back(entry);
+    }
+}
+
+/* Adds or replaces a User Key Encryption Key by RSI and KID. */
+
+void CryptoContainer::addUKEK(EKCKeyItem key)
+{
+    if (key.isInvalid())
+        return;
+
+    std::lock_guard<std::mutex> lock(s_mutex);
+    auto it = std::find_if(m_ukeks.begin(), m_ukeks.end(),
+        [&](const EKCKeyItem& item) 
+        {
+            return item.rsiId() == key.rsiId() && item.kId() == key.kId();
+        });
+    if (it != m_ukeks.end()) {
+        *it = key;
+    } else {
+        m_ukeks.push_back(key);
     }
 }
 
@@ -292,9 +336,25 @@ EKCKeyItem CryptoContainer::findUKEK(uint32_t rsi)
 
     std::lock_guard<std::mutex> lock(s_mutex);
 
-    /*
-    ** TODO TODO TODO
-    */
+    // prefer exact RSI/LLID match, then fall back to the default (RSI 0) key.
+    auto it = std::find_if(m_ukeks.begin(), m_ukeks.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == rsi;
+        });
+    if (it != m_ukeks.end()) {
+        entry = *it;
+        return entry;
+    }
+
+    it = std::find_if(m_ukeks.begin(), m_ukeks.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == 0U;
+        });
+    if (it != m_ukeks.end()) {
+        entry = *it;
+        return entry;
+    }
+
     entry = EKCKeyItem();
 
     return entry;
@@ -308,12 +368,84 @@ EKCKeyItem CryptoContainer::findLLA(uint32_t rsi)
 
     std::lock_guard<std::mutex> lock(s_mutex);
 
-    /*
-    ** TODO TODO TODO
-    */
+    // prefer exact RSI/LLID match, then fall back to the default (RSI 0) key.
+    auto it = std::find_if(m_llas.begin(), m_llas.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == rsi;
+        });
+    if (it != m_llas.end()) {
+        entry = *it;
+        return entry;
+    }
+
+    it = std::find_if(m_llas.begin(), m_llas.end(),
+        [&](const EKCKeyItem& x) {
+            return x.rsiId() == 0U;
+        });
+    if (it != m_llas.end()) {
+        entry = *it;
+        return entry;
+    }
+
     entry = EKCKeyItem();
 
     return entry;
+}
+
+/* Returns the last load time of this lookup table. */
+
+uint64_t CryptoContainer::lastLoadTime() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_lastLoadTime;
+}
+
+/* Returns thread-safe snapshots of the crypto tables. */
+
+std::vector<EKCKeyItem> CryptoContainer::keys() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_keys;
+}
+
+/* Sets thread-safe snapshots of the crypto tables. */
+
+void CryptoContainer::keys(std::vector<EKCKeyItem> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_keys = std::move(val);
+}
+
+/* Returns thread-safe snapshots of the UKEK RSI keys. */
+
+std::vector<EKCKeyItem> CryptoContainer::ukeks() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_ukeks;
+}
+
+/* Sets thread-safe snapshots of the UKEK RSI keys. */
+
+void CryptoContainer::ukeks(std::vector<EKCKeyItem> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_ukeks = std::move(val);
+}
+
+/* Returns thread-safe snapshots of the LLA RSI keys. */
+
+std::vector<EKCKeyItem> CryptoContainer::llas() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_llas;
+}
+
+/* Sets thread-safe snapshots of the LLA RSI keys. */
+
+void CryptoContainer::llas(std::vector<EKCKeyItem> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_llas = std::move(val);
 }
 
 // ---------------------------------------------------------------------------
@@ -327,6 +459,7 @@ bool CryptoContainer::load()
 #if !defined(ENABLE_SSL)
     return false;
 #else
+    std::lock_guard<std::mutex> loadLock(s_loadMutex);
     if (!m_enabled) {
         return false;
     }
@@ -513,15 +646,21 @@ bool CryptoContainer::load()
             AES aes = AES(AESKeyLength::AES_256);
             uint8_t* innerContainer = aes.decryptCBC(innerContainerCrypted, innerContainerLen, key, iv);
             free(innerContainerCrypted); // base64Decode allocates memory with malloc()
+            if (innerContainer == nullptr) {
+                ::LogError(LOG_HOST, "Error opening EKC: failed to decrypt inner container");
+                return false;
+            }
 
-            /*
-            ** bryanb: this is probably slightly error prone...
-            */
-
-            int xmlFirstTagChar = findFirstChar(innerContainer, innerContainerLen, '<');
+            int xmlFirstTagChar = findXmlStart(innerContainer, innerContainerLen);
             int xmlLastTagChar = findLastChar(innerContainer, innerContainerLen, '>');
+            if (xmlFirstTagChar < 0 || xmlLastTagChar < xmlFirstTagChar || xmlLastTagChar >= innerContainerLen - 1) {
+                delete[] innerContainer;
+                ::LogError(LOG_HOST, "Error opening EKC: decrypted inner container does not contain valid XML framing");
+                return false;
+            }
+
             // zero all bytes after the last > character
-            ::memset(innerContainer + xmlLastTagChar + 1U, 0x00U, innerContainerLen - xmlLastTagChar);
+            ::memset(innerContainer + xmlLastTagChar + 1U, 0x00U, innerContainerLen - xmlLastTagChar - 1U);
 
             rapidxml::xml_document<> ekcInnerContainer;
             ekcInnerContainer.parse<PARSE_FLAGS>(reinterpret_cast<char*>(innerContainer + xmlFirstTagChar));
@@ -537,7 +676,7 @@ bool CryptoContainer::load()
                 rapidxml::xml_node<>* keys = innerRoot->first_node("Keys");
                 if (keys != nullptr) {
                     uint32_t i = 0U;
-                    for (rapidxml::xml_node<>* keyNode = keys->first_node("KeyItem"); keyNode; keyNode = keyNode->next_sibling()) {
+                    for (rapidxml::xml_node<>* keyNode = keys->first_node("KeyItem"); keyNode; keyNode = keyNode->next_sibling("KeyItem")) {
                         EKCKeyItem key = EKCKeyItem();
                         key.id(i);
 
@@ -589,6 +728,126 @@ bool CryptoContainer::load()
                         i++;
                     }
                 }
+
+                // get UKEKs node
+                rapidxml::xml_node<>* ukeks = innerRoot->first_node("UKEKs");
+                if (ukeks != nullptr) {
+                    uint32_t i = 0U;
+                    for (rapidxml::xml_node<>* keyNode = ukeks->first_node("RSIKeyItem"); keyNode; keyNode = keyNode->next_sibling("RSIKeyItem")) {
+                        EKCKeyItem key = EKCKeyItem();
+                        key.id(i);
+
+                        rapidxml::xml_node<>* rsiNode = keyNode->first_node("RsiId");
+                        if (rsiNode == nullptr) {
+                            continue;
+                        }
+                        key.rsiId(::strtoul(rsiNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* nameNode = keyNode->first_node("Name");
+                        if (nameNode == nullptr) {
+                            continue;
+                        }
+                        key.name(nameNode->value());
+
+                        rapidxml::xml_node<>* keysetIdNode = keyNode->first_node("KeysetId");
+                        if (keysetIdNode == nullptr) {
+                            continue;
+                        }
+                        key.keysetId(::strtoul(keysetIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* slnNode = keyNode->first_node("Sln");
+                        if (slnNode != nullptr) {
+                            key.sln(::strtoul(slnNode->value(), NULL, 10));
+                        }
+
+                        rapidxml::xml_node<>* algIdNode = keyNode->first_node("AlgorithmId");
+                        if (algIdNode == nullptr) {
+                            continue;
+                        }
+                        key.algId(::strtoul(algIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* kIdNode = keyNode->first_node("KeyId");
+                        if (kIdNode == nullptr) {
+                            continue;
+                        }
+                        key.kId(::strtoul(kIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* keyMatNode = keyNode->first_node("Key");
+                        if (keyMatNode == nullptr) {
+                            continue;
+                        }
+                        key.keyMaterial(keyMatNode->value());
+
+                        if (key.isInvalid()) {
+                            continue;
+                        }
+
+                        ::LogInfoEx(LOG_HOST, "UKEK RSI: %u NAME: %s ALGID: $%02X, KID: $%04X", key.rsiId(), key.name().c_str(), key.algId(), key.kId());
+
+                        m_ukeks.push_back(key);
+                        i++;
+                    }
+                }
+
+                // get LLAs node
+                rapidxml::xml_node<>* llas = innerRoot->first_node("LLAs");
+                if (llas != nullptr) {
+                    uint32_t i = 0U;
+                    for (rapidxml::xml_node<>* keyNode = llas->first_node("RSIKeyItem"); keyNode; keyNode = keyNode->next_sibling("RSIKeyItem")) {
+                        EKCKeyItem key = EKCKeyItem();
+                        key.id(i);
+
+                        rapidxml::xml_node<>* rsiNode = keyNode->first_node("RsiId");
+                        if (rsiNode == nullptr) {
+                            continue;
+                        }
+                        key.rsiId(::strtoul(rsiNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* nameNode = keyNode->first_node("Name");
+                        if (nameNode == nullptr) {
+                            continue;
+                        }
+                        key.name(nameNode->value());
+
+                        rapidxml::xml_node<>* keysetIdNode = keyNode->first_node("KeysetId");
+                        if (keysetIdNode == nullptr) {
+                            continue;
+                        }
+                        key.keysetId(::strtoul(keysetIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* slnNode = keyNode->first_node("Sln");
+                        if (slnNode != nullptr) {
+                            key.sln(::strtoul(slnNode->value(), NULL, 10));
+                        }
+
+                        rapidxml::xml_node<>* algIdNode = keyNode->first_node("AlgorithmId");
+                        if (algIdNode == nullptr) {
+                            continue;
+                        }
+                        key.algId(::strtoul(algIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* kIdNode = keyNode->first_node("KeyId");
+                        if (kIdNode == nullptr) {
+                            continue;
+                        }
+                        key.kId(::strtoul(kIdNode->value(), NULL, 10));
+
+                        rapidxml::xml_node<>* keyMatNode = keyNode->first_node("Key");
+                        if (keyMatNode == nullptr) {
+                            continue;
+                        }
+                        key.keyMaterial(keyMatNode->value());
+
+                        if (key.isInvalid()) {
+                            continue;
+                        }
+
+                        ::LogInfoEx(LOG_HOST, "LLA RSI: %u NAME: %s ALGID: $%02X, KID: $%04X", key.rsiId(), key.name().c_str(), key.algId(), key.kId());
+
+                        m_llas.push_back(key);
+                        i++;
+                    }
+                }
             }
 
             delete[] innerContainer;
@@ -598,19 +857,34 @@ bool CryptoContainer::load()
         return false;
     }
 
-    if (m_keys.size() == 0U) {
+    size_t keyCount = 0U;
+    size_t ukekCount = 0U;
+    size_t llaCount = 0U;
+    {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        keyCount = m_keys.size();
+        ukekCount = m_ukeks.size();
+        llaCount = m_llas.size();
+    }
+
+    if (keyCount == 0U && ukekCount == 0U && llaCount == 0U) {
         ::LogError(LOG_HOST, "No encryption keys defined!");
         return false;
     }
 
-    size_t size = m_keys.size();
-    if (size == 0U)
+    size_t size = keyCount + ukekCount + llaCount;
+    if (size == 0U) {
         return false;
+    }
 
     uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    m_lastLoadTime = now;
+    {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        m_lastLoadTime = now;
+    }
 
-    LogInfoEx(LOG_HOST, "Loaded %lu entries into crypto lookup table", size);
+    LogInfoEx(LOG_HOST, "Loaded %lu entries into crypto lookup table (TEK=%lu, UKEK=%lu, LLA=%lu)",
+        size, keyCount, ukekCount, llaCount);
 
     return true;
 #endif // !ENABLE_SSL

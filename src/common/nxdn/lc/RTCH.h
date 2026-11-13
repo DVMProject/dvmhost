@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -36,7 +36,7 @@ namespace nxdn
          * @brief Represents link control data for traffic channel NXDN calls.
          * @ingroup nxdn_lc
          */
-        class HOST_SW_API RTCH {
+        class DVM_COMMON_API RTCH {
         public:
             /**
              * @brief Initializes a new instance of the RTCH class.
@@ -77,6 +77,21 @@ namespace nxdn
              * @brief Helper to reset data values to defaults.
              */
             void reset();
+
+            /** @name Encryption data */
+            /** 
+             * @brief Gets the 64-bit on-air initialization vector. 
+             * @param mi Pointer to the 64-bit initialization vector.
+             */
+            void getMI(uint8_t* mi) const;
+
+            /**
+             * @brief Sets the 64-bit on-air initialization vector carried by
+             * VCALL_IV/SDCALL_IV.
+             * @param mi Pointer to the 64-bit initialization vector.
+             */
+            void setMI(const uint8_t* mi);
+            /** @} */
 
             /**
              * @brief Sets the flag indicating verbose log output.
@@ -132,6 +147,10 @@ namespace nxdn
              * @brief Transmission mode.
              */
             DECLARE_PROPERTY(uint8_t, transmissionMode, TransmissionMode);
+            /**
+             * @brief Transmission right flag carried by TX_REL_EX.
+             */
+            DECLARE_PROPERTY(bool, transmissionPermit, TransmissionPermit);
             /** @} */
 
             /** @name Data Call Data */

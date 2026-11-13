@@ -67,7 +67,7 @@ FullRateVoice::~FullRateVoice()
         delete[] additionalData;
 }
 
-/* */
+/* Gets the length of the full rate voice frame. */
 
 uint8_t FullRateVoice::getLength()
 {
@@ -89,7 +89,7 @@ bool FullRateVoice::decode(const uint8_t* data)
     assert(data != nullptr);
 
     if (imbeData != nullptr)
-        delete imbeData;
+        delete[] imbeData;
     imbeData = new uint8_t[IMBE_BUF_LEN];
     ::memset(imbeData, 0x00U, IMBE_BUF_LEN);
 
@@ -113,7 +113,7 @@ bool FullRateVoice::decode(const uint8_t* data)
         }
     } else {
         if (additionalData != nullptr)
-            delete additionalData;
+            delete[] additionalData;
         additionalData = nullptr;
     }
 
@@ -137,6 +137,8 @@ void FullRateVoice::encode(uint8_t* data)
         (m_busy & 0x03U));                                      // Busy Status
 
     if (isVoice3thru8() || isVoice12thru17() || isVoice9or18()) {
+        if (additionalData == nullptr)
+            return;
         if (isVoice9or18()) {
             // CAI 9 and 18 are 3 bytes of additional data not 4
             ::memcpy(data + 14U, additionalData, ADDITIONAL_LENGTH - 1U);

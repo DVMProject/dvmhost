@@ -33,7 +33,7 @@ namespace dmr
              * @brief Implements EXT FNCT - Extended Function
              * @ingroup dmr_csbk
              */
-            class HOST_SW_API CSBK_EXT_FNCT : public CSBK {
+            class DVM_COMMON_API CSBK_EXT_FNCT : public CSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the CSBK_EXT_FNCT class.

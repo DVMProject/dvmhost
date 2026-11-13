@@ -31,7 +31,7 @@ namespace p25
          * @brief Represents embedded low speed data in P25 LDUs.
          * @ingroup p25
          */
-        class HOST_SW_API LowSpeedData {
+        class DVM_COMMON_API LowSpeedData {
         public:
             /**
              * @brief Initializes a new instance of the LowSpeedData class.
@@ -71,8 +71,9 @@ namespace p25
 
         private:
             /**
-             * @brief 
-             * @param in 
+             * @brief Helper to encode a single byte using the CCS parity table.
+             * @param in Byte to encode.
+             * @returns uint8_t Encoded byte.
              */
             uint8_t encode(const uint8_t in) const;
         };

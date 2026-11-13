@@ -38,7 +38,7 @@ namespace p25
                  * @brief Base class FSC messages derive from.
                  * @ingroup dfsi_fsc_frames
                  */
-                class HOST_SW_API FSCMessage {
+                class DVM_COMMON_API FSCMessage {
                 public:
                     static const uint8_t LENGTH = 3;
 

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SYS SRV BCAST - System Service Broadcast
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_SYS_SRV_BCAST : public TSBK {
+            class DVM_COMMON_API OSP_SYS_SRV_BCAST : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_SYS_SRV_BCAST class.
@@ -60,6 +60,24 @@ namespace p25
                  * @returns std::string String representation of the TSBK.
                  */
                 std::string toString(bool isp = false) override;
+
+            public:
+                /**
+                 * @brief WUID validity field in 30-minute increments beyond four hours; 0xFF disables expiry.
+                 */
+                DECLARE_RO_PROPERTY(uint8_t, wuidValidity, WUIDValidity);
+                /**
+                 * @brief Bitmap of services currently available at the site.
+                 */
+                DECLARE_RO_PROPERTY(uint32_t, servicesAvailable, ServicesAvailable);
+                /**
+                 * @brief Bitmap of services supported by the site.
+                 */
+                DECLARE_RO_PROPERTY(uint32_t, servicesSupported, ServicesSupported);
+                /**
+                 * @brief Lowest service-request priority currently accepted by the site.
+                 */
+                DECLARE_RO_PROPERTY(uint8_t, requestPriority, RequestPriority);
             };
         } // namespace tsbk
     } // namespace lc

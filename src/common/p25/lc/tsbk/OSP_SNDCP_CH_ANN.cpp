@@ -25,7 +25,7 @@ using namespace p25::lc::tsbk;
 
 OSP_SNDCP_CH_ANN::OSP_SNDCP_CH_ANN() : TSBK(),
     m_implicitChannel(false),
-    m_sndcpAutoAccess(true),
+    m_sndcpAutoAccess(false), // the announced channel is the control channel, which receives no SN-Data
     m_sndcpRequestedAccess(true),
     m_sndcpDAC(1U)
 {

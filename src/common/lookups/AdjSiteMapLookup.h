@@ -39,7 +39,7 @@ namespace lookups
      * @brief Represents an adjacent peer map entry.
      * @ingroup lookups_asm
      */
-    class HOST_SW_API AdjPeerMapEntry {
+    class DVM_COMMON_API AdjPeerMapEntry {
     public:
         /**
          * @brief Initializes a new instance of the AdjPeerMapEntry class.
@@ -59,7 +59,7 @@ namespace lookups
             AdjPeerMapEntry()
         {
             m_active = node["active"].as<bool>(false);
-            m_peerId = node["peer_id"].as<uint32_t>(0U);
+            m_peerId = node["peerId"].as<uint32_t>(0U);
 
             yaml::Node& neighborList = node["neighbors"];
             if (neighborList.size() > 0U) {
@@ -120,6 +120,7 @@ namespace lookups
                     newNeighbor = __INT_STR(neighbor);
                 }
             }
+            node["neighbors"] = neighborList;
         }
 
     public:
@@ -147,7 +148,7 @@ namespace lookups
      *  information.
      * @ingroup lookups_asm
      */
-    class HOST_SW_API AdjSiteMapLookup : public Thread {
+    class DVM_COMMON_API AdjSiteMapLookup : public Thread {
     public:
         /**
          * @brief Initializes a new instance of the AdjSiteMapLookup class.

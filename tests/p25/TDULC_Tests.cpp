@@ -4,12 +4,14 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "host/Defines.h"
 #include "common/p25/lc/tdulc/LC_GROUP.h"
+#include "common/p25/lc/tdulc/LC_GROUP_UPDT.h"
 #include "common/p25/lc/tdulc/LC_PRIVATE.h"
+#include "common/p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
 #include "common/p25/P25Defines.h"
 #include "common/edac/Golay24128.h"
 #include "common/edac/RS634717.h"
@@ -131,6 +133,73 @@ TEST_CASE("TDULC", "[p25][tdulc]") {
         LC_PRIVATE privateTdulc;
         privateTdulc.setGroup(false);
         REQUIRE(privateTdulc.getGroup() == false);
+    }
+
+    SECTION("TelInt_Encode_Decode_Layout") {
+        // the single address carries the subscriber unit (dstId), not the gateway source
+        LC_TEL_INT_VCH_USER tdulc1;
+        tdulc1.setPriority(4U);
+        tdulc1.setSrcId(0x000064U);
+        tdulc1.setDstId(0x123456U);
+
+        uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+        ::memset(data, 0x00U, P25_TDULC_FRAME_LENGTH_BYTES + 2U);
+        tdulc1.encode(data);
+
+        LC_TEL_INT_VCH_USER tdulc2;
+        REQUIRE(tdulc2.decode(data) == true);
+
+        const uint8_t* raw = tdulc2.getDecodedRaw();
+        REQUIRE(raw != nullptr);
+        REQUIRE(raw[0U] == (0x40U | LCO::TEL_INT_VCH_USER));    // Implicit + LCO
+        REQUIRE(raw[2U] == 0x04U);                              // Service Options
+        REQUIRE(raw[3U] == 0x00U);                              // Reserved
+        REQUIRE(raw[4U] == 0x00U);                              // Call Timer
+        REQUIRE(raw[5U] == 0x00U);
+        REQUIRE(raw[6U] == 0x12U);                              // Source/Target Address
+        REQUIRE(raw[7U] == 0x34U);
+        REQUIRE(raw[8U] == 0x56U);
+
+        REQUIRE(tdulc2.getPriority() == 4U);
+        REQUIRE(tdulc2.getDstId() == 0x123456U);
+        REQUIRE(tdulc2.getSrcId() == 0x123456U);
+        REQUIRE(tdulc2.getGroup() == false);
+    }
+
+    SECTION("Group_Update_Encode_Decode_Layout") {
+        SiteData siteData(WACN_STD_DEFAULT, SID_STD_DEFAULT, 1U, 1U, 0U, 0x05U,
+            1U, ServiceClass::VOICE, 0);
+        TDULC::setSiteData(siteData);
+
+        LC_GROUP_UPDT source;
+        source.setGrpVchNo(0x123U);
+        source.setDstId(0x4567U);
+        source.setGrpVchNoB(0x89AU);
+        source.setDstIdB(0xBCDEU);
+
+        uint8_t data[P25_TDULC_FRAME_LENGTH_BYTES + 2U];
+        ::memset(data, 0x00U, sizeof(data));
+        source.encode(data);
+
+        LC_GROUP_UPDT decoded;
+        REQUIRE(decoded.decode(data));
+
+        const uint8_t* raw = decoded.getDecodedRaw();
+        REQUIRE(raw != nullptr);
+        CHECK(raw[0U] == (0x40U | LCO::GROUP_UPDT));
+        CHECK(raw[1U] == 0x51U);
+        CHECK(raw[2U] == 0x23U);
+        CHECK(raw[3U] == 0x45U);
+        CHECK(raw[4U] == 0x67U);
+        CHECK(raw[5U] == 0x58U);
+        CHECK(raw[6U] == 0x9AU);
+        CHECK(raw[7U] == 0xBCU);
+        CHECK(raw[8U] == 0xDEU);
+        CHECK(decoded.getGrpVchNo() == 0x123U);
+        CHECK(decoded.getDstId() == 0x4567U);
+        CHECK(decoded.getGrpVchNoB() == 0x89AU);
+        CHECK(decoded.getDstIdB() == 0xBCDEU);
+        CHECK(decoded.getGroup());
     }
 
     SECTION("SrcId_Values") {

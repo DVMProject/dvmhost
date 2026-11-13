@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2006-2016,2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -26,6 +26,7 @@
 
 #include <string>
 #include <queue>
+#include <random>
 
 #if defined(_WIN32)
 #pragma comment(lib, "Ws2_32.lib")
@@ -86,7 +87,8 @@ namespace network
                 ssize_t ret = sendmsg(sockfd, &msgvec[i].msg_hdr, flags);
                 if (ret < 0)
                     break;
-                n += ret;
+                msgvec[i].msg_len = (unsigned int)ret;
+                n++;
             }
 
             if (n == 0)
@@ -140,7 +142,8 @@ namespace network
                 ssize_t ret = ::sendto(sockfd, (char*)&msgvec[i].msg_hdr.msg_iov->iov_base, msgvec[i].msg_hdr.msg_iov->iov_len, 0, (sockaddr*)&msgvec[i].msg_hdr.msg_name, msgvec[i].msg_hdr.msg_namelen);
                 if (ret < 0)
                     break;
-                n += ret;
+                msgvec[i].msg_len = (unsigned int)ret;
+                n++;
             }
 
             if (n == 0)
@@ -179,7 +182,7 @@ namespace network
          *  network socket.
          * @ingroup udp_socket
          */
-        class HOST_SW_API Socket {
+        class DVM_COMMON_API Socket {
         public:
             auto operator=(Socket&) -> Socket& = delete;
             auto operator=(Socket&&) -> Socket& = delete;
@@ -300,7 +303,7 @@ namespace network
             static std::string getLocalAddress();
 
             /**
-             * @brief 
+             * @brief Helper to match two socket addresses based on the specified match type.
              * @param addr1 Instance of sockaddr_storage socket address structure.
              * @param addr2 Instance of sockaddr_storage socket address structure.
              * @param type IPMATCHTYPE.
@@ -345,6 +348,8 @@ namespace network
 
             uint32_t m_counter;
 
+            std::mt19937 m_random;
+
             /**
              * @brief Internal helper to initialize the socket.
              * @param domain Address family type.
@@ -368,6 +373,19 @@ namespace network
              * @param[out] addr Instance of sockaddr_storage socket address structure.
              */
             static void initAddr(const std::string& ipAddr, const int port, sockaddr_in& addr);
+        
+            /**
+             * @brief Helper to step the linear feedback shift register (LFSR).
+             * @note This uses the polynomial: x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+             * @param lfsr Linear feedback shift register value.
+             * @return uint64_t The next LFSR value.
+             */
+            uint64_t stepLFSR(uint64_t& lfsr);
+            /**
+             * @brief Helper given to generate a new initial seed IV. 
+             * @returns Pointer to the newly generated IV.
+             */
+            uint8_t* generateIV();
         };
     } // namespace udp
 } // namespace network

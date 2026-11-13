@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #if !defined(_WIN32)
@@ -21,10 +21,12 @@ using namespace network::viface;
 #include <fstream>
 #include <iomanip>
 #include <random>
+#include <unordered_map>
 
 #include <cassert>
 #include <cstring>
 #include <cerrno>
+#include <cctype>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -37,6 +39,8 @@ using namespace network::viface;
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <linux/if_arp.h>
+#include <linux/rtnetlink.h>
+#include <linux/pkt_sched.h>
 #include <ifaddrs.h>
 
 // ---------------------------------------------------------------------------
@@ -219,6 +223,229 @@ void readVIFlags(int sockfd, std::string name, struct ifreq& ifr)
     if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) != 0) {
         LogError(LOG_NET, "Unable to read virtual interface flags %s, err: %d (%s)", name.c_str(), errno, strerror(errno));
     }
+}
+
+/**
+ * @brief Helper to append a netlink attribute.
+ * @param n Netlink message header.
+ * @param maxLen Maximum message buffer length.
+ * @param type Attribute type.
+ * @param data Attribute payload.
+ * @param len Attribute payload length.
+ * @returns bool True, if attribute appended, otherwise false.
+ */
+bool nlAddAttr(struct nlmsghdr* n, size_t maxLen, int type, const void* data, size_t len)
+{
+    assert(n != nullptr);
+
+    const size_t attrLen = RTA_LENGTH(len);
+    const size_t newLen = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(attrLen);
+    if (newLen > maxLen) {
+        return false;
+    }
+
+    struct rtattr* rta = (struct rtattr*)(((uint8_t*)n) + NLMSG_ALIGN(n->nlmsg_len));
+    rta->rta_type = type;
+    rta->rta_len = (uint16_t)attrLen;
+    if (len > 0U && data != nullptr) {
+        ::memcpy(RTA_DATA(rta), data, len);
+    }
+
+    n->nlmsg_len = (uint32_t)newLen;
+    return true;
+}
+
+/**
+ * @brief Helper to start a nested netlink attribute.
+ * @param n Netlink message header.
+ * @param maxLen Maximum message buffer length.
+ * @param type Attribute type.
+ * @returns rtattr* Nested attribute pointer or nullptr on failure.
+ */
+struct rtattr* nlNestStart(struct nlmsghdr* n, size_t maxLen, int type)
+{
+    struct rtattr* nest = (struct rtattr*)(((uint8_t*)n) + NLMSG_ALIGN(n->nlmsg_len));
+    if (!nlAddAttr(n, maxLen, type, nullptr, 0U)) {
+        return nullptr;
+    }
+    return nest;
+}
+
+/**
+ * @brief Helper to finalize a nested netlink attribute.
+ * @param n Netlink message header.
+ * @param nest Nested attribute pointer.
+ */
+void nlNestEnd(struct nlmsghdr* n, struct rtattr* nest)
+{
+    if (n == nullptr || nest == nullptr) {
+        return;
+    }
+
+    nest->rta_len = (uint16_t)(((uint8_t*)n + NLMSG_ALIGN(n->nlmsg_len)) - (uint8_t*)nest);
+}
+
+/**
+ * @brief Helper to lowercase a string.
+ * @param value Input string.
+ * @returns std::string Lowercased string.
+ */
+std::string toLowerStr(const std::string& value)
+{
+    std::string out = value;
+    for (char& c : out) {
+        c = (char)std::tolower((unsigned char)c);
+    }
+    return out;
+}
+
+/**
+ * @brief Helper to parse a size string with optional k/m/g suffix into bytes.
+ * @param value Input string.
+ * @param outBytes Parsed byte value.
+ * @returns bool True on success.
+ */
+bool parseSizeBytes(const std::string& value, uint32_t& outBytes)
+{
+    if (value.empty()) {
+        return false;
+    }
+
+    std::string lower = toLowerStr(value);
+    uint64_t mult = 1U;
+    if (lower.size() > 1U && lower.back() == 'b') {
+        lower.pop_back();
+    }
+
+    if (!lower.empty()) {
+        char sfx = lower.back();
+        if (sfx == 'k' || sfx == 'm' || sfx == 'g') {
+            lower.pop_back();
+            if (sfx == 'k') mult = 1024ULL;
+            if (sfx == 'm') mult = 1024ULL * 1024ULL;
+            if (sfx == 'g') mult = 1024ULL * 1024ULL * 1024ULL;
+        }
+    }
+
+    if (lower.empty()) {
+        return false;
+    }
+
+    char* end = nullptr;
+    errno = 0;
+    unsigned long long base = strtoull(lower.c_str(), &end, 10);
+    if (errno != 0 || end == nullptr || *end != '\0') {
+        return false;
+    }
+
+    uint64_t total = base * mult;
+    if (total > 0xFFFFFFFFULL) {
+        return false;
+    }
+
+    outBytes = (uint32_t)total;
+    return true;
+}
+
+/**
+ * @brief Helper to parse a duration string into microseconds.
+ * @param value Input value (supports us, ms, s).
+ * @param outUsec Parsed microseconds.
+ * @returns bool True on success.
+ */
+bool parseDurationUsec(const std::string& value, uint32_t& outUsec)
+{
+    if (value.empty()) {
+        return false;
+    }
+
+    std::string lower = toLowerStr(value);
+    uint64_t mult = 1U;
+
+    if (lower.size() >= 2U && lower.substr(lower.size() - 2U) == "us") {
+        mult = 1U;
+        lower = lower.substr(0U, lower.size() - 2U);
+    }
+    else if (lower.size() >= 2U && lower.substr(lower.size() - 2U) == "ms") {
+        mult = 1000U;
+        lower = lower.substr(0U, lower.size() - 2U);
+    }
+    else if (!lower.empty() && lower.back() == 's') {
+        mult = 1000000U;
+        lower.pop_back();
+    }
+
+    if (lower.empty()) {
+        return false;
+    }
+
+    char* end = nullptr;
+    errno = 0;
+    unsigned long long base = strtoull(lower.c_str(), &end, 10);
+    if (errno != 0 || end == nullptr || *end != '\0') {
+        return false;
+    }
+
+    uint64_t total = base * mult;
+    if (total > 0xFFFFFFFFULL) {
+        return false;
+    }
+
+    outUsec = (uint32_t)total;
+    return true;
+}
+
+/**
+ * @brief Parses qdisc args string into key/value pairs.
+ * Supports "key=value" and "key value" forms.
+ * @param args Input args string.
+ * @returns unordered_map Parsed key/value map.
+ */
+std::unordered_map<std::string, std::string> parseQDiscArgs(const std::string& args)
+{
+    std::unordered_map<std::string, std::string> out;
+    if (args.empty()) {
+        return out;
+    }
+
+    std::vector<std::string> tokens;
+    std::string token;
+    for (char c : args) {
+        if (std::isspace((unsigned char)c)) {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
+        }
+        else {
+            token.push_back(c);
+        }
+    }
+    if (!token.empty()) {
+        tokens.push_back(token);
+    }
+
+    for (size_t i = 0U; i < tokens.size(); i++) {
+        std::string t = tokens[i];
+        size_t eq = t.find('=');
+        if (eq != std::string::npos) {
+            std::string k = toLowerStr(t.substr(0U, eq));
+            std::string v = t.substr(eq + 1U);
+            if (!k.empty() && !v.empty()) {
+                out[k] = v;
+            }
+            continue;
+        }
+
+        if ((i + 1U) < tokens.size()) {
+            std::string k = toLowerStr(t);
+            std::string v = tokens[i + 1U];
+            out[k] = v;
+            i++;
+        }
+    }
+
+    return out;
 }
 
 /**
@@ -695,6 +922,182 @@ uint32_t VIFace::getMTU() const
     }
 
     return ifr.ifr_mtu;
+}
+
+/* Applies a root qdisc to the virtual interface using rtnetlink. */
+
+bool VIFace::setQDisc(std::string kind, std::string args)
+{
+    if (kind.empty()) {
+        LogError(LOG_NET, "Invalid qdisc kind for virtual interface %s", m_name.c_str());
+        return false;
+    }
+
+    kind = toLowerStr(kind);
+
+    struct ifreq ifr;
+    ::memset(&ifr, 0x00U, sizeof(struct ifreq));
+    ::strncpy(ifr.ifr_name, m_name.c_str(), IFNAMSIZ - 1);
+
+    if (::ioctl(m_ksFd, SIOCGIFINDEX, &ifr) != 0) {
+        LogError(LOG_NET, "Unable to get interface index for qdisc on %s, err: %d (%s)",
+            m_name.c_str(), errno, strerror(errno));
+        return false;
+    }
+
+    int nl = ::socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (nl < 0) {
+        LogError(LOG_NET, "Unable to open rtnetlink socket for qdisc on %s, err: %d (%s)",
+            m_name.c_str(), errno, strerror(errno));
+        return false;
+    }
+
+    struct {
+        struct nlmsghdr n;
+        struct tcmsg t;
+        uint8_t buf[512U];
+    } req;
+    ::memset(&req, 0x00U, sizeof(req));
+
+    req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct tcmsg));
+    req.n.nlmsg_type = RTM_NEWQDISC;
+    req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
+    req.n.nlmsg_seq = 1U;
+
+    req.t.tcm_family = AF_UNSPEC;
+    req.t.tcm_ifindex = ifr.ifr_ifindex;
+    req.t.tcm_parent = TC_H_ROOT;
+    req.t.tcm_handle = 0U;
+
+    if (!nlAddAttr(&req.n, sizeof(req), TCA_KIND, kind.c_str(), kind.length() + 1U)) {
+        LogError(LOG_NET, "Unable to append qdisc kind attribute for %s", m_name.c_str());
+        ::close(nl);
+        return false;
+    }
+
+    if (!args.empty() && kind == "fq_codel") {
+        std::unordered_map<std::string, std::string> opts = parseQDiscArgs(args);
+        struct rtattr* optsNest = nlNestStart(&req.n, sizeof(req), TCA_OPTIONS);
+        if (optsNest == nullptr) {
+            LogError(LOG_NET, "Unable to append qdisc options for %s", m_name.c_str());
+            ::close(nl);
+            return false;
+        }
+
+        for (const auto& kv : opts) {
+            const std::string& key = kv.first;
+            const std::string& value = kv.second;
+
+            if (key == "limit") {
+                uint32_t v = 0U;
+                if (parseSizeBytes(value, v)) {
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_LIMIT, &v, sizeof(v));
+                }
+            }
+            else if (key == "flows") {
+                uint32_t v = 0U;
+                if (parseSizeBytes(value, v)) {
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_FLOWS, &v, sizeof(v));
+                }
+            }
+            else if (key == "quantum") {
+                uint32_t v = 0U;
+                if (parseSizeBytes(value, v)) {
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_QUANTUM, &v, sizeof(v));
+                }
+            }
+            else if (key == "memory_limit") {
+                uint32_t v = 0U;
+                if (parseSizeBytes(value, v)) {
+#if defined(TCA_FQ_CODEL_MEMORY_LIMIT)
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_MEMORY_LIMIT, &v, sizeof(v));
+#else
+                    LogWarning(LOG_NET, "fq_codel memory_limit not supported by kernel headers, interface %s", m_name.c_str());
+#endif
+                }
+            }
+            else if (key == "drop_batch_size") {
+                uint32_t v = 0U;
+                if (parseSizeBytes(value, v)) {
+#if defined(TCA_FQ_CODEL_DROP_BATCH_SIZE)
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_DROP_BATCH_SIZE, &v, sizeof(v));
+#else
+                    LogWarning(LOG_NET, "fq_codel drop_batch_size not supported by kernel headers, interface %s", m_name.c_str());
+#endif
+                }
+            }
+            else if (key == "target") {
+                uint32_t v = 0U;
+                if (parseDurationUsec(value, v)) {
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_TARGET, &v, sizeof(v));
+                }
+            }
+            else if (key == "interval") {
+                uint32_t v = 0U;
+                if (parseDurationUsec(value, v)) {
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_INTERVAL, &v, sizeof(v));
+                }
+            }
+            else if (key == "ce_threshold") {
+                uint32_t v = 0U;
+                if (parseDurationUsec(value, v)) {
+#if defined(TCA_FQ_CODEL_CE_THRESHOLD)
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_CE_THRESHOLD, &v, sizeof(v));
+#else
+                    LogWarning(LOG_NET, "fq_codel ce_threshold not supported by kernel headers, interface %s", m_name.c_str());
+#endif
+                }
+            }
+            else if (key == "ecn") {
+                uint32_t v = 0U;
+                if (parseSizeBytes(value, v)) {
+                    (void)nlAddAttr(&req.n, sizeof(req), TCA_FQ_CODEL_ECN, &v, sizeof(v));
+                }
+            }
+        }
+
+        nlNestEnd(&req.n, optsNest);
+    }
+    else if (!args.empty()) {
+        LogWarning(LOG_NET, "qdisc args are currently supported only for fq_codel, interface %s", m_name.c_str());
+    }
+
+    ssize_t sent = ::send(nl, &req, req.n.nlmsg_len, 0);
+    if (sent < 0) {
+        LogError(LOG_NET, "Unable to send rtnetlink qdisc request for %s, err: %d (%s)",
+            m_name.c_str(), errno, strerror(errno));
+        ::close(nl);
+        return false;
+    }
+
+    uint8_t replyBuf[512U];
+    ssize_t recvd = ::recv(nl, replyBuf, sizeof(replyBuf), 0);
+    if (recvd < 0) {
+        LogError(LOG_NET, "Unable to receive rtnetlink qdisc response for %s, err: %d (%s)",
+            m_name.c_str(), errno, strerror(errno));
+        ::close(nl);
+        return false;
+    }
+
+    struct nlmsghdr* nh = (struct nlmsghdr*)replyBuf;
+    for (; NLMSG_OK(nh, (uint32_t)recvd); nh = NLMSG_NEXT(nh, recvd)) {
+        if (nh->nlmsg_type == NLMSG_ERROR) {
+            struct nlmsgerr* err = (struct nlmsgerr*)NLMSG_DATA(nh);
+            if (err->error == 0) {
+                ::close(nl);
+                return true;
+            }
+
+            LogError(LOG_NET, "Kernel rejected qdisc %s on %s, err: %d (%s)",
+                kind.c_str(), m_name.c_str(), -err->error, strerror(-err->error));
+            ::close(nl);
+            return false;
+        }
+    }
+
+    ::close(nl);
+    LogError(LOG_NET, "Unexpected rtnetlink response while setting qdisc on %s", m_name.c_str());
+    return false;
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -38,6 +38,16 @@ void MESSAGE_TYPE_VCALL_ASSGN::decode(const uint8_t* data, uint32_t length, uint
     ::memset(rcch, 0x00U, NXDN_RCCH_LC_LENGTH_BYTES + 4U);
 
     RCCH::decode(data, rcch, length, offset);
+
+    m_callType = (rcch[2U] >> 5) & 0x07U;                                           // Call Type
+    m_group = m_callType != CallType::INDIVIDUAL;                                   // Group Flag
+    m_emergency = (rcch[1U] & 0x80U) == 0x80U;                                      // Emergency Flag
+    m_priority = (rcch[1U] & 0x20U) == 0x20U;                                       // Priority Flag
+    m_duplex = (rcch[2U] & 0x10U) == 0x10U;                                         // Half/Full Duplex Flag
+    m_transmissionMode = rcch[2U] & 0x07U;                                          // Transmission Mode
+    m_srcId = (uint16_t)((rcch[3U] << 8) | rcch[4U]) & 0xFFFFU;                     // Source Radio Address
+    m_dstId = (uint16_t)((rcch[5U] << 8) | rcch[6U]) & 0xFFFFU;                     // Target Radio Address
+    m_grpVchNo = (uint16_t)(((rcch[7U] & 0x03U) << 8) | rcch[8U]);                  // Channel
 }
 
 /* Encode RCCH data. */
@@ -60,7 +70,7 @@ void MESSAGE_TYPE_VCALL_ASSGN::encode(uint8_t* data, uint32_t length, uint32_t o
     rcch[5U] = (m_dstId >> 8U) & 0xFFU;                                             // Target Radio Address
     rcch[6U] = (m_dstId >> 0U) & 0xFFU;                                             // ...
 
-    rcch[7U] = (m_grpVchNo >> 10) & 0x03U;                                          // Channel
+    rcch[7U] = (m_grpVchNo >> 8) & 0x03U;                                           // Channel
     rcch[8U] = (m_grpVchNo & 0xFFU);                                                // ...
 
     rcch[10U] = (s_siteData.locId() >> 8) & 0xFFU;                                  // Location ID

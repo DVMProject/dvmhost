@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2022,2024,2025 Bryan Biedenkapp, N2PLL
- *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (c) 2024 P. McDonnell, W3AXL
  *  Copyright (c) 2024 Caleb, KO4UYJ
  *
  */
@@ -41,7 +41,7 @@ namespace lookups
      * @brief Represents an individual entry in the peer ID table.
      * @ingroup lookups_peer
      */
-    class HOST_SW_API PeerId {
+    class DVM_COMMON_API PeerId {
     public:
         /**
          * @brief Initializes a new instance of the PeerId class.
@@ -54,6 +54,8 @@ namespace lookups
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_hasCallPriority(false),
+            m_telephoneInterconnect(false),
+            m_allowUnitToUnit(true),
             m_jitterBufferEnabled(false),
             m_jitterBufferMaxSize(4U),
             m_jitterBufferMaxWait(40000U),
@@ -77,6 +79,8 @@ namespace lookups
             m_canRequestKeys(false),
             m_canIssueInhibit(false),
             m_hasCallPriority(false),
+            m_telephoneInterconnect(false),
+            m_allowUnitToUnit(true),
             m_jitterBufferEnabled(false),
             m_jitterBufferMaxSize(4U),
             m_jitterBufferMaxWait(40000U),
@@ -99,6 +103,8 @@ namespace lookups
                 m_canRequestKeys = data.m_canRequestKeys;
                 m_canIssueInhibit = data.m_canIssueInhibit;
                 m_hasCallPriority = data.m_hasCallPriority;
+                m_telephoneInterconnect = data.m_telephoneInterconnect;
+                m_allowUnitToUnit = data.m_allowUnitToUnit;
                 m_jitterBufferEnabled = data.m_jitterBufferEnabled;
                 m_jitterBufferMaxSize = data.m_jitterBufferMaxSize;
                 m_jitterBufferMaxWait = data.m_jitterBufferMaxWait;
@@ -176,6 +182,14 @@ namespace lookups
          * @brief Flag indicating if the peer has call transmit priority.
          */
         DECLARE_PROPERTY_PLAIN(bool, hasCallPriority);
+        /**
+         * @brief Flag indicating if the peer is a telephone interconnect gateway.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, telephoneInterconnect);
+        /**
+         * @brief Flag indicating whether the peer may originate, receive, or transit unit-to-unit traffic.
+         */
+        DECLARE_PROPERTY_PLAIN(bool, allowUnitToUnit);
 
         /**
          * @brief Jitter buffer enabled flag.
@@ -205,15 +219,16 @@ namespace lookups
      *  lookup table.
      * @ingroup lookups_peer
      */
-    class HOST_SW_API PeerListLookup : public LookupTable<PeerId> {
+    class DVM_COMMON_API PeerListLookup : public LookupTable<PeerId> {
     public:
         /**
          * @brief Initializes a new instance of the PeerListLookup class.
          * @param filename Full-path to the list file.
          * @param reloadTime Interval of time to reload the lookup table.
          * @param peerAcl Flag indicating these rules are enabled for enforcing access control.
+         * @param verbose Flag indicating if logging should be enabled for this lookup table.
          */
-        PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl);
+        PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl, bool verbose = true);
 
         /**
          * @brief Clears all entries from the list.
@@ -282,6 +297,8 @@ namespace lookups
 
     protected:
         bool m_acl;
+
+        bool m_verbose;
 
         /**
          * @brief Loads the table from the passed lookup table file.

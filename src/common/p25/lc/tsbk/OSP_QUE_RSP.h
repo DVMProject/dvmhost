@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements QUE RSP - Queued Response
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_QUE_RSP : public TSBK {
+            class DVM_COMMON_API OSP_QUE_RSP : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_QUE_RSP class.

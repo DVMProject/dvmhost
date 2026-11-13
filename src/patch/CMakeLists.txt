@@ -7,7 +7,7 @@
 # *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB patch_SRC
+file(GLOB patch_SRC CONFIGURE_DEPENDS
     "src/patch/mmdvm/*.h"
     "src/patch/mmdvm/*.cpp"
     "src/patch/network/*.h"

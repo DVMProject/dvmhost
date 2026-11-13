@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements U DE REG ACK - Unit De-Registration Acknowledge
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_U_DEREG_ACK : public TSBK {
+            class DVM_COMMON_API OSP_U_DEREG_ACK : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_U_DEREG_ACK class.

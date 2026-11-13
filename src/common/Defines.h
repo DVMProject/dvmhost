@@ -109,8 +109,8 @@ typedef unsigned long long  ulong64_t;
 #define __PROG_NAME__ ""
 #define __EXE_NAME__ ""
 
-#define VERSION_MAJOR       "05"
-#define VERSION_MINOR       "04"
+#define VERSION_MAJOR       "06"
+#define VERSION_MINOR       "00"
 #define VERSION_REV         "A"
 
 #define __NETVER__ "DVM_R" VERSION_MAJOR VERSION_REV VERSION_MINOR
@@ -140,6 +140,30 @@ typedef unsigned long long  ulong64_t;
     "or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by the authors."
 
 #define HOST_SW_API
+
+#if defined(DVMCOMMON_STATIC)
+    #define DVM_COMMON_API
+#elif defined(_WIN32)
+    #if defined(DVMCOMMON_EXPORTS)
+        #define DVM_COMMON_API __declspec(dllexport)
+    #else
+        #define DVM_COMMON_API __declspec(dllimport)
+    #endif
+#else
+    #define DVM_COMMON_API __attribute__((visibility("default")))
+#endif
+
+#if defined(VOCODER_STATIC)
+    #define VOCODER_API
+#elif defined(_WIN32)
+    #if defined(VOCODER_EXPORTS)
+        #define VOCODER_API __declspec(dllexport)
+    #else
+        #define VOCODER_API __declspec(dllimport)
+    #endif
+#else
+    #define VOCODER_API __attribute__((visibility("default")))
+#endif
 
 /**
  * @addtogroup common

@@ -1,0 +1,337 @@
+AMBE Native integration (DVSI AMBE-3000 or compatible device)
+
+This project supports an optional external native library named AMBE.DLL. Due to the proprietary nature of DVSI AMBE the DLL is not shipped in this repository. You can implement your 
+    own DLL to bridge between DVM and a DVSI AMBE-3000 (or another hardware/software codec backend).
+
+IMPORTANT NOTE: No support is given for any of this. Building the AMBE.DLL interop is an exercise left to the reader, no implementation is provided, and no support for implementing
+it is provided. The DVMProject Team does not give any help or support for this. Again, *NO SUPPORT OR HELP TO IMPLEMENT THIS DLL IS GIVEN, DO NOT ASK*.
+
+--------------------------------------------------------------------
+Where external AMBE is used
+--------------------------------------------------------------------
+
+1) dvmhost bridge (C++, dvmhost/src/bridge)
+- External AMBE is only enabled in Windows builds (#if defined(_WIN32)).
+- The bridge loads AMBE.dll with LoadLibrary() and resolves the 6 symbols with GetProcAddress().
+- If loading succeeds, DMR/P25/NXDN encode+decode paths call ambeEncode()/ambeDecode(), which invoke your DLL.
+
+2) managed console (C#, managed/dvmconsole)
+- AmbeNative.cs (class name AmbeVocoder) uses P/Invoke against AMBE.DLL.
+- Channel startup checks for AMBE.DLL in the running assembly directory.
+- If present, the console uses AmbeVocoder for DMR half-rate and P25 full-rate voice coding.
+
+--------------------------------------------------------------------
+Required exports (exact names)
+--------------------------------------------------------------------
+
+Your DLL must export these exact 6 symbol names:
+
+Decoder exports:
+void ambe_init_dec(void* state, short mode);
+short ambe_get_dec_mode(void* state);
+uint32_t ambe_voice_dec(short* samples, short sampleLength, short* codewordBits, short bitSteal, uint16_t cmode, short n, void* state);
+
+Encoder exports:
+void ambe_init_enc(void* state, short mode, short initialize);
+short ambe_get_enc_mode(void* state);
+uint32_t ambe_voice_enc(short* codewordBits, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short uSize, void* state);
+
+Important ABI notes:
+- Export undecorated names exactly as above (use a .def file or equivalent).
+- Use extern "C" to avoid C++ name mangling.
+- State buffers are caller-allocated and mutable.
+- codewordBits passed to/from ambe_voice_dec/ambe_voice_enc are bit arrays in short elements (0 or 1), not packed bytes.
+
+--------------------------------------------------------------------
+Function-by-function contract (recommended)
+--------------------------------------------------------------------
+
+This section documents a practical contract for the 6 required symbols so independent implementations behave consistently with DVM callers.
+
+General rules for all 6 functions:
+- Do not throw exceptions across the DLL boundary.
+- Treat null pointers as invalid input.
+- Avoid blocking behavior; these functions are called in real-time audio paths.
+- Keep per-call work bounded (no long retries, no unbounded waits).
+- Maintain independent decoder/encoder state per state pointer.
+
+1) ambe_init_dec(void* state, short mode)
+Purpose:
+- Initialize decoder state memory for the selected mode.
+
+Inputs:
+- state: pointer to caller-owned writable state memory (expected size at least 2048 bytes by current DVM callers).
+- mode: FULL_RATE (0) or HALF_RATE (1).
+
+Expected behavior:
+- Zero or reset decoder internals associated with state.
+- Store mode so ambe_get_dec_mode() can report it.
+- After return, ambe_voice_dec() should accept calls immediately.
+
+Failure handling:
+- No return value is available, so fail-safe behavior is important.
+- If mode is invalid, set an internal invalid marker; ambe_get_dec_mode() can report NOT_VALID (3) or equivalent.
+
+2) ambe_get_dec_mode(void* state)
+Purpose:
+- Query decoder mode currently associated with state.
+
+Inputs:
+- state: pointer previously initialized by ambe_init_dec().
+
+Return value:
+- 0 for FULL_RATE, 1 for HALF_RATE, optionally 3 for invalid/uninitialized.
+
+Notes:
+- Current DVM code does not require this for the active audio path, but implementing it correctly helps diagnostics.
+
+3) ambe_voice_dec(short* samples, short sampleLength, short* codewordBits, short bitSteal, uint16_t cmode, short n, void* state)
+Purpose:
+- Decode one half-frame (typically 80 samples) from codeword bits into PCM.
+
+Inputs:
+- samples: output buffer for decoded PCM signed 16-bit samples.
+- sampleLength: expected 80 in current callers.
+- codewordBits: input bit array (short elements 0/1), 49 bits for HALF_RATE or 88 bits for FULL_RATE.
+- bitSteal: currently always 0 from DVM callers.
+- cmode: decoder control flags (currently 0 in DVM callers).
+- n: segment index (0 for first half-frame, 1 for second half-frame).
+- state: decoder state pointer.
+
+Expected behavior:
+- Decode using the mode selected at initialization.
+- Fill exactly sampleLength samples.
+- Honor n ordering semantics if your backend uses streaming/subframe context.
+
+Return value:
+- Recommended: 0 for success, non-zero for decode issue.
+- Note: current DVM wrappers do not strongly act on this status, so avoid hard failures where possible.
+
+4) ambe_init_enc(void* state, short mode, short initialize)
+Purpose:
+- Initialize encoder state memory for selected mode.
+
+Inputs:
+- state: pointer to caller-owned writable state memory (expected size at least 6144 bytes by current DVM callers).
+- mode: FULL_RATE (0) or HALF_RATE (1).
+- initialize: caller passes 1 in current DVM code paths.
+
+Expected behavior:
+- Reset encoder internals.
+- Store mode so ambe_get_enc_mode() can report it.
+- When initialize==0, implementation may keep some persistent state if supported.
+
+5) ambe_get_enc_mode(void* state)
+Purpose:
+- Query encoder mode currently associated with state.
+
+Inputs:
+- state: pointer previously initialized by ambe_init_enc().
+
+Return value:
+- 0 for FULL_RATE, 1 for HALF_RATE, optionally 3 for invalid/uninitialized.
+
+6) ambe_voice_enc(short* codewordBits, short bitSteal, short* samples, short sampleLength, uint16_t cmode, short n, short uSize, void* state)
+Purpose:
+- Encode one half-frame (typically 80 samples) of PCM into vocoder bits.
+
+Inputs:
+- codewordBits: output bit array (short elements 0/1), written as 49 bits (HALF_RATE) or 88 bits (FULL_RATE) across the n=0 and n=1 sequence.
+- bitSteal: currently always 0 from DVM callers.
+- samples: input PCM signed 16-bit samples.
+- sampleLength: expected 80 in current callers.
+- cmode: encoder control flags. DVM typically enables noise suppression and AGC bits.
+- n: segment index (0 then 1).
+- uSize: caller passes 8192 in current DVM code.
+- state: encoder state pointer.
+
+Expected behavior:
+- Consume sampleLength samples and update codewordBits for the corresponding half-frame.
+- Respect n ordering for subframe accumulation.
+- Keep output deterministic for identical input/state when possible.
+
+Return value:
+- Recommended: 0 for success, non-zero for encode issue.
+
+Call ordering required by DVM callers:
+- Decoder path: ambe_init_dec() once, then ambe_voice_dec(..., n=0, ...), ambe_voice_dec(..., n=1, ...) per 160-sample frame.
+- Encoder path: ambe_init_enc() once, then ambe_voice_enc(..., n=0, ...), ambe_voice_enc(..., n=1, ...) per 160-sample frame.
+
+Threading and reentrancy guidance:
+- Assume different state pointers may be active concurrently.
+- A single state pointer should be treated as single-stream, ordered calls.
+- If using shared hardware access, serialize internally with low-overhead locking and bounded wait times.
+
+--------------------------------------------------------------------
+Modes, frame sizes, and expected behavior
+--------------------------------------------------------------------
+
+Mode values:
+- FULL_RATE = 0 (IMBE 88-bit; used by P25)
+- HALF_RATE = 1 (AMBE 49-bit; used by DMR and NXDN)
+
+State sizes expected by current callers:
+- Decoder state buffer: 2048 bytes
+- Encoder state buffer: 6144 bytes
+
+Audio framing expected by current callers:
+- Input/output PCM frame = 160 samples (16-bit signed).
+- Callers invoke voice functions twice per frame:
+  - n = 0 for first 80 samples
+  - n = 1 for second 80 samples
+
+Codeword lengths used by callers:
+- P25 full-rate IMBE payload: 11 bytes packed, 88 bits unpacked.
+- DMR/NXDN half-rate AMBE payload: 7 bytes packed, 49 bits unpacked.
+- DMR over-the-air/network framing often arrives as 9-byte ECC/interleaved AMBE.
+  Callers deinterleave/de-ECC before sending bits to your DLL.
+
+Control flags used by callers:
+- bitSteal: always 0 in current code.
+- dcmode: currently 0.
+- ecmode: ECMODE_NOISE_SUPPRESS (0x40) | ECMODE_AGC (0x2000) by default.
+- uSize argument in ambe_voice_enc: currently 8192.
+
+--------------------------------------------------------------------
+How AmbeVocoder (managed) works
+--------------------------------------------------------------------
+
+Decode flow (AmbeVocoder.decode):
+1) Validate incoming codeword length.
+2) In HALF_RATE mode, if a 9-byte DMR codeword is provided, decode managed DMR ECC/interleave to 49 raw bits.
+3) Unpack packed bytes into bit array (short[] values 0/1).
+4) Call ambe_voice_dec twice (n=0 then n=1), each for 80 samples.
+5) Concatenate both 80-sample blocks into one 160-sample PCM frame.
+
+Encode flow (AmbeVocoder.encode):
+1) Validate 160-sample PCM input.
+2) Split into two 80-sample blocks.
+3) Call ambe_voice_enc twice (n=0 then n=1) to fill codeword bits.
+4) HALF_RATE + DMR path: managed layer applies DMR interleave/ECC to produce 9-byte AMBE.
+5) Otherwise pack bits to bytes (7-byte half-rate or 11-byte full-rate).
+
+--------------------------------------------------------------------
+How HostBridge (native C++) uses your DLL
+--------------------------------------------------------------------
+
+Decode:
+- DMR/NXDN: receives 9-byte network AMBE, removes ECC/interleave via internal vocoder helper, converts to 49-bit array, calls ambe_voice_dec twice.
+- P25: unpacks 11-byte IMBE to 88-bit array, calls ambe_voice_dec twice.
+
+Encode:
+- PCM (160 samples) is split into two 80-sample blocks.
+- ambe_voice_enc is called twice to produce bit output.
+- DMR/NXDN: host-side helper adds interleave/ECC for 9-byte network AMBE.
+- P25: host packs 88 bits to 11 bytes for LDU placement.
+
+--------------------------------------------------------------------
+Minimal DLL skeleton (Windows)
+--------------------------------------------------------------------
+
+The example below shows the required signatures and export style only.
+
+#ifdef _WIN32
+#define AMBE_API extern "C" __declspec(dllexport)
+#else
+#define AMBE_API extern "C"
+#endif
+
+AMBE_API void ambe_init_dec(void* state, short mode);
+AMBE_API short ambe_get_dec_mode(void* state);
+AMBE_API uint32_t ambe_voice_dec(short* samples, short sampleLength, short* codewordBits,
+    short bitSteal, uint16_t cmode, short n, void* state);
+
+AMBE_API void ambe_init_enc(void* state, short mode, short initialize);
+AMBE_API short ambe_get_enc_mode(void* state);
+AMBE_API uint32_t ambe_voice_enc(short* codewordBits, short bitSteal, short* samples,
+    short sampleLength, uint16_t cmode, short n, short uSize, void* state);
+
+Use a module-definition (.def) file to force undecorated symbol names:
+
+LIBRARY AMBE
+EXPORTS
+    ambe_init_dec
+    ambe_get_dec_mode
+    ambe_voice_dec
+    ambe_init_enc
+    ambe_get_enc_mode
+    ambe_voice_enc
+
+--------------------------------------------------------------------
+Deployment checklist
+--------------------------------------------------------------------
+
+1) Build a Windows DLL named exactly AMBE.DLL.
+2) Export the 6 functions above with exact names.
+3) Place AMBE.DLL where the app can load it:
+   - dvmconsole: same directory as the running managed executable.
+   - dvmhost bridge (Windows build): in the process DLL search path (recommended: beside executable).
+4) Verify startup logs or behavior indicates external vocoder is active.
+5) If DLL load fails or symbols are missing, DVM should continue using internal vocoder paths.
+
+--------------------------------------------------------------------
+Practical implementation notes
+--------------------------------------------------------------------
+
+- You can back these exports with a DVSI AMBE-3000 USB transport, another hardware modem, or even a software codec backend.
+- Keep state in the provided state buffers or in an internal handle table keyed by state pointer.
+- Avoid blocking calls in ambe_voice_dec/ambe_voice_enc. Audio pipelines call these per frame and timing jitter will cause audio dropouts.
+- If your hardware works better on 160-sample transactions, you can buffer internally; keep the 2-call (n=0/n=1) contract at the DLL boundary unchanged.
+
+--------------------------------------------------------------------
+Additional DVSI USB-3000 details from vendor examples/docs
+--------------------------------------------------------------------
+
+The following details come from DVSI sample code and the USB-3000 manual in ~/src/DVSI. They are useful if your AMBE.DLL talks directly to USB-3000/3003 hardware.
+
+Transport options seen in DVSI examples:
+- Direct FTDI/D2XX access (usb3k-linux and usb3k_client examples).
+- Named-pipe server/client model (dvsiserver + usb3k_client).
+
+Packet framing format used by DVSI examples:
+- START/HEADER byte: 0x61 ('a').
+- 2-byte length (big-endian in examples).
+- 1-byte packet type: control (0), channel (1), speech (2).
+- Payload fields.
+- Optional parity field ID 0x2F plus 1-byte parity value.
+
+Parity behavior (important for robustness):
+- Example parity calculation XORs all bytes except START byte and final parity byte.
+- If parity mode is enabled on device, bad parity packets are discarded.
+
+Initialization/handshake sequence observed in sample code:
+1) Configure FTDI transport.
+2) Reset device (UART break on USB-3003 path, soft-reset packet path for USB-3000 in examples).
+3) Wait for/consume PKT_READY.
+4) Send control packets such as PKT_INIT and rate selection (PKT_RATET or PKT_RATEP).
+5) Begin speech/channel packet exchange.
+
+FTDI settings recommended by DVSI examples/manual:
+- 8 data bits, 1 stop bit, no parity.
+- RTS/CTS flow control.
+- Latency timer: 4 ms.
+- USB-3000 typical baud: 460800.
+- USB-3003 typical baud: 921600.
+
+Speech/channel exchange model:
+- Speech is 160 PCM samples per frame (20 ms at 8 kHz).
+- Device behavior is request/response style:
+  - Send speech packet -> receive channel packet.
+  - Send channel packet -> receive speech packet.
+- Manual notes describe input buffering of roughly two speech packets and two channel packets, so pacing and alternating patterns matter for full-duplex stability.
+
+Channelized devices (USB-3003 family):
+- Channel selectors are encoded as field IDs PKT_CHANNEL0/1/2.
+- Example control/speech/channel packets include channel selection fields.
+
+What this means for an AMBE.DLL implementation:
+- Your exported functions can hide all packet-level details from DVM.
+- Internally, maintain a small pipeline to map DVM's two 80-sample calls into the device's packet cadence without underflow/overflow.
+- Keep device I/O asynchronous or low-latency to avoid blocking ambe_voice_dec/ambe_voice_enc.
+
+Reference assets used:
+- ~/src/DVSI/Docs/USB-3000_Manual.pdf
+- ~/src/DVSI/usb3k-linux/usb3klinux.c
+- ~/src/DVSI/VisualStudioProjects/usb3k_client/usb3k_client.c
+- ~/src/DVSI/VisualStudioProjects/usb3k_client/a3kpacket.h
+- ~/src/DVSI/VisualStudioProjects/usb3k_client/cmode.h

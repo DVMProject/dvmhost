@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -44,6 +44,7 @@ bool ISP_GRP_AFF_Q_RSP::decode(const uint8_t* data, bool rawTSBK)
 
     ulong64_t tsbkValue = TSBK::toValue(tsbk);
 
+    m_emergency = ((tsbkValue >> 56) & 0x80U) != 0U;                                  // Emergency Flag
     m_announceGroup = (uint32_t)((tsbkValue >> 40) & 0xFFFFU);                      // Announcement Group Address
     m_dstId = (uint32_t)((tsbkValue >> 24) & 0xFFFFU);                              // Talkgroup Address
     m_srcId = (uint32_t)(tsbkValue & 0xFFFFFFU);                                    // Source Radio Address
@@ -57,7 +58,13 @@ void ISP_GRP_AFF_Q_RSP::encode(uint8_t* data, bool rawTSBK, bool noTrellis)
 {
     assert(data != nullptr);
 
-    /* stub */
+    ulong64_t tsbkValue = m_emergency ? 0x80U : 0x00U;                                // Emergency Flag
+    tsbkValue = (tsbkValue << 16) + m_announceGroup;                                  // Announcement Group Address
+    tsbkValue = (tsbkValue << 16) + m_dstId;                                          // Talkgroup Address
+    tsbkValue = (tsbkValue << 24) + m_srcId;                                          // Source Radio Address
+
+    std::unique_ptr<uint8_t[]> tsbk = TSBK::fromValue(tsbkValue);
+    TSBK::encode(data, tsbk.get(), rawTSBK, noTrellis);
 }
 
 /* Returns a string that represents the current TSBK. */

@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -265,7 +265,10 @@ namespace concurrent
          */
         T& front()
         {
-            return m_vector.front();
+            __shared_lock();
+            T& value = m_vector.front();
+            __shared_unlock();
+            return value;
         }
         /**
          * @brief Gets the first element of the vector.
@@ -273,7 +276,10 @@ namespace concurrent
          */
         const T& front() const
         {
-            return m_vector.front();
+            __shared_lock();
+            const T& value = m_vector.front();
+            __shared_unlock();
+            return value;
         }
 
         /**
@@ -282,7 +288,10 @@ namespace concurrent
          */
         T& back()
         {
-            return m_vector.back();
+            __shared_lock();
+            T& value = m_vector.back();
+            __shared_unlock();
+            return value;
         }
         /**
          * @brief Gets the last element of the vector.
@@ -290,7 +299,10 @@ namespace concurrent
          */
         const T& back() const
         {
-            return m_vector.back();
+            __shared_lock();
+            const T& value = m_vector.back();
+            __shared_unlock();
+            return value;
         }
 
         /**

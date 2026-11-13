@@ -42,6 +42,7 @@ public:
     EKCKeyItem() :
         m_id(0U),
         m_name(),
+        m_rsiId(0U),
         m_keysetId(0U),
         m_sln(0U),
         m_algId(0U),
@@ -60,6 +61,7 @@ public:
         if (this != &data) {
             m_id = data.m_id;
             m_name = data.m_name;
+            m_rsiId = data.m_rsiId;
             m_keysetId = data.m_keysetId;
             m_sln = data.m_sln;
             m_algId = data.m_algId;
@@ -77,8 +79,6 @@ public:
      */
     bool isInvalid() const
     {
-        if (m_sln == 0U)
-            return true;
         if (m_algId == 0U)
             return true;
         if (m_kId == 0U)
@@ -127,6 +127,10 @@ public:
      * @brief 
      */
     DECLARE_PROPERTY_PLAIN(std::string, name);
+    /**
+     * @brief RSI/LLID this key belongs to. Zero is used as a default entry.
+     */
+    DECLARE_PROPERTY_PLAIN(uint32_t, rsiId);
 
     /**
      * @brief 
@@ -167,10 +171,13 @@ public:
      * @brief Initializes a new instance of the CryptoContainer class.
      * @param filename Full-path to the crypto container file.
      * @param password Crypto container file access password.
+     * @param remotePassword Remote access password for the crypto container.
+     * @param remoteAccessEnabled Flag indicating if remote access is enabled.
      * @param reloadTime Interval of time to reload the crypto container.
      * @param enabled Flag indicating if crypto container is enabled.
      */
-    CryptoContainer(const std::string& filename, const std::string& password, uint32_t reloadTime, bool enabled);
+    CryptoContainer(const std::string& filename, const std::string& password, 
+        const std::string& remotePassword, bool remoteAccessEnabled, uint32_t reloadTime, bool enabled);
     /**
      * @brief Finalizes a instance of the CryptoContainer class.
      */
@@ -208,6 +215,11 @@ public:
      * @param key Key Item.
      */
     void addEntry(EKCKeyItem key);
+    /** 
+     * @brief Adds or replaces a User Key Encryption Key. 
+     * @param key Key Item representing the UKEK.
+     */
+    void addUKEK(EKCKeyItem key);
     /**
      * @brief Erases an existing entry from the lookup table by the specified unique ID.
      * @param id Unique ID to erase.
@@ -249,11 +261,59 @@ public:
      * @brief Returns the last load time of this lookup table.
      * @return const uint64_t Last load time in milliseconds since epoch.
      */
-    const uint64_t lastLoadTime() const { return m_lastLoadTime; }
+    uint64_t lastLoadTime() const;
+
+    /**
+     * @brief Returns the filename of this lookup table.
+     * @return const std::string& Filename of this lookup table.
+     */
+    const std::string& filename() const { return m_file; }
+    
+    /**
+     * @brief Returns the remote access password for the crypto container.
+     * @return const std::string& Remote access password.
+     */
+    const std::string& getRemotePassword() const { return m_remotePassword; }
+    /**
+     * @brief Returns the flag indicating whether or not the crypto container remote access is enabled.
+     * @return const bool True, if remote access is enabled, otherwise false.
+     */
+    const bool isRemoteAccessEnabled() const { return m_remoteAccessEnabled; }
+
+    /**
+     * @brief Returns a thread-safe snapshot of the keys.
+     */
+    std::vector<EKCKeyItem> keys() const;
+    /**
+     * @brief Sets the thread-safe snapshot of the keys.
+     * @param val Vector of key items to set.
+     */
+    void keys(std::vector<EKCKeyItem> val);
+
+    /**
+     * @brief Returns a thread-safe snapshot of the UKEK RSI keys.
+     */
+    std::vector<EKCKeyItem> ukeks() const;
+    /**
+     * @brief Sets the thread-safe snapshot of the UKEK RSI keys.
+     * @param val Vector of key items to set.
+     */
+    void ukeks(std::vector<EKCKeyItem> val);
+    /**
+     * @brief Returns a thread-safe snapshot of the LLA RSI keys.
+     */
+    std::vector<EKCKeyItem> llas() const;
+    /**
+     * @brief Sets the thread-safe snapshot of the LLA RSI keys.
+     * @param val Vector of key items to set.
+     */
+    void llas(std::vector<EKCKeyItem> val);
 
 private:
     std::string m_file;
     std::string m_password;
+    std::string m_remotePassword;
+    bool m_remoteAccessEnabled;
     uint32_t m_reloadTime;
 
     uint64_t m_lastLoadTime;
@@ -262,6 +322,7 @@ private:
     bool m_stop;
 
     static std::mutex s_mutex;
+    static std::mutex s_loadMutex;
 
     /**
      * @brief Loads the table from the passed lookup table file.
@@ -269,11 +330,10 @@ private:
      */
     bool load();
 
-public:
-    /**
-     * @brief List of keys.
-     */
-    DECLARE_PROPERTY_PLAIN(std::vector<EKCKeyItem>, keys);
+private:
+    std::vector<EKCKeyItem> m_keys;
+    std::vector<EKCKeyItem> m_ukeks;
+    std::vector<EKCKeyItem> m_llas;
 };
 
 #endif // __CRYPTO_CONTAINER_H__

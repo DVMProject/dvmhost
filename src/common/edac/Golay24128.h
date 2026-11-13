@@ -30,7 +30,7 @@ namespace edac
      *  correction.
      * @ingroup edac
      */
-    class HOST_SW_API Golay24128 {
+    class DVM_COMMON_API Golay24128 {
     public:
         /**
          * @brief Decode Golay (23,12,7) FEC.

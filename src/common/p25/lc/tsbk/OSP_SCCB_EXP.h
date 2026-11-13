@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SCCB - Secondary Control Channel Broadcast - Explicit
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_SCCB_EXP : public TSBK {
+            class DVM_COMMON_API OSP_SCCB_EXP : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_SCCB_EXP class.
@@ -63,13 +63,33 @@ namespace p25
 
             public:
                 /**
-                 * @brief SCCB channel ID 1.
+                 * @brief RF Sub-System ID containing the secondary control channel.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbRfssId, SCCBRFSSId);
+                /**
+                 * @brief Site ID containing the secondary control channel.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbSiteId, SCCBSiteId);
+                /**
+                 * @brief Explicit SCCB transmit channel ID.
                  */
                 DECLARE_PROPERTY(uint8_t, sccbChannelId1, SCCBChnId1);
                 /**
-                 * @brief Explicit SCCB channel number.
+                 * @brief Explicit SCCB transmit channel number.
                  */
                 DECLARE_PROPERTY(uint32_t, sccbChannelNo, SCCBChnNo);
+                /**
+                 * @brief Explicit SCCB receive channel ID.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbChannelId2, SCCBChnId2);
+                /**
+                 * @brief Explicit SCCB receive channel number.
+                 */
+                DECLARE_PROPERTY(uint32_t, sccbChannelNo2, SCCBChnNo2);
+                /**
+                 * @brief System service class for the secondary control channel.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbServiceClass, SCCBSvcClass);
 
                 DECLARE_COPY(OSP_SCCB_EXP);
             };

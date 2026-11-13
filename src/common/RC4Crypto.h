@@ -38,7 +38,7 @@ namespace crypto
      * @brief Rivest Cipher 4 Algorithm.
      * @ingroup crypto
      */
-    class HOST_SW_API RC4 {
+    class DVM_COMMON_API RC4 {
     public:
         /**
          * @brief Initializes a new instance of the RC4 class.
@@ -67,8 +67,28 @@ namespace crypto
         uint32_t m_i1;
         uint32_t m_i2;
 
+        /**
+         * @brief Swaps two values in the permutation array.
+         * @param a Pointer to the permutation array.
+         * @param i1 Index of the first value to swap.
+         * @param i2 Index of the second value to swap.
+         */
         void swap(uint8_t* a, uint8_t i1, uint8_t i2);
+        /**
+         * @brief Initializes the permutation array with the given key.
+         * @param key Pointer to the encryption key.
+         * @param keyLen Length of the encryption key.
+         * @param permutation Pointer to the permutation array to initialize.
+         */
         void init(const uint8_t key[], uint8_t keyLen, uint8_t* permutation);
+        /**
+         * @brief Transforms the input buffer using the given permutation array.
+         * @param input Pointer to the input buffer.
+         * @param length Length of the input buffer.
+         * @param permutation Pointer to the permutation array.
+         * @param output Pointer to the output buffer.
+         * @param ksOnly If true, only generates the keystream without modifying the input
+         */
         void transform(const uint8_t* input, uint32_t length, uint8_t* permutation, uint8_t* output, bool ksOnly);
     };
 } // namespace crypto

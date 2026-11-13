@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (c) 2003-2013 Christopher M. Kohlhoff
- *  Copyright (C) 2023 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -52,8 +52,8 @@ namespace restapi
              */
             void start(ConnectionPtr c)
             {
-                std::lock_guard<std::mutex> guard(m_lock);
                 {
+                    std::lock_guard<std::mutex> guard(m_lock);
                     m_connections.insert(c);
                 }
                 c->start();
@@ -65,8 +65,8 @@ namespace restapi
              */
             void stop(ConnectionPtr c)
             {
-                std::lock_guard<std::mutex> guard(m_lock);
                 {
+                    std::lock_guard<std::mutex> guard(m_lock);
                     m_connections.erase(c);
                 }
                 c->stop();
@@ -77,11 +77,16 @@ namespace restapi
              */
             void stopAll()
             {
-                for (auto c : m_connections)
-                    c->stop();
+                std::set<ConnectionPtr> connections;
 
-                std::lock_guard<std::mutex> guard(m_lock);
-                m_connections.clear();
+                // scope is intentional
+                {
+                    std::lock_guard<std::mutex> guard(m_lock);
+                    connections.swap(m_connections);
+                }
+
+                for (const ConnectionPtr& c : connections)
+                    c->stop();
             }
 
         private:

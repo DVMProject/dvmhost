@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements IDEN UP VU - Channel Identifier Update for VHF/UHF Bands
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_IDEN_UP_VU : public TSBK {
+            class DVM_COMMON_API OSP_IDEN_UP_VU : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_IDEN_UP_VU class.

@@ -47,7 +47,7 @@ namespace network
          * 4 bytes
          * \endcode
          */
-        class HOST_SW_API RTPExtensionHeader {
+        class DVM_COMMON_API RTPExtensionHeader {
         public:
             /**
              * @brief Initializes a new instance of the RTPExtensionHeader class.

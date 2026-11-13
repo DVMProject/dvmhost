@@ -37,7 +37,7 @@ namespace p25
          * @{
          */
 
-         const uint32_t KMM_BODY_MODIFY_KEY_LENGTH = 8U;
+         const uint32_t KMM_BODY_MODIFY_KEY_LENGTH = 4U; // decryption instruction block
 
          /** @} */
  
@@ -45,7 +45,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMModifyKey : public KMMFrame {
+        /**
+         * @brief Represents a KMM modify key command.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMModifyKey : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMModifyKey class.

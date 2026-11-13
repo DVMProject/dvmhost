@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2016 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2022,2024,2025 Bryan Biedenkapp, N2PLL
- *  Copyright (c) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (c) 2024 P. McDonnell, W3AXL
  *  Copyright (c) 2024 Caleb, KO4UYJ
  *
  */
@@ -50,8 +50,9 @@ bool PeerListLookup::s_locked = false;
 
 /* Initializes a new instance of the PeerListLookup class. */
 
-PeerListLookup::PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl) : LookupTable(filename, reloadTime),
-    m_acl(peerAcl)
+PeerListLookup::PeerListLookup(const std::string& filename, uint32_t reloadTime, bool peerAcl, bool verbose) : LookupTable(filename, reloadTime),
+    m_acl(peerAcl),
+    m_verbose(verbose)
 {
     /* stub */
 }
@@ -257,6 +258,16 @@ bool PeerListLookup::load()
             if (parsed.size() >= 10)
                 jitterBufferMaxWait = (uint32_t)::atoi(parsed[9].c_str());
 
+            // parse telephone interconnect flag
+            bool telephoneInterconnect = false;
+            if (parsed.size() >= 11)
+                telephoneInterconnect = ::atoi(parsed[10].c_str()) == 1;
+
+            // parse unit-to-unit routing permission; omitted fields preserve legacy behavior
+            bool allowUnitToUnit = true;
+            if (parsed.size() >= 12 && !parsed[11].empty())
+                allowUnitToUnit = ::atoi(parsed[11].c_str()) == 1;
+
             // parse optional password
             std::string password = "";
             if (parsed.size() >= 2)
@@ -268,6 +279,8 @@ bool PeerListLookup::load()
             entry.canRequestKeys(canRequestKeys);
             entry.canIssueInhibit(canIssueInhibit);
             entry.hasCallPriority(hasCallPriority);
+            entry.telephoneInterconnect(telephoneInterconnect);
+            entry.allowUnitToUnit(allowUnitToUnit);
             entry.jitterBufferEnabled(jitterBufferEnabled);
             entry.jitterBufferMaxSize(jitterBufferMaxSize);
             entry.jitterBufferMaxWait(jitterBufferMaxWait);
@@ -275,14 +288,18 @@ bool PeerListLookup::load()
             m_table[id] = entry;
 
             // log depending on what was loaded
-            LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s", id,
-                (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
-                (!password.empty() ? "using unique peer password" : "using master password"),
-                (peerReplica) ? ", Replication Enabled" : "",
-                (canRequestKeys) ? ", Can Request Keys" : "",
-                (canIssueInhibit) ? ", Can Issue Inhibit" : "",
-                (hasCallPriority) ? ", Has Call Priority" : "",
-                (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "");
+            if (m_verbose) {
+                LogInfoEx(LOG_HOST, "Loaded peer ID %u%s into peer ID lookup table, %s%s%s%s%s%s%s%s", id,
+                    (!alias.empty() ? (" (" + alias + ")").c_str() : ""),
+                    (!password.empty() ? "using unique peer password" : "using master password"),
+                    (peerReplica) ? ", Replication Enabled" : "",
+                    (canRequestKeys) ? ", Can Request Keys" : "",
+                    (canIssueInhibit) ? ", Can Issue Inhibit" : "",
+                    (hasCallPriority) ? ", Has Call Priority" : "",
+                    (jitterBufferEnabled) ? ", Jitter Buffer Enabled" : "",
+                    (telephoneInterconnect) ? ", Telephone Interconnect" : "",
+                    (!allowUnitToUnit) ? ", Unit-to-Unit Disabled" : "");
+            }
         }
     }
 
@@ -394,7 +411,23 @@ bool PeerListLookup::save(bool quiet)
 
         // add jitter buffer max wait time
         uint32_t jitterBufferMaxWait = entry.second.jitterBufferMaxWait();
-        line += std::to_string(jitterBufferMaxWait);
+        line += std::to_string(jitterBufferMaxWait) + ",";
+
+        // add telephone interconnect flag
+        bool telephoneInterconnect = entry.second.telephoneInterconnect();
+        if (telephoneInterconnect) {
+            line += "1,";
+        } else {
+            line += "0,";
+        }
+
+        // add unit-to-unit routing permission
+        bool allowUnitToUnit = entry.second.allowUnitToUnit();
+        if (allowUnitToUnit) {
+            line += "1";
+        } else {
+            line += "0";
+        }
 
         line += "\n";
         file << line;

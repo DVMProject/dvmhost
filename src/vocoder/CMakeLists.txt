@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #/*
-# * Digital Voice Modem - Remote Command Client
+# * Digital Voice Modem - Vocoder
 # * GPLv2 Open Source. Use is subject to license terms.
 # * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 # *
 # *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB vocoder_SRC
+file(GLOB vocoder_SRC CONFIGURE_DEPENDS
     "src/vocoder/imbe/*.cpp"
     "src/vocoder/*.cpp"
     "src/vocoder/*.c"
 )
 
-file(GLOB vocoder_INCLUDE
+file(GLOB vocoder_INCLUDE CONFIGURE_DEPENDS
     "src/vocoder/imbe/*.h"
     "src/vocoder/*.h"
 )

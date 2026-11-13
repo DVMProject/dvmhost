@@ -300,7 +300,7 @@ RS634717::~RS634717() = default;
 
 /* Decode RS (24,12,13) FEC. */
 
-bool RS634717::decode241213(uint8_t* data)
+bool RS634717::decode241213(uint8_t* data, int8_t* errs)
 {
     assert(data != nullptr);
 
@@ -317,6 +317,9 @@ bool RS634717::decode241213(uint8_t* data)
     offset = 0U;
     for (uint32_t i = 0U; i < 12U; i++, offset += 6)
         Utils::hex2Bin(codeword[39 + i], data, offset);
+
+    if (errs != nullptr)
+        *errs = (int8_t)ec;
 
     if ((ec == -1) || (ec > 6)) {
         return false;
@@ -350,7 +353,7 @@ void RS634717::encode241213(uint8_t* data)
 
 /* Decode RS (24,16,9) FEC. */
 
-bool RS634717::decode24169(uint8_t* data)
+bool RS634717::decode24169(uint8_t* data, int8_t* errs)
 {
     assert(data != nullptr);
 
@@ -367,6 +370,9 @@ bool RS634717::decode24169(uint8_t* data)
     offset = 0U;
     for (uint32_t i = 0U; i < 16U; i++, offset += 6)
         Utils::hex2Bin(codeword[39 + i], data, offset);
+
+    if (errs != nullptr)
+        *errs = (int8_t)ec;
 
     if ((ec == -1) || (ec > 4)) {
         return false;
@@ -400,7 +406,7 @@ void RS634717::encode24169(uint8_t* data)
 
 /* Decode RS (36,20,17) FEC. */
 
-bool RS634717::decode362017(uint8_t* data)
+bool RS634717::decode362017(uint8_t* data, int8_t* errs)
 {
     assert(data != nullptr);
 
@@ -417,6 +423,9 @@ bool RS634717::decode362017(uint8_t* data)
     offset = 0U;
     for (uint32_t i = 0U; i < 20U; i++, offset += 6)
         Utils::hex2Bin(codeword[27 + i], data, offset);
+
+    if (errs != nullptr)
+        *errs = (int8_t)ec;
 
     if ((ec == -1) || (ec > 8)) {
         return false;
@@ -450,7 +459,7 @@ void RS634717::encode362017(uint8_t* data)
 
 /* Decode RS (52,30,23) FEC. */
 
-bool RS634717::decode523023(uint8_t* data)
+bool RS634717::decode523023(uint8_t* data, int8_t* errs)
 {
     assert(data != nullptr);
 
@@ -468,6 +477,9 @@ bool RS634717::decode523023(uint8_t* data)
     offset = 0U;
     for (uint32_t i = 0U; i < 30U; i++, offset += 6)
         Utils::hex2Bin(codeword[11 + i], data, offset);
+
+    if (errs != nullptr)
+        *errs = (int8_t)ec;
 
     if ((ec == -1) || (ec >= 11)) {
         return false;
@@ -501,7 +513,7 @@ void RS634717::encode523023(uint8_t* data)
 
 /* Decode RS (46,26,21) FEC. */
 
-bool RS634717::decode462621(uint8_t* data)
+bool RS634717::decode462621(uint8_t* data, int8_t* errs)
 {
     assert(data != nullptr);
 
@@ -522,6 +534,9 @@ bool RS634717::decode462621(uint8_t* data)
     offset = 0U;
     for (uint32_t i = 0U; i < 26U; i++, offset += 6)
         Utils::hex2Bin(codeword[9 + i], data, offset);
+
+    if (errs != nullptr)
+        *errs = (int8_t)ec;
 
     if ((ec == -1) || (ec > 10)) {
         return false;
@@ -555,7 +570,7 @@ void RS634717::encode462621(uint8_t* data)
 
 /* Decode RS (45,26,20) FEC. */
 
-bool RS634717::decode452620(uint8_t* data)
+bool RS634717::decode452620(uint8_t* data, int8_t* errs)
 {
     assert(data != nullptr);
 
@@ -576,6 +591,9 @@ bool RS634717::decode452620(uint8_t* data)
     offset = 0U;
     for (uint32_t i = 0U; i < 26U; i++, offset += 6)
         Utils::hex2Bin(codeword[9 + i], data, offset);
+
+    if (errs != nullptr)
+        *errs = (int8_t)ec;
 
     if ((ec == -1) || (ec > 9)) {
         return false;
@@ -609,7 +627,7 @@ void RS634717::encode452620(uint8_t* data)
 
 /* Decode RS (44,16,29) FEC. */
 
-bool RS634717::decode441629(uint8_t* data)
+bool RS634717::decode441629(uint8_t* data, int8_t* errs)
 {
     assert(data != nullptr);
 
@@ -630,6 +648,9 @@ bool RS634717::decode441629(uint8_t* data)
     offset = 0U;
     for (uint32_t i = 0U; i < 16U; i++, offset += 6)
         Utils::hex2Bin(codeword[19 + i], data, offset);
+
+    if (errs != nullptr)
+        *errs = (int8_t)ec;
 
     if ((ec == -1) || (ec > 14)) {
         return false;

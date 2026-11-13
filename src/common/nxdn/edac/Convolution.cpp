@@ -69,7 +69,7 @@ void Convolution::start()
     m_dp = m_decisions;
 }
 
-/* */
+/* Performs chainback to determine the most likely transmitted sequence. */
 
 uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
 {
@@ -97,7 +97,7 @@ uint32_t Convolution::chainback(uint8_t* out, uint32_t nBits)
     return minCost / (M >> 1);
 }
 
-/* */
+/* Starts convolution decoding for a single pair of received symbols. */
 
 bool Convolution::decode(uint8_t s0, uint8_t s1)
 {
@@ -134,7 +134,7 @@ bool Convolution::decode(uint8_t s0, uint8_t s1)
     return true;
 }
 
-/* */
+/* Performs convolution encoding on the input bit sequence. */
 
 void Convolution::encode(const uint8_t* in, uint8_t* out, uint32_t nBits) const
 {

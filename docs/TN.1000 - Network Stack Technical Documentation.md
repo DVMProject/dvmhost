@@ -1,8 +1,8 @@
 # DVM Network Stack Technical Documentation
 
-**Version:** 1.0  
-**Date:** December 3, 2025  
-**Author:** AI Assistant (based on source code analysis)
+**Version:** 1.2  
+**Date:** July 8, 2026  
+**Author:** AI Assistant (updated based on current source code analysis)
 
 AI WARNING: This document was mainly generated using AI assistance. As such, there is the possibility of some error or inconsistency.
 
@@ -51,12 +51,12 @@ The DVM network implements a **spanning tree topology** to prevent routing loops
                         │    Primary FNE      │
                         └──────────┬──────────┘
                                    │
-            ┌──────────────────────┼──────────────────────────────────┐
-            │                      │                                  │
-    ┌───────▼────────┐     ┌──────▼──────────┐            ┌─────────▼─────────┐
-    │  dvmhost #1    │     │  FNE Regional   │            │    dvmbridge      │
-    │  (Leaf Peer)   │     │  (Child FNE)    │            │    (Leaf Peer)    │
-    └────────────────┘     └──────┬──────────┘            └───────────────────┘
+            ┌──────────────────────┼───────────────────────────┐
+            │                      │                           │
+    ┌───────▼────────┐      ┌──────▼──────────┐      ┌─────────▼─────────┐
+    │  dvmhost #1    │      │  FNE Regional   │      │    dvmbridge      │
+    │  (Leaf Peer)   │      │  (Child FNE)    │      │    (Leaf Peer)    │
+    └────────────────┘      └──────┬──────────┘      └───────────────────┘
                                    │
                         ┌──────────┼──────────────────┐
                         │          │                  │
@@ -90,24 +90,24 @@ Key Topology Rules:
 
 Alternative HA Configuration with Replica:
 
-    ┌─────────────────────┐           ┌─────────────────────┐
-    │   FNE Master (Root) │◄─────────►│  FNE Replica (HA)   │
-    │    Primary FNE      │  Repl.    │   Standby FNE       │
-    └──────────┬──────────┘  Sync     └──────────┬──────────┘
-               │                                  │
-    ┌──────────┼──────────┬──────────┐   (Takes over on failure)
-    │          │          │          │
-┌───▼──────┐ ┌▼────────┐ ┌▼───────┐ ┌▼─────────┐
+       ┌─────────────────────┐           ┌─────────────────────┐
+       │   FNE Master (Root) │◄─────────►│  FNE Replica (HA)   │
+       │    Primary FNE      │  Repl.    │   Standby FNE       │
+       └──────────┬──────────┘  Sync     └──────────┬──────────┘
+                  │                                 │
+      ┌───────────┼───────────┬──────────┐   (Takes over on failure)
+      │           │           │          │
+┌─────▼────┐ ┌────▼────┐ ┌────▼───┐ ┌────▼─────┐
 │ dvmhost1 │ │dvmhost2 │ │Regional│ │dvmbridge │
 │  (Leaf)  │ │ (Leaf)  │ │  FNE   │ │  (Leaf)  │
-└──────────┘ └─────────┘ └┬───────┘ └──────────┘
-                           │
-                    ┌──────┴────────┐
-                    │               │
-                ┌───▼──────┐   ┌────▼──────┐
-                │ dvmhost3 │   │ dvmpatch  │
-                │  (Leaf)  │   │  (Leaf)   │
-                └──────────┘   └───────────┘
+└──────────┘ └─────────┘ └────┬───┘ └──────────┘
+                              │
+                        ┌─────┴─────────┐
+                        │               │
+                   ┌────▼─────┐   ┌─────▼─────┐
+                   │ dvmhost3 │   │ dvmpatch  │
+                   │  (Leaf)  │   │  (Leaf)   │
+                   └──────────┘   └───────────┘
 ```
 
 **Spanning Tree Features:**
@@ -137,14 +137,12 @@ The DVM network stack is organized into a hierarchical class structure with clea
 
 #### Common/Core Network Classes (dvmhost/src/common/network/)
 
-These classes provide the foundational networking functionality used by all DVM components (dvmhost, dvmbridge, dvmpatch, dvmfne):
+These classes provide the foundational networking functionality used by all DVM components (dvmhost, dvmbridge, dvmpatch, and dvmfne):
 
 ```
 BaseNetwork (Abstract Base Class)
     │
     ├── Network (Peer Implementation - for dvmhost, dvmbridge, dvmpatch)
-    │
-    └── FNENetwork (Master Implementation - for dvmfne only)
 
 Core Supporting Classes:
     ├── FrameQueue (RTP Frame Management)
@@ -156,18 +154,22 @@ Core Supporting Classes:
     │
     ├── RTPStreamMultiplex (Multi-Stream Management)
     ├── PacketBuffer (Fragmentation/Reassembly)
+    ├── NetRPC / RPCHeader (RPC Transport and Framing Helpers)
+    ├── AdaptiveJitterBuffer (Per-Stream Reordering/Jitter Management)
     └── udp::Socket (UDP Transport Layer)
 ```
 
 #### FNE-Specific Network Classes (dvmhost/src/fne/network/)
 
-These classes extend the core functionality specifically for FNE master operations:
+These classes extend the core functionality specifically for current FNE runtime operations:
 
 ```
-FNENetwork (Extends BaseNetwork)
+TrafficNetwork (Extends BaseNetwork)
     │
-    ├── DiagNetwork (Diagnostic Port Handler)
-    │   └── Uses BaseNetwork functionality on alternate port
+    ├── MetadataNetwork (Metadata / Activity / Diagnostic Transfer Listener)
+    ├── PeerNetwork (Extends Network for Upstream/Neighbor FNE Links)
+    ├── FNEPeerConnection (Per-Peer Session State, RTPStreamMultiplex)
+    ├── SpanningTree (Peer Topology State)
     │
     └── Call Handlers (Traffic Routing & Management):
         ├── TagDMRData (DMR Protocol Handler)
@@ -179,22 +181,24 @@ FNENetwork (Extends BaseNetwork)
 #### Class Usage by Component:
 
 | Class | dvmhost | dvmbridge | dvmpatch | dvmfne |
-|-------|---------|-----------|----------|--------|
+|-------|---------|-----------|----------|--------------------|
 | BaseNetwork | ✓ | ✓ | ✓ | ✓ |
-| Network | ✓ | ✓ | ✓ | ✗ |
-| FNENetwork | ✗ | ✗ | ✗ | ✓ |
+| Network | ✓ | ✓ | ✓ | ✓ (via `PeerNetwork`) |
+| TrafficNetwork | ✗ | ✗ | ✗ | ✓ |
+| MetadataNetwork | ✗ | ✗ | ✗ | ✓ |
+| PeerNetwork | ✗ | ✗ | ✗ | ✓ |
 | FrameQueue | ✓ | ✓ | ✓ | ✓ |
 | RTPHeader/FNEHeader | ✓ | ✓ | ✓ | ✓ |
-| DiagNetwork | ✗ | ✗ | ✗ | ✓ |
 | TagXXXData | ✗ | ✗ | ✗ | ✓ |
 | FNEPeerConnection | ✗ | ✗ | ✗ | ✓ |
+| SpanningTree | ✗ | ✗ | ✗ | ✓ |
 
 ### BaseNetwork Class
 
 The `BaseNetwork` class provides core networking functionality shared by both peer and master implementations:
 
-- **Ring Buffers**: Fixed-size circular buffers (4KB each) for DMR, P25, NXDN, and analog receive data
-- **Protocol Writers**: Methods for writing DMR, P25 LDU1/LDU2, NXDN, and analog frames
+- **Ring Buffers**: Fixed-size circular buffers (4098 bytes each) for DMR, P25, P25 Phase 2, NXDN, and analog receive data
+- **Protocol Writers**: Methods for writing DMR, P25 LDU1/LDU2/TDU/TSDU/TDULC, P25 Phase 2, NXDN, and analog frames
 - **Message Builders**: Functions to construct protocol-specific network messages
 - **Grant Management**: Grant request and encryption key request handling
 - **Announcements**: Unit registration, group affiliation, and peer status announcements
@@ -210,12 +214,14 @@ protected:
     // Ring buffers for protocol data
     RingBuffer m_rxDMRData;         // DMR receive buffer (4KB)
     RingBuffer m_rxP25Data;         // P25 receive buffer (4KB)
+    RingBuffer m_rxP25P2Data;       // P25 Phase 2 receive buffer (4KB)
     RingBuffer m_rxNXDNData;        // NXDN receive buffer (4KB)
     RingBuffer m_rxAnalogData;      // Analog receive buffer (4KB)
     
     // Stream identifiers
     uint32_t* m_dmrStreamId;        // DMR stream IDs (2 slots)
     uint32_t m_p25StreamId;         // P25 stream ID
+    uint32_t* m_p25P2StreamId;      // P25 Phase 2 stream IDs (2 slots)
     uint32_t m_nxdnStreamId;        // NXDN stream ID
     uint32_t m_analogStreamId;      // Analog stream ID
 };
@@ -226,7 +232,7 @@ protected:
 The `Network` class implements peer-side functionality for connecting to FNE masters:
 
 - **Connection State Machine**: Login, authorization, configuration, and running states
-- **Authentication**: SHA256-based challenge-response authentication
+- **Authentication**: SHA256 digest authentication using FNE-provided per-login salt and shared password
 - **Heartbeat**: Regular ping/pong messages to maintain connection
 - **Metadata Exchange**: Peer configuration and status reporting
 - **High Availability**: Support for multiple master addresses with failover
@@ -251,34 +257,49 @@ private:
 };
 ```
 
-### FNENetwork Class (Master)
+### TrafficNetwork / MetadataNetwork / PeerNetwork Classes
 
-The `FNENetwork` class implements master-side functionality for managing connected peers:
+Current FNE runtime networking is split across multiple classes rather than a single `FNENetwork` implementation:
 
-- **Peer Management**: Track connected peers, their capabilities, and metadata
-- **Call Routing**: Route traffic between peers based on talkgroup affiliations
-- **Access Control**: Whitelist/blacklist management for RIDs and talkgroups
-- **Network Replication**: Distribute peer lists, talkgroup rules, and RID lookups
-- **Spanning Tree**: Optional spanning tree protocol for complex network topologies
-- **Thread Pool**: Worker threads for asynchronous packet processing
+- **TrafficNetwork**: Primary master-side traffic/control plane. Manages connected peers, routing, affiliations, ACL distribution, spanning tree state, HA state, and protocol call handlers.
+- **MetadataNetwork**: Separate metadata/activity/diagnostic/status listener bound to `master.port + 1`, sharing the same peer/runtime context as `TrafficNetwork`.
+- **PeerNetwork**: Upstream or neighbor FNE client link implementation used when this FNE also peers to other masters.
+
+Representative current layout:
 
 ```cpp
-class FNENetwork : public BaseNetwork {
+class TrafficNetwork : public BaseNetwork {
 private:
-    std::unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-    std::unordered_map<uint32_t, uint32_t> m_ccPeerMap;
-    
+    concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
+    concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
+    concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
+
     lookups::RadioIdLookup* m_ridLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
     lookups::PeerListLookup* m_peerListLookup;
-    
-    ThreadPool m_threadPool;        // Worker threads
-    Timer m_maintainenceTimer;      // Peer maintenance timer
-    
-    bool m_enableSpanningTree;      // Spanning tree enabled
-    bool m_disallowU2U;             // Disallow unit-to-unit calls
+
+    SpanningTree* m_treeRoot;
+    ThreadPool m_threadPool;
+    Timer m_maintainenceTimer;
+
+    bool m_enableSpanningTree;
+    bool m_disallowU2U;
+};
+
+class MetadataNetwork : public BaseNetwork {
+private:
+    TrafficNetwork* m_trafficNetwork;
+    ThreadPool m_threadPool;
+};
+
+class PeerNetwork : public Network {
+private:
+    lookups::PeerListLookup* m_pidLookup;
+    ThreadPool m_threadPool;
 };
 ```
+
+At the application level, `HostFNE` owns `m_network` (`TrafficNetwork`), `m_mdNetwork` (`MetadataNetwork`), and `m_peerNetworks` (`PeerNetwork` map). Startup order is `createMasterNetwork()`, then `initializeRESTAPI()`, then `createPeerNetworks()`.
 
 ---
 
@@ -291,7 +312,7 @@ The DVM network stack implements a layered protocol architecture:
 - **Socket Operations**: Standard UDP datagram socket (IPv4/IPv6)
 - **Buffer Sizes**: Configurable send/receive buffers (default 512KB)
 - **Non-Blocking**: Asynchronous I/O for high-throughput scenarios
-- **Encryption**: Optional AES-256 encryption at transport layer
+- **Encryption**: Optional AES-256-ECB UDP payload wrapping with preshared key and `0xC0FE` packet leader
 
 ### Layer 2: RTP (Real-time Transport Protocol)
 
@@ -518,13 +539,14 @@ Byte Offset | Field              | Size    | Description
 ```
 FE 04 A3 5C 00 00 00 00 12 34 56 78 00 00 4E 20 00 00 00 21
 │  │  │  │  │  │  │  │  │        │  │        │  │        │
-│  │  │  │  │  │  │  │  │        │  └────────┴─ Peer ID: 0x00004E20 (20000)
-│  │  │  │  │  │  │  │  └────────┴──────────── Stream ID: 0x12345678
-│  │  │  │  │  │  └──┴─────────────────────── Reserved (0x0000)
-│  │  │  │  └──┴────────────────────────────── Function: 0x00, SubFunc: 0x00
-│  │  └──┴───────────────────────────────────── CRC-16: 0xA35C
-│  └─────────────────────────────────────────── Extension Length: 4 (words)
-└────────────────────────────────────────────── Payload Type: 0xFE
+│  │  │  │  │  │  │  │  │        │  │        │  └────────┴─ Payload Length: 0x00000021 (33)
+│  │  │  │  │  │  │  │  │        │  └────────┴───────────── Peer ID: 0x00004E20 (20000)
+│  │  │  │  │  │  │  │  └────────┴───────────────────────── Stream ID: 0x12345678
+│  │  │  │  │  │  └──┴───────────────────────────────────── Reserved (0x0000)
+│  │  │  │  └──┴─────────────────────────────────────────── Function: 0x00, SubFunc: 0x00
+│  │  └──┴───────────────────────────────────────────────── CRC-16: 0xA35C
+│  └─────────────────────────────────────────────────────── Extension Length: 4 (words)
+└────────────────────────────────────────────────────────── Payload Type: 0xFE
 ```
 
 **Encoding Example:**
@@ -620,6 +642,10 @@ The DVM protocol uses a two-level opcode system for message routing and handling
 | 0x7D | KEY_RSP | Encryption key response |
 | 0x7E | ACK | Acknowledgment |
 | 0x7F | NAK | Negative acknowledgment |
+| 0x80 | KEY_LLA_REQ | Encryption key LLA request |
+| 0x81 | KEY_LLA_RSP | Encryption key LLA response |
+| 0x8E | KEYS_INVENTORY | Encryption key inventory transfer |
+| 0x8F | KEYS_UPDATE | Encryption key container update |
 | 0x90 | TRANSFER | Activity/diagnostic/status transfer |
 | 0x91 | ANNOUNCE | Affiliation/registration announcements |
 | 0x92 | REPL | FNE replication (peer/TG/RID lists) |
@@ -631,7 +657,7 @@ When an FNE master sends a NAK (Negative Acknowledgment), it includes a 16-bit r
 
 **NAK Message Format:**
 ```
-Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
+Reserved (6 bytes) + Peer ID (4 bytes) + Reason Code (2 bytes)
 ```
 
 **Reason Code Enumeration:**
@@ -647,6 +673,7 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 | 6 | PEER_RESET | Warning | FNE demands connection reset | Reset connection and re-login |
 | 7 | PEER_ACL | **Fatal** | Peer rejected by Access Control List | **Disable network - peer is banned** |
 | 8 | FNE_MAX_CONN | Warning | FNE has reached maximum permitted connections | Wait and retry later |
+| 9 | FNE_DUPLICATE_CONN | Warning | FNE detected this peer as a duplicate connection | Disconnect, clear remote peer state, and retry with duplicate-connection backoff |
 
 **Severity Levels:**
 
@@ -663,6 +690,8 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 
 - `FNE_MAX_CONN` (Code 8): If received while in `NET_STAT_RUNNING` state, indicates the FNE is overloaded or shutting down. Peer should implement exponential backoff before reconnecting.
 
+- `FNE_DUPLICATE_CONN` (Code 9): The peer transitions to `NET_STAT_WAITING_CONNECT`, clears `m_remotePeerId`, sets the duplicate-connection flag, reduces retry count thresholds, and uses the extended duplicate-connection reconnect delay (`DUPLICATE_CONN_RETRY_TIME`) to avoid rapid reconnect storms.
+
 ### NET_SUBFUNC: Secondary Function Codes
 
 #### Protocol Sub-Functions (PROTOCOL)
@@ -672,6 +701,7 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 | 0x00 | PROTOCOL_SUBFUNC_DMR | DMR protocol data |
 | 0x01 | PROTOCOL_SUBFUNC_P25 | P25 protocol data |
 | 0x02 | PROTOCOL_SUBFUNC_NXDN | NXDN protocol data |
+| 0x03 | PROTOCOL_SUBFUNC_P25_P2 | P25 Phase 2 protocol data |
 | 0x0F | PROTOCOL_SUBFUNC_ANALOG | Analog audio data |
 
 #### Master Sub-Functions (MASTER)
@@ -701,6 +731,7 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 | 0x02 | ANNC_SUBFUNC_UNIT_DEREG | Unit deregistration |
 | 0x03 | ANNC_SUBFUNC_GRP_UNAFFIL | Group unaffiliation |
 | 0x90 | ANNC_SUBFUNC_AFFILS | Complete affiliation update |
+| 0x91 | ANNC_SUBFUNC_UNIT_REGS | Complete unit registration update |
 | 0x9A | ANNC_SUBFUNC_SITE_VC | Site voice channel list |
 
 #### Replication Sub-Functions (REPL)
@@ -712,6 +743,13 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 | 0x02 | REPL_PEER_LIST | Peer configuration list |
 | 0xA2 | REPL_ACT_PEER_LIST | Active peer list |
 | 0xA3 | REPL_HA_PARAMS | HA configuration parameters |
+
+#### Network Tree Sub-Functions (NET_TREE)
+
+| Code | Name | Purpose |
+|------|------|---------|
+| 0x00 | NET_TREE_LIST | Spanning-tree topology list transfer |
+| 0x01 | NET_TREE_DISC | Spanning-tree disconnect notification |
 
 #### In-Call Control (INCALL_CTRL)
 
@@ -729,7 +767,7 @@ Peer ID (4 bytes) + Reserved (4 bytes) + Reason Code (2 bytes)
 The peer connection follows a state machine:
 
 ```
-NET_STAT_INVALID
+NET_STAT_WAITING_CONNECT
     ↓
 NET_STAT_WAITING_LOGIN (send RPTL)
     ↓
@@ -745,17 +783,17 @@ NET_STAT_RUNNING (operational)
 **Step 1: Login Request (RPTL)**
 
 Peer sends login request with:
+- Repeater login tag (`"RPTL"`)
 - Peer ID
-- Random salt value
 
 ```cpp
 bool Network::writeLogin() {
     uint8_t buffer[8U];
-    ::memcpy(buffer + 0U, m_salt, sizeof(uint32_t));
+    ::memcpy(buffer + 0U, TAG_REPEATER_LOGIN, 4U);
     SET_UINT32(m_peerId, buffer, 4U);
     
     return writeMaster({ NET_FUNC::RPTL, NET_SUBFUNC::NOP }, 
-                       buffer, 8U, m_pktSeq, m_loginStreamId);
+                       buffer, 8U, pktSeq(true), m_loginStreamId);
 }
 ```
 
@@ -767,41 +805,42 @@ bool Network::writeLogin() {
 RPTL Payload (8 bytes):
 Byte Offset | Field              | Size    | Description
 ------------|--------------------|---------|---------------------------------
-0-3         | Salt               | 4 bytes | Random value (big-endian)
+0-3         | TAG_REPEATER_LOGIN | 4 bytes | ASCII "RPTL"
 4-7         | Peer ID            | 4 bytes | Peer identifier (big-endian)
 ```
 
 **Example RPTL Payload (hexadecimal):**
 ```
-A1 B2 C3 D4 00 00 4E 20
+52 50 54 4C 00 00 4E 20
 │        │  │        │
 │        │  └────────┴─ Peer ID: 0x00004E20 (20000)
-└────────┴──────────── Salt: 0xA1B2C3D4
+└────────┴──────────── TAG: "RPTL"
 ```
 
-**Step 2: Authorization Challenge (RPTK)**
+After receiving `RPTL`, the FNE generates a random 32-bit salt and returns it in the `ACK` payload extension bytes. The peer stores that salt (`m_salt`) and uses it for the digest in Step 2.
 
-Peer responds to master's challenge with SHA256 hash:
+**Step 2: Authorization Digest (RPTK)**
+
+Peer responds with SHA256 digest of `salt || password`:
 
 ```cpp
 bool Network::writeAuthorisation() {
-    uint8_t buffer[40U];
-    
-    // Combine peer salt and master challenge
-    uint8_t hash[50U];
-    ::memcpy(hash, m_salt, sizeof(uint32_t));
-    ::memcpy(hash + sizeof(uint32_t), m_password.c_str(), m_password.size());
-    
-    // Calculate SHA256
+    size_t size = m_password.size();
+    uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
+    ::memcpy(in, m_salt, sizeof(uint32_t));
+    for (size_t i = 0U; i < size; i++)
+        in[i + sizeof(uint32_t)] = m_password.at(i);
+
+    uint8_t out[40U];
+    ::memcpy(out + 0U, TAG_REPEATER_AUTH, 4U);
+    SET_UINT32(m_peerId, out, 4U);
+
     edac::SHA256 sha256;
-    sha256.buffer(hash, 40U, hash);
-    
-    // Send response
-    ::memcpy(buffer, hash, 32U);
-    SET_UINT32(m_peerId, buffer, 32U);
-    
+    sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out + 8U);
+    delete[] in;
+
     return writeMaster({ NET_FUNC::RPTK, NET_SUBFUNC::NOP }, 
-                       buffer, 40U, m_pktSeq, m_loginStreamId);
+                       out, 40U, pktSeq(), m_loginStreamId);
 }
 ```
 
@@ -813,18 +852,17 @@ bool Network::writeAuthorisation() {
 RPTK Payload (40 bytes):
 Byte Offset | Field              | Size    | Description
 ------------|--------------------|---------|---------------------------------
-0-31        | SHA256 Hash        | 32 bytes| SHA256(salt + password + challenge)
-32-35       | Peer ID            | 4 bytes | Peer identifier (big-endian)
-36-39       | Reserved           | 4 bytes | Padding (0x00)
+0-3         | TAG_REPEATER_AUTH  | 4 bytes | ASCII "RPTK"
+4-7         | Peer ID            | 4 bytes | Peer identifier (big-endian)
+8-39        | SHA256 Hash        | 32 bytes| SHA256(salt + password)
 ```
 
 **Example RPTK Payload (hexadecimal):**
 ```
-2F 9A 8B ... [32 bytes of SHA256 hash] ... 00 00 4E 20 00 00 00 00
-│                                          │        │  │        │
-│                                          │        │  └────────┴─ Reserved
-│                                          └────────┴──────────── Peer ID: 20000
-└──────────────────────────────────────────────────────────────── SHA256 Hash
+52 50 54 4B 00 00 4E 20 [32 bytes SHA256(salt||password)]
+│        │  │        │
+│        │  └────────┴─ Peer ID: 20000
+└────────┴──────────── TAG: "RPTK"
 ```
 
 **Step 3: Configuration Exchange (RPTC)**
@@ -840,54 +878,72 @@ bool Network::writeConfig() {
     config["rxFrequency"].set<uint32_t>(m_metadata->rxFrequency);
     config["txFrequency"].set<uint32_t>(m_metadata->txFrequency);
     
-    // Protocol support
-    config["dmr"].set<bool>(m_dmrEnabled);
-    config["p25"].set<bool>(m_p25Enabled);
-    config["nxdn"].set<bool>(m_nxdnEnabled);
-    config["analog"].set<bool>(m_analogEnabled);
-    
-    // Location
-    config["latitude"].set<float>(m_metadata->latitude);
-    config["longitude"].set<float>(m_metadata->longitude);
+    json::object sysInfo = json::object();
+    sysInfo["latitude"].set<float>(m_metadata->latitude);
+    sysInfo["longitude"].set<float>(m_metadata->longitude);
+    sysInfo["height"].set<int>(m_metadata->height);
+    sysInfo["location"].set<std::string>(m_metadata->location);
+    config["info"].set<json::object>(sysInfo);
+
+    json::object channel = json::object();
+    channel["txPower"].set<uint32_t>(m_metadata->power);
+    channel["txOffsetMhz"].set<float>(m_metadata->txOffsetMhz);
+    channel["chBandwidthKhz"].set<float>(m_metadata->chBandwidthKhz);
+    channel["channelId"].set<uint8_t>(m_metadata->channelId);
+    channel["channelNo"].set<uint32_t>(m_metadata->channelNo);
+    config["channel"].set<json::object>(channel);
+
+    json::object rcon = json::object();
+    rcon["password"].set<std::string>(m_metadata->restApiPassword);
+    rcon["port"].set<uint16_t>(m_metadata->restApiPort);
+    config["rcon"].set<json::object>(rcon);
+
+    config["peerClass"].set<uint32_t>(PEER_CONN_CLASS_STANDARD);
+    config["conventionalPeer"].set<bool>(m_metadata->isConventional);
+    config["software"].set<std::string>(std::string(__NETVER__));
     
     // Serialize to JSON string
     std::string json = json::object(config).serialize();
+
+    DECLARE_CHAR_ARRAY(buffer, json.length() + 9U);
+    ::memcpy(buffer + 0U, TAG_REPEATER_CONFIG, 4U);
+    ::snprintf(buffer + 8U, json.length() + 1U, "%s", json.c_str());
     
     return writeMaster({ NET_FUNC::RPTC, NET_SUBFUNC::NOP },
-                       (uint8_t*)json.c_str(), json.length(), 
-                       m_pktSeq, m_loginStreamId);
+                       (uint8_t*)buffer, json.length() + 8U,
+                       RTP_END_OF_CALL_SEQ, m_loginStreamId);
 }
 ```
 
 **Raw RPTC Message Structure:**
 
 ```
-[RTP Header: 12 bytes] + [FNE Header: 20 bytes] + [TAG: 4 bytes] + [Peer ID: 4 bytes] + [JSON: variable]
+[RTP Header: 12 bytes] + [FNE Header: 20 bytes] + [TAG: 4 bytes] + [Reserved: 4 bytes] + [JSON: variable]
 
 RPTC Payload:
 Byte Offset | Field              | Size      | Description
 ------------|--------------------|-----------|-----------------------------
 0-3         | TAG_REPEATER_CONFIG| 4 bytes   | ASCII "RPTC"
-4-7         | Peer ID            | 4 bytes   | Peer identifier (big-endian)
+4-7         | Reserved           | 4 bytes   | Reserved (zero-initialized)
 8+          | JSON Configuration | Variable  | UTF-8 JSON string
 ```
 
 **Example RPTC Payload (partial hexadecimal + ASCII):**
 ```
-52 50 54 43 00 00 4E 20 7B 22 69 64 65 6E 74 69 74 79 22 3A 22 4B 42 ...
+52 50 54 43 00 00 00 00 7B 22 69 64 65 6E 74 69 74 79 22 3A 22 4B 42 ...
 │  │  │  │  │        │  │  
 │  │  │  │  │        │  └─ JSON starts: {"identity":"KB...
-│  │  │  │  └────────┴─── Peer ID: 0x00004E20 (20000)
+│  │  │  │  └────────┴─── Reserved: 0x00000000
 └──┴──┴──┴───────────── TAG: "RPTC"
 ```
 
 **RPTC Configuration JSON Schema:**
 
-The RPTC configuration uses a nested JSON structure with three main object groups: `info` (system information), `channel` (RF parameters), and `rcon` (remote control/REST API).
+The RPTC configuration uses a nested JSON structure with three main object groups: `info` (system information), `channel` (RF parameters), and `rcon` (remote control/REST API). Current peers also include the top-level `peerClass` field, which is the canonical way to describe the peer connection class.
 
 ```json
 {
-  "identity": "string",           // Peer identity/callsign (required)
+  "identity": "string",          // Peer identity/callsign (required)
   "rxFrequency": 0,              // RX frequency in Hz (required)
   "txFrequency": 0,              // TX frequency in Hz (required)
   
@@ -895,12 +951,7 @@ The RPTC configuration uses a nested JSON structure with three main object group
     "latitude": 0.0,             // Latitude in decimal degrees
     "longitude": 0.0,            // Longitude in decimal degrees
     "height": 0,                 // Antenna height in meters
-    "location": "string",        // Location description
-    "power": 0,                  // Transmit power in watts
-    "class": 0,                  // Site class designation
-    "band": 0,                   // Operating frequency band
-    "slot": 0,                   // TDMA slot assignment (DMR)
-    "colorCode": 0               // Color code for DMR systems
+    "location": "string"         // Location description
   },
   
   "channel": {                   // Channel configuration object (required)
@@ -915,13 +966,22 @@ The RPTC configuration uses a nested JSON structure with three main object group
     "password": "string",        // REST API password
     "port": 0                    // REST API port
   },
-  
-  "externalPeer": false,         // External network peer flag (optional)
+ 
+  "peerClass": 2,                // Canonical peer connection class enum
+
   "conventionalPeer": false,     // Conventional (non-trunked) mode (optional)
-  "sysView": false,              // SysView monitoring peer flag (optional)
   "software": "string"           // Software identifier (optional)
 }
 ```
+
+**PEER_CONN_CLASS Enumeration:**
+
+- **0 (`PEER_CONN_CLASS_UNKNOWN`)**: Unknown class. The FNE normalizes this to `PEER_CONN_CLASS_STANDARD` when processing RPTC.
+- **1 (`PEER_CONN_CLASS_NEIGHBOR`)**: Downstream neighbor FNE peer used for FNE-to-FNE interconnects.
+- **2 (`PEER_CONN_CLASS_STANDARD`)**: Standard RF site peer. This is the default value emitted by current peer implementations.
+- **3 (`PEER_CONN_CLASS_SYSVIEW`)**: SysView monitoring peer.
+- **4 (`PEER_CONN_CLASS_CONSOLE`)**: Console client peer.
+- **5 (`PEER_CONN_CLASS_INVALID`)**: Sentinel only. Values greater than or equal to this are treated as invalid and normalized to `PEER_CONN_CLASS_STANDARD` by the FNE.
 
 **Example RPTC Configuration:**
 
@@ -935,12 +995,7 @@ The RPTC configuration uses a nested JSON structure with three main object group
     "latitude": 39.9526,
     "longitude": -75.1652,
     "height": 30,
-    "location": "Philadelphia, PA",
-    "power": 50,
-    "class": 1,
-    "band": 1,
-    "slot": 1,
-    "colorCode": 1
+    "location": "Philadelphia, PA"
   },
   
   "channel": {
@@ -955,10 +1010,10 @@ The RPTC configuration uses a nested JSON structure with three main object group
     "password": "api_secret",
     "port": 9990
   },
-  
-  "externalPeer": false,
+ 
+  "peerClass": 2,
+
   "conventionalPeer": false,
-  "sysView": false,
   "software": "DVMHOST_R04A00"
 }
 ```
@@ -968,20 +1023,14 @@ The RPTC configuration uses a nested JSON structure with three main object group
 **Top-Level Fields:**
 - **identity**: Unique identifier for the peer (callsign, site name, etc.)
 - **rxFrequency/txFrequency**: Operating frequencies in Hertz
-- **externalPeer**: Indicates peer is outside the primary network (affects routing)
+- **peerClass**: Canonical peer connection class (`PEER_CONN_CLASS_STANDARD` is emitted by current peers)
 - **conventionalPeer**: Indicates non-trunked operation mode (affects grant behavior)
-- **sysView**: Indicates monitoring-only peer (affiliation viewer, no traffic routing)
 - **software**: Software version string (e.g., `DVMHOST_R04A00`) for compatibility checking
 
 **System Information Object (`info`):**
 - **latitude/longitude**: Geographic coordinates in decimal degrees for mapping and adjacent site calculations
 - **height**: Antenna height above ground level in meters (used for coverage calculations)
 - **location**: Human-readable location description
-- **power**: Transmit power in watts
-- **class**: Site class designation (used for network topology planning)
-- **band**: Operating frequency band identifier
-- **slot**: TDMA slot assignment for DMR systems
-- **colorCode**: Color code for DMR systems (0-15)
 
 **Channel Configuration Object (`channel`):**
 - **txPower**: Transmit power in watts
@@ -998,9 +1047,10 @@ The RPTC configuration uses a nested JSON structure with three main object group
 The FNE master stores the complete configuration JSON in the peer connection object (`FNEPeerConnection::config`) and extracts specific fields for connection management:
 - `identity` → Used for peer identification in logs and routing tables
 - `software` → Logged for version tracking and compatibility checks
-- `sysView` → Determines if peer is monitoring-only (no traffic routing)
-- `externalPeer` → Used for spanning tree routing decisions (external peers have special routing rules)
+- `peerClass` → Primary peer classification used to determine routing and peer behavior
 - `conventionalPeer` → Affects talkgroup affiliation and grant behavior (conventional peers don't require grants)
+
+If `peerClass` is absent, the FNE can still fall back to legacy booleans for backward compatibility with older peers. If `peerClass` is `PEER_CONN_CLASS_UNKNOWN` or greater than or equal to `PEER_CONN_CLASS_INVALID`, the FNE normalizes it to `PEER_CONN_CLASS_STANDARD`.
 
 **Step 4: ACK/NAK Response**
 
@@ -1016,12 +1066,12 @@ Once connected, peers and master exchange periodic PING/PONG messages:
 
 ```cpp
 bool Network::writePing() {
-    uint8_t buffer[11U];
-    SET_UINT32(m_peerId, buffer, 7U);
+    uint8_t buffer[1U];
+    ::memset(buffer, 0x00U, 1U);
     
     return writeMaster({ NET_FUNC::PING, NET_SUBFUNC::NOP }, 
-                       buffer, 11U, RTP_END_OF_CALL_SEQ, 
-                       m_random.next());
+                       buffer, 1U, RTP_END_OF_CALL_SEQ,
+                       createStreamId());
 }
 ```
 
@@ -1134,25 +1184,21 @@ The DMR network packet uses the TAG_DMR_DATA identifier (`0x444D5244` or ASCII "
 
 Complete Packet (87 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 00 12 34 56 78 00 00 4E 20 00 23 00 00 00 00 00 00 | 44 4D 52 44 05 00 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR data...] 00 7F
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── DMR (55) ────────────────────────────────┤
+├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── DMR (55) ─────────────────────────────────────────────────┤
 
 DMR Payload breakdown:
-44 4D 52 44 05 00 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR frame...] 00 7F
-│        │  │  │        │  │        │  │  │  │  │  │               │  │
-│        │  │  │        │  │        │  │  │  │  │  └─[Reserved 4]──┤  │
-│        │  │  │        │  │        │  │  │  │  └─ Slot/FLCO/DataType: 0x02
-│        │  │  │        │  │        │  │  │  └──── Control: 0x01
-│        │  │  │        │  │        │  └─[Reserved 3]
-│        │  │  │        │  └─[DestID 3rd byte]──── Dest ID: 0x00CCDD (52445)
-│        │  │  │        └─[DestID 2nd byte]
-│        │  │  └─[DestID 1st byte]
-│        │  └─[SrcID 3rd byte]────────────────── Src ID: 0x0000AABB (43707)
-│        └─[SrcID 2nd byte]
-│        └─[SrcID 1st byte]
-│        └─────────────────────────────────────── Sequence: 5
-└──────────────────────────────────────────────── Tag: "DMRD" (0x444D5244)
-       └─ (DMR frame at offset 20)──────────────── BER: 0x00
-                                                    └─ RSSI: 0x7F (127)
+44 4D 52 44 05 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR frame...] 00 7F
+│        │  │  │     │  │     │   │     │  │  │  │       │                          │  │
+│        │  │  │     │  │     │   │     │  │  │  └───────┴ Reserved                 │  │
+│        │  │  │     │  │     │   │     │  │  └─────────── Slot/FLCO/DataType: 0x02 │  │
+│        │  │  │     │  │     │   │     │  └────────────── Control: 0x01            │  │ 
+│        │  │  │     │  │     │   └─────┴───────────────── Reserved                 │  │
+│        │  │  │     │  └─────┴─────────────────────────── Dest ID: 0x00CCDD (52445)│  │
+│        │  │  └─────┴──────────────────────────────────── Src ID: 0x00AABB (43707) │  │
+│        │  └───────────────────────────────────────────── Sequence: 5              │  │
+└────────┴──────────────────────────────────────────────── Tag: "DMRD" (0x444D5244) │  │
+                                                                                    └─── BER: 0x00
+                                                                                       └─ RSSI: 0x7F (127)
 ```
 
 #### P25 Message Formats
@@ -1176,6 +1222,61 @@ bool BaseNetwork::writeP25LDU1(const p25::lc::LC& control,
                        buffer, P25_LDU1_PACKET_LENGTH + PACKET_PAD,
                        pktSeq, m_p25StreamId);
 }
+```
+
+**P25 Message Header Structure (24 bytes):**
+
+**Control Byte (`CONTROL_BYTE`) Flags:**
+
+The Control Byte at offset 14 is a bitmask defined by `enum CONTROL_BYTE` in `BaseNetwork.h`. It is passed as the `controlByte` parameter to `writeP25TDU()` and stored in the TDU packet to signal in-band network control to the receiving endpoint. Multiple flags may be OR'd together. A value of `0x00` means no control operation is requested.
+
+| Bit Mask | Name | Description |
+|----------|------|-------------|
+| `0x80` | `NET_CTRL_GRANT_DEMAND` | Grant demand — peer is requesting a channel grant for an ongoing call |
+| `0x40` | `NET_CTRL_GRANT_DENIAL` | Grant denial — FNE is denying a channel grant request |
+| `0x20` | `NET_CTRL_SWITCH_OVER` | Call source RID switch over — the originating radio ID changed mid-call |
+| `0x08` | `NET_CTRL_GRANT_ENCRYPT` | Encrypted grant — the associated channel grant is for an encrypted call |
+| `0x01` | `NET_CTRL_U2U` | Unit-to-unit — this is a unit-to-unit (private) call, not a group call |
+
+**P25 Message Header Structure (24 bytes):**
+
+The message header created by `createP25_MessageHdr()` contains:
+
+| Offset | Length | Field | Description |
+|--------|--------|-------|-------------|
+| 0-3 | 4 | P25 Tag | "P25D" (0x50323544) |
+| 4 | 1 | LCO | Link Control Opcode |
+| 5-7 | 3 | Source ID | Calling radio ID |
+| 8-10 | 3 | Destination ID | Target talkgroup/radio |
+| 11-12 | 2 | System ID | Site system ID |
+| 13 | 1 | Reserved | Reserved (0x00) |
+| 14 | 1 | Control Byte | Network control flags (`CONTROL_BYTE` bitmask) |
+| 15 | 1 | MFId | Manufacturer ID |
+| 16-18 | 3 | Network ID | FNE network/WACN ID |
+| 19 | 1 | Slot / Reserved | Bit 7: slot number; bits 4–0: P2 DUID (if Phase 2, else 0x00) |
+| 20 | 1 | LSD1 | Low Speed Data byte 1 |
+| 21 | 1 | LSD2 | Low Speed Data byte 2 |
+| 22 | 1 | DUID | Data Unit ID (0x05 LDU1, 0x0A LDU2, 0x03 TDU, 0x07 TSDU, 0x0F TDULC) |
+| 23 | 1 | Frame Length | Payload data length in bytes (0x00 for LDU1/LDU2; set for TDU/TSDU/TDULC) |
+
+```
+P25 Message Header (first 24 bytes):
+50 32 35 44 00 00 AA BB 00 CC DD 00 01 00 00 00 00 00 01 00 00 00 05 00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  │  │  │
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  │  │  └─────── Frame Length: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  │  └────────── DUID: 0x05 (LDU1)
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  │  └───────────── LSD2: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  │  └──────────────── LSD1: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  │     │  └─────────────────── Slot/Reserved: 0x00
+│        │  │  │     │  │     │  │  │  │  │  │  └─────┴────────────────────── Net ID: 0x000001 (1)
+│        │  │  │     │  │     │  │  │  │  │  └─────────────────────────────── MFId: 0x00 (Standard)
+│        │  │  │     │  │     │  │  │  │  └────────────────────────────────── Control Byte: 0x00
+│        │  │  │     │  │     │  │  │  └───────────────────────────────────── Reserved: 0x00
+│        │  │  │     │  │     │  └──┴──────────────────────────────────────── Sys ID: 0x0001 (1)
+│        │  │  │     │  └─────┴────────────────────────────────────────────── Dst ID: 0x00CCDD (52445)
+│        │  │  └─────┴─────────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
+│        │  └──────────────────────────────────────────────────────────────── LCO: 0x00 (Group Voice)
+└────────┴─────────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
 ```
 
 **P25 LDU1 Packet Structure:**
@@ -1202,25 +1303,6 @@ The P25 LDU1 message uses DFSI encoding to pack 9 IMBE voice frames with link co
 
 **Total P25 LDU1 Size:** 193 bytes (`P25_LDU1_PACKET_LENGTH`)
 
-**P25 Message Header Structure (24 bytes):**
-
-The message header created by `createP25_MessageHdr()` contains:
-
-| Offset | Length | Field | Description |
-|--------|--------|-------|-------------|
-| 0 | 4 | P25 Tag | "P25D" (0x50323544) |
-| 4 | 1 | DUID | Data Unit ID (e.g., 0x05 for LDU1, 0x0A for LDU2) |
-| 5 | 1 | Control Byte | Network control flags |
-| 6 | 1 | LCO | Link Control Opcode |
-| 7 | 1 | MFId | Manufacturer ID |
-| 8-10 | 3 | Source ID | Calling radio ID |
-| 11-13 | 3 | Destination ID | Target (talkgroup/radio) |
-| 14-16 | 3 | Reserved | Reserved bytes |
-| 17 | 1 | RSSI | Signal strength |
-| 18 | 1 | BER | Bit error rate |
-| 19-22 | 4 | Reserved | Reserved bytes |
-| 23 | 1 | Count | Total payload size |
-
 **DFSI Encoding Details:**
 
 The Digital Fixed Station Interface (DFSI) encoding is a TIA-102.BAHA standard for transporting P25 voice over IP. Each IMBE voice frame (11 bytes of raw IMBE data) is encoded using the `p25::dfsi::LC::encodeLDU1()` method with a specific frame type:
@@ -1242,21 +1324,7 @@ The DFSI frames embed the Link Control (LC) and Low Speed Data (LSD) information
 ```
 [RTP: 12 bytes] [FNE: 20 bytes] [P25 LDU1 Payload: 193 bytes]
 
-P25 Message Header (first 24 bytes):
-50 32 35 44 05 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 A9
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  └─ Count: 0xA9 (169)
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──── Reserved
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴────────────────────── Reserved
-│        │  │  │  │  │  │        └──┴───────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └───────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └──────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └─────────────────────────────────────────────────────── LCO: 0x03 (Group Voice Channel User)
-│        │  │  └────────────────────────────────────────────────────────── Control: 0x00
-│        │  └───────────────────────────────────────────────────────────── DUID: 0x05 (LDU1)
-└────────┴──────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
+[P25 Message Header 24 bytes]
 
 DFSI Voice Frames (offsets 24-177):
 Offset 24: [22 bytes] LDU1_VOICE1 (DFSI frame type 0x62)
@@ -1280,7 +1348,7 @@ Additional Data (offsets 178-192):
 - `MSG_HDR_SIZE = 24U`
 - Total allocated size: 193 + 8 = 201 bytes
 
-**LDU2 (Link Data Unit 2) with DFSI Encoding:**
+**P25 LDU2 Packet Structure:**
 
 LDU2 has a similar structure to LDU1 but uses different DFSI frame types and contains Encryption Sync (ESS) data instead of Link Control in frames 3-8. Total size is 181 bytes (`P25_LDU2_PACKET_LENGTH = 181U`).
 
@@ -1315,56 +1383,23 @@ The TDU packet consists of:
 
 **Total TDU Payload Size (after FNE):** 24 bytes (`MSG_HDR_SIZE = 24U`)
 
+**Raw TDU Packet Example (hexadecimal):**
+
+```
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 TSDU: 24 bytes]
+
+Complete Packet (101 bytes):
+90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 45 00 00 00 00 00 00 | 50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D
+├─────────── RTP (12) ────────────┤   ├────────────────────── FNE (20) ─────────────────────────┤   ├───────────────────────────────── P25 TSDU (24) ────────────────────────┤
+```
+
 **Constants:**
 - `MSG_HDR_SIZE = 24U` (defined in `BaseNetwork.h`)
 - `PACKET_PAD = 8U`
 - Total allocated size: 24 + 8 = 32 bytes
 - DUID value: `0x03` (TDU - Terminator Data Unit)
 
-**P25 Message Header Structure (24 bytes):**
-
-| Offset | Length | Field | Description |
-|--------|--------|-------|-------------|
-| 0-3 | 4 | P25 Tag | "P25D" (0x50323544) |
-| 4 | 1 | DUID | 0x03 (TDU) |
-| 5 | 1 | Control Byte | Network control flags (at offset 14 in buffer) |
-| 6 | 1 | LCO | Link Control Opcode (from last transmission) |
-| 7 | 1 | MFId | Manufacturer ID |
-| 8-10 | 3 | Source ID | Radio ID that ended transmission |
-| 11-13 | 3 | Destination ID | Target talkgroup/radio |
-| 14-16 | 3 | Reserved | Reserved bytes |
-| 17 | 1 | RSSI | Signal strength |
-| 18 | 1 | BER | Bit error rate |
-| 19-22 | 4 | Reserved | Reserved bytes |
-| 23 | 1 | Count | 0x18 (24) - header size only, no payload follows |
-
-**Raw TDU Packet Example (hexadecimal):**
-
-```
-[RTP Header: 12 bytes] [FNE Header: 20 bytes] [P25 Header: 24 bytes] [NO PAYLOAD]
-
-Complete Packet (56 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 18 00 00 00 00 00 00 | 50 32 35 44 03 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 18
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────── P25 (24) ─────────────────────────┤
-
-P25 Message Header (NO PAYLOAD FOLLOWS):
-50 32 35 44 03 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 18
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──┴─ Count: 0x18 (24) - header only
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── Reserved (4 bytes)
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  └──────────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴───────────────────── Reserved (3 bytes)
-│        │  │  │  │  │  │        └──┴────────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └───────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └──────────────────────────────────────────────────────── LCO: 0x03 (Group Voice)
-│        │  │  └─────────────────────────────────────────────────────────── Control: 0x00
-│        │  └────────────────────────────────────────────────────────────── DUID: 0x03 (TDU)
-└────────┴───────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
-
 Total packet ends at byte 56 - no additional payload bytes after the P25 header.
-```
 
 **Important Note:**
 
@@ -1420,28 +1455,12 @@ The 45-byte TSDU frame data at offset 24 is **transmitted in its raw over-the-ai
 
 Complete Packet (101 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 45 00 00 00 00 00 00 | 50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D [45 bytes raw TSDU frame...]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├───────────────────────────────── P25 TSDU (69) ────────────────────────────────┤
-
-TSDU Message Header (24 bytes):
-50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──┴─ Count: 0x2D (45)
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── Reserved
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  └──────────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴───────────────────── Reserved
-│        │  │  │  │  │  │        └──┴────────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └───────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └──────────────────────────────────────────────────────── LCO: 0x00 (not applicable for TSDU)
-│        │  │  └─────────────────────────────────────────────────────────── Control: 0x00
-│        │  └────────────────────────────────────────────────────────────── DUID: 0x07 (TSDU)
-└────────┴───────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├───────────────────────────────── P25 TSDU (69) ─────────────────────────────────────────────────────┤
 
 TSDU Frame Data (45 bytes starting at offset 24):
 55 75 F7 FF 5D 7F [NID: 2 bytes] [TSBK: 25 bytes FEC encoded] [Status: 12 bytes]
 │              │  └────────────┴────────────────────┴──────────────────────── Raw over-the-air P25 TSDU frame
-└──────────────┴────────────────────────────────────────────────────────────── Frame Sync pattern
+└──────────────┴───────────────────────────────────────────────────────────── Frame Sync pattern
 ```
 
 **TSDU Content Types:**
@@ -1501,28 +1520,12 @@ The 54-byte TDULC frame data at offset 24 is **transmitted in its raw over-the-a
 
 Complete Packet (110 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 4E 00 00 00 00 00 00 | 50 32 35 44 0F 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 36 [54 bytes raw TDULC frame...]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────────────── P25 TDULC (78) ─────────────────────────────────┤
-
-TDULC Message Header (24 bytes):
-50 32 35 44 0F 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 36
-│        │  │  │  │  │  │        │  │        │  │  │  │  │  │  │  │  │
-│        │  │  │  │  │  │        │  │        │  │  │  │  └──┴──┴──┴──┴─ Count: 0x36 (54)
-│        │  │  │  │  │  │        │  │        │  │  │  └────────────────── Reserved
-│        │  │  │  │  │  │        │  │        │  │  └───────────────────── BER: 0x00
-│        │  │  │  │  │  │        │  │        │  └──────────────────────── RSSI: 0x7F (127)
-│        │  │  │  │  │  │        │  │        └──┴──┴───────────────────── Reserved
-│        │  │  │  │  │  │        └──┴────────────────────────────────────── Dest ID: 0x00CCDDEE (13492718)
-│        │  │  │  │  │  └────────────────────────────────────────────────── Src ID: 0x0000AABB (43707)
-│        │  │  │  │  └───────────────────────────────────────────────────── MFId: 0x90 (Standard)
-│        │  │  │  └──────────────────────────────────────────────────────── LCO: 0x03 (Group Voice)
-│        │  │  └─────────────────────────────────────────────────────────── Control: 0x00
-│        │  └────────────────────────────────────────────────────────────── DUID: 0x0F (TDULC)
-└────────┴───────────────────────────────────────────────────────────────── Tag: "P25D" (0x50323544)
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├──────────────────────────────── P25 TDULC (78) ──────────────────────────────────────────────────────┤
 
 TDULC Frame Data (54 bytes starting at offset 24):
 55 75 F7 FF 5D 7F [NID: 2 bytes] [LC: 36 bytes FEC encoded] [Status: 10 bytes]
 │              │  └────────────┴──────────────────────┴─────────────────────── Raw over-the-air P25 TDULC frame
-└──────────────┴──────────────────────────────────────────────────────────────── Frame Sync pattern
+└──────────────┴────────────────────────────────────────────────────────────── Frame Sync pattern
 ```
 
 **TDULC Link Control Content:**
@@ -1550,6 +1553,59 @@ TDULC is sent when:
 The difference between **TDU** and **TDULC**:
 - **TDU:** Simple terminator, no additional payload (24 bytes total)
 - **TDULC:** Terminator with embedded link control (78 bytes total), provides complete call metadata at termination
+
+**P25 Phase 2 (TDMA Voice/Data) Network Format:**
+
+P25 Phase 2 traffic is carried under its own network subfunction, `NET_SUBFUNC::PROTOCOL_SUBFUNC_P25_P2 (0x03)`, rather than the classic `PROTOCOL_SUBFUNC_P25` path. `BaseNetwork::writeP25P2()` creates the encapsulated packet and `Network::clock()` handles it in a dedicated receive branch with separate per-slot receive stream tracking.
+
+The encapsulated Phase 2 format is fixed-length:
+
+| Offset | Length | Field | Description |
+|--------|--------|-------|-------------|
+| 0-23 | 24 | Message Header | Standard P25 network header created by `createP25_MessageHdr()` |
+| 24-63 | 40 | P25 Phase 2 Frame Data | Raw Phase 2 payload (`P25_P2_FRAME_LENGTH_BYTES = 40U`) |
+
+**Total P25 Phase 2 Size:** 66 bytes (`P25_P2_PACKET_LENGTH = 66U`)
+
+**Constants:**
+- `PROTOCOL_SUBFUNC_P25_P2 = 0x03U` (defined in `RTPFNEHeader.h`)
+- `P25_P2_PACKET_LENGTH = 66U` (defined in `BaseNetwork.h`)
+- `P25_P2_FRAME_LENGTH_BYTES = 40U` (defined in `P25Defines.h`)
+- `MSG_HDR_SIZE = 24U`
+- `PACKET_PAD = 8U`
+- Total allocated size: 66 + 8 = 74 bytes
+
+**Header Semantics:**
+
+`createP25P2_Message()` starts from the normal P25 message header, then overlays Phase 2-specific metadata:
+
+- The common P25 header is created with `DUID::PDU` and `FrameType::DATA_UNIT`.
+- `buffer[14]` carries the DVM control byte.
+- `buffer[19]` carries Phase 2 signaling:
+    - Bit 7 is the slot marker inspected by the receive path.
+    - The low bits carry the `p25::defines::P2_DUID` value.
+- `buffer[23]` contains the encapsulated data count, which is `0x40` (64 bytes: 24-byte header + 40-byte Phase 2 payload).
+
+**Receive-Side Behavior in `Network.cpp`:**
+
+- `Network::clock()` routes `PROTOCOL_SUBFUNC_P25_P2` into `m_rxP25P2Data`, separate from classic `m_rxP25Data`.
+- The receive path derives the slot from bit 7 of byte 19 and maintains one active receive stream per slot in `m_rxP25P2StreamId[2]`.
+- Promiscuous peers validate multiplexed RTP sequencing per stream using `RTPStreamMultiplex::verifyStream()`.
+- Non-promiscuous peers lock a slot to the first active Phase 2 stream until an end-of-call RTP sequence is observed.
+- Oversized frames are logged when they exceed `P25_P2_PACKET_LENGTH + PACKET_PAD`.
+
+**Raw P25 Phase 2 Packet Example (layout):**
+
+```
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 Phase 2: 66 bytes]
+
+P25 Phase 2 payload breakdown:
+"P25D" | common P25 header fields | controlByte @ 14 | slot/DUID @ 19 | count=0x40 @ 23 | 40 bytes raw P25 Phase 2 payload
+```
+
+**Implementation Note:**
+
+P25 Phase 2 is a separate transport lane in DVM documentation because it has its own subfunction code, receive buffer, reset path (`resetP25P2(slotNo)`), and per-slot stream tracking even though it reuses the generic P25 message header builder.
 
 #### NXDN Message Format
 
@@ -1580,7 +1636,7 @@ The NXDN network packet uses the TAG_NXDN_DATA identifier and includes the 48-by
 | 8-10 | 3 | Destination ID | NXDN radio ID or talkgroup ID |
 | 11-13 | 3 | Reserved | Reserved for future use (0x000000) |
 | 14 | 1 | Control Byte | Network control flags |
-| 15 | 1 | Group Flag | Group call flag (0=private, 1=group) |
+| 15 | 1 | Group/Call Type Bits | Bit 6 (`0x40`) indicates private call when set; clear indicates group call |
 | 16-22 | 7 | Reserved | Reserved for future use |
 | 23 | 1 | Count | Total NXDN data length |
 | 24-71 | 48 | NXDN Frame Data | Raw NXDN frame (`NXDN_FRAME_LENGTH_BYTES = 48U`) |
@@ -1600,25 +1656,19 @@ The NXDN network packet uses the TAG_NXDN_DATA identifier and includes the 48-by
 
 Complete Packet (102 bytes):
 90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 00 12 34 56 78 00 00 4E 20 00 46 00 00 00 00 00 00 | 4E 58 44 44 02 00 10 00 00 20 00 00 01 00 00 00 00 00 00 00 00 00 00 30 [48 bytes NXDN frame...]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├─────────────────────────────────── NXDN (70) ─────────────────────────────────┤
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├─────────────────────────────────── NXDN (70) ────────────────────────────────────────────────┤
 
 NXDN Payload breakdown:
-4E 58 44 44 02 00 10 00 00 20 00 00 01 00 00 00 00 00 00 00 00 00 00 30 [48 bytes NXDN frame data...]
-│        │  │  │        │  │        │  │  │  └──────────┴──────────┴─────┤
-│        │  │  │        │  │        │  │  └───────────────────────────────── Group: 0x00 (private call)
-│        │  │  │        │  │        │  └──────────────────────────────────── Control: 0x01
-│        │  │  │        │  └─[Reserved 3]
-│        │  │  │        └─[DestID 3rd byte]──────────────────────────────── Dest ID: 0x200000 (2097152)
-│        │  │  └─[DestID 2nd byte]
-│        │  └─[DestID 1st byte]
-│        └─[SrcID 3rd byte]──────────────────────────────────────────────── Src ID: 0x001000 (4096)
-│        └─[SrcID 2nd byte]
-│        └─[SrcID 1st byte]
-│        └──────────────────────────────────────────────────────────────── Msg Type: 0x02 (RTCH)
-└───────────────────────────────────────────────────────────────────────── Tag: "NXDD" (0x4E584444)
-       └──────────────────────────────────────────────────────────────────  Reserved (7 bytes)
-                                                                           └─ Count: 0x30 (48)
-                                                                              (NXDN frame at offset 24)
+4E 58 44 44 02 00 10 00 00 20 00 00 00 00 00 01 00 00 00 00 00 00 00 30 [48 bytes NXDN frame data...]
+│        │  │  │     │  │     │  │     │  │  │  │                  │ └──── NXDN Count: 0x30 (48)
+│        │  │  │     │  │     │  │     │  │  │  └──────────────────┴────── Reserved
+│        │  │  │     │  │     │  │     │  │  └──────────────────────────── Group: 0x01 (group call)
+│        │  │  │     │  │     │  │     │  └─────────────────────────────── Control: 0x00
+│        │  │  │     │  │     │  └─────┴────────────────────────────────── Reserved
+│        │  │  │     │  └─────┴─────────────────────────────────────────── Dest ID: 0x002000 (8192)
+│        │  │  └─────┴──────────────────────────────────────────────────── Src ID: 0x001000 (4096)
+│        │  └───────────────────────────────────────────────────────────── Msg Type: 0x02 (RTCH)
+└────────┴──────────────────────────────────────────────────────────────── Tag: "NXDD" (0x4E584444)
 ```
 
 **NXDN Message Types:**
@@ -1629,7 +1679,7 @@ The actual NXDN frame data (48 bytes) contains the over-the-air NXDN frame struc
 
 #### Analog Message Format
 
-Analog audio frames use G.711 μ-law encoding and are created by `createAnalog_Message()` in `BaseNetwork.cpp`. The frame size is 324 bytes as defined by `ANALOG_PACKET_LENGTH = 324U`.
+Analog audio frames are created by `createAnalog_Message()` in `BaseNetwork.cpp`. The current network frame size is 344 bytes as defined by `ANALOG_PACKET_LENGTH = 344U`.
 
 ```cpp
 bool BaseNetwork::writeAnalog(const analog::AnalogData& data) {
@@ -1646,63 +1696,44 @@ bool BaseNetwork::writeAnalog(const analog::AnalogData& data) {
 
 **Analog Packet Structure:**
 
-The analog audio packet uses the TAG_ANALOG_DATA identifier and contains 300 bytes of audio samples (calculated as 324 - 20 header - 4 trailer).
+The analog audio packet uses the `TAG_ANALOG_DATA` identifier (`"ANOD"`) and contains 320 bytes of audio payload (`AUDIO_SAMPLES_LENGTH_BYTES = 320U`). The inline comments in current analog code describe this as 20 ms of audio at 8 kHz, while `analog::data::NetData` still notes that the audio buffer is expected to be MuLaw encoded. The network builder itself follows the 320-byte payload constant.
 
 | Offset | Length | Field | Description |
 |--------|--------|-------|-------------|
-| 0-3 | 4 | Analog Tag | "ADIO" (0x4144494F) or similar ASCII identifier |
+| 0-3 | 4 | Analog Tag | "ANOD" (`TAG_ANALOG_DATA`) |
 | 4 | 1 | Sequence Number | Packet sequence number for audio ordering (0-255) |
 | 5-7 | 3 | Source ID | Radio ID of transmitting station |
 | 8-10 | 3 | Destination ID | Target radio ID or conference ID |
 | 11-13 | 3 | Reserved | Reserved for future use (0x000000) |
 | 14 | 1 | Control Byte | Network control flags |
-| 15 | 1 | Frame Type / Group | Bit 7: Group flag (0=private, 1=group)<br/>Bits 0-6: Audio frame type |
+| 15 | 1 | Frame Type / Group | Bit 6 (`0x40`) indicates private call when set; clear indicates group call.<br/>Remaining bits carry `AudioFrameType` |
 | 16-19 | 4 | Reserved | Reserved for future use (0x00000000) |
-| 20-319 | 300 | Audio Data | G.711 μ-law encoded audio samples (300 bytes @ 8kHz) |
-| 320-323 | 4 | Trailer | Reserved trailer bytes |
+| 20-339 | 320 | Audio Data | Analog network audio payload (`AUDIO_SAMPLES_LENGTH_BYTES`) |
+| 340-343 | 4 | Trailer | Reserved trailer bytes |
 
-**Total Analog Payload Size:** 324 bytes (`ANALOG_PACKET_LENGTH`)
+**Total Analog Payload Size:** 344 bytes (`ANALOG_PACKET_LENGTH`)
 
 **Constants:**
-- `ANALOG_PACKET_LENGTH = 324U` (defined in `BaseNetwork.h`: 20 byte header + 300 byte audio + 4 byte trailer)
-- Audio sample size: 300 bytes (AUDIO_SAMPLES_LENGTH_BYTES, calculated as 324 - 20 - 4)
+- `ANALOG_PACKET_LENGTH = 344U` (defined in `BaseNetwork.h`: 20 byte header + `AUDIO_SAMPLES_LENGTH_BYTES` + 4 byte trailer)
+- `AUDIO_SAMPLES_LENGTH_BYTES = 320U`
 - `PACKET_PAD = 8U`
-- Total allocated size: 324 + 8 = 332 bytes
+- Total allocated size: 344 + 8 = 352 bytes
 
 **Audio Encoding Details:**
-- **Codec:** G.711 μ-law (ITU-T G.711)
+- **Payload Length:** 320 bytes
 - **Sample Rate:** 8 kHz (8000 samples per second)
-- **Bit Depth:** 8 bits per sample (1 byte per sample)
-- **Frame Duration:** 37.5 ms (300 samples ÷ 8000 samples/sec = 0.0375 sec)
-- **Samples per Frame:** 300 samples
-- **Bandwidth:** 64 kbit/s (8000 samples/sec × 8 bits/sample)
+- **Implementation Note:** `AnalogDefines.h` describes this as 20 ms of 16-bit audio at 8 kHz; `NetData.h` describes the buffer passed into `setAudio()` as MuLaw encoded. The network packetizer currently uses the 320-byte constant and copies that payload verbatim.
 
-**Raw Analog Packet Example (hexadecimal):**
+**Raw Analog Packet Example (layout):**
 
 ```
-[RTP Header: 12 bytes] [FNE Header: 20 bytes] [Analog Payload: 324 bytes]
+[RTP Header: 12 bytes] [FNE Header: 20 bytes] [Analog Payload: 344 bytes]
 
-Complete Packet (356 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 03 12 34 56 78 00 00 4E 20 01 44 00 00 00 00 00 00 | 41 44 49 4F 05 00 10 00 00 20 00 00 01 00 00 00 80 00 00 00 [300 bytes G.711 audio...] 00 00 00 00
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── Analog (324) ──────────────────────────────────┤
+Complete Packet (376 bytes):
+[RTP 12] [FNE 20] ["ANOD" + header bytes + 320 bytes audio + 4 byte trailer]
 
 Analog Payload breakdown:
-41 44 49 4F 05 00 10 00 00 20 00 00 01 00 00 00 80 00 00 00 [300 bytes audio data...] 00 00 00 00
-│        │  │  │        │  │        │  │  │  │  │  └──────┴─ Reserved (4 bytes)
-│        │  │  │        │  │        │  │  │  │  └─────────────── Frame Type/Group: 0x80 (group call, frame type 0)
-│        │  │  │        │  │        │  │  │  └──────────────────── Control: 0x01
-│        │  │  │        │  │        │  └──┴────────────────────── Reserved (3 bytes)
-│        │  │  │        │  └─[DestID 3rd]──────────────────────── Dest ID: 0x200000 (2097152, conference)
-│        │  │  │        └─[DestID 2nd]
-│        │  │  └─[DestID 1st]
-│        │  └─[SrcID 3rd]──────────────────────────────────────── Src ID: 0x001000 (4096)
-│        └─[SrcID 2nd]
-│        └─[SrcID 1st]
-│        └──────────────────────────────────────────────────────── Sequence: 0x05 (5)
-└───────────────────────────────────────────────────────────────── Tag: "ADIO" (0x4144494F)
-       └────────────────────────────────────────────────────────── Reserved (4 bytes)
-                                                                   └────── Audio samples (300 bytes)
-                                                                           └─── Trailer (4 bytes)
+"ANOD" | Seq | SrcID | DstID | Reserved | Control | FrameType/Group | Reserved | 320 bytes audio | 4 byte trailer
 
 G.711 μ-law Audio Sample Example (first 16 bytes of audio data shown):
 FF FE FD FC FB FA F9 F8 F7 F6 F5 F4 F3 F2 F1 F0 ...
@@ -1710,15 +1741,9 @@ FF FE FD FC FB FA F9 F8 F7 F6 F5 F4 F3 F2 F1 F0 ...
 └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴─── Each byte is one 8kHz audio sample (μ-law encoded)
 ```
 
-**G.711 μ-law Encoding:**
+The current analog network payload is sized for 320 bytes per frame, with the packetizer copying the application-provided buffer directly into the on-wire message.
 
-G.711 μ-law is a logarithmic audio compression standard that provides toll-quality voice at 64 kbit/s:
-- **Range:** ±8159 linear PCM values compressed to 256 μ-law values (0x00-0xFF)
-- **Characteristics:** Non-linear quantization favoring lower amplitude signals (human speech)
-- **Compatibility:** Standard telephony codec, widely supported
-- **Signal-to-Noise Ratio:** ~37 dB for speech signals
-
-The 300-byte audio payload represents 37.5 milliseconds of continuous audio, allowing for smooth real-time voice transmission with minimal latency.
+G.711 μ-law details, if used by the source audio path, remain codec-layer behavior above the network framing described here.
 
 ### Ring Buffer Architecture
 
@@ -1727,6 +1752,7 @@ Each protocol uses a fixed-size ring buffer for received data:
 ```cpp
 RingBuffer m_rxDMRData(NET_RING_BUF_SIZE, "DMR Net Buffer");     // 4098 bytes
 RingBuffer m_rxP25Data(NET_RING_BUF_SIZE, "P25 Net Buffer");     // 4098 bytes
+RingBuffer m_rxP25P2Data(NET_RING_BUF_SIZE, "P25 Phase 2 Net Buffer"); // 4098 bytes
 RingBuffer m_rxNXDNData(NET_RING_BUF_SIZE, "NXDN Net Buffer");   // 4098 bytes
 RingBuffer m_rxAnalogData(NET_RING_BUF_SIZE, "Analog Net Buffer"); // 4098 bytes
 ```
@@ -1740,11 +1766,13 @@ RingBuffer m_rxAnalogData(NET_RING_BUF_SIZE, "Analog Net Buffer"); // 4098 bytes
 
 **Buffer Sizing:**
 
-4KB buffers provide sufficient buffering for:
-- DMR: ~124 frames (33 bytes each)
-- P25 LDU: ~19 frames (216 bytes each)
-- NXDN: Variable, typically 40-80 frames
-- Analog: ~4 seconds at 8kHz G.711
+4098-byte buffers provide protocol-specific buffering based on on-wire packet sizes (plus `PACKET_PAD`):
+- DMR (`55 + 8 = 63` bytes): ~65 frames
+- P25 LDU1 (`193 + 8 = 201` bytes): ~20 frames
+- P25 LDU2 (`181 + 8 = 189` bytes): ~21 frames
+- P25 Phase 2 (`66 + 8 = 74` bytes): ~55 frames
+- NXDN (`70 + 8 = 78` bytes): ~52 frames
+- Analog (`344 + 8 = 352` bytes): ~11 frames
 
 ### Packet Fragmentation
 
@@ -1891,41 +1919,39 @@ Configurable timeout (default 5 seconds) prevents stale call states.
 
 ### Authentication
 
-SHA256-based challenge-response authentication:
+SHA256-based digest authentication:
 
 **Process:**
 
-1. Peer generates random salt (4 bytes)
-2. Peer sends salt in RPTL login request
-3. Master generates challenge value
-4. Master sends challenge to peer
-5. Peer computes: `SHA256(salt || password || challenge)`
-6. Peer sends hash in RPTK authorization
-7. Master validates hash
+1. Peer sends `RPTL` login message (`TAG_REPEATER_LOGIN` + peer ID)
+2. Master generates random 32-bit salt for that login exchange
+3. Master returns the salt in the `ACK` payload for `RPTL`
+4. Peer computes: `SHA256(salt || password)`
+5. Peer sends digest in `RPTK` (`TAG_REPEATER_AUTH` + peer ID + digest)
+6. Master computes the same digest and validates
 
 **Implementation:**
 
 ```cpp
-// Peer side
-uint8_t hash[50U];
-::memcpy(hash, m_salt, sizeof(uint32_t));
-::memcpy(hash + sizeof(uint32_t), m_password.c_str(), m_password.size());
-// Append master challenge...
+size_t size = m_password.size();
+uint8_t* in = new uint8_t[size + sizeof(uint32_t)];
+::memcpy(in, m_salt, sizeof(uint32_t));
+for (size_t i = 0U; i < size; i++)
+    in[i + sizeof(uint32_t)] = m_password.at(i);
 
 edac::SHA256 sha256;
-sha256.buffer(hash, 40U, hash);
+sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out + 8U);
 ```
 
 **Security Properties:**
 
-- Prevents replay attacks (random salt/challenge)
+- Reduces replay risk by using per-login random salt
 - Password never transmitted in cleartext
-- Mutual authentication possible
 - Resistant to offline dictionary attacks
 
 ### Encryption
 
-Optional AES-256-ECB encryption at transport layer:
+Optional AES-256-ECB encryption is implemented as UDP payload wrapping at the socket layer:
 
 ```cpp
 void Network::setPresharedKey(const uint8_t* presharedKey) {
@@ -1946,7 +1972,10 @@ The implementation uses AES-256-ECB (Electronic Codebook mode):
 - **Key Size**: 256 bits (32 bytes)
 - **Block Size**: 128 bits (16 bytes)
 - **Mode**: ECB - each 16-byte block encrypted independently
-- **Padding**: PKCS#7 padding for variable-length payloads
+- **Padding**: Zero-padding to the AES block boundary
+- **Packet Leader**: `0xC0FE` (`AES_WRAPPED_PCKT_MAGIC`) is prepended before encrypted payloads
+
+**Runtime Behavior:** When preshared-key wrapping is enabled, receive logic drops datagrams that do not carry the `0xC0FE` leader. This is transport wrapping around the existing RTP/FNE payload, not SRTP.
 
 **Note**: ECB mode is used for simplicity and performance in this implementation. While ECB has known cryptographic weaknesses (identical plaintext blocks produce identical ciphertext), the primary goal is to provide basic confidentiality for network traffic between trusted peers rather than military-grade security. For high-security deployments, additional network-layer security (IPsec, VPN) should be used.
 
@@ -2032,9 +2061,9 @@ if (response == NET_FUNC::ACK) {
 - Protocol error
 - Resource unavailable
 
-### Retry Logic
+### Connection Retry Logic
 
-Failed transmissions are retried with exponential backoff:
+Failed connections are retried with exponential backoff:
 
 ```cpp
 Timer m_retryTimer(1000U, DEFAULT_RETRY_TIME); // 10 seconds
@@ -2199,28 +2228,30 @@ bool BaseNetwork::writePeerStatus(json::object obj) {
 }
 ```
 
-### Diagnostic Network Port
+### Metadata Network Port
 
-FNE master uses separate port for diagnostics:
+Current FNE runtime uses a separate `MetadataNetwork` listener for activity log transfer, diagnostic transfer, status transfer, peer announcement and packet-buffered replication metadata:
 
 ```cpp
-class DiagNetwork : public BaseNetwork {
+class MetadataNetwork : public BaseNetwork {
 private:
-    FNENetwork* m_fneNetwork;
-    uint16_t m_port;              // Separate diagnostic port
+    TrafficNetwork* m_trafficNetwork;
+    uint16_t m_port;              // Bound to master port + 1
     ThreadPool m_threadPool;
-    
+
 public:
-    void processNetwork();        // Process diagnostic packets
+    void processNetwork();        // Process metadata / transfer packets
 };
 ```
+
+`HostFNE::createMasterNetwork()` creates `TrafficNetwork` on the configured master port and `MetadataNetwork` on `master.port + 1`.
 
 **Benefits:**
 
 - Isolate diagnostic traffic from operational traffic
 - Different QoS/priority handling
 - Optional firewall rules
-- Reduced congestion on main port
+- Reduced congestion on main traffic port
 
 ### Network Statistics
 
@@ -2329,7 +2360,7 @@ Key metrics tracked:
 
 - BaseNetwork: ~20KB
 - Network (Peer): ~50KB
-- FNENetwork (Master): ~100KB base
+- TrafficNetwork + MetadataNetwork (FNE runtime): ~100KB base before peer/session maps and call-handler state
 - Per-peer state: ~1-2KB
 - **Total for 100 peers: ~300-400MB**
 
@@ -2462,15 +2493,11 @@ Peer A (Initiator)          FNE Master              Peer B (Recipient)
 ```
 Peer A (Initiator)          FNE Master              Peer B (Recipient)
     |                           |                           |
-    | P25 PROTOCOL (HDU)        |                           |
-    | Header Data Unit          |                           |
-    |-------------------------->|-------------------------->|
-    |                           | (Route based on TG)       |
-    |                           |                           |
     | P25 PROTOCOL (LDU1)       |                           |
     | Logical Data Unit 1       |                           |
-    | [Voice + LC + LSD]        |                           |
+    | [Voice + LC + LSD + ESS]  |                           |
     |-------------------------->|-------------------------->|
+    |                           | (Route based on TG)       |
     |                           |                           |
     | P25 PROTOCOL (LDU2)       |                           |
     | Logical Data Unit 2       |                           |
@@ -2562,7 +2589,7 @@ Peer (dvmhost)           FNE (Child)              FNE (Parent/KMS)
     |                        |                           |
     | KEY_REQ                |                           |
     | KeyID=0x1234           |                           |
-    | AlgID=0x81 (AES-256)   |                           |
+    | AlgID=0x84 (AES-256)   |                           |
     | SrcID=123456           |                           |
     |----------------------->|                           |
     |                        | KEY_REQ (forwarded)       |
@@ -2599,12 +2626,10 @@ Offset | Length | Field        | Description
 
 **Algorithm IDs:**
 - `0x80`: Unencrypted (cleartext)
-- `0x81`: AES-256
-- `0x82`: DES-OFB
-- `0x83`: DES-XL
-- `0x84`: ADP (Motorola Advanced Digital Privacy)
-- `0x9F`: AES-256-GCM (custom)
-- Other values: Vendor-specific or reserved
+- `0x81`: DES-OFB
+- `0x84`: AES-256
+- `0xAA`: ARC4
+- Other values: Vendor-specific, implementation-specific, or reserved
 
 **KEY_RSP Message Structure:**
 
@@ -2650,7 +2675,7 @@ Offset | Length | Field         | Description
 **Important Notes:**
 
 - KEY_REQ/KEY_RSP are for **call data encryption** (voice/data payload), not network transport encryption
-- Network transport uses AES-256-ECB (see Section 7)
+- Network transport uses the optional AES-256-ECB UDP wrapper described in Section 9
 - Keys are transmitted encrypted over the already-secured network connection
 - Only authorized peers (verified during RPTK) can request keys
 - Key material format is algorithm-specific (AES keys, DES keys, etc.)
@@ -2662,11 +2687,11 @@ Offset | Length | Field         | Description
 ```
 Peer                        FNE Master
   |                             |
-  | RPTL (login + salt)         |
+  | RPTL (login request)        |
   |---------------------------->|
-  |                             | (Generate challenge)
+  |                             | (Generate login salt)
   |                             |
-  |              Challenge + ACK|
+  |                Salt + ACK   |
   |<----------------------------|
   |                             |
   | RPTK (auth response)        |
@@ -2751,16 +2776,21 @@ network:
 ### Master Configuration (YAML)
 
 ```yaml
-fne:
-  port: 62031
-  diagPort: 62032       # Separate diagnostic port
-  
-  # Authentication
-  password: "SecurePassword123"
-  
-  # Scaling
-  workers: 8            # Thread pool size
-  softConnLimit: 100    # Soft connection limit
+master:
+    peerId: 9000100
+    address: 0.0.0.0
+    port: 62031           # Traffic port; metadata listener uses port + 1
+
+    # Authentication
+    password: "SecurePassword123"
+
+    # Scaling
+    workers: 8
+    connectionLimit: 100
+
+    # Transport security
+    encrypted: false
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
   
   # Network Features
   spanningTree: true
@@ -2817,7 +2847,7 @@ fne:
 
 - **Check**: Password matches exactly
 - **Check**: Clock synchronization (NTP)
-- **Check**: Master challenge timeout
+- **Check**: RPTL/RPTK exchange timeout (salt ACK not received)
 - **Solution**: Verify SHA256 hash calculation
 
 ### Debug Techniques
@@ -2825,7 +2855,7 @@ fne:
 **Enable Packet Dumps:**
 
 ```cpp
-m_debug = true;  // In Network or FNENetwork constructor
+m_debug = true;  // In Network, TrafficNetwork, or MetadataNetwork constructor/config
 ```
 
 **Wireshark Capture:**
@@ -2842,7 +2872,7 @@ wireshark capture.pcap
 grep "peerId = 1234567" /var/log/dvm/dvmhost.log
 
 # Search for NAK messages
-grep "NAK" /var/log/dvm/dvmfne.log
+grep "NAK" /var/log/dvm/dvmhost.log
 
 # Monitor in real-time
 tail -f /var/log/dvm/dvmhost.log | grep "NET"
@@ -2889,6 +2919,8 @@ tail -f /var/log/dvm/dvmhost.log | grep "NET"
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | Dec 3, 2025 | Initial documentation based on source code analysis |
+| 1.1 | May 8, 2026 | Update to match current state of the codebase |
+| 1.2 | Jul 8, 2026 | Corrected connection/auth flow, opcode tables, RPTC schema, ping payload, bitfields, and buffer/stream details to match current implementation |
 
 ---
 

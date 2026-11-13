@@ -29,7 +29,7 @@ namespace analog
      * @brief Implements aLaw and uLaw audio codecs, along with helper routines for analog audio.
      * @ingroup analog
      */
-    class HOST_SW_API AnalogAudio {
+    class DVM_COMMON_API AnalogAudio {
     public:
         /**
          * @brief Helper to convert PCM into G.711 aLaw.

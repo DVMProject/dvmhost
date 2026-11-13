@@ -14,7 +14,6 @@
 #include "Host.h"
 #include "calibrate/HostCal.h"
 #include "setup/HostSetup.h"
-#include "ActivityLog.h"
 
 using namespace network;
 using namespace modem;
@@ -341,7 +340,6 @@ int main(int argc, char** argv)
     } while (g_signal == SIGHUP);
 
     ::LogFinalise();
-    ::ActivityLogFinalise();
 
     return ret;
 }

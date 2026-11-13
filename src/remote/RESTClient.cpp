@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023,2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -55,7 +55,7 @@ bool RESTClient::s_debug = false;
 //  Global Functions
 // ---------------------------------------------------------------------------
 
-/* */
+/* Parses the JSON response body from the HTTP response. */
 
 bool parseResponseBody(const HTTPPayload& response, json::object& obj)
 {
@@ -68,11 +68,13 @@ bool parseResponseBody(const HTTPPayload& response, json::object& obj)
     json::value v;
     std::string err = json::parse(v, response.content);
     if (!err.empty()) {
+        LogError(LOG_REST, "Failed to parse REST API response body: %s", err.c_str());
         return false;
     }
 
     // ensure parsed JSON is an object
     if (!v.is<json::object>()) {
+        LogError(LOG_REST, "Failed to parse REST API response body: expected JSON object");
         return false;
     }
 
@@ -161,19 +163,19 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 #if defined(ENABLE_SSL)
         if (s_enableSSL) {
             sslClient = new SecureHTTPClient<RESTDispatcherType>(address, port);
+            sslClient->setHandler(m_dispatcher);
             if (!sslClient->open()) {
                 delete sslClient;
                 return ERRNO_SOCK_OPEN;
             }
-            sslClient->setHandler(m_dispatcher);
         } else {
 #endif // ENABLE_SSL
             client = new HTTPClient<RESTDispatcherType>(address, port);
+            client->setHandler(m_dispatcher);
             if (!client->open()) {
                 delete client;
                 return ERRNO_SOCK_OPEN;
             }
-            client->setHandler(m_dispatcher);
 #if defined(ENABLE_SSL)
         }
 #endif // ENABLE_SSL
@@ -274,19 +276,19 @@ int RESTClient::send(const std::string& address, uint32_t port, const std::strin
 #if defined(ENABLE_SSL)
         if (s_enableSSL) {
             sslClient = new SecureHTTPClient<RESTDispatcherType>(address, port);
+            sslClient->setHandler(m_dispatcher);
             if (!sslClient->open()) {
                 delete sslClient;
                 return ERRNO_SOCK_OPEN;
             }
-            sslClient->setHandler(m_dispatcher);
         } else {
 #endif // ENABLE_SSL
             client = new HTTPClient<RESTDispatcherType>(address, port);
+            client->setHandler(m_dispatcher);
             if (!client->open()) {
                 delete client;
                 return ERRNO_SOCK_OPEN;
             }
-            client->setHandler(m_dispatcher);
 #if defined(ENABLE_SSL)
         }
 #endif // ENABLE_SSL

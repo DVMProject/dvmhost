@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 P. McDonnell, W3AXL
  *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
@@ -67,7 +67,7 @@ MotFullRateVoice::~MotFullRateVoice()
         delete[] additionalData;
 }
 
-/* */
+/* Gets the size of the full rate voice frame. */
 
 uint32_t MotFullRateVoice::size()
 {
@@ -95,7 +95,7 @@ bool MotFullRateVoice::decode(const uint8_t* data, bool shortened)
     assert(data != nullptr);
 
     if (imbeData != nullptr)
-        delete imbeData;
+        delete[] imbeData;
     imbeData = new uint8_t[RAW_IMBE_LENGTH_BYTES];
     ::memset(imbeData, 0x00U, RAW_IMBE_LENGTH_BYTES);
 

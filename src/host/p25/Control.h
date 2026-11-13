@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -34,6 +34,7 @@
 #include "common/network/NetRPC.h"
 #include "common/network/RTPFNEHeader.h"
 #include "common/network/Network.h"
+#include "common/p25/kmm/KeysetItem.h"
 #include "common/p25/SiteData.h"
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
@@ -50,6 +51,14 @@
 #include <unordered_map>
 #include <random>
 #include <mutex>
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 namespace p25
 {
@@ -111,7 +120,6 @@ namespace p25
         /**
          * @brief Helper to set P25 configuration options.
          * @param conf Instance of the yaml::Node class.
-         * @param supervisor Flag indicating whether the DMR has supervisory functions.
          * @param cwCallsign CW callsign of this host.
          * @param controlChData Control Channel data.
          * @param pSuperGroup 
@@ -123,7 +131,7 @@ namespace p25
          * @param channelNo Channel Number.
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
-        void setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
+        void setOptions(yaml::Node& conf, const std::string cwCallsign, const ::lookups::VoiceChData controlChData,
             uint32_t netId, uint32_t sysId, uint8_t rfssId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /** @name CC Control */
@@ -194,18 +202,27 @@ namespace p25
         void clockSiteData(uint32_t ms);
         /** @} */
 
-        /** @name Supervisory Control */
-        /**
-         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
-         * @param supervisor Flag indicating whether control has supervisory functions.
-         */
-        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /**
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
          * @param dataPermit Flag indicating this permit is for data.
+         * @param telInt Flag indicating this permit is for a telephone interconnect call to the unit in dstId.
          */
-        void permittedTG(uint32_t dstId, bool dataPermit = false);
+        void permittedTG(uint32_t dstId, bool dataPermit = false, bool telInt = false,
+            uint32_t srcId = 0U, bool unitToUnit = false);
+        /**
+         * @brief Tests traffic identities against the current voice-channel permit.
+         * @param srcId Source radio ID.
+         * @param dstId Destination ID.
+         * @param group Flag indicating group traffic.
+         * @returns bool True when the traffic matches the active permit.
+         */
+        bool isPermitted(uint32_t srcId, uint32_t dstId, bool group) const;
+        /**
+         * @brief Determines whether this control channel currently owns grant decisions.
+         * @return True for configured authority or disconnected-network fallback.
+         */
+        bool isGrantAuthoritative() const;
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -277,6 +294,9 @@ namespace p25
 
     private:
         friend class packet::Voice;
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::HostTestHooks;
+#endif
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
@@ -285,7 +305,6 @@ namespace p25
         friend class lookups::P25AffiliationLookup;
 
         bool m_authoritative;
-        bool m_supervisor;
 
         uint32_t m_nac;
         uint32_t m_txNAC;
@@ -307,8 +326,9 @@ namespace p25
         bool m_voiceOnControl;
         bool m_controlOnly;
         bool m_ackTSBKRequests;
-        bool m_disableNetworkGrant;
+        bool m_allowRFGrantTGSteering;
         bool m_disableNetworkHDU;
+        bool m_hideRemoteGrantLog;
         bool m_allowExplicitSourceId;
         bool m_convNetGrantDemand;
         bool m_sndcpSupport;
@@ -342,18 +362,22 @@ namespace p25
         RPT_NET_STATE m_netState;
         uint32_t m_netLastDstId;
         uint32_t m_netLastSrcId;
+        bool m_netRejectedU2UStream;
 
         uint32_t m_permittedDstId;
+        uint32_t m_permittedSrcId;
+        bool m_permittedU2U;
+        bool m_permittedTelInt;
 
         bool m_tailOnIdle;
         bool m_ccRunning;
         bool m_ccPrevRunning;
         bool m_ccHalted;
 
-        Timer m_rfTimeout;
+        Timer m_rfTimeoutTimer;
         Timer m_rfTGHang;
         Timer m_rfLossWatchdog;
-        Timer m_netTimeout;
+        Timer m_netTimeoutTimer;
         Timer m_netTGHang;
         Timer m_networkWatchdog;
 
@@ -379,10 +403,16 @@ namespace p25
 
         std::mt19937 m_random;
 
-        uint8_t* m_llaK;
-        uint8_t* m_llaRS;
-        uint8_t* m_llaCRS;
-        uint8_t* m_llaKS;
+        /**
+         * @brief Struct to hold LLA data for a given Radio ID for FNE KMM LLA responses.
+         */
+        struct LLAParams {
+            uint8_t* k;
+            uint8_t* rs;
+            uint8_t* crs;
+            uint8_t* ks;
+        };
+        std::unordered_map<uint32_t, LLAParams*> m_llaRID;
 
         NID m_nid;
 
@@ -394,6 +424,9 @@ namespace p25
         uint8_t m_minRSSI;
         uint32_t m_aveRSSI;
         uint32_t m_rssiCount;
+
+        bool m_rfTimeout;
+        bool m_netTimeout;
 
         static std::mutex s_activeTGLock;
         bool m_ccNotifyActiveTG;
@@ -413,7 +446,7 @@ namespace p25
          * @param net Flag indicating whether the data came from the network or not
          * @param imm Flag indicating whether or not the data is priority and is added to the immediate queue.
          */
-        void addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
+        bool addFrame(const uint8_t* data, uint32_t length, bool net = false, bool imm = false);
 
         /**
          * @brief Process a data frames from the network.
@@ -421,8 +454,9 @@ namespace p25
         void processNetwork();
         /**
          * @brief Helper to process loss of frame stream from modem.
+         * @param type Type of RF frame loss.
          */
-        void processFrameLoss();
+        void processFrameLoss(RPT_RF_LOSS_TYPE type);
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.
@@ -469,7 +503,7 @@ namespace p25
          */
         void writeRF_TDU(bool noNetwork, bool imm = false);
 
-        /** @name Supervisory Control */
+        /** @name Traffic Permit Control */
         /**
          * @brief (RPC Handler) Permits a TGID on a non-authoritative host.
          * @param req JSON request.
@@ -503,9 +537,33 @@ namespace p25
         /** @} */
 
         /**
-         * @brief Helper to setup and generate LLA AM1 parameters.
+         * @brief Handles a voice-channel request to release or retain a completed grant.
+         * @param dstId Destination-keyed grant owner reported by the voice channel.
          */
-        void generateLLA_AM1_Parameters();
+        void releaseGrantFromVoiceChannel(uint32_t dstId);
+
+        /**
+         * @brief Helper to retrieve LLA AM1 parameters for a given source ID.
+         * @param srcId Source ID.
+         * @param[out] rs Buffer to store generated RS parameter.
+         * @param[out] crs Buffer to store generated CRS parameter.
+         * @param[out] ks Buffer to store generated KS parameter.
+         * @returns bool True, if LLA AM1 parameters were successfully retrieved, otherwise false
+         */
+        bool getLLA_AM1_Parameters(uint32_t srcId, uint8_t* rs, uint8_t* crs, uint8_t* ks);
+        /**
+         * @brief Helper to clear LLA AM1 parameters for a given source ID.
+         * @param srcId Source ID.
+         */
+        void clearLLA_AM1_Parameters(uint32_t srcId);
+
+        /**
+         * @brief Helper to process a FNE KMM LLA response.
+         * @param srcId Source Radio ID for the LLA response.
+         * @param ki Key Item.
+         * @param keyLength Length of key in bytes.
+         */
+        void processLLAResponse(uint32_t srcId, p25::kmm::KeyItem* ki, uint8_t keyLength);
     };
 } // namespace p25
 

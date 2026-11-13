@@ -44,7 +44,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMRegistrationCommand : public KMMFrame {
+        /**
+         * @brief Represents a KMM registration command.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMRegistrationCommand : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMRegistrationCommand class.

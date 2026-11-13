@@ -4,8 +4,8 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
- *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024 P. McDonnell, W3AXL
  *
  */
 #include "lookups/TalkgroupRulesLookup.h"
@@ -50,16 +50,17 @@ bool TalkgroupRulesLookup::s_locked = false;
 
 /* Initializes a new instance of the TalkgroupRulesLookup class. */
 
-TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl) : Thread(),
+TalkgroupRulesLookup::TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl, bool verbose) : Thread(),
     m_rulesFile(filename),
     m_reloadTime(reloadTime),
     m_rules(),
     m_lastLoadTime(0U),
     m_acl(acl),
     m_stop(false),
+    m_verbose(verbose),
+    m_groupVoice(),
     m_groupHangTime(5U),
-    m_sendTalkgroups(false),
-    m_groupVoice()
+    m_sendTalkgroups(false)
 {
     /* stub */
 }
@@ -131,7 +132,8 @@ void TalkgroupRulesLookup::clear()
 
 /* Adds a new entry to the lookup table by the specified unique ID. */
 
-void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, bool affiliated, bool nonPreferred)
+void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, bool affiliated, bool nonPreferred,
+    uint8_t strapping)
 {
     TalkgroupRuleGroupVoiceSource source;
     TalkgroupRuleConfig config;
@@ -140,6 +142,7 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, boo
     config.active(enabled);
     config.affiliated(affiliated);
     config.nonPreferred(nonPreferred);
+    config.strapping(strapping);
 
     __LOCK_TABLE();
 
@@ -160,6 +163,7 @@ void TalkgroupRulesLookup::addEntry(uint32_t id, uint8_t slot, bool enabled, boo
         config.active(enabled);
         config.affiliated(affiliated);
         config.nonPreferred(nonPreferred);
+        config.strapping(strapping);
 
         TalkgroupRuleGroupVoice entry = *it;
         entry.config(config);
@@ -290,6 +294,56 @@ TalkgroupRuleGroupVoice TalkgroupRulesLookup::findByRewrite(uint32_t peerId, uin
     return entry;
 }
 
+/* Determines whether a radio ID is admitted to a talkgroup. */
+
+bool TalkgroupRulesLookup::isRIDPermitted(uint32_t id, uint8_t slot, uint32_t radioId)
+{
+    if (!m_acl) {
+        return true;
+    }
+
+    TalkgroupRuleGroupVoice entry = find(id, slot);
+    if (entry.isInvalid()) {
+        return false;
+    }
+
+    const std::vector<uint32_t> permittedRIDs = entry.config().permittedRIDs();
+    if (permittedRIDs.empty()) {
+        return true;
+    }
+
+    return std::find(permittedRIDs.begin(), permittedRIDs.end(), radioId) != permittedRIDs.end();
+}
+
+/* Atomically replaces all network-delivered talkgroup RID admission lists. */
+
+void TalkgroupRulesLookup::replaceRIDAdmissions(const std::vector<TalkgroupRuleGroupVoice>& admissions)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+
+    // clear the permitted RIDs for all existing group voice entries
+    for (TalkgroupRuleGroupVoice& entry : m_groupVoice) {
+        TalkgroupRuleConfig config = entry.config();
+        config.permittedRIDs(std::vector<uint32_t>());
+        entry.config(config);
+    }
+
+    // apply the new RID admissions to the existing group voice entries
+    for (const TalkgroupRuleGroupVoice& admission : admissions) {
+        const uint32_t id = admission.source().tgId();
+        const uint8_t slot = admission.source().tgSlot();
+        auto it = std::find_if(m_groupVoice.begin(), m_groupVoice.end(),
+            [id, slot](const TalkgroupRuleGroupVoice& entry) {
+                return entry.source().tgId() == id && (slot == 0U || entry.source().tgSlot() == slot);
+            });
+        if (it != m_groupVoice.end()) {
+            TalkgroupRuleConfig config = it->config();
+            config.permittedRIDs(admission.config().permittedRIDs());
+            it->config(config);
+        }
+    }
+}
+
 /* Saves loaded talkgroup rules. */
 
 bool TalkgroupRulesLookup::commit(bool quiet)
@@ -302,6 +356,22 @@ bool TalkgroupRulesLookup::commit(bool quiet)
 bool TalkgroupRulesLookup::getACL()
 {
     return m_acl;
+}
+
+/* Gets a snapshot of the group voice rules. */
+
+std::vector<TalkgroupRuleGroupVoice> TalkgroupRulesLookup::groupVoice() const
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    return m_groupVoice;
+}
+
+/* Replaces the group voice rules. */
+
+void TalkgroupRulesLookup::groupVoice(std::vector<TalkgroupRuleGroupVoice> val)
+{
+    std::lock_guard<std::mutex> lock(s_mutex);
+    m_groupVoice = val;
 }
 
 // ---------------------------------------------------------------------------
@@ -345,29 +415,32 @@ bool TalkgroupRulesLookup::load()
         TalkgroupRuleGroupVoice groupVoice = TalkgroupRuleGroupVoice(groupVoiceList[i]);
         m_groupVoice.push_back(groupVoice);
 
-        std::string groupName = groupVoice.name();
-        uint32_t tgId = groupVoice.source().tgId();
-        uint8_t tgSlot = groupVoice.source().tgSlot();
-        bool active = groupVoice.config().active();
-        bool parrot = groupVoice.config().parrot();
-        bool affil = groupVoice.config().affiliated();
+        if (m_verbose) {
+            std::string groupName = groupVoice.name();
+            uint32_t tgId = groupVoice.source().tgId();
+            uint8_t tgSlot = groupVoice.source().tgSlot();
+            bool active = groupVoice.config().active();
+            bool parrot = groupVoice.config().parrot();
+            bool affil = groupVoice.config().affiliated();
+            uint8_t strapping = groupVoice.config().strapping();
 
-        uint32_t incCount = groupVoice.config().inclusion().size();
-        uint32_t excCount = groupVoice.config().exclusion().size();
-        uint32_t rewrCount = groupVoice.config().rewrite().size();
-        uint32_t alwyCount = groupVoice.config().alwaysSend().size();
-        uint32_t prefCount = groupVoice.config().preferred().size();
-        uint32_t permRIDCount = groupVoice.config().permittedRIDs().size();
+            uint32_t incCount = groupVoice.config().inclusion().size();
+            uint32_t excCount = groupVoice.config().exclusion().size();
+            uint32_t rewrCount = groupVoice.config().rewrite().size();
+            uint32_t alwyCount = groupVoice.config().alwaysSend().size();
+            uint32_t prefCount = groupVoice.config().preferred().size();
+            uint32_t permRIDCount = groupVoice.config().permittedRIDs().size();
 
-        if (incCount > 0 && excCount > 0) {
-            ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusion rules take precedence and exclusion rules will be ignored.", groupName.c_str());
+            if (incCount > 0 && excCount > 0) {
+                ::LogWarning(LOG_HOST, "Talkgroup (%s) defines both inclusions and exclusions! Inclusion rules take precedence and exclusion rules will be ignored.", groupName.c_str());
+            }
+
+            if (alwyCount > 0 && affil) {
+                ::LogWarning(LOG_HOST, "Talkgroup (%s) is marked as affiliation required and has a defined always send list! Always send peers take rule precedence and defined peers will always receive traffic.", groupName.c_str());
+            }
+
+            ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u AFFILIATED: %u STRAPPING: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u ALWAYS: %u PREFERRED: %u PERMITTED RIDS: %u", groupName.c_str(), tgId, tgSlot, active, parrot, affil, strapping, incCount, excCount, rewrCount, alwyCount, prefCount, permRIDCount);
         }
-
-        if (alwyCount > 0 && affil) {
-            ::LogWarning(LOG_HOST, "Talkgroup (%s) is marked as affiliation required and has a defined always send list! Always send peers take rule precedence and defined peers will always receive traffic.", groupName.c_str());
-        }
-
-        ::LogInfoEx(LOG_HOST, "Talkgroup NAME: %s SRC_TGID: %u SRC_TS: %u ACTIVE: %u PARROT: %u AFFILIATED: %u INCLUSIONS: %u EXCLUSIONS: %u REWRITES: %u ALWAYS: %u PREFERRED: %u PERMITTED RIDS: %u", groupName.c_str(), tgId, tgSlot, active, parrot, affil, incCount, excCount, rewrCount, alwyCount, prefCount, permRIDCount);
     }
 
     __UNLOCK_TABLE();

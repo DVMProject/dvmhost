@@ -33,7 +33,7 @@ namespace nxdn
              * @brief Implements DCALL_HDR - Data Call Header
              * @ingroup nxdn_rcch
              */
-            class HOST_SW_API MESSAGE_TYPE_DCALL_HDR : public RCCH {
+            class DVM_COMMON_API MESSAGE_TYPE_DCALL_HDR : public RCCH {
             public:
                 /**
                  * @brief Initializes a new instance of the MESSAGE_TYPE_DCALL_HDR class.

@@ -54,7 +54,7 @@
   * @param tzp
   * @returns int
   */
-extern HOST_SW_API int gettimeofday(struct timeval* tv, struct timezone* tzp);
+extern DVM_COMMON_API int gettimeofday(struct timeval* tv, struct timezone* tzp);
 #endif // defined(_WIN32)
 
 namespace system_clock 
@@ -70,7 +70,7 @@ namespace system_clock
          * @ingroup system_clock
          * @returns uint64_t Current time in NTP units.
          */
-        uint64_t now();
+        DVM_COMMON_API uint64_t now();
         /**
          * @brief Calculate the time difference of two NTP times.
          * @ingroup system_clock
@@ -78,14 +78,14 @@ namespace system_clock
          * @param ntp2 Time in NTP units to compare.
          * @returns uint64_t Difference in NTP units between ntp1 and ntp2.
          */
-        uint64_t diff(uint64_t ntp1, uint64_t ntp2);
+        DVM_COMMON_API uint64_t diff(uint64_t ntp1, uint64_t ntp2);
         /**
          * @brief Calculate the time difference the given NTP time and now.
          * @ingroup system_clock
          * @param then Time in NTP units to compare.
          * @returns uint64_t Difference in NTP units between now and then.
          */
-        uint64_t diffNow(uint64_t then);
+        DVM_COMMON_API uint64_t diffNow(uint64_t then);
     } // namespace ntp
 
     /*
@@ -101,7 +101,7 @@ namespace system_clock
          * @ingroup system_clock
          * @returns hrc_t Current time in HRC units.
          */
-        hrc_t now();
+        DVM_COMMON_API hrc_t now();
         /**
          * @brief Calculate the time difference of two HRC times.
          * @ingroup system_clock
@@ -109,21 +109,21 @@ namespace system_clock
          * @param hrc2 Time in HRC units to compare.
          * @returns uint64_t Difference in HRC units between hrc1 and hrc2.
          */
-        uint64_t diff(hrc_t hrc1, hrc_t hrc2);
+        DVM_COMMON_API uint64_t diff(hrc_t hrc1, hrc_t hrc2);
         /**
          * @brief Calculate the time difference the given HRC time and now.
          * @ingroup system_clock
          * @param then Time in HRC units to compare.
          * @returns uint64_t Difference in HRC units between now and then.
          */
-        uint64_t diffNow(hrc_t then);
+        DVM_COMMON_API uint64_t diffNow(hrc_t then);
         /**
          * @brief Calculate the time difference the given HRC time and now in microseconds.
          * @ingroup system_clock
          * @param then Time in HRC units to compare.
          * @returns uint64_t Difference in HRC units between now and then.
          */
-        uint64_t diffNowUS(hrc_t& then);
+        DVM_COMMON_API uint64_t diffNowUS(hrc_t& then);
     } // namespace hrc
 
     /**
@@ -132,14 +132,14 @@ namespace system_clock
      * @param ms Milliseconds.
      * @returns uint64_t Milliseconds in jiffies.
      */
-    uint64_t msToJiffies(uint64_t ms);
+    DVM_COMMON_API uint64_t msToJiffies(uint64_t ms);
     /**
      * @brief Convert jiffies to milliseconds.
      * @ingroup system_clock
      * @param jiffies Jiffies.
      * @returns uint64_t Jiffes in miilliseconds.
      */
-    uint64_t jiffiesToMs(uint64_t jiffies);
+    DVM_COMMON_API uint64_t jiffiesToMs(uint64_t jiffies);
 } // namespace system_clock
 
 #endif // __CLOCK_H__

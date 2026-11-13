@@ -130,6 +130,15 @@ namespace dmr
         const uint32_t  RAW_AMBE_LENGTH_BYTES = 9U;
         /** @} */
 
+        /** @name Reverse Channel Commands */
+        const uint8_t   RC_CEASE_TRANSMIT[5U] = { 0x07U, 0x0DU, 0x04U, 0xF1U, 0xF0U };
+        const uint8_t   RC_REQUEST_CEASE_TRANSMIT[5U] = { 0x02U, 0x7BU, 0x4EU, 0x48U, 0x70U };
+        const uint8_t   RC_MAX_POWER[5U] = { 0x01U, 0xC3U, 0xDDU, 0x3CU, 0x10U };
+        const uint8_t   RC_MIN_POWER[5U] = { 0x04U, 0xB5U, 0x97U, 0x85U, 0x90U };
+        const uint8_t   RC_POWER_INCREASE[5U] = { 0x04U, 0x5BU, 0xA7U, 0x58U, 0xA0U };
+        const uint8_t   RC_POWER_DECREASE[5U] = { 0x01U, 0x2DU, 0xEDU, 0xE1U, 0x20U };
+        /** @} */
+
         /** @name Thresholds */
         /** @brief TSCC maximum CSC count */
         const uint16_t  TSCC_MAX_CSC_CNT = 511U;
@@ -159,6 +168,7 @@ namespace dmr
         const uint32_t  WUID_SUPLI = 0xFFFEC4U;         //!< Supplementary Data Service Working Unit ID
         const uint32_t  WUID_SDMI = 0xFFFEC5U;          //!< UDT Short Data Service Working Unit ID
         const uint32_t  WUID_REGI = 0xFFFEC6U;          //!< Registration Working Unit ID
+        const uint32_t  WUID_TSI = 0xFFFECAU;           //!< Trunking Station Identifier
         const uint32_t  WUID_STUNI = 0xFFFECCU;         //!< MS Stun/Revive Identifier
         const uint32_t  WUID_AUTHI = 0xFFFECDU;         //!< Authentication Working Unit ID
         const uint32_t  WUID_KILLI = 0xFFFECFU;         //!< MS Kill Identifier
@@ -461,6 +471,7 @@ namespace dmr
                 AHOY = 0x1CU,                           //!< AHOY - Enquiry from TSCC
                 RAND = 0x1FU,                           //!< (ETSI) RAND - Random Access / (DMRA) CALL ALRT - Call Alert
                 ACK_RSP = 0x20U,                        //!< ACK RSP - Acknowledge Response
+                ACK_RSP_U = 0x21U,                      //!< ACK RSP U - Acknowledge Response from Unit
                 EXT_FNCT = 0x24U,                       //!< (DMRA) EXT FNCT - Extended Function
                 NACK_RSP = 0x26U,                       //!< NACK RSP - Negative Acknowledgement Response
                 BROADCAST = 0x28U,                      //!< BCAST - Announcement PDU

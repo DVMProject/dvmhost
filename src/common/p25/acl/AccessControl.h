@@ -36,7 +36,7 @@ namespace p25
          * @brief Implements radio and talkgroup ID access control checking.
          * @ingroup p25
          */
-        class HOST_SW_API AccessControl {
+        class DVM_COMMON_API AccessControl {
         public:
             /**
              * @brief Initializes the P25 access control.
@@ -58,6 +58,13 @@ namespace p25
              * @returns bool True, if talkgroup ID is valid, otherwise false.
              */
             static bool validateTGId(uint32_t id, bool allowZero = false);
+            /**
+             * @brief Validates whether a radio ID is admitted to a talkgroup.
+             * @param srcId Source radio ID.
+             * @param dstId Destination talkgroup ID.
+             * @returns bool True if admitted, otherwise false.
+             */
+            static bool validateTGAccess(uint32_t srcId, uint32_t dstId);
 
             /**
              * @brief Helper to determine if a talkgroup ID is non-preferred.

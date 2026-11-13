@@ -29,7 +29,7 @@ namespace nxdn
      * @brief This class implements various helper functions for scrambling NXDN data.
      * @ingroup nxdn
      */
-    class HOST_SW_API NXDNUtils {
+    class DVM_COMMON_API NXDNUtils {
     public:
         /**
          * @brief Helper to scramble the NXDN frame data.

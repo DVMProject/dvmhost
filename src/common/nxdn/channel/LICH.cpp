@@ -160,11 +160,8 @@ void LICH::copy(const LICH& data)
 
 bool LICH::getParity() const
 {
-    switch (m_lich & 0xF0U) {
-    case 0x80U:
-    case 0xB0U:
-        return true;
-    default:
-        return false;
-    }
+    // TS 1-A section 4.5.3 defines even parity over the four most
+    // significant LICH information bits (RFCT and FCT).
+    const uint8_t parityBits = (m_lich >> 4U) & 0x0FU;
+    return ((parityBits >> 3U) ^ (parityBits >> 2U) ^ (parityBits >> 1U) ^ parityBits) & 0x01U;
 }

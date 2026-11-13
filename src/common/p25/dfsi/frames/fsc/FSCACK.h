@@ -39,7 +39,7 @@ namespace p25
                  * @brief Implements the FSC Acknowledgement Message.
                  * @ingroup dfsi_fsc_frames
                  */
-                class HOST_SW_API FSCACK : public FSCMessage {
+                class DVM_COMMON_API FSCACK : public FSCMessage {
                 public:
                     static const uint8_t LENGTH = 7U;
 

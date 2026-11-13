@@ -39,7 +39,7 @@ namespace p25
                  * @brief Implements the FSC Select Channel Message.
                  * @ingroup dfsi_fsc_frames
                  */
-                class HOST_SW_API FSCSelChannel : public FSCMessage {
+                class DVM_COMMON_API FSCSelChannel : public FSCMessage {
                 public:
                     static const uint8_t LENGTH = 3U;
 

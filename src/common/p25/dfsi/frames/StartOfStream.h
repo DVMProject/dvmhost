@@ -43,7 +43,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API StartOfStream {
+            class DVM_COMMON_API StartOfStream {
             public:
                 static const uint8_t LENGTH = 3U;
 

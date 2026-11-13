@@ -4,8 +4,8 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
- *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024 P. McDonnell, W3AXL
  *
  */
 /**
@@ -34,6 +34,17 @@
 namespace lookups
 {
     // ---------------------------------------------------------------------------
+    //  Constants
+    // ---------------------------------------------------------------------------
+
+    /** @brief Talkgroup Strapping Selectable */
+    const uint8_t TG_STRAPPING_SELECTABLE   = 0U;
+    /** @brief Talkgroup Strapping Strapped */
+    const uint8_t TG_STRAPPING_STRAPPED     = 1U;
+    /** @brief Talkgroup Strapping Clear */
+    const uint8_t TG_STRAPPING_CLEAR        = 2U;
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
 
@@ -41,7 +52,7 @@ namespace lookups
      * @brief Represents an source block for a routing rule.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleGroupVoiceSource {
+    class DVM_COMMON_API TalkgroupRuleGroupVoiceSource {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleGroupVoiceSource class.
@@ -106,7 +117,7 @@ namespace lookups
      * @brief Represents an rewrite block for a routing rule rewrites.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleRewrite {
+    class DVM_COMMON_API TalkgroupRuleRewrite {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleRewrite class.
@@ -179,7 +190,7 @@ namespace lookups
      * @brief Represents an configuration block for a routing rule.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleConfig {
+    class DVM_COMMON_API TalkgroupRuleConfig {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleConfig class.
@@ -187,6 +198,7 @@ namespace lookups
         TalkgroupRuleConfig() :
             m_active(false),
             m_affiliated(false),
+            m_strapping(TG_STRAPPING_SELECTABLE),
             m_parrot(false),
             m_inclusion(),
             m_exclusion(),
@@ -208,6 +220,7 @@ namespace lookups
             m_active = node["active"].as<bool>(false);
             m_affiliated = node["affiliated"].as<bool>(false);
             m_parrot = node["parrot"].as<bool>(false);
+            m_strapping = (uint8_t)node["strapping"].as<uint32_t>(TG_STRAPPING_SELECTABLE);
 
             yaml::Node& inclusionList = node["inclusion"];
             if (inclusionList.size() > 0U) {
@@ -267,6 +280,7 @@ namespace lookups
             if (this != &data) {
                 m_active = data.m_active;
                 m_affiliated = data.m_affiliated;
+                m_strapping = data.m_strapping;
                 m_parrot = data.m_parrot;
                 m_inclusion = data.m_inclusion;
                 m_exclusion = data.m_exclusion;
@@ -320,8 +334,9 @@ namespace lookups
             // We have to convert the bools back to strings to pass to the yaml node
             node["active"] = __BOOL_STR(m_active);
             node["affiliated"] = __BOOL_STR(m_affiliated);
+            node["strapping"] = __INT_STR(m_strapping);
             node["parrot"] = __BOOL_STR(m_parrot);
-            
+
             // Get the lists
             yaml::Node inclusionList;
             if (m_inclusion.size() > 0U) {
@@ -388,6 +403,10 @@ namespace lookups
          */
         DECLARE_PROPERTY_PLAIN(bool, affiliated);
         /**
+         * @brief Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
+         */
+        DECLARE_PROPERTY_PLAIN(uint8_t, strapping);
+        /**
          * @brief Flag indicating whether or not the talkgroup is a parrot.
          */
         DECLARE_PROPERTY_PLAIN(bool, parrot);
@@ -413,7 +432,7 @@ namespace lookups
         DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, preferred);
 
         /**
-         * @brief List of radios IDs permitted to transmit on the talkgroup.
+         * @brief Radio IDs admitted to affiliate with and originate traffic on the talkgroup; empty admits all RIDs.
          */
         DECLARE_PROPERTY_PLAIN(std::vector<uint32_t>, permittedRIDs);
 
@@ -431,7 +450,7 @@ namespace lookups
      * @brief Represents an group voice block for a routing rule.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRuleGroupVoice {
+    class DVM_COMMON_API TalkgroupRuleGroupVoice {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRuleGroupVoice class.
@@ -530,15 +549,16 @@ namespace lookups
      *  rules information.
      * @ingroup lookups_tgid
      */
-    class HOST_SW_API TalkgroupRulesLookup : public Thread {
+    class DVM_COMMON_API TalkgroupRulesLookup : public Thread {
     public:
         /**
          * @brief Initializes a new instance of the TalkgroupRulesLookup class.
          * @param filename Full-path to the routing rules file.
          * @param reloadTime Interval of time to reload the routing rules.
          * @param acl Flag indicating these rules are enabled for enforcing access control.
+         * @param verbose Flag indicating if logging should be enabled for this lookup table.
          */
-        TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl);
+        TalkgroupRulesLookup(const std::string& filename, uint32_t reloadTime, bool acl, bool verbose = true);
         /**
          * @brief Finalizes a instance of the TalkgroupRulesLookup class.
          */
@@ -578,8 +598,10 @@ namespace lookups
          * @param enabled Flag indicating if talkgroup ID is enabled or not.
          * @param affiliated Flag indicating if talkgroup ID requires affiliated or not.
          * @param nonPreferred Flag indicating if the talkgroup ID is non-preferred.
+         * @param strapping Encryption strapping level for this talkgroup. (0 = Selectable, 1 = Strapped, 2 = Clear)
          */
-        void addEntry(uint32_t id, uint8_t slot, bool enabled, bool affiliated = false, bool nonPreferred = false);
+        void addEntry(uint32_t id, uint8_t slot, bool enabled, bool affiliated = false, bool nonPreferred = false,
+            uint8_t strapping = TG_STRAPPING_SELECTABLE);
         /**
          * @brief Adds a new entry to the lookup table.
          * @param groupVoice Group Voice Configuration Block.
@@ -608,6 +630,20 @@ namespace lookups
         virtual TalkgroupRuleGroupVoice findByRewrite(uint32_t peerId, uint32_t id, uint8_t slot = 0U);
 
         /**
+         * @brief Determines whether a radio ID is admitted to a talkgroup.
+         * @param id Talkgroup ID.
+         * @param slot DMR slot this talkgroup is valid on, or zero when not applicable.
+         * @param radioId Source radio ID.
+         * @returns bool True if talkgroup ACL enforcement is disabled, the talkgroup has no RID restriction, or the RID is permitted.
+         */
+        bool isRIDPermitted(uint32_t id, uint8_t slot, uint32_t radioId);
+        /**
+         * @brief Atomically replaces all network-delivered talkgroup RID admission lists.
+         * @param[in] admissions Talkgroup entries containing the replacement permitted RID lists.
+         */
+        void replaceRIDAdmissions(const std::vector<TalkgroupRuleGroupVoice>& admissions);
+
+        /**
          * @brief Saves loaded talkgroup rules.
          * @param quiet Disable logging during save operation.
          */
@@ -618,6 +654,17 @@ namespace lookups
          * @returns bool True, if talkgroup ID access control is enabled, otherwise false.
          */
         bool getACL();
+
+        /**
+         * @brief Gets a snapshot of the group voice rules.
+         * @return List of group voice rules.
+         */
+        std::vector<TalkgroupRuleGroupVoice> groupVoice() const;
+        /**
+         * @brief Replaces the group voice rules.
+         * @param[in] val List of group voice rules.
+         */
+        void groupVoice(std::vector<TalkgroupRuleGroupVoice> val);
 
         /**
          * @brief Returns the filename used to load this lookup table.
@@ -652,6 +699,10 @@ namespace lookups
         bool m_acl;
         bool m_stop;
 
+        bool m_verbose;
+
+        std::vector<TalkgroupRuleGroupVoice> m_groupVoice;
+
         static std::mutex s_mutex;  //!< Mutex used for change locking.
         static bool s_locked;       //!< Flag used for read locking (prevents find lookups), should be used when atomic operations (add/erase/etc) are being used.
 
@@ -676,10 +727,6 @@ namespace lookups
          * @brief Flag indicating whether or not the network layer should send the talkgroups to peers.
          */
         DECLARE_PROPERTY_PLAIN(bool, sendTalkgroups);
-        /**
-         * @brief List of group voice rules.
-         */
-        DECLARE_PROPERTY_PLAIN(std::vector<TalkgroupRuleGroupVoice>, groupVoice);
     };
 } // namespace lookups
 

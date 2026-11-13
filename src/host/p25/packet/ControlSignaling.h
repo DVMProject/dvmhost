@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -28,7 +28,10 @@
 #include <cstdio>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <algorithm>
+
+class HostTestHooks;
 
 namespace p25
 {
@@ -69,9 +72,11 @@ namespace p25
              * @param control Link Control Data.
              * @param lsd Low Speed Data.
              * @param duid Data Unit ID.
+             * @param inbound Flag indicating an inbound service packet received from RF.
              * @returns bool True, if data frame is processed, otherwise false.
              */
-            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd, defines::DUID::E& duid);
+            bool processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::LowSpeedData& lsd,
+                defines::DUID::E& duid, bool inbound = false);
             /** @} */
 
             /**
@@ -142,6 +147,7 @@ namespace p25
              */
             void setLastMFId(uint8_t mfId) { m_lastMFID = mfId; }
 
+
             /**
              * @brief Flag indicating whether P25 TSBK verbosity is enabled or not.
              * @returns bool Flag indicating whether TSBK verbosity is enabled.
@@ -154,11 +160,99 @@ namespace p25
             void setTSBKVerbose(bool verbose);
 
         protected:
+            friend class ::HostTestHooks;
             friend class packet::Voice;
             friend class packet::Data;
             friend class p25::Control;
-            Control* m_p25;
             friend class lookups::P25AffiliationLookup;
+
+            /**
+             * @brief Manufacturer identity retained for an asynchronous control transaction.
+             */
+            struct MFIdTransaction {
+                uint32_t srcId;                //!< Transaction source RID.
+                uint32_t dstId;                //!< Transaction destination RID.
+                uint8_t lco;                   //!< LCO which originated the transaction.
+                uint8_t mfId;                  //!< Manufacturer identity from the originating message.
+                Timer lifetime;                //!< Maximum lifetime of the retained identity.
+
+                MFIdTransaction(uint32_t src, uint32_t dst, uint8_t opcode, uint8_t manufacturer,
+                    uint32_t timeoutSeconds) :
+                    srcId(src),
+                    dstId(dst),
+                    lco(opcode),
+                    mfId(manufacturer),
+                    lifetime(1000U, timeoutSeconds)
+                {
+                    lifetime.start();
+                }
+            };
+
+            /**
+             * @brief State of a pending unit-to-unit availability transaction.
+             */
+            enum class U2UAvailabilityState : uint8_t
+            {
+                AWAITING, //!< Waiting for the called unit's initial response.
+                WAITING   //!< Called unit responded WAIT; a later final response is allowed.
+            };
+
+            /**
+             * @brief Pending unit-to-unit availability-check transaction.
+             * @ingroup host_p25
+             */
+            struct U2UAvailabilityTransaction {
+                uint32_t callerId;               //!< Original calling-unit RID.
+                uint32_t calledId;               //!< Original called-unit RID.
+                uint8_t serviceOptions;          //!< Service Options from the original UU VCH request.
+                U2UAvailabilityState state;      //!< Current answer-processing state.
+                bool originatingSite;            //!< True when this site received the original UU VCH request.
+                bool answerRequired;             //!< True when the FNE explicitly transmitted a UU ANS REQ.
+                Timer responseTimer;             //!< Response lifetime timer.
+
+                /**
+                 * @brief Initializes a pending availability-check transaction.
+                 * @param caller Original calling-unit RID.
+                 * @param called Original called-unit RID.
+                 * @param options Service Options from the request.
+                 * @param originating Flag indicating this site owns the originating transaction.
+                 * @param required Flag indicating an answer response is required to complete call setup.
+                 * @param timeoutSeconds Response lifetime in seconds.
+                 */
+                U2UAvailabilityTransaction(uint32_t caller, uint32_t called, uint8_t options, bool originating, bool required, uint32_t timeoutSeconds) :
+                    callerId(caller),
+                    calledId(called),
+                    serviceOptions(options),
+                    state(U2UAvailabilityState::AWAITING),
+                    originatingSite(originating),
+                    answerRequired(required),
+                    responseTimer(1000U, timeoutSeconds)
+                {
+                    responseTimer.start();
+                }
+            };
+
+            /**
+             * @brief Pending group-affiliation query transaction.
+             * @ingroup host_p25
+             */
+            struct GroupAffQueryTransaction {
+                uint8_t retries;                //!< Number of retransmissions already sent.
+                Timer responseTimer;            //!< TACK response timer.
+
+                /**
+                 * @brief Initializes a pending group-affiliation query transaction.
+                 * @param timeoutSeconds Response timeout in seconds.
+                 */
+                explicit GroupAffQueryTransaction(uint32_t timeoutSeconds) :
+                    retries(0U),
+                    responseTimer(1000U, timeoutSeconds)
+                {
+                    responseTimer.start();
+                }
+            };
+
+            Control* m_p25;
 
             uint32_t m_patchSuperGroup;
             uint32_t m_announcementGroup;
@@ -178,16 +272,22 @@ namespace p25
             std::unordered_map<uint8_t, SiteData> m_adjSiteTable;
             std::unordered_map<uint8_t, uint8_t> m_adjSiteUpdateCnt;
 
-            std::unordered_map<uint8_t, SiteData> m_sccbTable;
-            std::unordered_map<uint8_t, uint8_t> m_sccbUpdateCnt;
+            std::unordered_map<uint16_t, SiteData> m_sccbTable;
+            std::unordered_map<uint16_t, uint8_t> m_sccbUpdateCnt;
 
             std::unordered_map<uint32_t, ulong64_t> m_llaDemandTable;
+            std::vector<uint32_t> m_llaDeferredAuthList;
 
             uint8_t m_lastMFID;
 
             bool m_noStatusAck;
             bool m_noMessageAck;
             bool m_unitToUnitAvailCheck;
+            bool m_telephoneInterconnect;
+            std::unordered_set<uint32_t> m_telIntGrants;
+            std::unordered_map<uint64_t, U2UAvailabilityTransaction> m_u2uAvailabilityTransactions;
+            std::unordered_map<uint32_t, GroupAffQueryTransaction> m_groupAffQueryTransactions;
+            std::unordered_map<uint64_t, MFIdTransaction> m_mfIdTransactions;
 
             uint8_t m_convFallbackPacketDelay;
             bool m_convFallback;
@@ -226,12 +326,29 @@ namespace p25
             virtual ~ControlSignaling();
 
             /**
+             * @brief Updates and expires pending unit-to-unit availability transactions.
+             * @param ms Elapsed milliseconds.
+             */
+            void clock(uint32_t ms);
+
+            /**
+             * @brief Clears all pending unit-to-unit availability transactions.
+             */
+            void resetU2UAvailabilityTransactions();
+
+            /**
+             * @brief Clears all pending group-affiliation query transactions.
+             */
+            void resetGroupAffQueryTransactions();
+
+            /**
              * @brief Write data processed from RF to the network.
              * @param tsbk TSBK to write to network.
              * @param data Buffer containing encoded TSBK.
              * @param autoReset After writing TSBK to network, reset P25 network state.
+             * @param inbound Flag indicating the TSBK originated on the inbound RF path.
              */
-            void writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset);
+            void writeNetworkRF(lc::TSBK* tsbk, const uint8_t* data, bool autoReset, bool inbound = true);
             /**
              * @brief Write data processed from RF to the network.
              * @param tduLc TDULC to write to network.
@@ -321,9 +438,12 @@ namespace p25
              * @param net Flag indicating this grant is coming from network traffic.
              * @param skip Flag indicating normal grant checking is skipped.
              * @param chNo Channel Number.
+             * @param telInt Flag indicating this grant is for a telephone interconnect call to the unit in dstId.
+             * @param u2uConfirmedUnitId Participant whose presence was confirmed by a correlated U2U answer, or zero.
              * @returns True, if granted, otherwise false.
              */
-            bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, bool skip = false, uint32_t chNo = 0U);
+            bool writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp, bool net = false, 
+                bool skip = false, uint32_t chNo = 0U, bool telInt = false, uint32_t u2uConfirmedUnitId = 0U);
             /**
              * @brief Helper to write a grant update packet.
              */
@@ -333,9 +453,10 @@ namespace p25
              * @param srcId Source Radio ID.
              * @param skip Flag indicating normal grant checking is skipped.
              * @param chNo Channel Number.
+             * @param dataServiceOptions Data Service Options of the request being answered, echoed in the grant.
              * @returns True, if granted, otherwise false.
              */
-            bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip = false, uint32_t chNo = 0U);
+            bool writeRF_TSDU_SNDCP_Grant(uint32_t srcId, bool skip = false, uint32_t chNo = 0U, uint8_t dataServiceOptions = 0U);
             /**
              * @brief Helper to write a unit to unit answer request packet.
              * @param srcId Source Radio ID.
@@ -347,9 +468,17 @@ namespace p25
              * @param srcId Source Radio ID.
              * @param service Service being acknowledged.
              * @param extended Flag indicating this is an extended acknowledgement.
-             * @param noActivityLog 
+             * @param noNetwork Flag indicating the acknowledgement must not be forwarded to the network.
+             * @param refreshRegistration Flag indicating the acknowledgement confirms a valid WUID transaction.
              */
-            void writeRF_TSDU_ACK_FNE(uint32_t srcId, uint32_t service, bool extended, bool noActivityLog);
+            void writeRF_TSDU_ACK_FNE(uint32_t dstId, uint32_t service, bool extended, bool noNetwork,
+                bool refreshRegistration = true);
+
+            /**
+             * @brief Emits a group-affiliation query without changing transaction state.
+             * @param dstId Destination Radio ID.
+             */
+            void writeRF_TSDU_Grp_Aff_Q_Once(uint32_t dstId);
             /**
              * @brief Helper to write a deny packet.
              * @param srcId Source Radio ID.
@@ -421,6 +550,72 @@ namespace p25
              * @param srcId Source Radio ID.
              */
             void denialInhibit(uint32_t srcId);
+
+            /**
+             * @brief Produces the ordered key for a pending U2U request.
+             * @param callerId Original calling-unit RID.
+             * @param calledId Original called-unit RID.
+             * @returns uint64_t Ordered 48-bit request key.
+             */
+            static uint64_t u2uTransactionKey(uint32_t callerId, uint32_t calledId);
+
+            /**
+             * @brief Starts or replaces a pending U2U availability transaction.
+             * @param callerId Original calling-unit RID.
+             * @param calledId Original called-unit RID.
+             * @param serviceOptions Requested Service Options.
+             * @param originatingSite Flag indicating this site received the original request.
+             */
+            void startU2UAvailabilityTransaction(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions,
+                bool originatingSite, bool answerRequired, uint8_t mfId);
+
+            /**
+             * @brief Produces the ordered key for retained transaction MFID state.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @returns uint64_t Ordered 48-bit transaction key.
+             */
+            static uint64_t mfIdTransactionKey(uint32_t srcId, uint32_t dstId, uint8_t lco);
+            /**
+             * @brief Stores retained MFID state for a control transaction.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @param mfId MFID to remember.
+             * @param timeoutSeconds Timeout for the retained state.
+             */
+            void storeMFId(uint32_t srcId, uint32_t dstId, uint8_t lco, uint8_t mfId, uint32_t timeoutSeconds);
+            /**
+             * @brief Returns retained transaction MFID, or the supplied compatibility fallback.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @param fallback Compatibility fallback MFID.
+             * @returns uint8_t Retained MFID or the fallback.
+             */
+            uint8_t transactionMFId(uint32_t srcId, uint32_t dstId, uint8_t lco, uint8_t fallback) const;
+            /**
+             * @brief Tests whether retained MFID state exists for a control transaction.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             * @returns bool True if retained MFID state exists, false otherwise.
+             */
+            bool hasMFIdTransaction(uint32_t srcId, uint32_t dstId, uint8_t lco) const;
+            /**
+             * @brief Clears retained MFID state for one control transaction.
+             * @param srcId Source Radio ID.
+             * @param dstId Destination Radio ID.
+             * @param lco LCO which originated the transaction.
+             */
+            void clearMFId(uint32_t srcId, uint32_t dstId, uint8_t lco);
+            /**
+             * @brief Clears retained MFID state for an LCO, optionally limited to a subscriber.
+             * @param lco LCO which originated the transactions.
+             * @param subscriberId Subscriber ID to limit the clearing, or 0 for all.
+             */
+            void clearMFIds(uint8_t lco, uint32_t subscriberId = 0U);
         };
     } // namespace packet
 } // namespace p25

@@ -37,7 +37,7 @@ namespace p25
          * @brief Represents the data header for PDU P25 packets.
          * @ingroup p25_pdu
          */
-        class HOST_SW_API DataHeader {
+        class DVM_COMMON_API DataHeader {
         public:
             /**
              * @brief Initializes a copy instance of the DataHeader class.
@@ -52,6 +52,13 @@ namespace p25
              * @brief Finalizes a instance of the DataHeader class.
              */
             ~DataHeader();
+
+            /**
+             * @brief Equals operator.
+             * @param header Instance of DataHeader class to copy from.
+             * @return Reference to this instance.
+             */
+            DataHeader& operator=(const DataHeader& header);
 
             /**
              * @brief Decodes P25 PDU data header.

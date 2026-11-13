@@ -130,7 +130,7 @@ bool UDCH::decode(const uint8_t* data)
     uint8_t puncture[420U];
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_UDCH_FEC_LENGTH_BITS; i++) {
-        if (n == PUNCTURE_LIST[index]) {
+        if (index < (sizeof(PUNCTURE_LIST) / sizeof(PUNCTURE_LIST[0U])) && n == PUNCTURE_LIST[index]) {
             puncture[n++] = 1U;
             index++;
         }
@@ -207,7 +207,7 @@ void UDCH::encode(uint8_t* data) const
 
     uint32_t n = 0U, index = 0U;
     for (uint32_t i = 0U; i < NXDN_UDCH_FEC_CONV_LENGTH_BITS; i++) {
-        if (i != PUNCTURE_LIST[index]) {
+        if (index >= (sizeof(PUNCTURE_LIST) / sizeof(PUNCTURE_LIST[0U])) || i != PUNCTURE_LIST[index]) {
             bool b = READ_BIT(convolution, i);
             WRITE_BIT(puncture, n, b);
             n++;
@@ -259,5 +259,4 @@ void UDCH::copy(const UDCH& data)
     ::memcpy(m_data, data.m_data, NXDN_UDCH_CRC_LENGTH_BYTES);
 
     m_ran = data.m_ran;
-    m_ran = m_data[0U] & 0x3FU;
 }

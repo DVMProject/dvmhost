@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2022 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements SCCB - Secondary Control Channel Broadcast
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API OSP_SCCB : public TSBK {
+            class DVM_COMMON_API OSP_SCCB : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the OSP_SCCB class.
@@ -63,13 +63,29 @@ namespace p25
 
             public:
                 /**
-                 * @brief SCCB channel ID 1.
+                 * @brief RF Sub-System ID containing the secondary control channels.
                  */
-                DECLARE_PROPERTY(uint8_t, sccbChannelId1, SCCBChnId1);
+                DECLARE_PROPERTY(uint8_t, sccbRfssId, SCCBRFSSId);
                 /**
-                 * @brief SCCB channel ID 2.
+                 * @brief Site ID containing the secondary control channels.
                  */
-                DECLARE_PROPERTY(uint8_t, sccbChannelId2, SCCBChnId2);
+                DECLARE_PROPERTY(uint8_t, sccbSiteId, SCCBSiteId);
+                /**
+                 * @brief Complete implicit SCCB channel value A.
+                 */
+                DECLARE_PROPERTY(uint16_t, sccbChannelId1, SCCBChnId1);
+                /**
+                 * @brief System service class for SCCB channel A.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbServiceClass1, SCCBSvcClass1);
+                /**
+                 * @brief Complete implicit SCCB channel value B.
+                 */
+                DECLARE_PROPERTY(uint16_t, sccbChannelId2, SCCBChnId2);
+                /**
+                 * @brief System service class for SCCB channel B.
+                 */
+                DECLARE_PROPERTY(uint8_t, sccbServiceClass2, SCCBSvcClass2);
 
                 DECLARE_COPY(OSP_SCCB);
             };

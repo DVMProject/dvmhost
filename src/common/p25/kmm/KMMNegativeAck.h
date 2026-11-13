@@ -44,7 +44,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMNegativeAck : public KMMFrame {
+        /**
+         * @brief Represents a KMM negative acknowledgment (NAK).
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMNegativeAck : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMNegativeAck class.
@@ -83,7 +87,7 @@ namespace p25
             /**
              * @brief 
              */
-            DECLARE_PROPERTY(uint8_t, messageId, MessageId);
+            DECLARE_PROPERTY(uint8_t, nakMessageId, NakMessageId);
             /**
              * @brief 
              */

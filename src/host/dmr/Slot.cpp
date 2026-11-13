@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -19,7 +19,6 @@
 #include "common/Utils.h"
 #include "dmr/Slot.h"
 #include "common/dmr/acl/AccessControl.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 #include "Host.h"
 
@@ -152,7 +151,6 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_enableTSCC(false),
     m_dedicatedTSCC(false),
     m_ignoreAffiliationCheck(false),
-    m_disableNetworkGrant(false),
     m_convNetGrantDemand(false),
     m_legacyGroupReg(false),
     m_defaultNetIdleTalkgroup(0U),
@@ -161,14 +159,16 @@ Slot::Slot(uint32_t slotNo, uint32_t timeout, uint32_t tgHang, uint32_t queueSiz
     m_tsccPayloadGroup(false),
     m_tsccPayloadVoice(true),
     m_tsccPayloadActRetry(1000U, 0U, 250U),
+    m_tsccPayloadActTimeout(1000U, 15U),
+    m_tsccPayloadActRetryCount(0U),
     m_tsccAdjSSCnt(0U),
     m_disableGrantSrcIdCheck(false),
     m_lastLateEntry(0U),
-    m_supervisor(false),
     m_notifyCC(true),
     m_ccDebug(debug),
     m_verbose(verbose),
-    m_debug(debug)
+    m_debug(debug),
+    m_reverseChannelCommand(network::NET_ICC::NOP)
 {
     m_interval.start();
 
@@ -203,7 +203,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         if (m_frameLossCnt > m_frameLossThreshold) {
             m_frameLossCnt = 0U;
 
-            processFrameLoss();
+            processFrameLoss(RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD);
 
             return false;
         }
@@ -229,7 +229,9 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     }
 
     if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
-        if (m_rfLossWatchdog.isRunning()) {
+        // if RF TG hang is disabled, keep the loss watchdog alive from inbound
+        // RF frames so abrupt stream loss can still recover state.
+        if (m_rfTGHang.getTimeout() == 0U || m_rfLossWatchdog.isRunning()) {
             m_rfLossWatchdog.start();
         }
     }
@@ -289,7 +291,7 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
     if (dataSync) {
         DataType::E dataType = (DataType::E)(data[1U] & 0x0FU);
 
-        if (dataType == DataType::CSBK) {
+        if (dataType == DataType::CSBK || dataType == DataType::MBC_HEADER || dataType == DataType::MBC_DATA) {
             return m_control->process(data, len);
         }
 
@@ -395,6 +397,13 @@ uint32_t Slot::getFrame(uint8_t* data, bool* imm)
 
 void Slot::processNetwork(const data::NetData& dmrData)
 {
+    const DataType::E dataType = dmrData.getDataType();
+    Slot* tscc = s_dmr->getTSCCSlot();
+    const bool fneGrantControl = !s_authoritative && s_network != nullptr &&
+        s_network->hasGrantAuthority() && tscc != nullptr && tscc->m_enableTSCC &&
+        tscc->m_dedicatedTSCC && (dataType == DataType::CSBK ||
+        dataType == DataType::MBC_HEADER || dataType == DataType::MBC_DATA);
+
     // don't process network frames if the RF modem isn't in a listening state
     if (m_rfState != RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
         return;
@@ -424,19 +433,6 @@ void Slot::processNetwork(const data::NetData& dmrData)
         }
     }
 
-    // don't process network frames if this modem isn't authoritative
-    if (!s_authoritative && m_permittedDstId != dmrData.getDstId()) {
-        if (!g_disableNonAuthoritativeLogging)
-            LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
-        return;
-    }
-
-    m_networkWatchdog.start();
-
-    DataType::E dataType = dmrData.getDataType();
-
-    Slot* tscc = s_dmr->getTSCCSlot();
-
     bool enableTSCC = false;
     if (tscc != nullptr)
         enableTSCC = tscc->m_enableTSCC;
@@ -455,13 +451,7 @@ void Slot::processNetwork(const data::NetData& dmrData)
                 bool unitToUnit = (dmrData.getControl() & network::NET_CTRL_U2U) == network::NET_CTRL_U2U;
                 
                 if (grantDemand) {
-                    if (m_disableNetworkGrant) {
-                        break;
-                    }
-
-                    // if we're non-dedicated control, and if we're not in a listening or idle state, ignore any grant
-                    // demands
-                    if (!dedicatedTSCC && (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)) {
+                    if (s_network != nullptr && s_network->disallowUnitToUnit() && unitToUnit) {
                         break;
                     }
 
@@ -470,9 +460,17 @@ void Slot::processNetwork(const data::NetData& dmrData)
                         break;
                     }
 
-                    // validate the target ID, if the target is a talkgroup
-                    if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
-                        break;
+                    if (unitToUnit) {
+                        // validate the target subscriber for an individual call
+                        if (!acl::AccessControl::validateSrcId(dmrData.getDstId())) {
+                            break;
+                        }
+                    }
+                    else {
+                        // validate the target talkgroup for a group call
+                        if (!acl::AccessControl::validateTGId(dmrData.getSlotNo(), dmrData.getDstId())) {
+                            break;
+                        }
                     }
 
                     if (m_verbose) {
@@ -492,21 +490,28 @@ void Slot::processNetwork(const data::NetData& dmrData)
             break;
         }
 
-        // if *this slot* is the TSCC slot, stop processing after this point
-        if (m_enableTSCC && m_dedicatedTSCC)
-        {
-            if (dataType != DataType::CSBK)
+        if (dataType != DataType::CSBK && dataType != DataType::MBC_HEADER && dataType != DataType::MBC_DATA)
+            return;
+        else {
+            if (m_slotNo != s_dmr->m_tsccSlotNo)
                 return;
-            else {
-                if (m_slotNo != s_dmr->m_tsccSlotNo)
-                    return;
-            }
         }
     }
+
+    // don't process network frames if this modem isn't authoritative
+    if (!s_authoritative && !fneGrantControl && m_permittedDstId != dmrData.getDstId()) {
+        if (!g_disableNonAuthoritativeLogging)
+            LogWarning(LOG_NET, "DMR Slot %u, [NON-AUTHORITATIVE] Ignoring network traffic, destination not permitted!", m_slotNo);
+        return;
+    }
+
+    m_networkWatchdog.start();
 
     switch (dataType)
     {
     case DataType::CSBK:
+    case DataType::MBC_HEADER:
+    case DataType::MBC_DATA:
         m_control->processNetwork(dmrData);
         break;
     case DataType::VOICE_LC_HEADER:
@@ -542,12 +547,33 @@ void Slot::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
                     }
                 }
 
-                processFrameLoss();
+                processFrameLoss(RF_LOSS_TYPE_IN_CALL_CONTROL);
 
                 m_rfLastDstId = 0U;
                 m_rfLastSrcId = 0U;
                 m_rfTGHang.stop();
                 m_rfState = RS_RF_REJECTED;
+                m_reverseChannelCommand = network::NET_ICC::DMR_RC_CEASE_TRANSMIT;
+            }
+        }
+        break;
+
+    case network::NET_ICC::DMR_RC_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_REQUEST_CEASE_TRANSMIT:
+    case network::NET_ICC::DMR_RC_MAXIMUM_POWER:
+    case network::NET_ICC::DMR_RC_MINIMUM_POWER:
+    case network::NET_ICC::DMR_RC_POWER_INCREASE_ONE_STEP:
+    case network::NET_ICC::DMR_RC_POWER_DECREASE_ONE_STEP:
+        {
+            if (m_rfState == RS_RF_AUDIO && m_rfLC != nullptr && (dstId == 0U || m_rfLC->getDstId() == dstId)) {
+                m_reverseChannelCommand = command;
+
+                if (m_verbose) {
+                    LogInfoEx(LOG_DMR, "Slot %u, set DMR reverse channel command = $%02X, dstId = %u", m_slotNo, command, dstId);
+                }
+            }
+            else if (m_verbose) {
+                LogInfoEx(LOG_DMR, "Slot %u, ignored DMR reverse channel command = $%02X, no active matching RF audio call, dstId = %u", m_slotNo, command, dstId);
             }
         }
         break;
@@ -563,6 +589,42 @@ void Slot::clock()
 {
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
+
+    const auto now = std::chrono::steady_clock::now();
+
+    // clean up expired authentication transactions
+    for (auto it = m_authTransactions.begin(); it != m_authTransactions.end(); ) {
+        if (it->second.expires <= now)
+            it = m_authTransactions.erase(it);
+        else
+            ++it;
+    }
+
+    // clean up expired UDT transactions
+    for (auto it = m_udtTransactions.begin(); it != m_udtTransactions.end(); ) {
+        if (it->second.expires <= now)
+            it = m_udtTransactions.erase(it);
+        else
+            ++it;
+    }
+
+    // ETSI TS 102 361-4 6.6.1.5: abandon an individual call when its
+    // called-party availability transaction expires
+    for (auto it = m_u2uOACSUTransactions.begin(); it != m_u2uOACSUTransactions.end(); ) {
+        if (it->second.expires <= now) {
+            m_control->writeRF_CSBK_NACK_RSP(it->second.callerId,
+                ReasonCode::TS_DENY_RSN_TGT_UNAVAILABLE, ServiceKind::IND_VOICE_CALL);
+            it = m_u2uOACSUTransactions.erase(it);
+        }
+        else {
+            if (it->second.nextRetry <= now) {
+                m_control->writeRF_CSBK_AHOY(it->second.calledId,
+                    ServiceKind::IND_VOICE_CALL, it->second.callerId, false, 0U, true);
+                it->second.nextRetry = now + std::chrono::seconds(1U);
+            }
+            ++it;
+        }
+    }
 
     if (s_network != nullptr) {
         if (s_network->getStatus() == network::NET_STAT_RUNNING) {
@@ -638,6 +700,24 @@ void Slot::clock()
 
     // activate payload channel if requested from the TSCC
     if (s_dmr->m_tsccPayloadActive) {
+        if (m_tsccPayloadActTimeout.isRunning()) {
+            m_tsccPayloadActTimeout.clock(ms);
+            if (m_tsccPayloadActTimeout.hasExpired()) {
+                uint32_t dstId = m_tsccPayloadDstId;
+                LogWarning(LOG_DMR, "DMR Slot %u, payload activation expired after %u retries, dstId = %u",
+                    m_slotNo, m_tsccPayloadActRetryCount, dstId);
+
+                Slot* tscc = s_dmr->getTSCCSlot();
+                if (tscc != nullptr && tscc->m_enableTSCC && tscc->s_affiliations->isGranted(dstId)) {
+                    tscc->s_affiliations->releaseGrant(dstId, false);
+                }
+                else {
+                    notifyCC_ReleaseGrant(dstId);
+                    s_dmr->tsccClearActivatedSlot(m_slotNo);
+                }
+            }
+        }
+
         if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
             if (m_tsccPayloadDstId > 0U) {
                 if (m_tsccPayloadActRetry.isRunning()) {
@@ -645,6 +725,7 @@ void Slot::clock()
 
                     if (m_tsccPayloadActRetry.hasExpired()) {
                         m_control->writeRF_CSBK_Payload_Activate(m_tsccPayloadDstId, m_tsccPayloadSrcId, m_tsccPayloadGroup, m_tsccPayloadVoice, true);
+                        m_tsccPayloadActRetryCount++;
                         m_tsccPayloadActRetry.start(0U, 500U);
                     }
                 }
@@ -665,7 +746,7 @@ void Slot::clock()
 
     if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired()) {
         if (!m_rfTimeout) {
-            LogInfoEx(LOG_RF, "DMR Slot %u, user has timed out", m_slotNo);
+            LogInfoEx(LOG_RF, "DMR Slot %u, traffic timeout timer has expired, traffic will not transmit", m_slotNo);
             m_rfTimeout = true;
         }
     }
@@ -677,7 +758,7 @@ void Slot::clock()
             if (m_rfLossWatchdog.hasExpired()) {
                 m_rfLossWatchdog.stop();
 
-                processFrameLoss();
+                processFrameLoss(RF_LOSS_TYPE_LOSS_WATCHDOG);
             }
         }
     }
@@ -697,12 +778,17 @@ void Slot::clock()
             if (!s_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
             }
+
+            // has the talkgroup hang timer expired while the modem is in a non-listening state?
+            if (m_rfState != RS_RF_LISTENING) {
+                processFrameLoss(RF_LOSS_TYPE_TG_HANG_NOT_LISTENING);
+            }
         }
     }
 
     if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired()) {
         if (!m_netTimeout) {
-            LogInfoEx(LOG_NET, "DMR Slot %u, user has timed out", m_slotNo);
+            LogInfoEx(LOG_NET, "DMR Slot %u, traffic timeout timer has expired, traffic will not transmit", m_slotNo);
             m_netTimeout = true;
         }
     }
@@ -732,12 +818,12 @@ void Slot::clock()
             if (m_netState == RS_NET_AUDIO) {
                 // We've received the voice header haven't we?
                 m_netFrames += 1U;
-                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%",
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u network watchdog has expired, %.1f seconds, %u%% packet loss, BER: %.1f%%",
                     m_slotNo, float(m_netFrames) / 16.667F, (m_netLost * 100U) / m_netFrames, float(m_netErrs * 100U) / float(m_netBits));
                 writeEndNet(true);
             }
             else {
-                ::ActivityLog("DMR", false, "Slot %u network watchdog has expired", m_slotNo);
+                ::ActivityLogEx(LOG_DMR, false, "Slot %u network watchdog has expired", m_slotNo);
                 writeEndNet();
             }
         }
@@ -766,7 +852,7 @@ void Slot::clock()
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
         m_frameLossCnt = 0U;
     if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
-        processFrameLoss();
+        processFrameLoss(RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD);
     }
 }
 
@@ -789,6 +875,13 @@ void Slot::clockSiteData(uint32_t ms)
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 m_control->writeAdjSSNetwork();
                 if (s_network != nullptr) {
+                    // network announce our unit registration table if we have one
+                    if (s_affiliations->unitRegSize() > 0) {
+                        auto regs = s_affiliations->unitRegTable();
+                        s_network->announceUnitRegUpdate(regs);
+                    }
+
+                    // network announce our affiliation table if we have one
                     if (s_affiliations->grpAffSize() > 0) {
                         auto affs = s_affiliations->grpAffTable();
                         s_network->announceAffiliationUpdate(affs);
@@ -842,6 +935,13 @@ void Slot::permittedTG(uint32_t dstId)
     m_permittedDstId = dstId;
 }
 
+/* Determines whether this control channel currently owns grant decisions. */
+
+bool Slot::isGrantAuthoritative() const
+{
+    return s_authoritative || s_network == nullptr || !s_network->hasGrantAuthority();
+}
+
 /* Grants a TGID on a non-authoritative host. */
 
 void Slot::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
@@ -854,7 +954,7 @@ void Slot::grantTG(uint32_t srcId, uint32_t dstId, bool grp)
         LogInfoEx(LOG_DMR, "DMR Slot %u, network TG grant demand, srcId = %u, dstId = %u", m_slotNo, srcId, dstId);
     }
 
-    m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp);
+    m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp, true);
 }
 
 /* Releases a granted TG. */
@@ -901,6 +1001,56 @@ void Slot::touchGrantTG(uint32_t dstId)
 
         s_affiliations->touchGrant(dstId);
     }
+}
+
+/* Reissues a missing grant for traffic beginning on a retained payload channel. */
+
+bool Slot::ensureTSCCPayloadGrant(uint32_t srcId, uint32_t dstId, bool grp)
+{
+    Slot* tscc = s_dmr->getTSCCSlot();
+    if (tscc == this)
+        return true;
+
+    // A normal RAND/grant activation already identifies this payload call.
+    // Only synthesize the grant when the subscriber re-keys directly on the
+    // retained traffic channel without returning to the TSCC.
+    if (m_tsccPayloadDstId != 0U)
+        return true;
+
+    bool granted = false;
+    if (tscc != nullptr && tscc->m_enableTSCC) {
+        granted = tscc->m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, grp,
+            true, false, s_channelNo, (uint8_t)m_slotNo);
+    }
+    else if (m_notifyCC && !s_controlChData.address().empty() && s_controlChData.port() != 0U) {
+        json::object req = json::object();
+        req["dstId"].set<uint32_t>(dstId);
+        req["srcId"].set<uint32_t>(srcId);
+        uint8_t slot = (uint8_t)m_slotNo;
+        req["slot"].set<uint8_t>(slot);
+        req["group"].set<bool>(grp);
+        req["chNo"].set<uint32_t>(s_channelNo);
+
+        bool rpcAccepted = false;
+        bool sent = g_RPC->req(RPC_TOUCH_DMR_TG, req,
+            [=, &rpcAccepted](json::object& req, json::object& reply) {
+                (void)reply;
+                rpcAccepted = req["status"].is<int>() &&
+                    req["status"].get<int>() == network::NetRPC::OK;
+            }, s_controlChData.address(), s_controlChData.port(), true);
+        granted = sent && rpcAccepted;
+    }
+    else {
+        // Conventional/non-trunked operation has no TSCC grant to maintain.
+        return true;
+    }
+
+    if (!granted) {
+        LogWarning(LOG_RF, "DMR Slot %u, unable to reissue missing payload grant, srcId = %u, dstId = %u",
+            m_slotNo, srcId, dstId);
+    }
+
+    return granted;
 }
 
 /* Clears the current operating RF state back to idle. */
@@ -961,7 +1111,9 @@ void Slot::setTSCCActivated(uint32_t dstId, uint32_t srcId, bool group, bool voi
     }
 
     if (m_tsccPayloadDstId != 0U && !m_tsccPayloadActRetry.isRunning()) {
+        m_tsccPayloadActRetryCount = 0U;
         m_tsccPayloadActRetry.start();
+        m_tsccPayloadActTimeout.start();
     }
 }
 
@@ -1032,6 +1184,12 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
 
     // set the grant release callback
     s_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
+        const bool networkGrant = s_affiliations->isNetGranted(dstId);
+        const bool unitToUnit = !s_affiliations->isGroup(dstId);
+        if (!s_authoritative && networkGrant && s_network != nullptr) {
+            s_network->writeGrantRelease(modem::DVM_STATE::STATE_DMR, srcId, dstId, slot, unitToUnit);
+        }
+
         Slot* tscc = s_dmr->getTSCCSlot();
         if (tscc != nullptr) {
             if (chNo == tscc->s_channelNo) {
@@ -1052,19 +1210,17 @@ void Slot::init(Control* dmr, bool authoritative, uint32_t colorCode, SiteData s
                 ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear payload channel, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
             }
 
-            // callback REST API to clear TG permit for the granted TG on the specified voice channel
-            if (s_authoritative && s_dmr->m_supervisor) {
-                if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
-                    json::object req = json::object();
-                    dstId = 0U; // clear TG value
-                    req["dstId"].set<uint32_t>(dstId);
-                    req["slot"].set<uint8_t>(slot);
+            // clear the TG permit on the selected remote voice channel
+            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0) {
+                json::object req = json::object();
+                dstId = 0U; // clear TG value
+                req["dstId"].set<uint32_t>(dstId);
+                req["slot"].set<uint8_t>(slot);
 
-                    g_RPC->req(RPC_PERMIT_DMR_TG, req, nullptr, voiceChData.address(), voiceChData.port());
-                }
-                else {
-                    ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
-                }
+                g_RPC->req(RPC_PERMIT_DMR_TG, req, nullptr, voiceChData.address(), voiceChData.port());
+            }
+            else {
+                ::LogError(LOG_DMR, "DMR Slot %u, CSBK, RAND (Random Access), failed to clear TG permit, chNo = %u, slot = %u", tscc->m_slotNo, chNo, slot);
             }
         }
     });
@@ -1195,20 +1351,40 @@ void Slot::addFrame(const uint8_t *data, bool net, bool imm)
 
 /* Helper to process loss of frame stream from modem. */
 
-void Slot::processFrameLoss()
+void Slot::processFrameLoss(RPT_RF_LOSS_TYPE type)
 {
+    // resolve the type of RF frame loss into a human-readable string
+    std::string typeStr;
+    switch (type) {
+    case RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD:
+        typeStr = "exceeded frame loss threshold";
+        break;
+    case RF_LOSS_TYPE_LOSS_WATCHDOG:
+        typeStr = "loss watchdog timeout";
+        break;
+    case RF_LOSS_TYPE_IN_CALL_CONTROL:
+        typeStr = "in-call control request";
+        break;
+    case RF_LOSS_TYPE_TG_HANG_NOT_LISTENING:
+        typeStr = "TG hang, RF not listening";
+        break;
+    default:
+        typeStr = "no loss type set BUGBUG";
+        break;
+    }
+
     if (m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
-                m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice transmission lost, %s, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
+                m_slotNo, typeStr.c_str(), float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
         }
         else {
-            ::ActivityLog("DMR", true, "Slot %u RF voice transmission lost, %.1f seconds, BER: %.1f%%, loss count: %u",
-                m_slotNo, float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_frameLossCnt);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice transmission lost, %s, %.1f seconds, BER: %.1f%%, loss count: %u",
+                m_slotNo, typeStr.c_str(), float(m_rfFrames) / 16.667F, float(m_rfErrs * 100U) / float(m_rfBits), m_frameLossCnt);
         }
 
-        LogInfoEx(LOG_RF, "DMR Slot %u, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
-            m_slotNo, m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
+        LogInfoEx(LOG_RF, "DMR Slot %u, transmission lost, %s, total frames: %d, total bits: %d, errors: %d, BER: %.4f%%",
+            m_slotNo, typeStr.c_str(), m_rfFrames, m_rfBits, m_rfErrs, float(m_rfErrs * 100U) / float(m_rfBits));
 
         // release trunked grant (if necessary)
         Slot* tscc = s_dmr->getTSCCSlot();
@@ -1217,11 +1393,15 @@ void Slot::processFrameLoss()
                 tscc->s_affiliations->releaseGrant(m_rfLC->getDstId(), false);
             }
             
-            clearTSCCActivated();
+            s_dmr->tsccClearActivatedSlot(m_slotNo);
 
             if (!tscc->m_enableTSCC) {
                 notifyCC_ReleaseGrant(m_rfLC->getDstId());
             }
+        }
+        else if (m_rfLC != nullptr) {
+            notifyCC_ReleaseGrant(m_rfLC->getDstId());
+            s_dmr->tsccClearActivatedSlot(m_slotNo);
         }
 
         if (m_rfTimeout) {
@@ -1233,7 +1413,7 @@ void Slot::processFrameLoss()
     }
 
     if (m_rfState == RS_RF_DATA) {
-        ::ActivityLog("DMR", true, "Slot %u, RF data transmission lost", m_slotNo);
+        ::ActivityLogEx(LOG_DMR, true, "Slot %u, RF data transmission lost", m_slotNo);
         writeEndRF();
     }
 
@@ -1241,6 +1421,9 @@ void Slot::processFrameLoss()
 
     m_rfLastDstId = 0U;
     m_rfTGHang.stop();
+    m_rfLossWatchdog.stop();
+
+    m_txQueue.clear();
 }
 
 /* Helper to send a REST API request to the CC to release a channel grant at the end of a call. */
@@ -1358,6 +1541,9 @@ void Slot::writeNetwork(const uint8_t* data, DataType::E dataType, FLCO::E flco,
     if (s_network == nullptr)
         return;
 
+    if (s_network->disallowUnitToUnit() && flco == FLCO::PRIVATE)
+        return;
+
     data::NetData dmrData;
     dmrData.setSlotNo(m_slotNo);
     dmrData.setDataType(dataType);
@@ -1473,7 +1659,7 @@ void Slot::writeEndNet(bool writeEnd)
             tscc->s_affiliations->releaseGrant(m_netLC->getDstId(), false);
         }
 
-        clearTSCCActivated();
+        s_dmr->tsccClearActivatedSlot(m_slotNo);
 
         if (!tscc->m_enableTSCC) {
             notifyCC_ReleaseGrant(m_netLC->getDstId());
@@ -1645,6 +1831,213 @@ void Slot::clearTSCCActivated()
     m_tsccPayloadVoice = true;
 
     m_tsccPayloadActRetry.stop();
+    m_tsccPayloadActTimeout.stop();
+    m_tsccPayloadActRetryCount = 0U;
+}
+
+/* Stops payload activation timers after traffic has arrived. */
+
+void Slot::confirmTSCCPayloadActive()
+{
+    m_tsccPayloadActRetry.stop();
+    m_tsccPayloadActTimeout.stop();
+    m_tsccPayloadActRetryCount = 0U;
+}
+
+/* Starts registration authentication using a key requested by the root controller. */
+
+void Slot::beginRegistrationAuth(uint32_t srcId, uint8_t serviceOptions)
+{
+    AuthTransaction& transaction = m_authTransactions[srcId];
+    transaction.serviceOptions = serviceOptions;
+    transaction.challengeSent = false;
+    transaction.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+    m_control->writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_WAIT_RSN, 0U);
+    if (s_network == nullptr || !s_network->writeLLAKeyReq(srcId)) {
+        m_authTransactions.erase(srcId);
+        m_control->writeRF_CSBK_NACK_RSP(srcId, ReasonCode::TS_DENY_RSN_REG_DENIED, ServiceKind::REG_SVC);
+    }
+}
+
+/* Validates an authentication response and completes the pending registration. */
+
+bool Slot::processRegistrationAuthResponse(uint32_t srcId, uint32_t response)
+{
+    auto it = m_authTransactions.find(srcId);
+    if (it == m_authTransactions.end() || !it->second.challengeSent)
+        return false;
+
+    uint32_t difference = (it->second.expectedResponse ^ response) & 0xFFFFFFU;
+    uint8_t serviceOptions = it->second.serviceOptions;
+    m_authTransactions.erase(it);
+
+    if (difference == 0U)
+        m_control->writeRF_CSBK_U_Reg_Rsp(srcId, serviceOptions);
+    else
+        m_control->writeRF_CSBK_NACK_RSP(srcId, ReasonCode::TS_DENY_RSN_REG_DENIED, ServiceKind::REG_SVC);
+    return true;
+}
+
+/* Starts a TSCC-local Unified Data Transport transaction. */
+
+void Slot::beginUDT(uint32_t srcId, uint32_t dstId, uint8_t serviceKind)
+{
+    bool group = serviceKind == ServiceKind::GRP_UDT_DATA_CALL;
+    m_udtTransactions[srcId] = { dstId, group, serviceKind, std::chrono::steady_clock::now() + std::chrono::seconds(30) };
+
+    m_control->writeRF_CSBK_AHOY(srcId, serviceKind, WUID_SDMI, group, 0U);
+}
+
+/* Validates an inbound UDT upload and converts its header for delivery. */
+
+bool Slot::prepareUDTHeader(data::DataHeader& header)
+{
+    // look for the UDT transaction corresponding to the source ID in the header
+    auto it = m_udtTransactions.find(header.getSrcId());
+    if (it == m_udtTransactions.end() || header.getDstId() != WUID_SDMI || header.getUDTO() != 0x1BU)
+        return false;
+
+    header.setDstId(it->second.target);
+    header.setSrcId(WUID_SDMI);
+    header.setGI(it->second.group);
+    header.setA(!it->second.group);
+    header.setUDTO(0x1AU);
+    it->second.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+    return true;
+}
+
+/* Completes an upload or waits for the individual recipient acknowledgement. */
+
+void Slot::completeUDT(uint32_t srcId)
+{
+    // look for the UDT transaction corresponding to the given source ID
+    auto it = m_udtTransactions.find(srcId);
+    if (it == m_udtTransactions.end())
+        return;
+
+    // if the transaction is a group transaction, complete it and send an acknowledgement
+    if (it->second.group) {
+        m_udtTransactions.erase(it);
+
+        m_control->writeRF_CSBK_ACK_RSP(srcId, ReasonCode::TS_ACK_RSN_MSG, 1U);
+    } else {
+        it->second.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    }
+}
+
+/* Mirrors an individual recipient acknowledgement to the originating unit. */
+
+bool Slot::processUDTAcknowledgement(uint32_t targetId)
+{
+    // look for a non-group UDT transaction matching the target ID
+    for (auto it = m_udtTransactions.begin(); it != m_udtTransactions.end(); ++it) {
+        if (!it->second.group && it->second.target == targetId) {
+            uint32_t caller = it->first;
+            m_udtTransactions.erase(it);
+
+            m_control->writeRF_CSBK_ACK_RSP(caller, ReasonCode::TS_ACK_RSN_MSG, 0U);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/* Starts a Tier III OACSU individual voice availability check. */
+
+bool Slot::beginU2UOACSU(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions)
+{
+    constexpr uint32_t OACSU_TIMEOUT_SECONDS = 10U;
+    constexpr uint32_t OACSU_RETRY_SECONDS = 1U;
+
+    const auto now = std::chrono::steady_clock::now();
+
+    // check if there is an existing U2U OACSU transaction for the called party 
+    auto calledIt = m_u2uOACSUTransactions.find(calledId);
+    if (calledIt != m_u2uOACSUTransactions.end() && calledIt->second.callerId != callerId) {
+        m_control->writeRF_CSBK_NACK_RSP(callerId,
+            ReasonCode::TS_DENY_RSN_TGT_BUSY, ServiceKind::IND_VOICE_CALL);
+        return false;
+    }
+
+    // if there is an existing transaction for the called party, send a wait response and an ahoy to the called party
+    if (calledIt != m_u2uOACSUTransactions.end()) {
+        m_control->writeRF_CSBK_ACK_RSP(callerId, ReasonCode::TS_WAIT_RSN, 0U);
+        m_control->writeRF_CSBK_AHOY(calledId, ServiceKind::IND_VOICE_CALL,
+            callerId, false, 0U, true);
+        return true;
+    }
+
+    // check if the caller has any existing U2U OACSU transactions with other called parties
+    for (const auto& transaction : m_u2uOACSUTransactions) {
+        if (transaction.second.callerId == callerId && transaction.second.calledId != calledId) {
+            m_control->writeRF_CSBK_NACK_RSP(callerId,
+                ReasonCode::TS_DENY_RSN_SYS_BUSY, ServiceKind::IND_VOICE_CALL);
+            return false;
+        }
+    }
+
+    // create a new U2U OACSU transaction for the called party
+    m_u2uOACSUTransactions[calledId] = {
+        callerId,
+        calledId,
+        serviceOptions,
+        now + std::chrono::seconds(OACSU_RETRY_SECONDS),
+        now + std::chrono::seconds(OACSU_TIMEOUT_SECONDS)
+    };
+
+    m_control->writeRF_CSBK_ACK_RSP(callerId, ReasonCode::TS_WAIT_RSN, 0U);
+    m_control->writeRF_CSBK_AHOY(calledId, ServiceKind::IND_VOICE_CALL,
+        callerId, false, 0U, true);
+    return true;
+}
+
+/* Completes a Tier III OACSU individual voice availability check. */
+
+bool Slot::processU2UOACSUResponse(uint32_t calledId, uint32_t callerId, bool accepted)
+{
+    // find the U2U OACSU transaction for the called party
+    auto it = m_u2uOACSUTransactions.find(calledId);
+    if (it == m_u2uOACSUTransactions.end() || it->second.callerId != callerId)
+        return false;
+
+    const U2UOACSUTransaction transaction = it->second;
+
+    // process the response for the U2U OACSU transaction
+    if (accepted) {
+        if (!m_control->writeRF_CSBK_Grant(transaction.callerId, transaction.calledId,
+                transaction.serviceOptions, false, false, false, 0U, 0U, true)) {
+            m_u2uOACSUTransactions.erase(it);
+            return true;
+        }
+    }
+    else {
+        m_control->writeRF_CSBK_NACK_RSP(transaction.callerId,
+            ReasonCode::TS_DENY_RSN_TGT_UNAVAILABLE, ServiceKind::IND_VOICE_CALL);
+    }
+
+    m_u2uOACSUTransactions.erase(it);
+
+    return true;
+}
+
+/* Cancels a pending Tier III OACSU individual voice availability check. */
+
+bool Slot::cancelU2UOACSU(uint32_t callerId)
+{
+    // cancel any pending U2U OACSU transactions for the caller
+    for (auto it = m_u2uOACSUTransactions.begin(); it != m_u2uOACSUTransactions.end(); ++it) {
+        if (it->second.callerId == callerId) {
+            m_control->writeRF_CSBK_AHOY(it->second.calledId, ServiceKind::CANCEL_CALL, callerId, false, 0U, true);
+            m_u2uOACSUTransactions.erase(it);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* Helper to set the DMR short LC. */

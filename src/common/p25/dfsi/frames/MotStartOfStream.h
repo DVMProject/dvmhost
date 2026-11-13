@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Patrick McDonnell, W3AXL
+ *  Copyright (C) 2024 P. McDonnell, W3AXL
  *  Copyright (C) 2024-2025 Bryan Biedenkapp, N2PLL
  *
  */
@@ -48,7 +48,7 @@ namespace p25
              * \endcode
              * @ingroup dfsi_frames
              */
-            class HOST_SW_API MotStartOfStream {
+            class DVM_COMMON_API MotStartOfStream {
             public:
                 /**
                  * @brief Initializes a copy instance of the MotStartOfStream class.

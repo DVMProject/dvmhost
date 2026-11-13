@@ -26,7 +26,9 @@ TEST_CASE("RS24169 preserves all-zero payload", "[edac][rs24169]") {
     rs.encode24169(data);
     Utils::dump(2U, "encode24169()", data, 24U);
 
-    REQUIRE(rs.decode24169(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode24169(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 16 bytes should be zero (data portion)
     for (size_t i = 0; i < 12U; i++) {
@@ -42,7 +44,9 @@ TEST_CASE("RS24169 preserves all-ones payload", "[edac][rs24169]") {
     rs.encode24169(data);
     Utils::dump(2U, "encode24169()", data, 24U);
 
-    REQUIRE(rs.decode24169(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode24169(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 16 bytes should be 0xFF
     for (size_t i = 0; i < 12U; i++) {
@@ -64,7 +68,9 @@ TEST_CASE("RS24169 preserves alternating pattern", "[edac][rs24169]") {
     rs.encode24169(data);
     Utils::dump(2U, "encode24169()", data, 24U);
 
-    REQUIRE(rs.decode24169(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode24169(data, &errs));
+    REQUIRE(errs == 0);
 
     REQUIRE(::memcmp(data, original, 12U) == 0);
 }
@@ -83,7 +89,9 @@ TEST_CASE("RS24169 preserves incrementing pattern", "[edac][rs24169]") {
     rs.encode24169(data);
     Utils::dump(2U, "encode24169()", data, 24U);
 
-    REQUIRE(rs.decode24169(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode24169(data, &errs));
+    REQUIRE(errs == 0);
 
     REQUIRE(::memcmp(data, original, 12U) == 0);
 }
@@ -110,12 +118,13 @@ TEST_CASE("RS24169 corrects single-byte errors", "[edac][rs24169]") {
         corrupted[pos] ^= 0xFFU;
 
         RS634717 rsDec;
-        bool decoded = rsDec.decode24169(corrupted);
+        int8_t errs = -1;
+        bool decoded = rsDec.decode24169(corrupted, &errs);
 
         // RS(24,16,9) can correct up to 4 symbol errors
-        if (decoded) {
-            REQUIRE(::memcmp(corrupted, original, 12U) == 0);
-        }
+        REQUIRE(decoded);
+        REQUIRE(errs >= 0);
+        REQUIRE(::memcmp(corrupted, original, 12U) == 0);
     }
 }
 
@@ -138,6 +147,8 @@ TEST_CASE("RS24169 detects uncorrectable errors", "[edac][rs24169]") {
         data[i] ^= 0xFFU;
     }
 
-    bool result = rs.decode24169(data);
-    REQUIRE(!result);
+    int8_t errs = -1;
+    bool result = rs.decode24169(data, &errs);
+    REQUIRE_FALSE(result);
+    REQUIRE(errs == -1);
 }
