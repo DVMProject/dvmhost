@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB common_SRC
+file(GLOB common_SRC CONFIGURE_DEPENDS
     # DMR module
     "src/common/dmr/*.cpp"
     "src/common/dmr/acl/*.cpp"
@@ -60,7 +60,7 @@ file(GLOB common_SRC
     "src/common/*.cpp"
 )
 
-file(GLOB common_INCLUDE
+file(GLOB common_INCLUDE CONFIGURE_DEPENDS
     # DMR module
     "src/common/dmr/*.h"
     "src/common/dmr/acl/*.h"

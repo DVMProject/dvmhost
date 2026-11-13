@@ -8,7 +8,7 @@
 # *  Copyright (C) 2022 Natalie Moore
 # *
 # */
-file(GLOB dvmhost_SRC
+file(GLOB dvmhost_SRC CONFIGURE_DEPENDS
     # DMR module
     "src/host/dmr/*.h"
     "src/host/dmr/*.cpp"

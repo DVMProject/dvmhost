@@ -7,13 +7,13 @@
 # *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB vocoder_SRC
+file(GLOB vocoder_SRC CONFIGURE_DEPENDS
     "src/vocoder/imbe/*.cpp"
     "src/vocoder/*.cpp"
     "src/vocoder/*.c"
 )
 
-file(GLOB vocoder_INCLUDE
+file(GLOB vocoder_INCLUDE CONFIGURE_DEPENDS
     "src/vocoder/imbe/*.h"
     "src/vocoder/*.h"
 )

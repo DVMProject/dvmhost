@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB dvmfne_SRC
+file(GLOB dvmfne_SRC CONFIGURE_DEPENDS
     "src/fne/lookups/*.h"
     "src/fne/lookups/*.cpp"
     "src/fne/network/callhandler/*.h"

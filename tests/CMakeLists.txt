@@ -8,7 +8,7 @@
 # *  Copyright (C) 2022 Natalie Moore
 # *
 # */
-file(GLOB dvmtests_SRC
+file(GLOB dvmtests_SRC CONFIGURE_DEPENDS
     "tests/*.h"
     "tests/*.cpp"
     "tests/crypto/*.cpp"
