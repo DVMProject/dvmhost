@@ -11,6 +11,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
 #include <vector>
 
 using namespace network;
@@ -81,4 +82,27 @@ TEST_CASE("FNE subscriber operations return recent history newest first", "[fne]
     CHECK(operations[0U].id == thirdId);
     CHECK(operations[1U].id == secondId);
     CHECK(store.getLast(0U).empty());
+}
+
+TEST_CASE("FNE subscriber one-shot operations suppress retained duplicates", "[fne][subscriber-operations]")
+{
+    SubscriberOperationStore store;
+    const uint32_t targetId = 0x2345U;
+    const uint64_t operationId = store.oneShot(SubscriberOperationStore::Protocol::NXDN,
+        SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U);
+
+    REQUIRE(operationId != 0U);
+    CHECK(store.oneShot(SubscriberOperationStore::Protocol::NXDN,
+              SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U) == 0U);
+    CHECK(store.oneShot(SubscriberOperationStore::Protocol::NXDN,
+              SubscriberOperationStore::Kind::EMERG_CALL, targetId, 43U) == 0U);
+    CHECK(store.oneShot(SubscriberOperationStore::Protocol::DMR,
+              SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U) != 0U);
+
+    SubscriberOperationStore::Operation operation;
+    REQUIRE(store.get(operationId, operation));
+    CHECK(operation.state == SubscriberOperationStore::State::SUCCEEDED);
+    CHECK(operation.completedAt == operation.createdAt);
+    CHECK(std::string(SubscriberOperationStore::protocolName(operation.protocol)) == "nxdn");
+    CHECK(std::string(SubscriberOperationStore::kindName(operation.kind)) == "emerg-call");
 }

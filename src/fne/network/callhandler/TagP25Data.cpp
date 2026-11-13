@@ -201,6 +201,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
             LogWarning(LOG_NET, (duid == DUID::LDU1) ? P25_LDU1_STR : P25_LDU2_STR ", missing %u LDU voice frames, srcId = %u, dstId = %u", missing, srcId, dstId);
         }
 
+        if (duid == DUID::LDU1) {
+            control.setEmergency(dfsiLC.control()->getEmergency());
+        }
+
         // if its a LDU2 get the crypto state
         if (duid == DUID::LDU2) {
             control.setAlgId(dfsiLC.control()->getAlgId());
@@ -586,6 +590,11 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     m_status[dstId].ssrc = ssrc;
                     m_status[dstId].activeCall = true;
                     m_status.unlock();
+
+                    if (control.getEmergency()) {
+                        m_network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::EMERG_CALL, srcId, peerId);
+                    }
 
                     // clear any rejected call streams for this TG
                     m_rejectedCallStreams.lock(false);
@@ -1478,6 +1487,13 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                             SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
                         return false;
                     }
+                }
+                break;
+            case TSBKO::ISP_EMERG_ALRM_REQ:
+                {
+                    lc::tsbk::ISP_EMERG_ALRM_REQ* isp = static_cast<lc::tsbk::ISP_EMERG_ALRM_REQ*>(tsbk.get());
+                    m_network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::P25,
+                        SubscriberOperationStore::Kind::EMERG_ALRM, isp->getSrcId(), peerId);
                 }
                 break;
             case TSBKO::IOSP_UU_VCH:

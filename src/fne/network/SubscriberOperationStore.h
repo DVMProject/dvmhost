@@ -42,7 +42,8 @@ namespace network
          */
         enum class Protocol : uint8_t {
             DMR = 0U,               //!< Digital Mobile Radio.
-            P25 = 1U                //!< Project 25.
+            P25 = 1U,               //!< Project 25.
+            NXDN = 2U               //!< Next Generation Digital Narrowband.
         };
 
         /**
@@ -58,7 +59,10 @@ namespace network
 
             KMM_REKEY = 5U,         //!< Key management rekey request.
             KMM_CHANGEOVER = 6U,    //!< Key management changeover request.
-            KMM_CHANGERSI = 7U      //!< Key management change RSI request.
+            KMM_CHANGERSI = 7U,     //!< Key management change RSI request.
+
+            EMERG_ALRM = 8U,        //!< Emergency alarm request.
+            EMERG_CALL = 9U         //!< Emergency voice call.
         };
 
         /**
@@ -129,6 +133,17 @@ namespace network
          */
         bool complete(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId,
             uint16_t resultValue = 0U, bool success = true);
+
+        /**
+         * @brief Adds a uniquely correlatable one-shot operation.
+         * @param[in] protocol Air-interface protocol.
+         * @param[in] kind Operation kind.
+         * @param[in] targetId Target subscriber ID.
+         * @param[in] peerId Requested peer ID, or zero for routed fanout.
+         * @param[in] requestValue Optional requested value.
+         * @returns Operation identifier, or zero when an equivalent request is already pending.
+         */
+        uint64_t oneShot(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint16_t requestValue = 0U);
 
         /**
          * @brief Adds a status report and completes a matching P25 status query.

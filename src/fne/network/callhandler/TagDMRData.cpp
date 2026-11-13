@@ -145,6 +145,12 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         csbk = lc::csbk::CSBKFactory::createCSBK(frame, dataType);
     }
 
+    std::unique_ptr<lc::LC> voiceLC;
+    if (dataSync && dataType == DataType::VOICE_LC_HEADER) {
+        lc::FullLC fullLC;
+        voiceLC = fullLC.decode(frame, dataType);
+    }
+
     // perform TGID route rewrites if configured
     routeRewrite(buffer, peerId, dmrData, dataType, dstId, slotNo, false);
     dstId = GET_UINT24(buffer, 8U);
@@ -478,6 +484,11 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                 m_status[dstId].ssrc = ssrc;
                 m_status[dstId].activeCall = true;
                 m_status.unlock();
+
+                if (voiceLC != nullptr && voiceLC->getEmergency()) {
+                    m_network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::DMR,
+                        SubscriberOperationStore::Kind::EMERG_CALL, srcId, peerId);
+                }
 
                 // clear any rejected call streams for this TG
                 m_rejectedCallStreams.lock(false);

@@ -497,6 +497,11 @@ bool TagNXDNData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerI
                     m_status[dstId].activeCall = true;
                     m_status.unlock();
 
+                    if (lc.getEmergency()) {
+                        m_network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::NXDN,
+                            SubscriberOperationStore::Kind::EMERG_CALL, srcId, peerId);
+                    }
+
                     // clear any rejected call streams for this TG
                     m_rejectedCallStreams.lock(false);
                     m_rejectedCallStreams[dstId].clear();
