@@ -72,10 +72,16 @@ int base64Decode(char* b64message, uint8_t** buffer)
     int decodeLen = calcDecodeLength(b64message), len = 0;
     
     *buffer = (uint8_t*)malloc(decodeLen + 1);
+
+#if defined(_WIN32)
+    BIO* b64 = BIO_new(BIO_f_base64());
+    BIO* bio = BIO_new_mem_buf(b64message, (int)::strlen(b64message));
+#else
     FILE* stream = ::fmemopen(b64message, ::strlen(b64message), "r");
-  
+
     BIO* b64 = BIO_new(BIO_f_base64());
     BIO* bio = BIO_new_fp(stream, BIO_NOCLOSE);
+#endif // defined(_WIN32)
     bio = BIO_push(b64, bio);
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // do not use newlines to flush buffer
     len = BIO_read(bio, *buffer, ::strlen(b64message));
@@ -84,7 +90,9 @@ int base64Decode(char* b64message, uint8_t** buffer)
     (*buffer)[len] = '\0';
   
     BIO_free_all(bio);
+#if !defined(_WIN32)
     ::fclose(stream);
+#endif // !defined(_WIN32)
 
     return decodeLen;
 }

@@ -25,7 +25,11 @@
 #include <cassert>
 #include <cstring>
 
+#if !defined(_WIN32)
 #include <fcntl.h>
+#else
+#include <winsock2.h>
+#endif // !defined(_WIN32)
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -67,6 +71,7 @@ namespace network
 
                 initSsl(sslCtx);
 
+#if !defined(_WIN32)
                 // setup socket for non-blocking operations
                 int flags = fcntl(fd, F_GETFL, 0);
                 if (flags < 0) {
@@ -78,6 +83,15 @@ namespace network
                     LogError(LOG_NET, "failed fcntl(F_SETFL), err: %d (%s)", errno, strerror(errno));
                     throw std::runtime_error("Cannot accept SSL client");
                 }
+#else
+                // setup socket for non-blocking operations
+                u_long mode = 1;
+                if (ioctlsocket(fd, FIONBIO, &mode) != NO_ERROR) {
+                    int err = WSAGetLastError();
+                    LogError(LOG_NET, "failed ioctlsocket(FIONBIO), err: %d", err);
+                    throw std::runtime_error("Cannot accept SSL client");
+                }
+#endif // !defined(_WIN32)
 
                 int status = -1;
                 struct timeval tv, tvRestore;
@@ -135,6 +149,7 @@ namespace network
                     }
                 } while (status == 1 && !SSL_is_init_finished(m_pSSL));
 
+#if !defined(_WIN32)
                 // reset socket blocking operations
                 if (!nonBlocking) {
                     flags = fcntl(fd, F_GETFL, 0);
@@ -148,6 +163,17 @@ namespace network
                         throw std::runtime_error("Cannot accept SSL client");
                     }
                 }
+#else
+                // reset socket blocking operations
+                if (!nonBlocking) {
+                    u_long mode = 0; // 0 = blocking, 1 = non-blocking
+                    if (ioctlsocket(fd, FIONBIO, &mode) != NO_ERROR) {
+                        int err = WSAGetLastError();
+                        LogError(LOG_NET, "failed ioctlsocket(FIONBIO), err: %d", err);
+                        throw std::runtime_error("Cannot accept SSL client");
+                    }
+                }
+#endif // !defined(_WIN32)
             }
             /**
              * @brief Initializes a new instance of the SecureTcpClient class.
@@ -184,7 +210,8 @@ namespace network
                     LogError(LOG_NET, "Failed to connect to server, %s err: %d", ERR_error_string(ERR_get_error(), NULL), errno);
                     throw std::runtime_error("Failed to SSL connect to server");
                 }
-            
+
+#if !defined(_WIN32)
                 // setup socket for non-blocking operations
                 if (nonBlocking) {
                     int flags = fcntl(m_fd, F_GETFL, 0);
@@ -198,6 +225,17 @@ namespace network
                         throw std::runtime_error("Failed to set SSL server connection to non-blocking");
                     }
                 }
+#else
+                // setup socket for non-blocking operations
+                if (nonBlocking) {
+                    u_long mode = 1;
+                    if (ioctlsocket(m_fd, FIONBIO, &mode) != NO_ERROR) {
+                        int err = WSAGetLastError();
+                        LogError(LOG_NET, "failed ioctlsocket(FIONBIO), err: %d", err);
+                        throw std::runtime_error("Cannot accept SSL client");
+                    }
+                }
+#endif // !defined(_WIN32)
             }
             /**
              * @brief Finalizes a instance of the SecureTcpClient class.

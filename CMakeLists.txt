@@ -58,6 +58,13 @@ if (COMPILE_WIN32)
     # No TUI for this
     set(ENABLE_TUI_SUPPORT OFF)
     message(CHECK_START "Enable TUI support - no; for simplicity WIN32 does not support TUI.")
+
+    # Automatically use vcpkg if VCPKG_ROOT is set in the environment
+    if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND NOT Z_VCPKG_TOOLCHAIN_LOADED)
+        if(DEFINED ENV{VCPKG_ROOT})
+            set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "vcpkg toolchain file")
+        endif()
+    endif()
 else()
     set(CMAKE_C_COMPILER /usr/bin/gcc CACHE STRING "C compiler")
     set(CMAKE_CXX_COMPILER /usr/bin/g++ CACHE STRING "C++ compiler")
@@ -158,11 +165,13 @@ if (COMPILE_WIN32)
     set(CMAKE_CXX_FLAGS "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
     set(CMAKE_C_FLAGS_RELEASE "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
     set(CMAKE_CXX_FLAGS_RELEASE "/EHsc /D_WIN32 /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
+else()
+    message(STATUS "GCC version ${CMAKE_CXX_COMPILER_VERSION}")
 endif (COMPILE_WIN32)
 
-message(STATUS "GCC version ${CMAKE_CXX_COMPILER_VERSION}")
-
 set(CMAKE_INSTALL_PREFIX "/usr/local")
+
+project(dvm)
 
 #
 # Library Inclusions
@@ -258,7 +267,6 @@ execute_process(COMMAND git describe --abbrev=8 --always WORKING_DIRECTORY ${CMA
 add_definitions(-D__GIT_VER__="${GIT_VER}")
 add_definitions(-D__GIT_VER_HASH__="${GIT_VER_HASH}")
 
-project(dvm)
 include(src/CMakeLists.txt)
 include(tools/CMakeLists.txt)
 
