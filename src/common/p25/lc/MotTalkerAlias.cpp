@@ -51,7 +51,7 @@ static const uint16_t MOT_TALKER_ALIAS_HEADER_CRC_LENGTH_BITS = 128U;
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
-/* Initializes an empty Motorola talker-alias assembler. */
+/* Initializes an new instance of the MotTalkerAlias class. */
 
 MotTalkerAlias::MotTalkerAlias() :
     m_dstId(0U),
@@ -100,6 +100,7 @@ bool MotTalkerAlias::decode(const uint8_t* lc, MotTalkerAliasResult& result)
             reset();
             m_sequence = sequence;
         }
+
         m_dstId = (uint16_t)((lc[2U] << 8U) | lc[3U]);
         m_blockCount = lc[4U];
         m_paddingCount = (lc[7U] >> 1U) & 0x07U;
@@ -194,9 +195,10 @@ std::vector<std::vector<uint8_t>> MotTalkerAlias::encode(uint32_t netId, uint16_
         }
     }
 
-    // determine the number of data blocks needed for the payload
     const uint32_t payloadBits = (uint32_t)payloadLength * 8U;
     const uint8_t blockCount = (uint8_t)((payloadBits + MOT_TALKER_ALIAS_FRAGMENT_LENGTH_BITS - 1U) / MOT_TALKER_ALIAS_FRAGMENT_LENGTH_BITS);
+
+    // assemble the header word for the talker-alias message
     std::vector<std::vector<uint8_t>> words;
     uint8_t header[9U] = { 0U };
     header[0U] = LCO::MOT_TALKER_ALIAS_HEADER;
@@ -204,11 +206,14 @@ std::vector<std::vector<uint8_t>> MotTalkerAlias::encode(uint32_t netId, uint16_
     header[2U] = (uint8_t)(dstId >> 8U);
     header[3U] = (uint8_t)dstId;
     header[4U] = blockCount;
-    header[5U] = 0x01U;
+    header[5U] = 0x01U; // always use BMP UTF-16
+
+    // calculate the number of available bits and the padding count for the last data block
     const uint32_t availableBits = (uint32_t)blockCount * MOT_TALKER_ALIAS_FRAGMENT_LENGTH_BITS;
     const uint8_t paddingCount = (uint8_t)((availableBits - payloadBits + 7U) / 8U);
     header[7U] = (uint8_t)(((sequence & 0x0FU) << 4U) | (paddingCount << 1U));
 
+    // calculate the header CRC and populate the CRC fields in the header
     const uint16_t crc = headerCRC(header);
     header[7U] |= (uint8_t)(crc >> 8U);
     header[8U] = (uint8_t)crc;
@@ -245,12 +250,14 @@ std::vector<std::vector<uint8_t>> MotTalkerAlias::encode(uint32_t netId, uint16_
 
 uint16_t MotTalkerAlias::headerCRC(const uint8_t* lc)
 {
+    // copy the first 8 bytes of the header into the CRC buffer
     uint8_t crcBuffer[MOT_TALKER_ALIAS_HEADER_CRC_LENGTH_BITS / 8U] = { 0U };
     for (uint8_t i = 0U; i < 8U; ++i)
         crcBuffer[i] = lc[i];
 
     crcBuffer[7U] &= 0xFEU;
 
+    // calculate the CRC9 for the header and apply the header CRC mask
     return edac::CRC::createCRC9(crcBuffer, MOT_TALKER_ALIAS_HEADER_CRC_LENGTH_BITS) ^
         MOT_TALKER_ALIAS_HEADER_CRC_MASK;
 }

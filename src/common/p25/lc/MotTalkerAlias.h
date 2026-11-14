@@ -59,7 +59,9 @@ namespace p25
          */
         class DVM_COMMON_API MotTalkerAlias {
         public:
-            /** @brief Initializes an empty Motorola talker-alias assembler. */
+            /** 
+             * @brief Initializes an new instance of the MotTalkerAlias class. 
+             */
             MotTalkerAlias();
 
             /**
