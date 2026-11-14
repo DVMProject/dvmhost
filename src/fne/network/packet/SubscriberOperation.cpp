@@ -214,6 +214,8 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
                     network->p25TrafficHandler()->write_TSDU_Ext_Func(operationPeerId,
                         p25::defines::ExtendedFunctions::UNINHIBIT, p25::defines::WUID_FNE, targetId);
                     break;
+                default:
+                    break;
                 }
             } else {
                 const uint8_t slot = request["slot"].get<uint8_t>();
