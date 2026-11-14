@@ -68,18 +68,14 @@ namespace p25
             void reset();
 
             /**
-             * @brief Adds one decoded nine-byte Motorola link control word.
+             * @brief Decodes and assembles an alias. This uses the nine-byte Motorola link control word,
+             *  which may be either a header or a data block. The assembler maintains state across multiple calls
+             *  until a complete CRC-valid alias is assembled.
              * @param[in] lc Link control bytes, including LCO and MFId.
-             * @returns bool True when a complete, CRC-valid alias is available.
-             */
-            bool add(const uint8_t* lc);
-
-            /**
-             * @brief Gets the most recently completed alias.
              * @param[out] result Completed talker-alias fields.
-             * @returns bool True when a completed alias is available.
+             * @returns bool True when this word completes a CRC-valid alias and result was populated.
              */
-            bool getResult(MotTalkerAliasResult& result) const;
+            bool decode(const uint8_t* lc, MotTalkerAliasResult& result);
 
             /**
              * @brief Encodes an alias into a header followed by numbered data-block LC words.

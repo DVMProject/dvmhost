@@ -71,12 +71,11 @@ TEST_CASE("P25 Motorola talker alias assembly", "[p25][lc][user-alias][motorola]
         { 0x17U, 0x90U, 0x07U, 0xF9U, 0x4BU, 0x30U, 0x00U, 0x00U, 0x00U }
     };
 
-    for (std::size_t i = 0U; i + 1U < sizeof(words) / sizeof(words[0U]); ++i)
-        REQUIRE_FALSE(assembler.add(words[i]));
-    REQUIRE(assembler.add(words[7U]));
-
     MotTalkerAliasResult result;
-    REQUIRE(assembler.getResult(result));
+    for (std::size_t i = 0U; i + 1U < sizeof(words) / sizeof(words[0U]); ++i)
+        REQUIRE_FALSE(assembler.decode(words[i], result));
+    REQUIRE(assembler.decode(words[7U], result));
+
     REQUIRE(result.netId == 0xBEE00U);
     REQUIRE(result.sysId == 0x2AEU);
     REQUIRE(result.srcId == 0xE67852U);
@@ -92,11 +91,10 @@ TEST_CASE("P25 Motorola talker alias encoding round trip", "[p25][lc][user-alias
     REQUIRE(words.size() > 1U);
 
     MotTalkerAlias assembler;
-    for (std::size_t i = 0U; i < words.size(); ++i)
-        REQUIRE(assembler.add(words[i].data()) == (i + 1U == words.size()));
-
     MotTalkerAliasResult result;
-    REQUIRE(assembler.getResult(result));
+    for (std::size_t i = 0U; i < words.size(); ++i)
+        REQUIRE(assembler.decode(words[i].data(), result) == (i + 1U == words.size()));
+
     REQUIRE(result.netId == 0xBB800U);
     REQUIRE(result.sysId == 0x123U);
     REQUIRE(result.srcId == 0x456789U);
