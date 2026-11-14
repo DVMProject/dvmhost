@@ -167,6 +167,10 @@ namespace p25
         const uint8_t   ENCRYPTED_NULL_IMBE[] = { 0xFCU, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U };
 
         const uint8_t   MOT_CALLSIGN_LENGTH_BYTES = 8U;
+        const uint8_t   MOT_TALKER_ALIAS_FRAGMENT_LENGTH_BITS = 44U;
+        const uint8_t   MOT_TALKER_ALIAS_MAX_BLOCKS = 0xFFU;
+        const uint16_t  MOT_TALKER_ALIAS_MAX_CHARS = 696U;
+        const uint16_t  MOT_TALKER_ALIAS_MAX_PAYLOAD_BYTES = 1403U;
         const uint8_t   HARRIS_USER_ALIAS_LENGTH_BYTES = 14U;
 
         const uint8_t   AUTH_RES_LENGTH_BYTES = 4U;
@@ -795,6 +799,8 @@ namespace p25
 
                 MOT_PTT_LOC_HEADER = 0x29U,             //!< MOT PTT LOC HEADER - Motorola PTT Location Header
                 MOT_PTT_LOC_PAYLOAD = 0x2AU,            //!< MOT PTT LOC PAYLOAD - Motorola PTT Location Payload
+                MOT_TALKER_ALIAS_HEADER = 0x15U,         //!< Motorola Talker Alias Header
+                MOT_TALKER_ALIAS_DATA = 0x17U,           //!< Motorola Talker Alias Data Block
 
             // LDUx/TDULC Harris Link Control Opcode(s)
                 HARRIS_PTT_A_ODD = 0x2AU,               //!< HARRIS PTT PA ODD - Harris PTT Position and Altitude Odd
