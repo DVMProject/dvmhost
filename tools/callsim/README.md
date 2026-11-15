@@ -59,6 +59,8 @@ by one for every generated call.
 | `--gap <ms>` | Delay between calls or batches in milliseconds. The default is `500`. |
 | `--source <rid>` | Source radio ID for the first call. The default is `100001`. |
 | `--slots <list>` | Comma-separated DMR slots (`1` or `2`), cycled as needed. The default is slot `1`. |
+| `--wacn <hex>` | P25 WACN in hexadecimal. The default is `BB800`. |
+| `--sys-id <hex>` | P25 system ID in hexadecimal. The default is `001`. |
 | `--grant-demand` | Sends an FNE group-call grant request before every call. |
 | `--simultaneous` | Starts one call per configured talkgroup in each batch. |
 | `--debug` | Enables verbose network logging. |
@@ -66,7 +68,9 @@ by one for every generated call.
 
 P25 and DMR source and destination IDs may be up to 24 bits. NXDN source and
 destination IDs must not exceed `65535`. The `--slots` setting is used only for
-DMR; P25 and NXDN are FDMA modes.
+DMR; P25 and NXDN are FDMA modes. P25 WACN values range from `00001` through
+`FFFFE`, excluding the reserved `BEE00` through `BEEFF` range. P25 system IDs
+range from `001` through `FFE`.
 
 ## Multiple talkgroups
 

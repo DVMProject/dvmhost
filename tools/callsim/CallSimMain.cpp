@@ -54,8 +54,8 @@ using namespace network;
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -125,6 +125,8 @@ struct Options {
     uint32_t durationSeconds = DEFAULT_CALL_DURATION_SECONDS; //!< Duration of each call in seconds.
     uint32_t gapMs = DEFAULT_CALL_GAP_MS;                     //!< Delay between completed calls in milliseconds.
     uint32_t srcId = 100001U;                                 //!< Source ID used by the first call; incremented per call.
+    uint32_t p25WACN = P25DEF::WACN_STD_DEFAULT;               //!< P25 WACN encoded in generated calls.
+    uint32_t p25SysId = P25DEF::SID_STD_DEFAULT;               //!< P25 system ID encoded in generated calls.
 
     std::vector<uint32_t> talkgroups;                         //!< Destination IDs selected round-robin by call index.
     std::vector<uint8_t> slots;                               //!< DMR slots selected round-robin by call index.
@@ -192,6 +194,8 @@ static void usage(const char* message, const char* arg)
         "  --source <rid>         First source radio ID (default 100001)\n"
         "  --talkgroups <list>    Comma-separated destination IDs\n"
         "  --slots <list>         DMR slots, one per TG or cycled (default 1)\n"
+        "  --wacn <hex>           P25 WACN (default BB800)\n"
+        "  --sys-id <hex>         P25 system ID (default 001)\n"
         "  --grant-demand         Send an FNE grant request before each call\n"
         "  --simultaneous         Emit all configured TGs concurrently per repetition\n"
         "  --debug                Enable network debug logging\n"
@@ -215,6 +219,29 @@ static bool parseUnsigned(const char* text, uint32_t minimum, uint32_t maximum, 
     errno = 0;
     char* end = nullptr;
     unsigned long parsed = ::strtoul(text, &end, 10);
+    if (errno != 0 || end == text || *end != '\0' || parsed < minimum || parsed > maximum)
+        return false;
+
+    value = static_cast<uint32_t>(parsed);
+    return true;
+}
+
+/**
+ * @brief Parses and range-checks an unsigned hexadecimal command-line value.
+ * @param text The string containing the hexadecimal value to parse.
+ * @param minimum The minimum allowed value.
+ * @param maximum The maximum allowed value.
+ * @param value The variable to store the parsed value.
+ * @return true if the value was successfully parsed and within range, false otherwise.
+ */
+static bool parseHexUnsigned(const char* text, uint32_t minimum, uint32_t maximum, uint32_t& value)
+{
+    if (text == nullptr || text[0U] == '\0')
+        return false;
+
+    errno = 0;
+    char* end = nullptr;
+    unsigned long parsed = ::strtoul(text, &end, 16);
     if (errno != 0 || end == text || *end != '\0' || parsed < minimum || parsed > maximum)
         return false;
 
@@ -364,6 +391,22 @@ static bool parseOptions(int argc, char** argv, Options& options)
                     usage("error: %s", "invalid --source");
                     return false;
                 }
+            } else if (arg == "--wacn") {
+                value = requireValue("--wacn");
+                if (value == nullptr || !parseHexUnsigned(value, 1U, 0xFFFFEU, options.p25WACN)) {
+                    usage("error: %s", "invalid --wacn");
+                    return false;
+                }
+                if (options.p25WACN >= 0xBEE00U && options.p25WACN <= 0xBEEFFU) {
+                    usage("error: %s", "--wacn must not be in the reserved BEE00-BEEFF range");
+                    return false;
+                }
+            } else if (arg == "--sys-id") {
+                value = requireValue("--sys-id");
+                if (value == nullptr || !parseHexUnsigned(value, 1U, 0xFFEU, options.p25SysId)) {
+                    usage("error: %s", "invalid --sys-id");
+                    return false;
+                }
             } else {
                 usage("error: %s", (std::string("unknown option: ") + arg).c_str());
                 return false;
@@ -480,16 +523,21 @@ static void fillP25Tone(uint8_t* data)
  * @param srcId The source ID of the call.
  * @param dstId The destination ID of the call.
  * @param durationMs The duration of the call in milliseconds.
+ * @param wacn The P25 wide area communications network ID.
+ * @param sysId The P25 system ID.
  * @param stream The call stream state.
  * @return true if the frames were successfully emitted, false otherwise.
  */
-static bool emitP25(CallSimNetwork& network, uint32_t srcId, uint32_t dstId, uint32_t durationMs, CallStreamState& stream)
+static bool emitP25(CallSimNetwork& network, uint32_t srcId, uint32_t dstId, uint32_t durationMs,
+    uint32_t wacn, uint32_t sysId, CallStreamState& stream)
 {
     p25::lc::LC control;
     control.setLCO(P25DEF::LCO::GROUP);
     control.setGroup(true);
     control.setSrcId(srcId);
     control.setDstId(dstId);
+    control.setNetId(wacn);
+    control.setSysId(sysId);
     control.setPriority(4U);
     p25::data::LowSpeedData lsd;
 
@@ -704,7 +752,7 @@ static bool emitCall(CallSimNetwork& network, const Options& options, uint32_t c
     bool success = false;
     switch (options.mode) {
     case Mode::P25:
-        success = emitP25(network, srcId, dstId, durationMs, stream);
+        success = emitP25(network, srcId, dstId, durationMs, options.p25WACN, options.p25SysId, stream);
         break;
     case Mode::DMR:
         success = emitDMR(network, srcId, dstId, slot, durationMs, stream);
@@ -721,6 +769,83 @@ static bool emitCall(CallSimNetwork& network, const Options& options, uint32_t c
 
     LogInfo("Call %u/%u end: srcId = %u, dstId = %u", callNumber, totalCalls, srcId, dstId);
     return true;
+}
+
+// ---------------------------------------------------------------------------
+//  Class Declaration
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Runs one simulated call through the project's thread abstraction.
+ * @ingroup callsim
+ */
+class CallWorker : public Thread {
+public:
+    /**
+     * @brief Initializes a worker for one simulated call.
+     * @param[in] network Network connection shared by the simulated calls.
+     * @param[in] options Simulator options shared by the workers.
+     * @param callNumber One-based call number.
+     * @param totalCalls Total calls scheduled for this simulator run.
+     * @param srcId Source subscriber ID.
+     * @param dstId Destination talkgroup ID.
+     * @param slot DMR slot, or ignored for FDMA protocols.
+     * @param durationMs Call duration in milliseconds.
+     * @param[out] result Receives one when the call succeeds, or zero on failure.
+     * @param[in,out] remaining Number of running workers.
+     */
+    CallWorker(CallSimNetwork& network, const Options& options, uint32_t callNumber, uint32_t totalCalls,
+        uint32_t srcId, uint32_t dstId, uint8_t slot, uint32_t durationMs, uint8_t& result,
+        std::atomic<uint32_t>& remaining);
+
+    /**
+     * @brief Emits the configured call and records its result.
+     */
+    void entry() override;
+
+private:
+    CallSimNetwork& m_network;                 //!< Network connection shared by the simulated calls.
+    const Options& m_options;                  //!< Simulator options shared by the workers.
+    uint32_t m_callNumber;                     //!< One-based call number.
+    uint32_t m_totalCalls;                     //!< Total calls scheduled for this simulator run.
+    uint32_t m_srcId;                          //!< Source subscriber ID.
+    uint32_t m_dstId;                          //!< Destination talkgroup ID.
+    uint8_t m_slot;                            //!< DMR slot, or ignored for FDMA protocols.
+    uint32_t m_durationMs;                     //!< Call duration in milliseconds.
+    uint8_t& m_result;                         //!< Result storage owned by the scheduler.
+    std::atomic<uint32_t>& m_remaining;        //!< Number of running workers.
+};
+
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
+
+/* Initializes a worker for one simulated call. */
+
+CallWorker::CallWorker(CallSimNetwork& network, const Options& options, uint32_t callNumber, uint32_t totalCalls,
+    uint32_t srcId, uint32_t dstId, uint8_t slot, uint32_t durationMs, uint8_t& result,
+    std::atomic<uint32_t>& remaining) :
+    m_network(network),
+    m_options(options),
+    m_callNumber(callNumber),
+    m_totalCalls(totalCalls),
+    m_srcId(srcId),
+    m_dstId(dstId),
+    m_slot(slot),
+    m_durationMs(durationMs),
+    m_result(result),
+    m_remaining(remaining)
+{
+    /* stub */
+}
+
+/* Emits the configured call and records its result. */
+
+void CallWorker::entry()
+{
+    m_result = emitCall(m_network, m_options, m_callNumber, m_totalCalls, m_srcId, m_dstId, m_slot,
+        m_durationMs) ? 1U : 0U;
+    m_remaining--;
 }
 
 // ---------------------------------------------------------------------------
@@ -747,6 +872,8 @@ int main(int argc, char** argv)
 
     CallSimNetwork network(options.address, options.port, 0U, options.peerId, options.password,
         true, options.debug, true, true, true, false, true, true, false, false, false, false);
+    p25::lc::LC::setSiteData(p25::SiteData(options.p25WACN, options.p25SysId, 1U, 1U, 0U, 1U, 1U,
+        P25DEF::ServiceClass::VOICE | P25DEF::ServiceClass::DATA, 0));
     network.setMetadata(options.identity, 0U, 0U, 0.0F, 0.0F, 0U, 0U, 0U, 0.0F, 0.0F, 0, "");
     network.enable(true);
     if (!network.open()) {
@@ -779,9 +906,9 @@ int main(int argc, char** argv)
 
     // iterate over the number of call repetitions, spawning and managing worker threads for each call
     for (uint32_t repetition = 0U; repetition < options.callCount && !g_stop; repetition++) {
-        std::atomic<uint32_t> remaining(callsPerRepetition);
+        std::atomic<uint32_t> remaining(0U);
         std::vector<uint8_t> results(callsPerRepetition, 0U);
-        std::vector<std::thread> workers;
+        std::vector<std::unique_ptr<CallWorker>> workers;
         workers.reserve(callsPerRepetition);
 
         // spawn worker threads for each call in the current repetition
@@ -792,10 +919,14 @@ int main(int argc, char** argv)
             const uint8_t slot = options.slots[scheduleIndex % options.slots.size()];
             const uint32_t srcId = options.srcId + callIndex;
 
-            workers.emplace_back([&, member, callIndex, srcId, dstId, slot]() {
-                results[member] = emitCall(network, options, callIndex + 1U, totalCalls, srcId, dstId, slot, durationMs) ? 1U : 0U;
+            workers.push_back(std::make_unique<CallWorker>(network, options, callIndex + 1U, totalCalls,
+                srcId, dstId, slot, durationMs, results[member], remaining));
+            remaining++;
+            if (!workers.back()->run()) {
                 remaining--;
-            });
+                break;
+            }
+            workers.back()->setName("callsim-worker");
         }
 
         auto lastClock = std::chrono::steady_clock::now();
@@ -811,8 +942,8 @@ int main(int argc, char** argv)
         }
 
         // join all worker threads for the current repetition before proceeding
-        for (std::thread& worker : workers)
-            worker.join();
+        for (const std::unique_ptr<CallWorker>& worker : workers)
+            worker->wait();
 
         // determine if all calls in the current repetition were successful
         success = std::find(results.begin(), results.end(), 0U) == results.end();
