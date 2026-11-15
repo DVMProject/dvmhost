@@ -28,12 +28,12 @@
 #include "common/dmr/data/NetData.h"
 #include "common/network/Network.h"
 #include "common/nxdn/NXDNDefines.h"
-#include "common/nxdn/Audio.h"
 #include "common/nxdn/NXDNUtils.h"
 #include "common/nxdn/Sync.h"
 #include "common/nxdn/channel/LICH.h"
 #include "common/nxdn/channel/SACCH.h"
 #include "common/nxdn/lc/RTCH.h"
+#include "common/p25/Audio.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
@@ -71,16 +71,25 @@ static constexpr uint32_t P25_LDU_PERIOD_MS = 180U;            //!< P25 Phase 1 
 static constexpr uint32_t DMR_BURST_PERIOD_MS = 60U;           //!< DMR voice burst interval in milliseconds.
 static constexpr uint32_t NXDN_FRAME_PERIOD_MS = 80U;          //!< NXDN 4800 voice-frame interval in milliseconds.
 
-/** @brief Stationary IMBE frame taken from the project's P25 1011 Hz calibration vector. */
-static const uint8_t P25_TONE_IMBE[P25DEF::RAW_IMBE_LENGTH_BYTES] = {
-    0xCBU, 0x19U, 0x4DU, 0x0DU, 0xCEU, 0x24U, 0xA1U, 0x24U, 0x0DU, 0x43U, 0x3CU
+/** @brief Alternating raw IMBE codewords decoded from the P25 1011 Hz calibration vector. */
+static const uint8_t P25_TONE_IMBE[2U][P25DEF::RAW_IMBE_LENGTH_BYTES] = {
+    { 0x09U, 0xB0U, 0x88U, 0x0CU, 0xC6U, 0x21U, 0xF6U, 0x80U, 0xA8U, 0x26U, 0x00U },
+    { 0x09U, 0xB0U, 0x88U, 0x0CU, 0xC6U, 0x21U, 0xF6U, 0x80U, 0xA8U, 0x26U, 0x01U }
 };
 
-/** @brief Fixed AMBE payload taken from the project's DMR 1031 Hz calibration vector. */
+/** @brief Fixed AMBE payload taken from the DMR 1031 Hz calibration vector. */
 static const uint8_t DMR_TONE_BURST[DMRDEF::DMR_FRAME_LENGTH_BYTES] = {
     0xCEU, 0xA8U, 0xFEU, 0x83U, 0xACU, 0xC4U, 0x58U, 0x20U, 0x0AU, 0xCEU, 0xA8U,
     0xFEU, 0x83U, 0xA0U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x0CU, 0xC4U, 0x58U,
     0x20U, 0x0AU, 0xCEU, 0xA8U, 0xFEU, 0x83U, 0xACU, 0xC4U, 0x58U, 0x20U, 0x0AU
+};
+
+/** @brief Four encoded AMBE codewords from the NXDN 1031 Hz calibration vector. */
+static const uint8_t NXDN_TONE_AUDIO[36U] = {
+    0x4CU, 0xAAU, 0xDEU, 0x8BU, 0x26U, 0xE4U, 0xF2U, 0x82U, 0x88U,
+    0xC6U, 0x8AU, 0x74U, 0x29U, 0xA4U, 0xECU, 0xD0U, 0x08U, 0x22U,
+    0xCEU, 0xA2U, 0xFCU, 0x01U, 0x8CU, 0xECU, 0xDAU, 0x0AU, 0xA0U,
+    0xEEU, 0x8AU, 0x7EU, 0x2BU, 0x26U, 0xCCU, 0xF8U, 0x8AU, 0x08U
 };
 
 // ---------------------------------------------------------------------------
@@ -505,16 +514,17 @@ static bool writeGrantDemand(CallSimNetwork& network, Mode mode, uint32_t srcId,
 }
 
 /**
- * @brief Fills each vocoder position in a raw P25 LDU with the fixed tone vector.
+ * @brief Encodes the alternating P25 tone codewords into one interleaved LDU.
  * @param data Pointer to the raw P25 LDU data buffer to be filled.
+ * @param phase Index of the first tone codeword in the alternating sequence.
  */
-static void fillP25Tone(uint8_t* data)
+static void fillP25Tone(uint8_t* data, uint32_t phase)
 {
-    static const uint16_t offsets[] = { 10U, 26U, 55U, 80U, 105U, 130U, 155U, 180U, 204U };
     ::memset(data, 0x00U, P25DEF::P25_LDU_FRAME_LENGTH_BYTES);
 
-    for (uint16_t offset : offsets)
-        ::memcpy(data + offset, P25_TONE_IMBE, P25DEF::RAW_IMBE_LENGTH_BYTES);
+    p25::Audio audio;
+    for (uint32_t n = 0U; n < 9U; n++)
+        audio.encode(data, P25_TONE_IMBE[(phase + n) % 2U], n);
 }
 
 /**
@@ -543,8 +553,8 @@ static bool emitP25(CallSimNetwork& network, uint32_t srcId, uint32_t dstId, uin
 
     uint8_t ldu1[P25DEF::P25_LDU_FRAME_LENGTH_BYTES];
     uint8_t ldu2[P25DEF::P25_LDU_FRAME_LENGTH_BYTES];
-    fillP25Tone(ldu1);
-    fillP25Tone(ldu2);
+    fillP25Tone(ldu1, 0U);
+    fillP25Tone(ldu2, 1U);
 
     uint32_t elapsed = 0U;
     bool useLDU1 = true;
@@ -657,29 +667,8 @@ static bool emitNXDNFrame(CallSimNetwork& network, nxdn::lc::RTCH& control, uint
     sacch.setStructure(structures[superframeIndex]);
     sacch.encode(frame);
 
-    // reuse the fixed AMBE test bits as the four vocoder payloads carried by
-    // this NXDN frame, then apply the NXDN-specific audio FEC/interleaving
-    Audio audio;
-    uint8_t packedBits[13U] = { 0U };
-    const uint8_t* ambe0 = DMR_TONE_BURST;
-    const uint8_t* ambe1 = DMR_TONE_BURST + 9U;
-    const uint8_t* ambe2 = DMR_TONE_BURST + 18U;
-    for (uint32_t bit = 0U; bit < 49U; bit++) {
-        WRITE_BIT(packedBits, bit, READ_BIT(ambe0, bit));
-        WRITE_BIT(packedBits, 49U + bit, READ_BIT(ambe1, bit));
-    }
-
-    audio.encode(packedBits, frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES);
-    ::memset(packedBits, 0x00U, sizeof(packedBits));
-
-    for (uint32_t bit = 0U; bit < 49U; bit++) {
-        WRITE_BIT(packedBits, bit, READ_BIT(ambe2, bit));
-        WRITE_BIT(packedBits, 49U + bit, READ_BIT(ambe0, bit));
-    }
-
-    audio.encode(packedBits, frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
-
     NXDNUtils::scrambler(frame);
+    ::memcpy(frame + NXDN_FSW_LICH_SACCH_LENGTH_BYTES, NXDN_TONE_AUDIO, sizeof(NXDN_TONE_AUDIO));
 
     return network.writeNXDNCall(control, frame, NXDN_FRAME_LENGTH_BYTES, stream, end);
 }

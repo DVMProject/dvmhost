@@ -5,11 +5,11 @@ calls for exercising DMR, P25, and NXDN call handling. It authenticates to an
 FNE traffic port as one peer and can emit calls sequentially or multiplex
 simultaneous calls to several talkgroups over that single connection.
 
-The generated audio is a fixed calibration-tone test pattern. P25 uses the
-project's 1011 Hz IMBE vector, while DMR uses its 1031 Hz AMBE vector. NXDN
-builds its voice payload from the fixed AMBE test bits and applies the NXDN
-voice encoding and interleaving used by the common library. This is synthetic
-protocol traffic; the tool does not read audio from a file or sound device.
+The generated audio uses the complete protocol-specific calibration-tone test
+patterns. P25 uses the alternating 1011 Hz LDU1/LDU2 IMBE sequences,
+while DMR and NXDN use their respective 1031 Hz AMBE voice payloads. This is
+synthetic protocol traffic; the tool does not read audio from a file or sound
+device.
 
 ## Build
 
