@@ -286,8 +286,10 @@ TEST_CASE("Network performs a full loopback login handshake", "[network][loopbac
     REQUIRE(network.open());
 
     bool connected = false;
-    network.setPeerConnectedCallback([&connected]() {
+    bool aliasRequestWritten = false;
+    network.setPeerConnectedCallback([&network, &connected, &aliasRequestWritten]() {
         connected = true;
+        aliasRequestWritten = network.writeRadioAliasSyncRequest();
     });
 
     network.clock(11000U);
@@ -336,6 +338,7 @@ TEST_CASE("Network performs a full loopback login handshake", "[network][loopbac
 
     network.clock(1000U);
     REQUIRE(connected);
+    REQUIRE(aliasRequestWritten);
 
     masterReceiver.close();
 }

@@ -1030,6 +1030,12 @@ bool Host::createNetwork()
 
         m_network->setPacketDump(packetDump);
         m_network->setLookups(m_ridLookup, m_tidLookup);
+        m_network->setRadioAliasLookups(m_ridAliasLookup);
+        m_network->setPeerConnectedCallback([this, updateLookup]() {
+            yaml::Node radioAlias = m_conf["protocols"]["p25"]["radioAlias"];
+            if (updateLookup && radioAlias["enable"].as<bool>(false))
+                m_network->writeRadioAliasSyncRequest();
+        });
         m_network->setMetadata(m_identity, m_rxFrequency, m_txFrequency, entry.txOffsetMhz(), entry.chBandwidthKhz(), m_channelId, m_channelNo,
             m_power, m_latitude, m_longitude, m_height, m_location);
 

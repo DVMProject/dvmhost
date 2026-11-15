@@ -54,6 +54,7 @@ std::mutex Control::s_activeTGLock;
 
 Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
     uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::ChannelLookup* chLookup, ::lookups::RadioIdLookup* ridLookup,
+    ::lookups::RadioAliasLookup* ridAliasLookup,
     ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose) :
     m_voice(nullptr),
@@ -92,6 +93,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_defaultNetIdleTalkgroup(0U),
     m_idenTable(idenTable),
     m_ridLookup(ridLookup),
+    m_ridAliasLookup(ridAliasLookup),
     m_tidLookup(tidLookup),
     m_affiliations(nullptr),
     m_controlChData(),
@@ -356,6 +358,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const :
     m_explicitTDUGrantRelease = p25Protocol["explicitTDUGrantRelease"].as<bool>(true);
     m_disableDenyResponse = p25Protocol["disableDenyResponse"].as<bool>(false);
 
+    yaml::Node radioAlias = p25Protocol["radioAlias"];
+    m_voice->m_radioAliasEnabled = radioAlias["enable"].as<bool>(false);
+    m_voice->m_motRadioAlias = radioAlias["motorola"].as<bool>(false);
+
     /*
     ** Voice Silence and Frame Loss Thresholds
     */
@@ -550,6 +556,11 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const :
 
         LogInfo("    Immediate Call Termination: %s", m_immediateCallTerm ? "yes" : "no");
         LogInfo("    Explicit TDU Grant Release: %s", m_explicitTDUGrantRelease ? "yes" : "no");
+
+        LogInfo("    Radio Alias Enabled: %s", m_voice->m_radioAliasEnabled ? "yes" : "no");
+        if (m_voice->m_radioAliasEnabled) {
+            LogInfo("    Motorola Radio Alias: %s", m_voice->m_motRadioAlias ? "yes" : "no");
+        }
 
         LogInfo("    Notify VCs of Active TGs: %s", m_ccNotifyActiveTG ? "yes" : "no");
 

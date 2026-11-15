@@ -400,7 +400,6 @@ namespace network
         uint32_t m_tgAdmissionStreamId;
 
         PacketBuffer m_radioAliasSyncPkt;
-        uint32_t m_radioAliasSyncStreamId;
 
         uint8_t* m_salt;
 

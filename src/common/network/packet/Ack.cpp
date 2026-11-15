@@ -53,13 +53,13 @@ bool Network::PacketHandler::ack(Network* network, uint32_t peerId, uint32_t str
             network->m_remotePeerId = rtpHeader.getSSRC();
 
             network->pktSeq(true);
+            network->m_status = NET_STAT_RUNNING;
 
             // fire off peer connected callback if we have one
             if (network->m_peerConnectedCallback != nullptr) {
                 network->m_peerConnectedCallback();
             }
 
-            network->m_status = NET_STAT_RUNNING;
             network->m_timeoutTimer.start();
             network->m_retryTimer.setTimeout(DEFAULT_RETRY_TIME);
             network->m_retryTimer.start();

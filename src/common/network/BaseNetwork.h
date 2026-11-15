@@ -1103,6 +1103,7 @@ namespace network
         uint32_t* m_p25P2StreamId;
         uint32_t m_nxdnStreamId;
         uint32_t m_analogStreamId;
+        uint32_t m_radioAliasSyncStreamId;
 
         /**
          * @brief Helper to update the RTP packet sequence.

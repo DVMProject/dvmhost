@@ -139,6 +139,9 @@ namespace p25
 
             uint8_t m_rfUserAliasPhase;
             uint8_t m_netUserAliasPhase;
+            bool m_radioAliasEnabled;
+            bool m_motRadioAlias;
+            uint8_t m_motAliasSequence;
 
             bool m_inbound;
 
@@ -234,6 +237,11 @@ namespace p25
              * @returns bool True if a User Alias LC was selected.
              */
             bool applyUserAlias(lc::LC& control, uint8_t& phase);
+            /**
+             * @brief Transmits Motorola talker-alias TDULCs for a completed call.
+             * @param control Link control identifying the completed call.
+             */
+            void writeMotAlias(const lc::LC& control);
 
             /**
              * @brief Helper to determine the next active talkgroup in a active multi-group scenario,

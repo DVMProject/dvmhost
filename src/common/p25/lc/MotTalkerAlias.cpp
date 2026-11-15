@@ -96,7 +96,7 @@ bool MotTalkerAlias::decode(const uint8_t* lc, MotTalkerAliasResult& result)
             return false;
 
         const uint8_t sequence = lc[7U] >> 4U;
-        if (m_sequence != sequence) {
+        if (m_sequence != sequence || m_haveHeader || m_complete) {
             reset();
             m_sequence = sequence;
         }

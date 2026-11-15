@@ -39,6 +39,7 @@
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
 #include "common/Timer.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/yaml/Yaml.h"
 #include "p25/packet/Data.h"
 #include "p25/packet/Voice.h"
@@ -94,6 +95,7 @@ namespace p25
          * @param duplex Flag indicating full-duplex operation.
          * @param chLookup Instance of the ChannelLookup class.
          * @param ridLookup Instance of the RadioIdLookup class.
+         * @param ridAliasLookup Instance of the RadioAliasLookup class.
          * @param tidLookup Instance of the TalkgroupRulesLookup class.
          * @param idenTable Instance of the IdenTableLookup class.
          * @param rssi Instance of the RSSIInterpolator class.
@@ -105,6 +107,7 @@ namespace p25
          */
         Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t queueSize, modem::Modem* modem, network::Network* network,
             uint32_t timeout, uint32_t tgHang, bool duplex, ::lookups::ChannelLookup* chLookup, ::lookups::RadioIdLookup* ridLookup,
+            ::lookups::RadioAliasLookup* ridAliasLookup,
             ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
             bool dumpPDUData, bool repeatPDU, bool dumpTSBKData, bool debug, bool verbose);
         /**
@@ -344,6 +347,7 @@ namespace p25
 
         ::lookups::IdenTableLookup* m_idenTable;
         ::lookups::RadioIdLookup* m_ridLookup;
+        ::lookups::RadioAliasLookup* m_ridAliasLookup;
         ::lookups::TalkgroupRulesLookup* m_tidLookup;
         lookups::P25AffiliationLookup* m_affiliations;
         ::lookups::VoiceChData m_controlChData;

@@ -105,6 +105,7 @@ Host::Host(const std::string& confFile) :
     m_controlChData(),
     m_idenTable(nullptr),
     m_ridLookup(nullptr),
+    m_ridAliasLookup(nullptr),
     m_tidLookup(nullptr),
     m_dmrBeacons(false),
     m_dmrTSCCData(false),
@@ -329,6 +330,19 @@ int Host::run()
     m_ridLookup = new RadioIdLookup(ridLookupFile, ridReloadTime, ridAcl, verboseRIDRules);
     m_ridLookup->read();
 
+    std::string ridAliasLookupFile = systemConf["radio_alias"]["file"].as<std::string>("rid_alias.dat");
+    uint32_t ridAliasReloadTime = systemConf["radio_alias"]["time"].as<uint32_t>(0U);
+    bool verboseRIDAliasRules = systemConf["radio_alias"]["verbose"].as<bool>(false);
+
+    LogInfo("Radio Alias Lookups");
+    LogInfo("    File: %s", ridAliasLookupFile.length() > 0U ? ridAliasLookupFile.c_str() : "None");
+    if (ridAliasReloadTime > 0U)
+        LogInfo("    Reload: %u mins", ridAliasReloadTime);
+    LogInfo("    Verbose: %s", verboseRIDAliasRules ? "true" : "false");
+
+    m_ridAliasLookup = new RadioAliasLookup(ridAliasLookupFile, ridAliasReloadTime, verboseRIDAliasRules);
+    m_ridAliasLookup->read();
+
     // try to load talkgroup IDs table
     std::string tidLookupFile = systemConf["talkgroup_id"]["file"].as<std::string>();
     uint32_t tidReloadTime = systemConf["talkgroup_id"]["time"].as<uint32_t>(0U);
@@ -519,7 +533,7 @@ int Host::run()
         }
 
         m_p25 = std::make_unique<p25::Control>(m_authoritative, m_p25NAC, callHang, m_p25QueueSizeBytes, m_modem,
-            m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_channelLookup, m_ridLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket, 
+            m_network, m_timeout, m_rfTalkgroupHang, m_duplex, m_channelLookup, m_ridLookup, m_ridAliasLookup, m_tidLookup, m_idenTable, rssi, p25DumpDataPacket,
             p25RepeatDataPacket, p25DumpTsbkData, p25Debug, p25Verbose);
         m_p25->setOptions(m_conf, m_cwCallsign, m_controlChData,
             m_p25NetId, m_sysId, m_p25RfssId, m_siteId, m_channelId, m_channelNo, true);
@@ -1735,8 +1749,12 @@ void Host::setState(uint8_t state)
                     m_tidLookup->stop();
                 }
                 if (m_ridLookup != nullptr) {
-                    m_tidLookup->setReloadTime(0U);
+                    m_ridLookup->setReloadTime(0U);
                     m_ridLookup->stop();
+                }
+                if (m_ridAliasLookup != nullptr) {
+                    m_ridAliasLookup->setReloadTime(0U);
+                    m_ridAliasLookup->stop();
                 }
             }
             else {

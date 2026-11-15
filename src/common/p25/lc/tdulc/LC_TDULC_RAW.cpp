@@ -99,5 +99,8 @@ void LC_TDULC_RAW::setTDULC(const uint8_t* tdulc)
     m_tdulc = new uint8_t[P25_TDULC_PAYLOAD_LENGTH_BYTES];
     ::memset(m_tdulc, 0x00U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
 
-    ::memcpy(m_tdulc, tdulc, P25_TDULC_PAYLOAD_LENGTH_BYTES);
+    // TDULC::encode() supplies the LCO separately in RS byte zero. Store only
+    // the eight bytes following the LCO so the complete nine-byte LC word is
+    // preserved on air.
+    ::memcpy(m_tdulc, tdulc + 1U, P25_TDULC_PAYLOAD_LENGTH_BYTES);
 }

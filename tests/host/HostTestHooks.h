@@ -657,6 +657,27 @@ public:
      */
     static void p25ProcessNetworkQueue(p25::Control& control);
     /**
+     * @brief Configures synthetic P25 OTA radio-alias transmission.
+     * @param control P25 control instance.
+     * @param enabled Flag indicating alias transmission is enabled.
+     * @param motorola Flag indicating Motorola TDULCs are selected.
+     */
+    static void p25ConfigureRadioAlias(p25::Control& control, bool enabled, bool motorola);
+    /**
+     * @brief Applies one synthetic Harris radio-alias scheduling step.
+     * @param control P25 control instance.
+     * @param lc Link control candidate to modify.
+     * @param phase Alias conveyance phase.
+     * @return bool True when the candidate was replaced by an alias LC.
+     */
+    static bool p25ApplyRadioAlias(p25::Control& control, p25::lc::LC& lc, uint8_t& phase);
+    /**
+     * @brief Queues Motorola radio-alias TDULCs for a synthetic completed call.
+     * @param control P25 control instance.
+     * @param lc Completed-call link control.
+     */
+    static void p25WriteMotorolaAlias(p25::Control& control, const p25::lc::LC& lc);
+    /**
      * @brief Selects the next secondary active talkgroup for a P25 voice channel.
      */
     static bool p25NextActiveTalkgroups(p25::Control& control, const std::vector<uint32_t>& activeTG,

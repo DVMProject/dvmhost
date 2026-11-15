@@ -61,6 +61,7 @@ BaseNetwork::BaseNetwork(uint32_t peerId, bool duplex, bool debug, bool slot1, b
     m_p25StreamId(0U),
     m_nxdnStreamId(0U),
     m_analogStreamId(0U),
+    m_radioAliasSyncStreamId(0U),
     m_pktSeq(0U),
     m_audio()
 {
@@ -255,8 +256,17 @@ bool BaseNetwork::writeRadioAliasSyncRequest()
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
         return false;
 
+    if (m_radioAliasSyncStreamId != 0U)
+        return false;
+
+    m_radioAliasSyncStreamId = createStreamId();
+
     uint8_t buffer[1U] = { 0U };
-    return writeMaster({ NET_FUNC::RADIO_ALIAS_SYNC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, 0U, true);
+    const bool written = writeMaster({ NET_FUNC::RADIO_ALIAS_SYNC, NET_SUBFUNC::NOP }, buffer, 1U, RTP_END_OF_CALL_SEQ, m_radioAliasSyncStreamId, true);
+    if (!written)
+        m_radioAliasSyncStreamId = 0U;
+
+    return written;
 }
 
 /* Writes the local activity log to the network. */

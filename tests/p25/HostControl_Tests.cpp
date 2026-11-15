@@ -12,6 +12,7 @@
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RSSIInterpolator.h"
 #include "common/lookups/RadioIdLookup.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/network/NetRPC.h"
 #include "common/network/Network.h"
@@ -19,6 +20,8 @@
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/MotTalkerAlias.h"
+#include "common/p25/lc/tdulc/LC_TDULC_RAW.h"
 #include "common/p25/lc/tdulc/TDULCFactory.h"
 #include "common/p25/lc/tsbk/IOSP_EXT_FNCT.h"
 #include "host/modem/Modem.h"
@@ -575,6 +578,7 @@ public:
             0U, 0U, 0U, 1024U, 4096U, 1024U, true, true, false, false, false, false),
         m_chLookup(),
         m_ridLookup("", 0U, false, false),
+        m_ridAliasLookup("", 0U, false),
         m_tidLookup("", 0U, tgAcl, false),
         m_idenLookup("", 0U),
         m_rssiMapper(),
@@ -583,9 +587,10 @@ public:
     {
         g_RPC = &m_rpc;
         m_modem.setModeParams(false, true, false);
+        m_ridAliasLookup.clear();
 
         m_control = new p25::Control(authoritative, 0x293U, 1U, 4096U, &m_modem, m_network,
-            5U, 2U, duplex, &m_chLookup, &m_ridLookup, &m_tidLookup, &m_idenLookup,
+            5U, 2U, duplex, &m_chLookup, &m_ridLookup, &m_ridAliasLookup, &m_tidLookup, &m_idenLookup,
             &m_rssiMapper, false, false, false, true, true);
     }
     /**
@@ -626,12 +631,135 @@ public:
     modem::Modem m_modem;
     lookups::ChannelLookup m_chLookup;
     lookups::RadioIdLookup m_ridLookup;
+    lookups::RadioAliasLookup m_ridAliasLookup;
     lookups::TalkgroupRulesLookup m_tidLookup;
     lookups::IdenTableLookup m_idenLookup;
     lookups::RSSIInterpolator m_rssiMapper;
     P25TestNetwork* m_network;
     p25::Control* m_control;
 };
+
+TEST_CASE("P25 Harris radio aliases preserve scheduled link control", "[p25][host][radio-alias][harris]")
+{
+    P25HostHarness harness(true, false, 0U, 1U, false, false, true);
+    harness.m_ridAliasLookup.addEntry(1001U, "TEST RADIO");
+    HostTestHooks::p25ConfigureRadioAlias(*harness.m_control, true, false);
+
+    uint8_t phase = 0U;
+    p25::lc::LC control;
+    control.setMFId(p25::defines::MFG_STANDARD);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+
+    SECTION("timed replacement LCOs take precedence") {
+        control.setLCO(p25::defines::LCO::RFSS_STS_BCAST);
+        CHECK_FALSE(HostTestHooks::p25ApplyRadioAlias(*harness.m_control, control, phase));
+        CHECK(control.getLCO() == p25::defines::LCO::RFSS_STS_BCAST);
+        CHECK(phase == 0U);
+
+        control.setLCO(p25::defines::LCO::GROUP_UPDT);
+        CHECK_FALSE(HostTestHooks::p25ApplyRadioAlias(*harness.m_control, control, phase));
+        CHECK(control.getLCO() == p25::defines::LCO::GROUP_UPDT);
+        CHECK(phase == 0U);
+    }
+
+    SECTION("explicit source signaling takes precedence") {
+        control.setLCO(p25::defines::LCO::GROUP);
+        control.setExplicitId(true);
+        CHECK_FALSE(HostTestHooks::p25ApplyRadioAlias(*harness.m_control, control, phase));
+        CHECK(control.getLCO() == p25::defines::LCO::GROUP);
+        CHECK(phase == 0U);
+
+        control.setExplicitId(false);
+        control.setLCO(p25::defines::LCO::PRIVATE_EXT);
+        CHECK_FALSE(HostTestHooks::p25ApplyRadioAlias(*harness.m_control, control, phase));
+        CHECK(control.getLCO() == p25::defines::LCO::PRIVATE_EXT);
+        CHECK(phase == 0U);
+    }
+}
+
+TEST_CASE("P25 Harris radio aliases follow the odd-even conveyance cadence", "[p25][host][radio-alias][harris]")
+{
+    P25HostHarness harness;
+    harness.m_ridAliasLookup.addEntry(1001U, "TEST RADIO");
+    HostTestHooks::p25ConfigureRadioAlias(*harness.m_control, true, false);
+
+    uint8_t phase = 0U;
+    const uint8_t expected[] = {
+        p25::defines::LCO::HARRIS_USER_ALIAS_A_ODD,
+        p25::defines::LCO::HARRIS_USER_ALIAS_B_ODD,
+        p25::defines::LCO::GROUP,
+        p25::defines::LCO::HARRIS_USER_ALIAS_A_EVEN,
+        p25::defines::LCO::HARRIS_USER_ALIAS_B_EVEN,
+        p25::defines::LCO::GROUP
+    };
+
+    for (uint8_t i = 0U; i < sizeof(expected); ++i) {
+        p25::lc::LC control;
+        control.setLCO(p25::defines::LCO::GROUP);
+        control.setMFId(p25::defines::MFG_STANDARD);
+        control.setSrcId(1001U);
+        control.setDstId(2001U);
+
+        const bool applied = HostTestHooks::p25ApplyRadioAlias(*harness.m_control, control, phase);
+        CHECK(applied == (i != 2U && i != 5U));
+        CHECK(control.getLCO() == expected[i]);
+        if (applied) {
+            CHECK(control.getMFId() == p25::defines::MFG_HARRIS);
+            CHECK(control.getUserAlias() == "TEST RADIO");
+        }
+    }
+    CHECK(phase == 0U);
+}
+
+TEST_CASE("P25 missing radio aliases leave voice link control unchanged", "[p25][host][radio-alias]")
+{
+    P25HostHarness harness;
+    HostTestHooks::p25ConfigureRadioAlias(*harness.m_control, true, false);
+
+    uint8_t phase = 0U;
+    p25::lc::LC control;
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setMFId(p25::defines::MFG_STANDARD);
+    control.setSrcId(1001U);
+    control.setDstId(2001U);
+
+    CHECK_FALSE(HostTestHooks::p25ApplyRadioAlias(*harness.m_control, control, phase));
+    CHECK(control.getLCO() == p25::defines::LCO::GROUP);
+    CHECK(control.getMFId() == p25::defines::MFG_STANDARD);
+    CHECK(phase == 0U);
+}
+
+TEST_CASE("P25 Motorola radio aliases queue captured TDULCs in order", "[p25][host][radio-alias][motorola]")
+{
+    P25HostHarness harness(true, false, 0U, 1U, false, false, true);
+    harness.m_ridAliasLookup.addEntry(0xE67852U, "NYSP-1D82UHFM");
+    HostTestHooks::p25ConfigureRadioAlias(*harness.m_control, true, true);
+
+    p25::lc::LC control;
+    control.setLCO(p25::defines::LCO::GROUP);
+    control.setMFId(p25::defines::MFG_STANDARD);
+    control.setSrcId(0xE67852U);
+    control.setDstId(0x1BBDU);
+
+    const std::vector<std::vector<uint8_t>> expected = p25::lc::MotTalkerAlias::encode(
+        p25::lc::LC::getSiteData().netId(), p25::lc::LC::getSiteData().sysId(),
+        control.getSrcId(), (uint16_t)control.getDstId(), "NYSP-1D82UHFM", 0U);
+    HostTestHooks::p25WriteMotorolaAlias(*harness.m_control, control);
+
+    for (const std::vector<uint8_t>& word : expected) {
+        uint8_t frame[p25::defines::P25_TDULC_FRAME_LENGTH_BYTES + 2U] = { 0U };
+        REQUIRE(harness.m_control->getFrame(frame) == sizeof(frame));
+
+        p25::lc::tdulc::LC_TDULC_RAW raw;
+        REQUIRE(raw.decode(frame + 2U));
+        REQUIRE(raw.getDecodedRaw() != nullptr);
+        CHECK(::memcmp(raw.getDecodedRaw(), word.data(), word.size()) == 0);
+    }
+
+    uint8_t extra[p25::defines::P25_TDULC_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    CHECK(harness.m_control->getFrame(extra) == 0U);
+}
 
 TEST_CASE("P25 group call termination addresses all subscriber units",
     "[p25][host][control][tdulc][call-termination]")

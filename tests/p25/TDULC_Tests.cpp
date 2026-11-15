@@ -11,6 +11,7 @@
 #include "common/p25/lc/tdulc/LC_GROUP.h"
 #include "common/p25/lc/tdulc/LC_GROUP_UPDT.h"
 #include "common/p25/lc/tdulc/LC_PRIVATE.h"
+#include "common/p25/lc/tdulc/LC_TDULC_RAW.h"
 #include "common/p25/lc/tdulc/LC_TEL_INT_VCH_USER.h"
 #include "common/p25/P25Defines.h"
 #include "common/edac/Golay24128.h"
@@ -24,6 +25,28 @@ using namespace p25::lc::tdulc;
 #include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("TDULC", "[p25][tdulc]") {
+    SECTION("Raw LC words preserve the LCO and all eight payload bytes") {
+        const uint8_t word[P25_TDULC_PAYLOAD_LENGTH_BYTES + 1U] = {
+            LCO::MOT_TALKER_ALIAS_DATA, MFG_MOT, 0x07U, 0xF9U, 0x4BU,
+            0x30U, 0x12U, 0x34U, 0x56U
+        };
+
+        LC_TDULC_RAW encoded;
+        encoded.setTDULC(word);
+
+        uint8_t frame[P25_TDULC_FRAME_LENGTH_BYTES] = { 0U };
+        encoded.encode(frame);
+
+        LC_TDULC_RAW decoded;
+        REQUIRE(decoded.decode(frame));
+        REQUIRE(decoded.getDecodedRaw() != nullptr);
+        CHECK(::memcmp(decoded.getDecodedRaw(), word, sizeof(word)) == 0);
+
+        uint8_t rawPayload[P25_TDULC_PAYLOAD_LENGTH_BYTES] = { 0U };
+        encoded.encode(rawPayload, true);
+        CHECK(::memcmp(rawPayload, word + 1U, sizeof(rawPayload)) == 0);
+    }
+
     SECTION("Constants_Valid") {
         // Verify TDULC length constants
         REQUIRE(P25_TDULC_LENGTH_BYTES == 18);           // Total length with RS FEC

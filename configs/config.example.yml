@@ -339,6 +339,14 @@ protocols:
         ignoreDataCRC: false
         # Flag indicating whether verbose dumping of P25 TSBK data is enabled.
         dumpTsbkData: false
+        # Trunked P25 OTA radio alias transmission.
+        #   (dvmhost currently does not support any conventional radio alias transmission, the current OTA
+        #    implementation only supports trunked OTA radio alias transmission.)
+        radioAlias:
+            # Flag indicating whether OTA radio alias transmission is enabled.
+            enable: false
+            # Flag indicating Motorola TDULCs are used instead of Harris in-call LCWs.
+            motorola: false
         # Amount of time to hang after a voice call.
         callHang: 5
         # Flag indicating whether or not the host will acknowledge status packets.
@@ -824,6 +832,17 @@ system:
         # Flag indicating whether or not RID ACLs are enforced.
         acl: false
         # Flag indicating whether or not the RID ACL updates are logged.
+        verbose: false
+
+    #
+    # Radio Alias Configuration
+    #
+    radio_alias:
+        # Local cache used for P25 OTA radio alias transmission.
+        file: rid_alias.dat
+        # Amount of time between local file reloads. (minutes)
+        time: 0
+        # Flag indicating whether radio alias updates are logged.
         verbose: false
 
     #

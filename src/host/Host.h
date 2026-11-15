@@ -31,6 +31,7 @@
 #include "common/lookups/ChannelLookup.h"
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/json/json.h"
 #include "common/network/Network.h"
@@ -159,6 +160,7 @@ private:
 
     lookups::IdenTableLookup* m_idenTable;
     lookups::RadioIdLookup* m_ridLookup;
+    lookups::RadioAliasLookup* m_ridAliasLookup;
     lookups::TalkgroupRulesLookup* m_tidLookup;
 
     bool m_dmrBeacons;

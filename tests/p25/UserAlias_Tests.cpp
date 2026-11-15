@@ -125,3 +125,22 @@ TEST_CASE("P25 Motorola talker alias captured encoding", "[p25][lc][user-alias][
         REQUIRE(::memcmp(words[word].data(), expected[word], sizeof(expected[word])) == 0);
     }
 }
+
+TEST_CASE("P25 Motorola talker alias sequence reuse starts a new message", "[p25][lc][user-alias][motorola]")
+{
+    const std::vector<std::vector<uint8_t>> first = MotTalkerAlias::encode(
+        0xBB800U, 0x123U, 0x456789U, 0x2345U, "FIRST", 0x03U);
+    const std::vector<std::vector<uint8_t>> second = MotTalkerAlias::encode(
+        0xBB800U, 0x123U, 0x456789U, 0x2345U, "SECOND", 0x03U);
+
+    MotTalkerAlias assembler;
+    MotTalkerAliasResult result;
+    for (const std::vector<uint8_t>& word : first)
+        assembler.decode(word.data(), result);
+    REQUIRE(result.alias == "FIRST");
+
+    REQUIRE_FALSE(assembler.decode(second.front().data(), result));
+    for (std::size_t i = 1U; i < second.size(); ++i)
+        assembler.decode(second[i].data(), result);
+    REQUIRE(result.alias == "SECOND");
+}

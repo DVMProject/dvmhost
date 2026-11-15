@@ -15,6 +15,8 @@
 #include "common/p25/lc/tsbk/OSP_GRP_VCH_GRANT_UPD.h"
 #include "common/p25/lc/tsbk/OSP_UU_VCH_GRANT_UPD.h"
 #include "common/p25/lc/tdulc/TDULCFactory.h"
+#include "common/p25/lc/tdulc/LC_TDULC_RAW.h"
+#include "common/p25/lc/MotTalkerAlias.h"
 #include "common/p25/P25Utils.h"
 #include "common/p25/Sync.h"
 #include "common/Log.h"
@@ -782,7 +784,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfLC.setRS(rsValue);
             }
 
-            m_rfLC.encodeLDU1(data + 2U);
+            lc::LC outboundLC(m_rfLC);
+            applyUserAlias(outboundLC, m_rfUserAliasPhase);
+            outboundLC.encodeLDU1(data + 2U);
 
             // generate Low Speed Data
             m_rfLSD.process(data + 2U);
@@ -1161,6 +1165,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
 
         if (duid == DUID::TDU) {
+            if (m_p25->m_rfState == RS_RF_AUDIO)
+                writeMotAlias(m_rfLC);
+
             if (m_p25->m_immediateCallTerm)
                 m_p25->writeRF_TDU(false);
             else {
@@ -1185,6 +1192,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 LogWarning(LOG_RF, P25_TDULC_STR ", undecodable TDULC");
             }
             else {
+                if (m_p25->m_rfState == RS_RF_AUDIO && tdulc->getLCO() == LCO::CALL_TERM)
+                    writeMotAlias(m_rfLC);
                 m_p25->m_control->writeRF_TDULC(tdulc.get(), false);
             }
         }
@@ -1395,6 +1404,8 @@ bool Voice::processNetwork(uint8_t* data, uint32_t len, lc::LC& control, data::L
             }
 
             if (m_p25->m_netState != RS_NET_IDLE) {
+                writeMotAlias(m_netLC);
+
                 if (duid == DUID::TDU)
                     writeNet_TDU();
 
@@ -1454,6 +1465,9 @@ Voice::Voice(Control* p25, bool debug, bool verbose) :
     m_roamLDU1Count(0U),
     m_rfUserAliasPhase(0U),
     m_netUserAliasPhase(0U),
+    m_radioAliasEnabled(false),
+    m_motRadioAlias(false),
+    m_motAliasSequence(0U),
     m_inbound(false),
     m_verbose(verbose),
     m_debug(debug)
@@ -2146,7 +2160,9 @@ void Voice::writeNet_LDU1()
         m_netLC.setRS(rsValue);
     }
 
-    m_netLC.encodeLDU1(buffer + 2U);
+    lc::LC outboundLC(m_netLC);
+    applyUserAlias(outboundLC, m_netUserAliasPhase);
+    outboundLC.encodeLDU1(buffer + 2U);
 
     // add the Audio
     m_audio.encode(buffer + 2U, m_netLDU1 + 10U, 0U);
@@ -2399,13 +2415,19 @@ void Voice::resetWithNullAudio(uint8_t* data, bool encrypted)
 
 bool Voice::applyUserAlias(lc::LC& control, uint8_t& phase)
 {
-    // User Alias is an outbound voice-channel LC. Do not displace scheduled
-    // status, update, explicit-source-ID, or vendor-specific LCs.
-    if (!control.isStandardMFId() ||
-        (control.getLCO() != LCO::GROUP && control.getLCO() != LCO::PRIVATE &&
-         control.getLCO() != LCO::PRIVATE_EXT)) {
+    if (!m_radioAliasEnabled || m_motRadioAlias || m_p25->m_ridAliasLookup == nullptr)
+        return false;
+
+    // user Alias is an outbound voice-channel LC; do not displace scheduled
+    // status, update, explicit-source-ID, or vendor-specific LCs
+    if (!control.isStandardMFId() || control.getExplicitId() ||
+        (control.getLCO() != LCO::GROUP && control.getLCO() != LCO::PRIVATE)) {
         return false;
     }
+
+    const std::string radioAlias = m_p25->m_ridAliasLookup->find(control.getSrcId());
+    if (radioAlias.empty() || radioAlias == "UNKNOWN")
+        return false;
 
     const uint8_t currentPhase = phase;
     phase = (phase + 1U) % USER_ALIAS_PHASE_COUNT;
@@ -2413,15 +2435,6 @@ bool Voice::applyUserAlias(lc::LC& control, uint8_t& phase)
     // leave one normal voice-user LC between complete alias conveyances
     if (currentPhase == 2U || currentPhase == 5U)
         return false;
-
-    // bryanb: this needs to be changed to use the actual Radio Alias from the new radio alias lookups
-    //  and not the radio ID ACL alias data
-    // TODO FIXME TODO
-    ::lookups::RadioId rid = m_p25->m_ridLookup->find(control.getSrcId());
-    if (rid.radioDefault())
-        return false;
-
-    std::string radioAlias = rid.radioAlias();
 
     control.setUserAlias(radioAlias);
     control.setMFId(MFG_HARRIS);
@@ -2444,6 +2457,28 @@ bool Voice::applyUserAlias(lc::LC& control, uint8_t& phase)
     }
 
     return true;
+}
+
+/* Transmits Motorola talker-alias TDULCs for a completed call. */
+
+void Voice::writeMotAlias(const lc::LC& control)
+{
+    if (!m_radioAliasEnabled || !m_motRadioAlias || m_p25->m_ridAliasLookup == nullptr || !m_p25->m_duplex)
+        return;
+
+    const std::string alias = m_p25->m_ridAliasLookup->find(control.getSrcId());
+    if (alias.empty() || alias == "UNKNOWN")
+        return;
+
+    const SiteData site = lc::LC::getSiteData();
+    const std::vector<std::vector<uint8_t>> words = lc::MotTalkerAlias::encode(site.netId(), site.sysId(),
+        control.getSrcId(), (uint16_t)control.getDstId(), alias, m_motAliasSequence++);
+
+    for (const std::vector<uint8_t>& word : words) {
+        lc::tdulc::LC_TDULC_RAW raw;
+        raw.setTDULC(word.data());
+        m_p25->m_control->writeRF_TDULC(&raw, true);
+    }
 }
 
 /* Helper to determine the next active talkgroup in a active multi-group scenario. */

@@ -773,6 +773,28 @@ void HostTestHooks::p25ProcessNetworkQueue(p25::Control& control)
     control.processNetwork();
 }
 
+/* Configures synthetic P25 OTA radio-alias transmission. */
+
+void HostTestHooks::p25ConfigureRadioAlias(p25::Control& control, bool enabled, bool motorola)
+{
+    control.m_voice->m_radioAliasEnabled = enabled;
+    control.m_voice->m_motRadioAlias = motorola;
+}
+
+/* Applies one synthetic Harris radio-alias scheduling step. */
+
+bool HostTestHooks::p25ApplyRadioAlias(p25::Control& control, p25::lc::LC& lc, uint8_t& phase)
+{
+    return control.m_voice->applyUserAlias(lc, phase);
+}
+
+/* Queues Motorola radio-alias TDULCs for a synthetic completed call. */
+
+void HostTestHooks::p25WriteMotorolaAlias(p25::Control& control, const p25::lc::LC& lc)
+{
+    control.m_voice->writeMotAlias(lc);
+}
+
 /* Selects the next secondary active talkgroup for a P25 voice channel. */
 
 bool HostTestHooks::p25NextActiveTalkgroups(p25::Control& control, const std::vector<uint32_t>& activeTG,
