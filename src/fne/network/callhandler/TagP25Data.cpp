@@ -691,6 +691,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         bool noConnectedPeerRepeat = false;
         bool privateCallInProgress = false;
         bool telInt = isTelIntTraffic(control, duid, tsbk.get());
+        bool telIntRoutedToConnectedPeer = false;
 
         // is this a private call in-progress?
         if (m_network->m_privateCallRoutingEnabled) {
@@ -812,6 +813,13 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     // perform TGID route rewrites if configured
                     routeRewrite(outboundPeerBuffer, peer.first, duid, dstId);
 
+                    // check if this traffic is routed through the telephone interconnect gateway
+                    if (telInt && isTelIntGateway(ssrc)) {
+                        uint32_t sitePeerId = conn->ccPeerId() > 0U ? conn->ccPeerId() : peer.first;
+                        if (sitePeerId == m_network->findPeerUnitReg(dstId))
+                            telIntRoutedToConnectedPeer = true;
+                    }
+
                     m_network->writePeerQueue(&queue, peer.first, ssrc, { NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, outboundPeerBuffer, len, pktSeq, streamId);
                     if (m_debug) {
                         LogDebugEx(LOG_P25, "TagP25Data::processFrame()", "Master, ssrc = %u, srcPeer = %u, dstPeer = %u, duid = $%02X, lco = $%02X, MFId = $%02X, srcId = %u, dstId = %u, len = %u, pktSeq = %u, streamId = %u, fromUpstream = %u, pci = %u, ncpr = %u", 
@@ -827,6 +835,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         // if this is a private call, and we have already repeated to the connected peer that registered
         // the unit, don't repeat to any neighbor FNE peers
         if (privateCallInProgress && !noConnectedPeerRepeat) {
+            return true;
+        }
+
+        // like a private call, stop after delivering gateway traffic to the
+        // directly connected site selected by the unit-route registry
+        if (telIntRoutedToConnectedPeer) {
             return true;
         }
 
@@ -849,6 +863,12 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
                     // skip peer if it isn't enabled
                     if (!peer.second->isEnabled()) {
+                        continue;
+                    }
+
+                    // Apply the same gateway and unit-route policy to upstream
+                    // peers that is used for peers connected to this master.
+                    if (telInt && !isTelIntPeerPermitted(ssrc, dstPeerId, nullptr, dstId)) {
                         continue;
                     }
 
