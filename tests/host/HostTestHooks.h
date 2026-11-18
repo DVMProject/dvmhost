@@ -428,6 +428,14 @@ public:
      */
     static bool p25AddFrame(p25::Control& control, const uint8_t* data, uint32_t length);
     /**
+     * @brief Copies the encoded data block that follows a response header out of a received RF PDU.
+     * @param[in] rfPDU Received RF PDU bits, starting with the preamble.
+     * @param rfPDUBits Number of valid bits held in rfPDU.
+     * @param[out] block Buffer of at least P25_PDU_FEC_LENGTH_BYTES receiving the encoded block.
+     * @returns bool True if the data block was received and copied; otherwise, false.
+     */
+    static bool p25ResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block);
+    /**
      * @brief Queues a tagged NXDN frame for transmission to the modem.
      * @param control NXDN control instance.
      * @param[in] data Tagged frame data.

@@ -193,8 +193,18 @@ bool Data::process(uint8_t* data, uint32_t len)
                     }
                 }
 
-                // rewrite the response to the network
-                writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, true);
+                // rewrite the response to the network; the network frame carries the header's
+                // blocks to follow, so a response with a data block (e.g. an ACK RETRY) must
+                // send that block too or the receiver waits for a block that never arrives
+                uint8_t rspBlock[P25_PDU_FEC_LENGTH_BYTES];
+                if (m_rfAssembler->dataHeader.getBlocksToFollow() > 0U &&
+                    getResponseDataBlock(m_rfPDU, m_rfPDUBits, rspBlock)) {
+                    writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, false);
+                    writeNetwork(1U, rspBlock, P25_PDU_FEC_LENGTH_BYTES, true);
+                }
+                else {
+                    writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, true);
+                }
 
                 // only repeat the PDU locally if the packet isn't for the FNE
                 if (m_repeatPDU && m_rfAssembler->dataHeader.getLLId() != WUID_FNE) {
@@ -1004,6 +1014,22 @@ bool Data::processSNDCPControl(const uint8_t* pduUserData, uint32_t length)
 
     // always forward SNDCP control to FNE for processing
     // FNE will generate the accept/reject response
+    return true;
+}
+
+/* Helper to copy the encoded data block that follows a response header out of a received RF PDU. */
+
+bool Data::getResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block)
+{
+    assert(rfPDU != nullptr);
+    assert(block != nullptr);
+
+    // the data block follows the preamble and the header block
+    if (rfPDUBits < P25_PREAMBLE_LENGTH_BITS + (2U * P25_PDU_FEC_LENGTH_BITS))
+        return false;
+
+    ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+    Utils::getBitRange(rfPDU, block, P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);
     return true;
 }
 

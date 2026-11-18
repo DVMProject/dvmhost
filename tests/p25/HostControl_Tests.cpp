@@ -17,6 +17,7 @@
 #include "common/network/NetRPC.h"
 #include "common/network/Network.h"
 #include "common/edac/CRC.h"
+#include "common/Utils.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
@@ -2401,6 +2402,34 @@ TEST_CASE("P25 grant authority follows configuration and FNE availability",
     P25HostHarness local(true, true);
     local.network()->activateForTest();
     REQUIRE(local.m_control->isGrantAuthoritative());
+}
+
+TEST_CASE("P25 response data block is copied from behind the response header", "[p25][host][pdu][response]")
+{
+    using namespace p25::defines;
+
+    // preamble, header block, then the response data block (e.g. selective retry flags)
+    std::vector<uint8_t> rfPDU(P25_PDU_FRAME_LENGTH_BYTES + 2U, 0x00U);
+
+    uint8_t expected[P25_PDU_FEC_LENGTH_BYTES];
+    for (uint32_t i = 0U; i < P25_PDU_FEC_LENGTH_BYTES; i++)
+        expected[i] = uint8_t(0xA5U ^ (i * 7U));
+    // the last octet only carries the bits that fit in the encoded block
+    const uint32_t tailBits = P25_PDU_FEC_LENGTH_BITS % 8U;
+    if (tailBits != 0U)
+        expected[P25_PDU_FEC_LENGTH_BYTES - 1U] &= uint8_t(0xFFU << (8U - tailBits));
+
+    Utils::setBitRange(expected, rfPDU.data(), P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);
+
+    const uint32_t completeBits = P25_PREAMBLE_LENGTH_BITS + (2U * P25_PDU_FEC_LENGTH_BITS);
+
+    uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
+    REQUIRE(HostTestHooks::p25ResponseDataBlock(rfPDU.data(), completeBits, block));
+    CHECK(::memcmp(block, expected, P25_PDU_FEC_LENGTH_BYTES) == 0);
+
+    // a response whose data block has not been received yet must not be forwarded as one
+    CHECK_FALSE(HostTestHooks::p25ResponseDataBlock(rfPDU.data(), completeBits - 1U, block));
+    CHECK_FALSE(HostTestHooks::p25ResponseDataBlock(rfPDU.data(), P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS, block));
 }
 
 TEST_CASE("P25 frame types wait for their complete variable-length modem space", "[p25][host][control][queue][pacing]")

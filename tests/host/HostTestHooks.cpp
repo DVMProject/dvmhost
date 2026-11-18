@@ -633,6 +633,13 @@ bool HostTestHooks::p25AddFrame(p25::Control& control, const uint8_t* data, uint
     return control.addFrame(data, length);
 }
 
+/* Copies the encoded data block that follows a response header out of a received RF PDU. */
+
+bool HostTestHooks::p25ResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block)
+{
+    return p25::packet::Data::getResponseDataBlock(rfPDU, rfPDUBits, block);
+}
+
 /* Queues a tagged NXDN frame for transmission to the modem. */
 
 void HostTestHooks::nxdnAddFrame(nxdn::Control& control, const uint8_t* data)
