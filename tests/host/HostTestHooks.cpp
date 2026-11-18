@@ -594,6 +594,21 @@ void HostTestHooks::p25ClockU2U(p25::Control& control, uint32_t ms)
     control.m_control->clock(ms);
 }
 
+/* Sets whether P25 SNDCP support is enabled. */
+
+void HostTestHooks::p25SetSNDCPSupport(p25::Control& control, bool enabled) { control.m_sndcpSupport = enabled; }
+
+/* Tests whether the P25 voice channel holds an SNDCP data permit. */
+
+bool HostTestHooks::p25PermittedData(const p25::Control& control) { return control.m_permittedData; }
+
+/* Advances the P25 data channel keep-alive and permit hold timers. */
+
+void HostTestHooks::p25ClockDataChannelKeepAlive(p25::Control& control, uint32_t ms)
+{
+    control.clockDataChannelKeepAlive(ms);
+}
+
 /* Queues a tagged DMR frame for transmission to the modem. */
 
 void HostTestHooks::dmrAddFrame(dmr::Control& control, uint32_t slotNo, const uint8_t* data)

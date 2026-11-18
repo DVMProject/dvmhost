@@ -7,6 +7,7 @@
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *  Copyright (C) 2026 Charles Bricker, K3NOP
+ *  Copyright (C) 2026 David Andrzejewski
  *
  */
 #include "Defines.h"
@@ -38,6 +39,10 @@ const uint32_t TSBK_PCH_CCH_CNT = 6U;
 const uint32_t MAX_PREAMBLE_TDU_CNT = 64U;
 
 const uint32_t VOICE_CALL_TERM_TIMEOUT = 1000U;  // ms
+
+// failsafe for a lost control channel unpermit; twice the CC grant timer so a
+// grant refreshed by a repeated SNDCP channel request is never cut short
+const uint32_t DATA_CH_PERMIT_HOLD_TIMEOUT = 30U; // s
 
 // ---------------------------------------------------------------------------
 //  Static Class Members
@@ -112,6 +117,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_permittedSrcId(0U),
     m_permittedU2U(false),
     m_permittedTelInt(false),
+    m_permittedData(false),
     m_tailOnIdle(false),
     m_ccRunning(false),
     m_ccPrevRunning(false),
@@ -125,6 +131,8 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_adjSiteUpdate(1000U, 75U),
     m_activeTGUpdate(1000U, 5U),
     m_ccPacketInterval(1000U, 0U, 15U),
+    m_dataChKeepAlive(1000U, 0U, 15U),
+    m_dataChPermitHold(1000U, DATA_CH_PERMIT_HOLD_TIMEOUT),
     m_rfVoiceCallTermTimeout(1000U, VOICE_CALL_TERM_TIMEOUT),
     m_interval(),
     m_hangCount(3U * 8U),
@@ -1100,6 +1108,8 @@ void Control::clock()
         }
     }
 
+    clockDataChannelKeepAlive(ms);
+
     // reset states if we're in a rejected state and we're a control channel
     if (m_rfState == RS_RF_REJECTED && m_enableControl && m_dedicatedControl) {
         clearRFReject();
@@ -1319,10 +1329,20 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt, uint32_t
     m_permittedSrcId = (dstId != 0U && unitToUnit) ? srcId : 0U;
     m_permittedU2U = (dstId != 0U) && unitToUnit;
     m_permittedTelInt = (dstId != 0U) && telInt;
+    m_permittedData = (dstId != 0U) && dataPermit && m_sndcpSupport;
 
     // is this a data permit?
-    if (dataPermit && m_sndcpSupport) {
+    if (m_permittedData) {
         m_data->sndcpInitialize(dstId);
+
+        // an SU directed here listens for outbound frame sync before it transmits
+        // a packet; an idle data channel must therefore key up on its own
+        m_dataChPermitHold.start();
+        m_dataChKeepAlive.start();
+    }
+    else {
+        m_dataChPermitHold.stop();
+        m_dataChKeepAlive.stop();
     }
 }
 
@@ -1944,6 +1964,42 @@ void Control::processFrameLoss(RPT_RF_LOSS_TYPE type)
         m_ccHalted = false;
         writeRF_ControlData();
     }
+}
+
+/* Helper to keep the outbound keyed on an idle, SNDCP-permitted data channel. */
+
+void Control::clockDataChannelKeepAlive(uint32_t ms)
+{
+    if (!m_permittedData)
+        return;
+
+    m_dataChPermitHold.clock(ms);
+    if (m_dataChPermitHold.isRunning() && m_dataChPermitHold.hasExpired()) {
+        // a lost unpermit must not leave the transmitter keyed indefinitely
+        LogWarning(LOG_P25, "data channel permit hold expired without a control channel release, dstId = %u", m_permittedDstId);
+
+        m_permittedData = false;
+        m_dataChPermitHold.stop();
+        m_dataChKeepAlive.stop();
+        return;
+    }
+
+    m_dataChKeepAlive.clock(ms);
+    if (!m_dataChKeepAlive.isRunning() || !m_dataChKeepAlive.hasExpired())
+        return;
+
+    m_dataChKeepAlive.start();
+
+    // only fill otherwise idle air time; RF or network traffic in progress, and
+    // any frame already queued (including PDU responses), keep the carrier up
+    if (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)
+        return;
+    if (peekFrameLength() != 0U)
+        return;
+
+    // a TDU carries frame sync and all-idle status symbols, advertising the
+    // inbound channel as free to the SU waiting to send its packet
+    writeRF_TDU(true);
 }
 
 /* Helper to process an In-Call Control message. */
