@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 David Andrzejewski
  *
  */
 #include "Defines.h"
@@ -641,6 +642,14 @@ void Data::resetReceivedBlocks()
 
     m_netDataBlockCnt = 0U;
     m_netTotalBlocks = 0U;
+}
+
+/* Helper to determine whether an RF PDU is held by, or still spaced by, the native-modem pacing guard. */
+
+bool Data::isRFPDUPaced()
+{
+    std::lock_guard<std::mutex> lock(m_pduPacingMutex);
+    return m_pduPacingRemainingMs > 0U || !m_pendingPDUs.empty();
 }
 
 /* Helper to write user data as a P25 PDU packet. */

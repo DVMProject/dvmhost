@@ -1984,17 +1984,33 @@ void Control::clockDataChannelKeepAlive(uint32_t ms)
         return;
     }
 
+    // once the SU transmits on this grant it no longer needs outbound frame sync, so
+    // the keep-alive ends for the rest of the grant
+    if (m_rfState != RS_RF_LISTENING) {
+        if (m_dataChKeepAlive.isRunning() && m_debug) {
+            LogDebugEx(LOG_P25, "Control::clockDataChannelKeepAlive()", "SU transmitting, data channel keep-alive ended, dstId = %u", m_permittedDstId);
+        }
+
+        m_dataChKeepAlive.stop();
+        return;
+    }
+
     m_dataChKeepAlive.clock(ms);
     if (!m_dataChKeepAlive.isRunning() || !m_dataChKeepAlive.hasExpired())
         return;
 
     m_dataChKeepAlive.start();
 
-    // only fill otherwise idle air time; RF or network traffic in progress, and
-    // any frame already queued (including PDU responses), keep the carrier up
-    if (m_rfState != RS_RF_LISTENING || m_netState != RS_NET_IDLE)
+    // only fill otherwise idle air time; network traffic in progress, and any frame
+    // already queued (including PDU responses), keep the carrier up
+    if (m_netState != RS_NET_IDLE)
         return;
     if (peekFrameLength() != 0U)
+        return;
+
+    // a PDU held by the native-modem pacing guard must not queue behind keep-alive
+    // TDUs, and filling the guard would keep the transmitter keyed when the SU answers
+    if (m_data->isRFPDUPaced())
         return;
 
     // a TDU carries frame sync and all-idle status symbols, advertising the

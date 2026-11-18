@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 David Andrzejewski
  *
  */
 /**
@@ -32,6 +33,14 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 namespace p25
 {
@@ -125,6 +134,9 @@ namespace p25
 
         private:
             friend class p25::Control;
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::HostTestHooks;
+#endif
             Control* m_p25;
 
             RPT_RF_STATE m_prevRfState;
@@ -227,6 +239,11 @@ namespace p25
              * @brief Helper to reset received network blocks.
              */
             void resetReceivedBlocks();
+            /**
+             * @brief Helper to determine whether an RF PDU is held by, or still spaced by, the native-modem pacing guard.
+             * @returns bool True, if an RF PDU is held or the pacing guard is running, otherwise false.
+             */
+            bool isRFPDUPaced();
 
             /**
              * @brief Helper to queue a complete P25 PDU packet.

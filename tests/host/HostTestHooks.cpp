@@ -24,6 +24,7 @@
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/P25Utils.h"
 #include "host/p25/packet/ControlSignaling.h"
+#include "host/p25/packet/Data.h"
 #include "host/p25/packet/Voice.h"
 
 #include <cstring>
@@ -607,6 +608,14 @@ bool HostTestHooks::p25PermittedData(const p25::Control& control) { return contr
 void HostTestHooks::p25ClockDataChannelKeepAlive(p25::Control& control, uint32_t ms)
 {
     control.clockDataChannelKeepAlive(ms);
+}
+
+/* Sets the remaining P25 native-modem PDU pacing guard. */
+
+void HostTestHooks::p25SetRFPDUPacing(p25::Control& control, uint32_t ms)
+{
+    std::lock_guard<std::mutex> lock(control.m_data->m_pduPacingMutex);
+    control.m_data->m_pduPacingRemainingMs = ms;
 }
 
 /* Queues a tagged DMR frame for transmission to the modem. */

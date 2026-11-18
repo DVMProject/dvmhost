@@ -2075,6 +2075,64 @@ TEST_CASE("P25 SNDCP data channel keep-alive yields to RF traffic", "[p25][host]
     REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
 }
 
+TEST_CASE("P25 SNDCP data channel keep-alive ends for the rest of the grant once the SU transmits", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    HostTestHooks::p25ClockDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+
+    // the SU keys up on the grant
+    HostTestHooks::p25SetRFCall(*harness.m_control, 9051U, 9051U);
+    HostTestHooks::p25ClockDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+
+    // after the SU unkeys the channel stays unkeyed while the grant is still held
+    HostTestHooks::p25ClearRFCall(*harness.m_control);
+    for (uint32_t i = 0U; i < 10U; i++) {
+        HostTestHooks::p25ClockDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+    REQUIRE(HostTestHooks::p25PermittedData(*harness.m_control));
+
+    // a new data grant keys the idle channel again
+    harness.m_control->permittedTG(0U, false);
+    drainRFFrames(*harness.m_control, tduCount);
+    harness.m_control->permittedTG(9051U, true);
+    drainRFFrames(*harness.m_control, tduCount);
+    HostTestHooks::p25ClockDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+    REQUIRE(tduCount == 1U);
+}
+
+TEST_CASE("P25 SNDCP data channel keep-alive does not fill the native-modem PDU pacing guard", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    // a PDU was just transmitted (or is held); the guard must elapse on its own
+    HostTestHooks::p25SetRFPDUPacing(*harness.m_control, 500U);
+    for (uint32_t i = 0U; i < 5U; i++) {
+        HostTestHooks::p25ClockDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+
+    // once the guard has elapsed the idle channel is kept keyed again
+    HostTestHooks::p25SetRFPDUPacing(*harness.m_control, 0U);
+    HostTestHooks::p25ClockDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+    REQUIRE(tduCount == 1U);
+}
+
 TEST_CASE("P25 SNDCP data channel keep-alive stops when the control channel releases the grant", "[p25][host][control][sndcp][data-channel]")
 {
     P25HostHarness harness(false, false, 0U, 1U, false, false, true);

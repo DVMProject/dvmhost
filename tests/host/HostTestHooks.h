@@ -407,6 +407,12 @@ public:
      */
     static void p25ClockDataChannelKeepAlive(p25::Control& control, uint32_t ms);
     /**
+     * @brief Sets the remaining P25 native-modem PDU pacing guard.
+     * @param control P25 control instance.
+     * @param ms Remaining pacing guard in milliseconds (0 clears it).
+     */
+    static void p25SetRFPDUPacing(p25::Control& control, uint32_t ms);
+    /**
      * @brief Queues a tagged DMR frame for transmission to the modem.
      * @param control DMR control instance.
      * @param slotNo DMR slot number (1 or 2).
