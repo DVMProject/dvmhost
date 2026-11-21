@@ -1907,6 +1907,10 @@ void Voice::writeNet_LDU1()
         // validate source RID
         if (!acl::AccessControl::validateSrcId(srcId)) {
             LogWarning(LOG_NET, P25_HDU_STR " denial, RID rejection, srcId = %u", srcId);
+            resetNet();
+            m_p25->m_netState = RS_NET_IDLE;
+            if (m_p25->m_network != nullptr)
+                m_p25->m_network->resetP25();
             return;
         }
 
@@ -1915,6 +1919,10 @@ void Voice::writeNet_LDU1()
             // validate the target RID
             if (!acl::AccessControl::validateSrcId(dstId)) {
                 LogWarning(LOG_NET, P25_HDU_STR " denial, RID rejection, dstId = %u", dstId);
+                resetNet();
+                m_p25->m_netState = RS_NET_IDLE;
+                if (m_p25->m_network != nullptr)
+                    m_p25->m_network->resetP25();
                 return;
             }
         }
@@ -1922,6 +1930,10 @@ void Voice::writeNet_LDU1()
             // validate the target ID, if the target is a talkgroup
             if (!acl::AccessControl::validateTGId(dstId)) {
                 LogWarning(LOG_NET, P25_HDU_STR " denial, TGID rejection, dstId = %u", dstId);
+                resetNet();
+                m_p25->m_netState = RS_NET_IDLE;
+                if (m_p25->m_network != nullptr)
+                    m_p25->m_network->resetP25();
                 return;
             }
         }
