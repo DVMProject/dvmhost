@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -144,8 +144,8 @@ UInt8Array Compression::decompress(const uint8_t* buffer, uint32_t len, uint32_t
         strm.next_out = outbuffer;
 
         ret = inflate(&strm, Z_NO_FLUSH);
-        if (ret == Z_STREAM_ERROR) {
-            LogError(LOG_HOST, "ZLIB error decompressing compressed data; stream error");
+        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR || ret == Z_BUF_ERROR) {
+            LogError(LOG_HOST, "ZLIB error decompressing compressed data; stream/data error");
             inflateEnd(&strm);
             delete[] data;
             return nullptr;

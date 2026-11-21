@@ -61,12 +61,15 @@ TEST_CASE("P25 HDU Reed-Soloman 36,20,17 Test", "[p25][hdu_rs362017]") {
 
     // decode RS (36,20,17) FEC
     try {
-        bool ret = m_rs.decode362017(rs);
+        int8_t errs = -1;
+        bool ret = m_rs.decode362017(rs, &errs);
         if (!ret) {
             ::LogError("T", "LC::decodeHDU(), failed to decode RS (36,20,17) FEC");
             failed = true;
             goto cleanup;
         }
+        REQUIRE(errs > 0);
+        REQUIRE(errs <= 8);
     }
     catch (...) {
         Utils::dump(2U, "P25, RS excepted with input data", rs, P25_HDU_LENGTH_BYTES);

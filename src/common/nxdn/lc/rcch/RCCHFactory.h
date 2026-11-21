@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -49,7 +49,7 @@ namespace nxdn
              * @brief Helper class to instantiate an instance of a RCCH.
              * @ingroup nxdn_rcch
              */
-            class HOST_SW_API RCCHFactory {
+            class DVM_COMMON_API RCCHFactory {
             public:
                 /**
                  * @brief Initializes a new instance of the RCCHFactory class.

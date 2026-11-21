@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Digital Voice Modem - MBE Vocoder
  * GPLv2 Open Source. Use is subject to license terms.
@@ -44,7 +44,7 @@ namespace vocoder
     /**
      * @brief Implements MBE audio encoding.
      */
-    class HOST_SW_API MBEEncoder {
+    class VOCODER_API MBEEncoder {
     public:
         /**
          * @brief Initializes a new instance of the MBEEncoder class.
@@ -65,6 +65,13 @@ namespace vocoder
          * @param[out] codeword MBE codewords.
          */
         void encode(int16_t* samples, uint8_t* codeword);
+
+        /**
+         * @brief Encodes PCM samples to a deinterleaved 49-bit AMBE payload.
+         * @param[in] samples PCM samples.
+         * @param[out] bits Deinterleaved AMBE payload, one bit per byte.
+         */
+        void encodeBits(int16_t* samples, uint8_t bits[]);
 
     private:
         imbe_vocoder m_vocoder;

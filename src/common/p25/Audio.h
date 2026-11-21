@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -29,7 +29,7 @@ namespace p25
      * @brief Implements P25 audio processing and interleaving.
      * @ingroup p25
      */
-    class HOST_SW_API Audio {
+    class DVM_COMMON_API Audio {
     public:
         /**
          * @brief Initializes a new instance of the Audio class.

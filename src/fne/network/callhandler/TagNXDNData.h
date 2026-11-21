@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -24,6 +24,16 @@
 #include "common/nxdn/lc/RTCH.h"
 #include "common/nxdn/lc/RCCH.h"
 #include "network/TrafficNetwork.h"
+#include "network/callhandler/OrderedFrameQueue.h"
+
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
 
 namespace network
 {
@@ -51,6 +61,19 @@ namespace network
             ~TagNXDNData();
 
             /**
+             * @brief Copies and enqueues an NXDN frame in arrival order for its stream.
+             * @param data Network data buffer copied before this method returns.
+             * @param len Length of data in bytes.
+             * @param peerId Peer ID identifying the packet origin.
+             * @param ssrc RTP synchronization source ID.
+             * @param pktSeq RTP packet sequence.
+             * @param streamId Call stream ID.
+             * @param fromUpstream Flag indicating traffic is from an upstream master.
+             * @returns bool True if the frame was queued, otherwise false.
+             */
+            bool enqueueFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
+
+            /**
              * @brief Process a data frame from the network.
              * @param data Network data buffer.
              * @param len Length of data.
@@ -62,17 +85,20 @@ namespace network
              * @returns bool True, if frame is processed, otherwise false.
              */
             bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
+
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.
              * @param dstId Destination ID.
              * @param unitToUnit Flag indicating whether or not this grant is for unit-to-unit traffic.
+             * @param serviceOptions NXDN service-options octet.
              * @param peerId Peer ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
              * @returns bool True, if the grant was processed, otherwise false.
              */
-            bool processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
+            bool processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint8_t serviceOptions,
+                uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /**
              * @brief Helper to trigger a call takeover from a In-Call control event.
@@ -121,8 +147,18 @@ namespace network
              */
             uint32_t lastParrotDstId() const { return m_lastParrotDstId; }
 
+            /**
+             * @brief Sets the debug flag.
+             * @param debug Debug flag.
+             */
+            void setDebug(bool debug) { m_debug = debug; }
+
         private:
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::FNETestHooks;
+#endif
             TrafficNetwork* m_network;
+            OrderedFrameQueue m_orderedFrames;
 
             /**
              * @brief Represents a stored parrot frame.
@@ -218,6 +254,7 @@ namespace network
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             concurrent::unordered_map<uint32_t, RxStatus> m_status;
             concurrent::unordered_map<uint32_t, RxStatus> m_statusPVCall;
+            concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_rejectedCallStreams;
 
             bool m_debug;
 
@@ -266,9 +303,11 @@ namespace network
              * @param dstId Destination ID.
              * @param serviceOptions Service Options.
              * @param grp Flag indicating the destination ID is a talkgroup.
+             * @param requestingPeer Flag indicating routing checks were already satisfied by the grant request.
              * @returns True, if granted, otherwise false.
              */
-            bool write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp);
+            bool write_Message_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId,
+                uint8_t serviceOptions, bool grp, bool requestingPeer = false);
             /**
              * @brief Helper to write a deny packet.
              * @param peerId Peer ID.

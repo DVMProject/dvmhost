@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -157,7 +157,13 @@ bool FrameQueue::write(const uint8_t* message, uint32_t length, uint32_t streamI
     // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
     //  this message
     if (bufferLen > (DATA_PACKET_LENGTH - OVERSIZED_PACKET_WARN)) {
-        LogDebug(LOG_NET, "FrameQueue::write(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG");
+        LogWarning(LOG_NET, "FrameQueue::write(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG, peerId = %u, func = $%02X, subfunc = $%02X, address = %s, port = %u, bufferLen = %u", 
+            peerId, opcode.first, opcode.second, udp::Socket::address(addr).c_str(), udp::Socket::port(addr), bufferLen);
+    }
+
+    if (bufferLen > DATA_PACKET_LENGTH) {
+        LogError(LOG_NET, "FrameQueue::write(), packet length is oversized, data truncation - BUGBUG, peerId = %u, func = $%02X, subfunc = $%02X, address = %s, port = %u, bufferLen = %u", 
+            peerId, opcode.first, opcode.second, udp::Socket::address(addr).c_str(), udp::Socket::port(addr), bufferLen);
     }
 
     bool ret = true;
@@ -202,7 +208,13 @@ void FrameQueue::enqueueMessage(udp::BufferQueue* queue, const uint8_t* message,
     // bryanb: this is really a developer warning not a end-user warning, there's nothing the end-users can do about
     //  this message
     if (bufferLen > (DATA_PACKET_LENGTH - OVERSIZED_PACKET_WARN)) {
-        LogDebug(LOG_NET, "FrameQueue::enqueueMessage(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG");
+        LogWarning(LOG_NET, "FrameQueue::enqueueMessage(), WARN: packet length is possibly oversized, possible data truncation - BUGBUG, peerId = %u, func = $%02X, subfunc = $%02X, address = %s, port = %u, bufferLen = %u", 
+            peerId, opcode.first, opcode.second, udp::Socket::address(addr).c_str(), udp::Socket::port(addr), bufferLen);
+    }
+
+    if (bufferLen > DATA_PACKET_LENGTH) {
+        LogError(LOG_NET, "FrameQueue::enqueueMessage(), packet length is oversized, data truncation - BUGBUG, peerId = %u, func = $%02X, subfunc = $%02X, address = %s, port = %u, bufferLen = %u", 
+            peerId, opcode.first, opcode.second, udp::Socket::address(addr).c_str(), udp::Socket::port(addr), bufferLen);
     }
 
     udp::UDPDatagram *dgram = new udp::UDPDatagram;

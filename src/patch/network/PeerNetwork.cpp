@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "patch/Defines.h"
@@ -189,7 +189,10 @@ bool PeerNetwork::writeConfig()
     rcon["port"].set<uint16_t>(m_metadata->restApiPort);                            // REST API Port
     config["rcon"].set<json::object>(rcon);
 
-    config["software"].set<std::string>(std::string(software));                 // Software ID
+    uint32_t peerClass = PEER_CONN_CLASS::PEER_CONN_CLASS_STANDARD;
+    config["peerClass"].set<uint32_t>(peerClass);                                   // Peer Connection Class
+
+    config["software"].set<std::string>(std::string(software));                     // Software ID
 
     json::value v = json::value(config);
     std::string json = v.serialize();

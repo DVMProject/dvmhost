@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -51,7 +51,7 @@ int gettimeofday(struct timeval* tv, struct timezone* tzp)
 }
 #endif // defined(_WIN32)
 
-/* */
+/* Calculates the difference between two NTP timestamps in milliseconds. */
 
 static inline uint32_t ntpDiffMS(uint64_t older, uint64_t newer)
 {

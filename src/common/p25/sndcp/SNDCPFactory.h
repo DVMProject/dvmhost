@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -36,7 +36,7 @@ namespace p25
          * @brief Helper class to instantiate an instance of a SNDCP packet.
          * @ingroup p25_sndcp
          */
-        class HOST_SW_API SNDCPFactory {
+        class DVM_COMMON_API SNDCPFactory {
         public:
             /**
              * @brief Initializes a new instance of the SNDCPFactory class.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -32,7 +32,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMInventoryResponseListKeysets : public KMMInventoryResponseHeader {
+        /**
+         * @brief Represents a KMM inventory response listing keysets.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMInventoryResponseListKeysets : public KMMInventoryResponseHeader {
         public:
             /**
              * @brief Initializes a new instance of the KMMInventoryResponseListKeysets class.

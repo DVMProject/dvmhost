@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -34,7 +34,7 @@ namespace p25
          * @brief Represents a SNDCP PDU context accept response.
          * @ingroup p25_sndcp
          */
-        class HOST_SW_API SNDCPCtxActAccept : public SNDCPPacket {
+        class DVM_COMMON_API SNDCPCtxActAccept : public SNDCPPacket {
         public:
             /**
              * @brief Initializes a new instance of the SNDCPCtxActAccept class.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -133,7 +133,7 @@ void LowSpeedData::encode(uint8_t* data) const
 //  Private Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Helper to encode a single byte using the CCS parity table. */
 
 uint8_t LowSpeedData::encode(uint8_t in) const
 {

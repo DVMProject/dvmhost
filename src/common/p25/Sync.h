@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -29,7 +29,7 @@ namespace p25
      * @brief Helper class for generating P25 sync data.
      * @ingroup p25
      */
-    class HOST_SW_API Sync {
+    class DVM_COMMON_API Sync {
     public:
         /**
          * @brief Helper to append P25 sync bytes to the passed buffer.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -30,7 +30,7 @@ namespace p25
      * @brief Represents the P25 network identifier.
      * @ingroup p25
      */
-    class HOST_SW_API NID {
+    class DVM_COMMON_API NID {
     public:
         /**
          * @brief Initializes a new instance of the NID class.

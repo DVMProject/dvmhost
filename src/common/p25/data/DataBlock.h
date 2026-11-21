@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2018-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2018-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -34,7 +34,7 @@ namespace p25
          * @brief Represents a data block for PDU P25 packets.
          * @ingroup p25_pdu
          */
-        class HOST_SW_API DataBlock {
+        class DVM_COMMON_API DataBlock {
         public:
             /**
              * @brief Initializes a copy instance of the DataBlock class.
@@ -116,6 +116,14 @@ namespace p25
              * @brief Internal helper to copy the class.
              */
             void copy(const DataBlock& data);
+            /**
+             * @brief Checks the CRC-9 of a decoded confirmed data block.
+             * @param[in] buffer Decoded confirmed data block.
+             * @param[out] crc CRC-9 carried in the block.
+             * @param[out] calculated CRC-9 computed over the block.
+             * @returns bool True if the carried and computed CRC-9 values match.
+             */
+            static bool checkConfirmedCRC9(const uint8_t* buffer, uint16_t& crc, uint16_t& calculated);
         };
     } // namespace data
 } // namespace p25

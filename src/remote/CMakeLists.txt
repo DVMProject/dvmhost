@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB dvmcmd_SRC
+file(GLOB dvmcmd_SRC CONFIGURE_DEPENDS
     "src/remote/*.h"
     "src/remote/*.cpp"
 )

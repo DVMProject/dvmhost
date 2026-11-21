@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -38,7 +38,7 @@ namespace network
         //  Class Prototypes
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API Socket;
+        class Socket;
     }
 
     // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ namespace network
      * @brief Implements the Remote Procedure Call networking logic.
      * @ingroup network_core
      */
-    class HOST_SW_API NetRPC {
+    class DVM_COMMON_API NetRPC {
     public:
         typedef std::function<void(json::object& request, json::object& reply)> RPCType;
 

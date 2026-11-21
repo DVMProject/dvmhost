@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /**
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements GRP AFF Q RSP - Group Affiliation Query Response
              * @ingroup p25_tsbk
              */
-            class HOST_SW_API ISP_GRP_AFF_Q_RSP : public TSBK {
+            class DVM_COMMON_API ISP_GRP_AFF_Q_RSP : public TSBK {
             public:
                 /**
                  * @brief Initializes a new instance of the ISP_GRP_AFF_Q_RSP class.

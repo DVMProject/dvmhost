@@ -26,7 +26,9 @@ TEST_CASE("RS523023 preserves all-zero payload", "[edac][rs523023]") {
     rs.encode523023(data);
     Utils::dump(2U, "encode523023()", data, 39U);
 
-    REQUIRE(rs.decode523023(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode523023(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 22.5 bytes (30 symbols * 6 bits = 180 bits) should be zero
     for (size_t i = 0; i < 22U; i++) {
@@ -42,7 +44,9 @@ TEST_CASE("RS523023 preserves all-ones payload", "[edac][rs523023]") {
     rs.encode523023(data);
     Utils::dump(2U, "encode523023()", data, 39U);
 
-    REQUIRE(rs.decode523023(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode523023(data, &errs));
+    REQUIRE(errs == 6);
 
     // First 22 bytes should be 0xFF
     for (size_t i = 0; i < 22U; i++) {
@@ -63,7 +67,9 @@ TEST_CASE("RS523023 preserves alternating pattern", "[edac][rs523023]") {
     rs.encode523023(data);
     Utils::dump(2U, "encode523023()", data, 39U);
 
-    REQUIRE(rs.decode523023(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode523023(data, &errs));
+    REQUIRE(errs == 6);
 
     // Verify first 22 bytes (data portion) match
     REQUIRE(::memcmp(data, original, 22U) == 0);
@@ -82,7 +88,9 @@ TEST_CASE("RS523023 preserves incrementing pattern", "[edac][rs523023]") {
     rs.encode523023(data);
     Utils::dump(2U, "encode523023()", data, 39U);
 
-    REQUIRE(rs.decode523023(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode523023(data, &errs));
+    REQUIRE(errs == 6);
 
     REQUIRE(::memcmp(data, original, 22U) == 0);
 }
@@ -112,10 +120,12 @@ TEST_CASE("RS523023 corrects symbol errors", "[edac][rs523023]") {
         corrupted[pos] ^= 0x3FU; // Flip 6 bits (1 symbol)
 
         RS634717 rsDec;
-        bool decoded = rsDec.decode523023(corrupted);
+        int8_t errs = -1;
+        bool decoded = rsDec.decode523023(corrupted, &errs);
 
         // RS(52,30,23) can correct up to 11 symbol errors
         if (decoded) {
+            REQUIRE(errs >= 0);
             REQUIRE(::memcmp(corrupted, original, 22U) == 0);
         }
     }
@@ -139,7 +149,9 @@ TEST_CASE("RS523023 corrects multiple symbol errors", "[edac][rs523023]") {
     data[30] ^= 0x01U;  // Single bit error
     data[36] ^= 0x01U;  // Single bit error
 
-    REQUIRE(rs.decode523023(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode523023(data, &errs));
+    REQUIRE(errs == 9);
     REQUIRE(::memcmp(data, original, 22U) == 0);
 }
 
@@ -161,6 +173,8 @@ TEST_CASE("RS523023 detects uncorrectable errors", "[edac][rs523023]") {
         data[i] ^= 0xFFU;
     }
 
-    bool result = rs.decode523023(data);
-    REQUIRE(!result);
+    int8_t errs = -1;
+    bool result = rs.decode523023(data, &errs);
+    REQUIRE_FALSE(result);
+    REQUIRE(errs == -1);
 }

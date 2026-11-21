@@ -35,6 +35,55 @@ from typing import Dict, Any, Optional, List
 import re
 
 
+class HexInt(int):
+    """Marker type for integers that should be emitted in hexadecimal."""
+
+
+class DVMConfigDumper(yaml.SafeDumper):
+    """Custom YAML dumper with consistent list indentation and NAC hex output."""
+
+    def increase_indent(self, flow=False, indentless=False):
+        # Force sequence items to be indented under mapping keys.
+        return super().increase_indent(flow, False)
+
+
+def _represent_hex_int(dumper, data):
+    """Represent marked integers as YAML int scalars in hex format."""
+    hex_value = f'{int(data):X}'
+    # YAML only accepts decimal/octal/0x-prefixed ints; bare A-F text must be a string.
+    if any(ch in 'ABCDEF' for ch in hex_value):
+        return dumper.represent_scalar('tag:yaml.org,2002:str', hex_value)
+    return dumper.represent_scalar('tag:yaml.org,2002:int', hex_value)
+
+
+DVMConfigDumper.add_representer(HexInt, _represent_hex_int)
+
+
+def _mark_hex_fields(value: Any, key: Optional[str] = None) -> Any:
+    """Recursively mark NAC-like fields for hexadecimal YAML serialization."""
+    hex_keys = {
+        'nac',
+        'txNAC',
+        'p25NAC',
+        'netId',
+        'p25NetId',
+        'sysId',
+        'rfssId',
+        'siteId',
+        'dmrNetId',
+        'channelNo',
+        'rxChannelNo',
+    }
+
+    if isinstance(value, dict):
+        return {k: _mark_hex_fields(v, k) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_mark_hex_fields(item) for item in value]
+    if key in hex_keys and isinstance(value, int):
+        return HexInt(value)
+    return value
+
+
 class ConfigValidator:
     """Validates DVMHost configuration values"""
     
@@ -111,8 +160,16 @@ class DVMConfig:
             backup_path = path.with_suffix(path.suffix + '.bak')
             path.rename(backup_path)
         
+        config_to_write = _mark_hex_fields(self.config)
+
         with open(path, 'w') as f:
-            yaml.dump(self.config, f, default_flow_style=False, sort_keys=False)
+            yaml.dump(
+                config_to_write,
+                f,
+                Dumper=DVMConfigDumper,
+                default_flow_style=False,
+                sort_keys=False,
+            )
     
     def get(self, key_path: str, default: Any = None) -> Any:
         """

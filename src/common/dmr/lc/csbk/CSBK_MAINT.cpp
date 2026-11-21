@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -45,7 +45,7 @@ bool CSBK_MAINT::decode(const uint8_t* data)
     ulong64_t csbkValue = CSBK::toValue(csbk);
 
     m_maintKind = (uint8_t)(((csbkValue >> 48) & 0xFFU) >> 1);                      // Maintainence Kind
-    m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFU);                              // Target Radio Address
+    m_dstId = (uint32_t)((csbkValue >> 24) & 0xFFFFFFU);                            // Target Radio Address
     m_srcId = (uint32_t)(csbkValue & 0xFFFFFFU);                                    // Source Radio Address
 
     return true;

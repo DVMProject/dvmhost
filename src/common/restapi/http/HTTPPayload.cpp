@@ -390,7 +390,10 @@ void HTTPPayload::ensureDefaultHeaders(const std::string& contentType)
     else {
         headers.add("User-Agent", std::string(("DVM/" __VER__)));
         headers.add("Accept", "*/*");
-        if (::strtoupper(method) != HTTP_GET) {
+        // GET requests normally have no entity body. If a caller does attach one,
+        // however, it still needs explicit framing; otherwise a strict server will
+        // correctly treat the unannounced bytes as data beyond the request.
+        if (::strtoupper(method) != HTTP_GET || !content.empty()) {
             headers.add("Content-Type", std::string(contentType));
             headers.add("Content-Length", std::to_string(content.size()));
         }

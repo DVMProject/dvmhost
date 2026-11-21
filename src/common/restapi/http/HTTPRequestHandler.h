@@ -39,7 +39,7 @@ namespace restapi
          * @brief This class implements the common handler for all incoming requests.
          * @ingroup http
          */
-        class HTTPRequestHandler {
+        class DVM_COMMON_API HTTPRequestHandler {
         public:
             auto operator=(HTTPRequestHandler&) -> HTTPRequestHandler& = delete;
             HTTPRequestHandler(HTTPRequestHandler&) = delete;

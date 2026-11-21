@@ -68,7 +68,7 @@ namespace dmr
              * @param netGranted Flag indicating the grant came from network traffic.
              * @returns bool True, if the destination address has been granted to the source ID, otherwise false.
              */
-            bool grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool grp, bool netGranted);
+            bool grantChSlot(uint32_t dstId, uint32_t srcId, uint8_t slot, uint32_t grantTimeout, bool grp, bool netGranted, uint32_t chNo = 0U);
             /**
              * @brief Helper to release the channel grant for the destination ID.
              * @param dstId Destination Address.

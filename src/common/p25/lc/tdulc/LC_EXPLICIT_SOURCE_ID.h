@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements EXPLICIT SOURCE ID - Explicit Source ID
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_EXPLICIT_SOURCE_ID : public TDULC {
+            class DVM_COMMON_API LC_EXPLICIT_SOURCE_ID : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_EXPLICIT_SOURCE_ID class.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -30,7 +30,7 @@ namespace dmr
          * @brief Represents a DMR embedded signalling data.
          * @ingroup dmr
          */
-        class HOST_SW_API EMB {
+        class DVM_COMMON_API EMB {
         public:
             /**
              * @brief Initializes a new instance of the EMB class.

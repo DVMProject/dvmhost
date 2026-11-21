@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB sysView_SRC
+file(GLOB sysView_SRC CONFIGURE_DEPENDS
     "src/host/modem/Modem.h"
 
     "src/remote/RESTClient.cpp"

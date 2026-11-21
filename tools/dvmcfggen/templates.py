@@ -76,6 +76,7 @@ def load_base_config() -> Dict[str, Any]:
 def get_minimal_fallback_config() -> Dict[str, Any]:
     """Minimal fallback configuration if config.example.yml is not available"""
     return {
+        'iAgreeNotToBeStupid': True,
         'daemon': True,
         'log': {
             'displayLevel': 1,
@@ -186,6 +187,9 @@ def apply_template_customizations(config: Dict[str, Any], template_type: str) ->
     # Make a deep copy to avoid modifying the original
     import copy
     config = copy.deepcopy(config)
+
+    # Generated configs must explicitly include license acknowledgement.
+    config['iAgreeNotToBeStupid'] = True
     
     if template_type == 'control-channel-p25':
         # P25 dedicated control channel

@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -36,7 +36,7 @@ namespace dmr
          * @brief Represents a data block for PDU DMR packets.
          * @ingroup dmr_pdu
          */
-        class HOST_SW_API DataBlock {
+        class DVM_COMMON_API DataBlock {
         public:
             /**
              * @brief Initializes a copy instance of the DataBlock class.
@@ -122,6 +122,34 @@ namespace dmr
             defines::DPF::E m_DPF;
 
             uint8_t* m_data;
+
+            /**
+             * @brief Gets the CRC mask for the given data type.
+             * @param dataType DMR data type.
+             * @returns uint16_t CRC mask.
+             */
+            uint16_t crcMask(const defines::DataType::E dataType) const;
+            /**
+             * @brief Checks the CRC-9 of a decoded confirmed rate-3/4 data block.
+             * @param[in] buffer Decoded 18-byte rate-3/4 data block.
+             * @param[out] crc Unmasked CRC-9 carried in the block.
+             * @param[out] calculated CRC-9 computed over the block.
+             * @returns bool True if the carried and computed CRC-9 values match.
+             */
+            bool checkConfirmedRate34CRC9(const uint8_t* buffer, uint16_t& crc, uint16_t& calculated) const;
+
+            /**
+             * @brief Decodes a rate 1 encoded data block.
+             * @param data Pointer to the encoded data.
+             * @param payload Pointer to the buffer to store the decoded payload.
+             */
+            void decodeRate1(const uint8_t* data, uint8_t* payload);
+            /**
+             * @brief Encodes a data block using rate 1 encoding.
+             * @param payload Pointer to the buffer containing the payload to encode.
+             * @param data Pointer to the buffer to store the encoded data.
+             */
+            void encodeRate1(const uint8_t* payload, uint8_t* data);
 
             /**
              * @brief Internal helper to copy the class.

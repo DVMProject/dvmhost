@@ -189,3 +189,29 @@ TEST_CASE("FACCH1 golden test for voice call header", "[nxdn][facch1][golden]") 
     decoded.getData(dataOut);
     REQUIRE(::memcmp(dataIn, dataOut, 10U) == 0);
 }
+
+TEST_CASE("FACCH1 matches independently encoded Console header", "[nxdn][facch1][bounds]") {
+    // Clear group VCALL, source 1234, destination 5678; Console's managed channel coder.
+    const uint8_t raw[10U] = {0x01U, 0x00U, 0x20U, 0x04U, 0xD2U, 0x16U, 0x2EU, 0x00U, 0x00U, 0x00U};
+    const uint8_t encoded[18U] = {
+        0x48U, 0xB4U, 0x05U, 0x01U, 0x00U, 0x08U, 0x00U, 0x30U, 0x38U,
+        0x08U, 0x80U, 0xA6U, 0x5CU, 0x02U, 0x02U, 0xCAU, 0x23U, 0xE1U
+    };
+    FACCH1 tx;
+    tx.setData(raw);
+    for (uint32_t offset : {96U, 240U}) {
+        uint8_t frame[NXDN_FRAME_LENGTH_BYTES];
+        ::memset(frame, 0xA5U, sizeof(frame));
+        tx.encode(frame, offset);
+        REQUIRE(::memcmp(frame + offset / 8U, encoded, sizeof(encoded)) == 0);
+        for (uint32_t i = 0U; i < sizeof(frame); i++) {
+            if (i < offset / 8U || i >= offset / 8U + sizeof(encoded))
+                REQUIRE(frame[i] == 0xA5U);
+        }
+        FACCH1 rx;
+        REQUIRE(rx.decode(frame, offset));
+        uint8_t decoded[10U];
+        rx.getData(decoded);
+        REQUIRE(::memcmp(decoded, raw, sizeof(raw)) == 0);
+    }
+}

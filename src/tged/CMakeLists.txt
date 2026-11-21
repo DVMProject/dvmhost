@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB tged_SRC
+file(GLOB tged_SRC CONFIGURE_DEPENDS
     "src/tged/*.h"
     "src/tged/*.cpp"
 )

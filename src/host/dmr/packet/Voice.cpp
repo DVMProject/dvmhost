@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -19,7 +19,6 @@
 #include "common/Utils.h"
 #include "dmr/packet/Voice.h"
 #include "dmr/Slot.h"
-#include "ActivityLog.h"
 #include "HostMain.h"
 
 using namespace dmr;
@@ -86,15 +85,18 @@ bool Voice::process(uint8_t* data, uint32_t len)
             if (checkRFTrafficCollision(dstId))
                 return false;
 
+            if (!m_slot->ensureTSCCPayloadGrant(srcId, dstId, flco == FLCO::GROUP))
+                return false;
+
             if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-                m_slot->m_tsccPayloadActRetry.stop();
+                m_slot->confirmTSCCPayloadActive();
             }
 
             // validate source RID
             if (!acl::AccessControl::validateSrcId(srcId)) {
                 if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == srcId) {
                     LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
-                    ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to %s%u ", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
                 }
 
                 m_slot->m_rfLastDstId = 0U;
@@ -107,10 +109,10 @@ bool Voice::process(uint8_t* data, uint32_t len)
 
             // validate target TID, if the target is a talkgroup
             if (flco == FLCO::GROUP) {
-                if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId)) {
+                if (!acl::AccessControl::validateTGId(m_slot->m_slotNo, dstId) || !acl::AccessControl::validateTGAccess(m_slot->m_slotNo, srcId, dstId)) {
                     if (m_slot->m_data->m_lastRejectId == 0U || m_slot->m_data->m_lastRejectId == dstId) {
-                        LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, TGID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
-                        ::ActivityLog("DMR", true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
+                        LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, TGID/RID admission rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, srcId, dstId);
                     }
 
                     m_slot->m_rfLastDstId = 0U;
@@ -139,6 +141,17 @@ bool Voice::process(uint8_t* data, uint32_t len)
                             m_slot->s_network->announceGroupAffiliation(srcId, dstId);
                     }
                 }
+            }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                LogWarning(LOG_RF, "DMR Slot %u, VOICE_LC_HEADER denial, destination RID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u RF private voice rejection from %u to %u ", m_slot->m_slotNo, srcId, dstId);
+
+                m_slot->m_rfLastDstId = 0U;
+                m_slot->m_rfLastSrcId = 0U;
+                m_slot->m_rfTGHang.stop();
+                m_slot->m_rfState = RS_RF_REJECTED;
+                return false;
             }
 
             m_slot->m_data->m_lastRejectId = 0U;
@@ -214,7 +227,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId(), m_slot->m_rfLC->getFLCO(), m_slot->m_rfLC->getFID(), m_slot->m_rfLC->getPF());
             }
 
-            ::ActivityLog("DMR", true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+            ::ActivityLogEx(LOG_DMR, true, "Slot %u RF %svoice header from %u to %s%u", m_slot->m_slotNo, encrypted ? "encrypted " : "", srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
             LogInfoEx(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
             return true;
         }
@@ -276,6 +289,33 @@ bool Voice::process(uint8_t* data, uint32_t len)
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
             bool pf = m_slot->m_rfLC->getPF();
+
+            // perform encryption strapping check on the first voice sync frame of a call
+            ::lookups::TalkgroupRuleGroupVoice groupVoice = m_slot->s_tidLookup->find(m_slot->m_rfLC->getDstId());
+            if (!groupVoice.isInvalid()) {
+                if (groupVoice.config().strapping() == ::lookups::TG_STRAPPING_STRAPPED) {
+                    bool encrypted = false;
+                    if (m_slot->m_rfPrivacyLC != nullptr) {
+                        if (m_slot->m_rfPrivacyLC->getAlgId() != 0U)
+                            encrypted = true;
+                    }
+                    else if (fid == FID_KENWOOD && pf)
+                        encrypted = true;
+
+                    if (!encrypted) {
+                        LogWarning(LOG_RF, "DMR Slot %u, VOICE_SYNC denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
+
+                        m_slot->m_rfLastDstId = 0U;
+                        m_slot->m_rfLastSrcId = 0U;
+                        m_slot->m_rfTGHang.stop();
+
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                        return false;
+                    }
+                }
+            }
+
             if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
                 if (fid == FID_KENWOOD && pf)
                     errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
@@ -330,6 +370,14 @@ bool Voice::process(uint8_t* data, uint32_t len)
         }
     }
     else {
+        // Late entry may begin on any of the B--E bursts carrying embedded LC;
+        // do not wait for the next voice-sync (A) burst before collecting it.
+        if (m_slot->m_rfState == RS_RF_LISTENING) {
+            m_rfEmbeddedLC.reset();
+            m_lastRfN = 0xFFU;
+            m_slot->m_rfState = RS_RF_LATE_ENTRY;
+        }
+
         if (m_slot->m_rfState == RS_RF_AUDIO) {
             m_rfN = data[1U] & 0x0FU;
 
@@ -344,6 +392,33 @@ bool Voice::process(uint8_t* data, uint32_t len)
             uint32_t errors = 0U;
             uint8_t fid = m_slot->m_rfLC->getFID();
             bool pf = m_slot->m_rfLC->getPF();
+
+            // perform encryption strapping check on the voice frame of a call
+            ::lookups::TalkgroupRuleGroupVoice groupVoice = m_slot->s_tidLookup->find(m_slot->m_rfLC->getDstId());
+            if (!groupVoice.isInvalid()) {
+                if (groupVoice.config().strapping() == ::lookups::TG_STRAPPING_STRAPPED) {
+                    bool encrypted = false;
+                    if (m_slot->m_rfPrivacyLC != nullptr) {
+                        if (m_slot->m_rfPrivacyLC->getAlgId() != 0U)
+                            encrypted = true;
+                    }
+                    else if (fid == FID_KENWOOD && pf)
+                        encrypted = true;
+
+                    if (!encrypted) {
+                        LogWarning(LOG_RF, "DMR Slot %u, VOICE_SYNC denial, TGID enc. strapping rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
+                        ::ActivityLogEx(LOG_DMR, true, "Slot %u RF voice rejection from %u to TG %u ", m_slot->m_slotNo, m_slot->m_rfLC->getSrcId(), m_slot->m_rfLC->getDstId());
+
+                        m_slot->m_rfLastDstId = 0U;
+                        m_slot->m_rfLastSrcId = 0U;
+                        m_slot->m_rfTGHang.stop();
+
+                        m_slot->m_rfState = RS_RF_REJECTED;
+                        return false;
+                    }
+                }
+            }
+
             if (fid == FID_ETSI || fid == FID_MOT || fid == FID_KENWOOD) {
                 if (fid == FID_KENWOOD && pf)
                     errors = 0U; // bryanb: for what we are assuming is Kenwood, these are encrypted frames
@@ -471,6 +546,13 @@ bool Voice::process(uint8_t* data, uint32_t len)
             // Regenerate the EMB
             emb.setColorCode(m_slot->s_colorCode);
             emb.setLCSS(lcss);
+
+            // Emit reverse-channel data in the final voice burst of a superframe
+            if (m_rfN == 5U) {
+                applyReverseChannelCommand(m_slot->m_reverseChannelCommand, data, emb);
+                m_slot->m_reverseChannelCommand = network::NET_ICC::NOP;
+            }
+
             emb.encode(data + 2U);
 
             if (!m_slot->m_rfTimeout) {
@@ -518,6 +600,9 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 if (checkRFTrafficCollision(dstId))
                     return false;
 
+                if (!m_slot->ensureTSCCPayloadGrant(srcId, dstId, flco == FLCO::GROUP))
+                    return false;
+
                 // validate the source RID
                 if (!acl::AccessControl::validateSrcId(srcId)) {
                     LogWarning(LOG_RF, "DMR Slot %u, VOICE denial, RID rejection, srcId = %u", m_slot->m_slotNo, srcId);
@@ -533,6 +618,11 @@ bool Voice::process(uint8_t* data, uint32_t len)
                         return false;
                     }
                 }
+                else if (!acl::AccessControl::validateSrcId(dstId)) {
+                    LogWarning(LOG_RF, "DMR Slot %u, VOICE denial, destination RID rejection, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
+                    m_slot->m_rfState = RS_RF_REJECTED;
+                    return false;
+                }
 
                 m_slot->m_rfLC = std::move(lc);
 
@@ -542,7 +632,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_rfEmbeddedData[1U].setLC(*m_slot->m_rfLC);
 
                 // Create a dummy start frame to replace the received frame
-                uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
+                uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
 
                 Sync::addDMRDataSync(start + 2U, m_slot->s_duplex);
 
@@ -656,7 +746,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
                     m_slot->setShortLC(m_slot->m_slotNo, dstId, flco, Slot::SLCO_ACT_TYPE::VOICE);
                 }
 
-                ::ActivityLog("DMR", true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+                ::ActivityLogEx(LOG_DMR, true, "Slot %u RF late entry from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
                 LogInfoEx(LOG_RF, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
                 return true;
             }
@@ -690,13 +780,19 @@ void Voice::processNetwork(const data::NetData& dmrData)
         uint32_t dstId = lc->getDstId();
         FLCO::E flco = lc->getFLCO();
 
+        if (m_slot->s_network != nullptr && m_slot->s_network->disallowUnitToUnit() && flco == FLCO::PRIVATE) {
+            LogWarning(LOG_NET, "DMR Slot %u, rejecting network unit-to-unit voice call, srcId = %u, dstId = %u",
+                m_slot->m_slotNo, srcId, dstId);
+            return;
+        }
+
         CHECK_NET_AUTHORITATIVE(dstId);
 
         if (checkNetTrafficCollision(dstId))
             return;
 
         if (m_slot->m_tsccPayloadDstId != 0U && m_slot->m_tsccPayloadActRetry.isRunning()) {
-            m_slot->m_tsccPayloadActRetry.stop();
+            m_slot->confirmTSCCPayloadActive();
         }
 
         if (dstId != dmrData.getDstId() || srcId != dmrData.getSrcId() || flco != dmrData.getFLCO())
@@ -773,12 +869,16 @@ void Voice::processNetwork(const data::NetData& dmrData)
                 m_slot->m_netLC->getSrcId(), m_slot->m_netLC->getDstId(), m_slot->m_netLC->getFLCO(), m_slot->m_netLC->getFID(), m_slot->m_netLC->getPF());
         }
 
-        ::ActivityLog("DMR", false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
+        ::ActivityLogEx(LOG_DMR, false, "Slot %u network voice header from %u to %s%u", m_slot->m_slotNo, srcId, flco == FLCO::GROUP ? "TG " : "", dstId);
         LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
     }
     else if (dataType == DataType::VOICE_PI_HEADER) {
         if (m_slot->m_netState != RS_NET_AUDIO) {
             std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
+
+            if (m_slot->s_network != nullptr && m_slot->s_network->disallowUnitToUnit() && lc->getFLCO() == FLCO::PRIVATE) {
+                return;
+            }
 
             uint32_t srcId = lc->getSrcId();
             uint32_t dstId = lc->getDstId();
@@ -804,7 +904,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
                 m_slot->addFrame(m_slot->s_idle, true);
 
             // Create a dummy start frame
-            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
+            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
 
             Sync::addDMRDataSync(start + 2U, m_slot->s_duplex);
 
@@ -840,7 +940,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), Slot::SLCO_ACT_TYPE::VOICE);
 
-            ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
+            ::ActivityLogEx(LOG_DMR, false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
             LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }
@@ -887,6 +987,10 @@ void Voice::processNetwork(const data::NetData& dmrData)
         if (m_slot->m_netState == RS_NET_IDLE) {
             std::unique_ptr<lc::LC> lc = std::make_unique<lc::LC>(dmrData.getFLCO(), dmrData.getSrcId(), dmrData.getDstId());
 
+            if (m_slot->s_network != nullptr && m_slot->s_network->disallowUnitToUnit() && lc->getFLCO() == FLCO::PRIVATE) {
+                return;
+            }
+
             uint32_t dstId = lc->getDstId();
             uint32_t srcId = lc->getSrcId();
 
@@ -913,7 +1017,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
                 m_slot->addFrame(m_slot->s_idle, true);
 
             // Create a dummy start frame
-            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U];
+            uint8_t start[DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
 
             Sync::addDMRDataSync(start + 2U, m_slot->s_duplex);
 
@@ -953,7 +1057,7 @@ void Voice::processNetwork(const data::NetData& dmrData)
 
             m_slot->setShortLC(m_slot->m_slotNo, dstId, m_slot->m_netLC->getFLCO(), Slot::SLCO_ACT_TYPE::VOICE);
 
-            ::ActivityLog("DMR", false, "Slot %u network late entry from %u to %s%u",
+            ::ActivityLogEx(LOG_DMR, false, "Slot %u network late entry from %u to %s%u",
                 m_slot->m_slotNo, srcId, m_slot->m_netLC->getFLCO() == FLCO::GROUP ? "TG " : "", dstId);
             LogInfoEx(LOG_NET, "DMR Voice Call, slot = %u, srcId = %u, dstId = %u", m_slot->m_slotNo, srcId, dstId);
         }
@@ -1217,6 +1321,15 @@ bool Voice::checkRFTrafficCollision(uint32_t dstId)
         }
     }
 
+    // RF traffic on a different talkgroup preempts the active network call.
+    if (m_slot->m_netState != RS_NET_IDLE) {
+        m_slot->m_netState = RS_NET_IDLE;
+        m_slot->m_netTimeoutTimer.stop();
+        m_slot->m_netTimeout = false;
+        m_slot->m_netTGHang.stop();
+        m_slot->m_networkWatchdog.stop();
+    }
+
     return false;
 }
 
@@ -1266,7 +1379,7 @@ bool Voice::checkNetTrafficCollision(uint32_t dstId)
     return false;
 }
 
-/* */
+/* Logs the GPS position for a given source ID. */
 
 void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
 {
@@ -1313,6 +1426,47 @@ void Voice::logGPSPosition(const uint32_t srcId, const uint8_t* data)
     latitude *= float(latitudeVal);
 
     LogInfoEx(LOG_DMR, "GPS position for %u [lat %f, long %f] (Position error %s)", srcId, latitude, longitude, error);
+}
+
+/* Helper to apply a DMR reverse channel command received via in-call control. */
+
+bool Voice::applyReverseChannelCommand(network::NET_ICC::ENUM command, uint8_t* data, dmr::data::EMB& emb)
+{
+    m_slot->m_reverseChannelCommand = network::NET_ICC::NOP;
+
+    const uint8_t* payload = nullptr;
+    switch (command) {
+    case network::NET_ICC::DMR_RC_CEASE_TRANSMIT:
+        payload = RC_CEASE_TRANSMIT;
+        break;
+    case network::NET_ICC::DMR_RC_REQUEST_CEASE_TRANSMIT:
+        payload = RC_REQUEST_CEASE_TRANSMIT;
+        break;
+    case network::NET_ICC::DMR_RC_MAXIMUM_POWER:
+        payload = RC_MAX_POWER;
+        break;
+    case network::NET_ICC::DMR_RC_MINIMUM_POWER:
+        payload = RC_MIN_POWER;
+        break;
+    case network::NET_ICC::DMR_RC_POWER_INCREASE_ONE_STEP:
+        payload = RC_POWER_INCREASE;
+        break;
+    case network::NET_ICC::DMR_RC_POWER_DECREASE_ONE_STEP:
+        payload = RC_POWER_DECREASE;
+        break;
+    default:
+        return false;
+    }
+
+    data[16U] = (data[16U] & 0xF0U) | (payload[0U] & 0x0FU);
+    data[17U] = payload[1U];
+    data[18U] = payload[2U];
+    data[19U] = payload[3U];
+    data[20U] = (data[20U] & 0x0FU) | (payload[4U] & 0xF0U);
+
+    // Reverse-channel command data is indicated via PI in EMB.
+    emb.setPI(true);
+    return true;
 }
 
 /* Helper to insert AMBE null frames for missing audio. */

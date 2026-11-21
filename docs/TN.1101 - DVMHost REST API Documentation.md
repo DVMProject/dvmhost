@@ -14,7 +14,7 @@ AI WARNING: This document was mainly generated using AI assistance. As such, the
 2. [Authentication](#2-authentication)
 3. [System Endpoints](#3-system-endpoints)
 4. [Modem Control](#4-modem-control)
-5. [Trunking and Supervisory Control](#5-trunking-and-supervisory-control)
+5. [Trunking and Traffic Permit Control](#5-trunking-and-traffic-permit-control)
 6. [Radio ID Lookup](#6-radio-id-lookup)
 7. [DMR Protocol Endpoints](#7-dmr-protocol-endpoints)
 8. [P25 Protocol Endpoints](#8-p25-protocol-endpoints)
@@ -533,99 +533,9 @@ Content-Type: application/json
 
 ---
 
-## 5. Trunking and Supervisory Control
+## 5. Trunking and Traffic Permit Control
 
-### 5.1 Endpoint: PUT /set-supervisor
-
-**Method:** `PUT`
-
-**Description:** Enable or disable supervisory (trunking) mode for the host.
-
-**Request Headers:**
-```
-X-DVM-Auth-Token: {token}
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "state": 4,
-  "enable": true
-}
-```
-
-**Request Fields:**
-- `state` (required, integer): Protocol state value
-  - `4` = DMR
-  - `5` = P25
-  - `6` = NXDN
-- `enable` (required, boolean): Enable (`true`) or disable (`false`) supervisory mode
-
-**Response (Success):**
-```json
-{
-  "status": 200,
-  "message": "OK"
-}
-```
-
-**Response Fields:**
-- `status`: HTTP status code (200)
-- `message`: Always `"OK"`
-
-**Error Responses:**
-
-**Host Not Authoritative:**
-```json
-{
-  "status": 400,
-  "message": "Host is not authoritative, cannot set supervisory state"
-}
-```
-
-**Invalid State Parameter:**
-```json
-{
-  "status": 400,
-  "message": "state was not a valid integer"
-}
-```
-
-**Invalid Enable Parameter:**
-```json
-{
-  "status": 400,
-  "message": "enable was not a boolean"
-}
-```
-
-**Invalid State Value:**
-```json
-{
-  "status": 400,
-  "message": "invalid mode"
-}
-```
-
-**Protocol Not Enabled:**
-```json
-{
-  "status": 503,
-  "message": "DMR mode is not enabled"
-}
-```
-*Similar messages for P25 and NXDN protocols*
-
-**Notes:**
-- Only available when host is configured as authoritative (`authoritative: true` in config)
-- Supervisory mode enables trunking control features for the specified protocol
-- The host must have the requested protocol enabled in its configuration
-- Each protocol (DMR, P25, NXDN) has independent supervisory mode settings
-
----
-
-### 5.2 Endpoint: PUT /permit-tg
+### 5.1 Endpoint: PUT /permit-tg
 
 **Method:** `PUT`
 
@@ -756,7 +666,7 @@ Content-Type: application/json
 
 ---
 
-### 5.3 Endpoint: PUT /grant-tg
+### 5.2 Endpoint: PUT /grant-tg
 
 **Method:** `PUT`
 
@@ -922,7 +832,7 @@ Content-Type: application/json
 
 ---
 
-### 5.4 Endpoint: GET /release-grants
+### 5.3 Endpoint: GET /release-grants
 
 **Method:** `GET`
 
@@ -961,7 +871,7 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 5.5 Endpoint: GET /release-affs
+### 5.4 Endpoint: GET /release-affs
 
 **Method:** `GET`
 
@@ -2995,14 +2905,6 @@ or
 }
 ```
 
-**Unauthorized Operation:**
-```json
-{
-  "status": 400,
-  "message": "Host is not authoritative, cannot set supervisory state"
-}
-```
-
 **Protocol Conflicts:**
 ```json
 {
@@ -3108,7 +3010,7 @@ or
 
 - **Mode changes:** Use caution when changing modes during active traffic
 - **Kill command:** Restricted to authorized administrators
-- **Supervisory mode:** Only enable on authoritative/master hosts
+- **Traffic permits:** Restrict permit operations to trusted control channels and management systems
 - **Raw TSBK:** Advanced feature requiring protocol knowledge
 
 ---
@@ -3805,7 +3707,6 @@ if __name__ == "__main__":
 | GET | /voice-ch | Get voice channel states | Yes | N/A |
 | PUT | /mdm/mode | Set modem mode | Yes | N/A |
 | PUT | /mdm/kill | Shutdown host | Yes | N/A |
-| PUT | /set-supervisor | Set supervisory mode | Yes | N/A |
 | PUT | /permit-tg | Permit talkgroup | Yes | All |
 | PUT | /grant-tg | Grant voice channel | Yes | All |
 | GET | /release-grants | Release all grants | Yes | All |

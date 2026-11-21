@@ -39,6 +39,14 @@
 #include "dmr/Slot.h"
 #include "modem/Modem.h"
 
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
+
 namespace dmr
 {
     // ---------------------------------------------------------------------------
@@ -47,6 +55,7 @@ namespace dmr
 
     class HOST_SW_API Slot;
     namespace packet { class HOST_SW_API ControlSignaling; }
+    namespace packet { class HOST_SW_API Data; }
 
     // ---------------------------------------------------------------------------
     //  Class Declaration
@@ -95,7 +104,6 @@ namespace dmr
         /**
          * @brief Helper to set DMR configuration options.
          * @param conf Instance of the ConfigINI class.
-         * @param supervisor Flag indicating whether the DMR has supervisory functions.
          * @param controlChData Control Channel data.
          * @param netId DMR Network ID.
          * @param siteId DMR Site ID.
@@ -103,7 +111,7 @@ namespace dmr
          * @param channelNo Channel Number.
          * @param printOptions Flag indicating whether or not options should be printed to log.
          */
-        void setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChData controlChData, 
+        void setOptions(yaml::Node& conf, ::lookups::VoiceChData controlChData,
             uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions);
 
         /** @name CC Control */
@@ -177,12 +185,6 @@ namespace dmr
         void clockSiteData(uint32_t ms);
         /** @} */
 
-        /** @name Supervisory Control */
-        /**
-         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
-         * @param supervisor Flag indicating whether control has supervisory functions.
-         */
-        void setSupervisor(bool supervisor);
         /**
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
@@ -299,9 +301,13 @@ namespace dmr
 
     private:
         friend class Slot;
+        friend class packet::ControlSignaling;
+        friend class packet::Data;
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::HostTestHooks;
+#endif
 
         bool m_authoritative;
-        bool m_supervisor;
 
         uint32_t m_colorCode;
 
@@ -316,6 +322,7 @@ namespace dmr
         ::lookups::TalkgroupRulesLookup* m_tidLookup;
 
         bool m_enableTSCC;
+        bool m_requireAuthForReg;
 
         uint16_t m_tsccCnt;
         Timer m_tsccCntInterval;
@@ -334,6 +341,14 @@ namespace dmr
          */
         void processNetwork();
         /**
+         * @brief Helper to process a registration authentication key.
+         * @param srcId Source Radio ID.
+         * @param key Key item containing the authentication key.
+         * @param algId Algorithm ID.
+         * @param keyLength Length of the key.
+         */
+        void processRegistrationAuthKey(uint32_t srcId, const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength);
+        /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.
          * @param dstId Destination ID.
@@ -341,7 +356,7 @@ namespace dmr
          */
         void processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo);
 
-        /** @name Supervisory Control */
+        /** @name Traffic Permit Control */
         /**
          * @brief (RPC Handler) Permits a TGID on a non-authoritative host.
          * @param req JSON request.

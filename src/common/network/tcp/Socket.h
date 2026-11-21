@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -58,7 +58,7 @@ namespace network
          *  network socket.
          * @ingroup tcp_socket
          */
-        class HOST_SW_API Socket
+        class DVM_COMMON_API Socket
         {
         public:
             auto operator=(Socket&) -> Socket& = delete;

@@ -47,6 +47,8 @@
 #define RID_CMD_P25_SET_MFID            "p25-setmfid"
 #define RID_CMD_PAGE                    "page"
 #define RID_CMD_CHECK                   "check"
+#define RID_CMD_STATUS_QUERY            "status-query"
+#define RID_CMD_MESSAGE_UPDATE          "message-update"
 #define RID_CMD_INHIBIT                 "inhibit"
 #define RID_CMD_UNINHIBIT               "uninhibit"
 #define RID_CMD_DYN_REGRP               "dyn-regrp"
@@ -59,7 +61,6 @@
 
 #define PUT_MDM_KILL                    "/mdm/kill"
 
-#define PUT_SET_SUPERVISOR              "/set-supervisor"
 #define PUT_PERMIT_TG                   "/permit-tg"
 #define PUT_GRANT_TG                    "/grant-tg"
 #define GET_RELEASE_GRNTS               "/release-grants"
