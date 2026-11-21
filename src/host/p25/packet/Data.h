@@ -209,9 +209,10 @@ namespace p25
             /**
              * @brief Helper used to process SNDCP control data from PDU data.
              * @param pduUserData Buffer containing user data to transmit.
+             * @param length Length of the SNDCP control data in bytes.
              * @returns bool True, if SNDCP control data was processed, otherwise false.
              */
-            bool processSNDCPControl(const uint8_t* pduUserData);
+            bool processSNDCPControl(const uint8_t* pduUserData, uint32_t length);
 
             /**
              * @brief Write data processed from RF to the network.

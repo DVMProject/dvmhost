@@ -371,6 +371,18 @@ namespace network
                  * @returns bool True, if the SNDCP header was stripped leaving an IPv4 datagram, otherwise false.
                  */
                 bool processSNDCPUserData(RxStatus* status, uint32_t peerId);
+                /**
+                 * @brief Dispatches an activation response and publishes the accepted SNDCP context.
+                 * @param responseHeader SNDCP activation response header.
+                 * @param responseData Encoded SNDCP activation response.
+                 * @param llId Logical Link ID of the SU.
+                 * @param nsapi Network Service Access Point Identifier.
+                 * @param ipAddress Assigned IPv4 address.
+                 * @param origin Origin of the assigned address.
+                 * @returns bool True if the response was dispatched and the context was committed.
+                 */
+                bool commitSNDCPActivation(::p25::data::DataHeader& responseHeader, uint8_t* responseData, uint32_t llId, 
+                    uint8_t nsapi, uint32_t ipAddress, p25data::DataBindingOrigin origin);
 
                 /**
                  * @brief Helper write ARP request to the network.

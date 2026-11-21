@@ -327,7 +327,7 @@ bool Data::process(uint8_t* data, uint32_t len)
                             m_rfAssembler->dataHeader.getBlocksToFollow());
                     }
 
-                    processSNDCPControl(m_rfPduUserData);
+                    processSNDCPControl(m_rfPduUserData, m_rfPduUserDataLength);
                     writeNet_PDU_User(m_rfAssembler->dataHeader, m_rfAssembler->getExtendedAddress(), m_rfAssembler->getAuxiliaryES(), 
                         m_rfPduUserData);
                 }
@@ -943,13 +943,13 @@ bool Data::processConvDataReg(const uint8_t* pduUserData, uint32_t length)
 
 /* Helper used to process SNDCP control data from PDU data. */
 
-bool Data::processSNDCPControl(const uint8_t* pduUserData)
+bool Data::processSNDCPControl(const uint8_t* pduUserData, uint32_t length)
 {
     if (!m_p25->m_sndcpSupport) {
         return false;
     }
 
-    std::unique_ptr<sndcp::SNDCPPacket> packet = SNDCPFactory::create(pduUserData);
+    std::unique_ptr<sndcp::SNDCPPacket> packet = SNDCPFactory::create(pduUserData, length);
     if (packet == nullptr) {
         LogWarning(LOG_RF, P25_PDU_STR ", undecodable SNDCP packet");
         return false;

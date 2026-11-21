@@ -1457,27 +1457,80 @@ bool P25PacketData::processSNDCPUserData(RxStatus* status, uint32_t peerId)
         return false;
     }
 
-    LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP user data, llId = %u, pduType = $%02X, nsapi = %u, length = %u",
-        llId, sndcpType, nsapi, status->pduUserDataLength - 2U);
+    LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP user data, llId = %u, pduType = $%02X, nsapi = %u, length = %u", llId, sndcpType,
+        nsapi, status->pduUserDataLength - 2U);
 
-    // adopt the context of an SU the FNE has no record of (the FNE restarted while the
-    // SU kept its context), so the reply is framed as SN-Data and can be routed
+    // SN-Data is valid only for a context accepted by this FNE; requiring the
+    // negotiated NSAPI also prevents a deactivated context from being recreated by data
     {
         const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         std::lock_guard<std::mutex> guard(m_sndcpContextLock);
-        SNDCPContext& ctx = m_sndcpContexts[llId];
-        if (!ctx.active) {
-            ctx.active = true;
-            ctx.nsapi = nsapi;
-            ctx.vcPeerId = peerId;
-            ctx.onChannelUntil = now + SNDCP_ON_CHANNEL_MS;
+        auto it = m_sndcpContexts.find(llId);
+        if (it == m_sndcpContexts.end() || !it->second.active || it->second.nsapi != nsapi) {
+            LogWarning(LOG_P25, P25_PDU_STR ", SNDCP user data without an active matching context, llId = %u, nsapi = %u", llId, nsapi);
+            return false;
         }
+
+        it->second.vcPeerId = peerId;
+        it->second.onChannelUntil = now + SNDCP_ON_CHANNEL_MS;
     }
 
     // strip the SNDCP header, leaving a bare IPv4 datagram
     ::memmove(status->pduUserData, status->pduUserData + 2U, status->pduUserDataLength - 2U);
     status->pduUserDataLength -= 2U;
+
+    return true;
+}
+
+/* Dispatches an activation response and publishes the accepted SNDCP context. */
+
+bool P25PacketData::commitSNDCPActivation(DataHeader& responseHeader, uint8_t* responseData,
+    uint32_t llId, uint8_t nsapi, uint32_t ipAddress, DataBindingOrigin origin)
+{
+    if (llId == 0U || llId == WUID_ALL || ipAddress == 0U)
+        return false;
+
+    // reject an address already assigned to another logical link ID
+    const IPBinding* owner = m_bindingRegistry.findByIPAddress(ipAddress);
+    if (owner != nullptr && owner->link.llId != llId) {
+        LogWarning(LOG_P25, P25_PDU_STR ", SNDCP address already assigned, llId = %u, ipAddr = %s, owner = %u", llId, __IP_FROM_UINT(ipAddress).c_str(), owner->link.llId);
+        return false;
+    }
+
+    // dispatch the activation response before publishing the accepted context
+    if (!dispatchUserFrameToFNE(responseHeader, false, false, responseData)) {
+        LogWarning(LOG_P25, P25_PDU_STR ", failed to dispatch SNDCP context activation response, llId = %u", llId);
+        return false;
+    }
+
+    IPBinding binding;
+    binding.link.llId = llId;
+    binding.ipAddress = ipAddress;
+    binding.accessMode = DataAccessMode::TRUNKED;
+    binding.convergenceMode = DataConvergenceMode::SNDCP;
+    binding.origin = origin;
+    binding.nsapi = nsapi;
+    binding.hasNSAPI = true;
+    binding.authorized = true;
+    if (!m_bindingRegistry.upsert(binding)) {
+        LogError(LOG_P25, P25_PDU_STR ", failed to commit SNDCP context binding, llId = %u, ipAddr = %s",
+            llId, __IP_FROM_UINT(ipAddress).c_str());
+        return false;
+    }
+
+    m_neighborCache.observe(llId, ipAddress);
+    m_dataLinkManager.setReady(llId, true);
+
+    // scope is intentional
+    {
+        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
+        SNDCPContext& ctx = m_sndcpContexts[llId];
+        ctx.active = true;
+        ctx.nsapi = nsapi;
+    }
+
+    clearSNDCPPendingAck(llId);
 
     return true;
 }
@@ -1558,7 +1611,13 @@ bool P25PacketData::processConvDataReg(RxStatus* status)
 
 bool P25PacketData::processSNDCPControl(RxStatus* status)
 {
-    std::unique_ptr<sndcp::SNDCPPacket> packet = SNDCPFactory::create(status->pduUserData);
+    if (status == nullptr || status->pduUserData == nullptr) {
+        LogWarning(LOG_P25, P25_PDU_STR ", truncated SNDCP control packet");
+        return false;
+    }
+
+    std::unique_ptr<sndcp::SNDCPPacket> packet = SNDCPFactory::create(
+        status->pduUserData, status->pduUserDataLength);
     if (packet == nullptr) {
         LogWarning(LOG_P25, P25_PDU_STR ", undecodable SNDCP packet");
         return false;
@@ -1643,7 +1702,7 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                         return true;
                     }
 
-                    // Accept with static IP
+                    // accept with static IP
                     uint8_t txPduUserData[P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES];
                     ::memset(txPduUserData, 0x00U, P25_MAX_PDU_BLOCKS * P25_PDU_UNCONFIRMED_LENGTH_BYTES);
 
@@ -1668,18 +1727,9 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                     rspHeader.setBlocksToFollow(1U);
                     rspHeader.calculateLength(13U);
 
-                    m_neighborCache.observe(llId, staticIP);
-                    m_dataLinkManager.setReady(llId, true);
-                    {
-                        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
-                        SNDCPContext& ctx = m_sndcpContexts[llId];
-                        ctx.active = true;
-                        ctx.nsapi = isp->getNSAPI();
-                    }
-                    // a downlink still awaiting its ACK belongs to the context this one replaces
-                    clearSNDCPPendingAck(llId);
-
-                    dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+                    // dispatch the activation response before publishing the accepted context
+                    if (!commitSNDCPActivation(rspHeader, txPduUserData, llId, isp->getNSAPI(), staticIP, DataBindingOrigin::SNDCP_STATIC))
+                        return false;
 
                     LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP context activation accept, llId = %u, ipAddr = %s (static)", 
                         llId, __IP_FROM_UINT(staticIP).c_str());
@@ -1741,18 +1791,9 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                     rspHeader.setBlocksToFollow(1U);
                     rspHeader.calculateLength(13U);
 
-                    m_neighborCache.observe(llId, dynamicIP);
-                    m_dataLinkManager.setReady(llId, true);
-                    {
-                        std::lock_guard<std::mutex> guard(m_sndcpContextLock);
-                        SNDCPContext& ctx = m_sndcpContexts[llId];
-                        ctx.active = true;
-                        ctx.nsapi = isp->getNSAPI();
-                    }
-                    // a downlink still awaiting its ACK belongs to the context this one replaces
-                    clearSNDCPPendingAck(llId);
-
-                    dispatchUserFrameToFNE(rspHeader, false, false, txPduUserData);
+                    // dispatch the activation response before publishing the accepted context
+                    if (!commitSNDCPActivation(rspHeader, txPduUserData, llId, isp->getNSAPI(), dynamicIP, DataBindingOrigin::SNDCP_DYNAMIC))
+                        return false;
 
                     LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP context activation accept, llId = %u, ipAddr = %s (dynamic)", 
                         llId, __IP_FROM_UINT(dynamicIP).c_str());
@@ -1796,13 +1837,20 @@ bool P25PacketData::processSNDCPControl(RxStatus* status)
                 isp->getDeactType());
 
             m_neighborCache.erase(llId);
+            const IPBinding* binding = m_bindingRegistry.findByLLId(llId);
+            if (binding != nullptr && binding->convergenceMode == DataConvergenceMode::SNDCP)
+                m_bindingRegistry.erase(llId);
+
             m_dataLinkManager.erase(llId);
+
+            // scope is intentional
             {
                 std::lock_guard<std::mutex> guard(m_sndcpContextLock);
                 auto ctx = m_sndcpContexts.find(llId);
                 if (ctx != m_sndcpContexts.end())
                     ctx->second.active = false;
             }
+
             clearSNDCPPendingAck(llId);
 
             // send ACK response
@@ -2088,7 +2136,6 @@ uint32_t P25PacketData::allocateIPAddress(uint32_t llId)
         nextIP = m_network->m_sndcpStartAddr;
     }
 
-    m_neighborCache.observe(llId, allocatedIP);
     LogInfoEx(LOG_P25, P25_PDU_STR ", SNDCP allocated dynamic IP %s to llId = %u (pool: %s - %s)", 
         __IP_FROM_UINT(allocatedIP).c_str(), llId, __IP_FROM_UINT(m_network->m_sndcpStartAddr).c_str(), __IP_FROM_UINT(m_network->m_sndcpEndAddr).c_str());
 

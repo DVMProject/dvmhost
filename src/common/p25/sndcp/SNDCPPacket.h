@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -56,9 +56,10 @@ namespace p25
             /**
              * @brief Decode a SNDCP packet.
              * @param[in] data Buffer containing SNDCP packet data to decode.
+             * @param length Length of the packet data in bytes.
              * @returns bool True, if decoded, otherwise false.
              */
-            virtual bool decode(const uint8_t* data) = 0;
+            virtual bool decode(const uint8_t* data, uint32_t length) = 0;
             /**
              * @brief Encode a SNDCP packet.
              * @param[out] data Buffer to encode SNDCP packet data to.

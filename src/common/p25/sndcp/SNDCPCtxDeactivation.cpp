@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -32,9 +32,10 @@ SNDCPCtxDeactivation::SNDCPCtxDeactivation() : SNDCPPacket(),
 
 /* Decode a SNDCP context deactivation packet. */
 
-bool SNDCPCtxDeactivation::decode(const uint8_t* data)
+bool SNDCPCtxDeactivation::decode(const uint8_t* data, uint32_t length)
 {
-    assert(data != nullptr);
+    if (data == nullptr || length < 2U)
+        return false;
 
     SNDCPPacket::decodeHeader(data, false);
 

@@ -89,10 +89,11 @@ ConvergenceResult SCEPService::authorizeUplink(uint32_t llId, const IPv4Packet& 
         (isMulticast(packet.destinationAddress) && !m_policy.allowMulticast))
         return ConvergenceResult::POLICY_REJECTED;
 
-    // check if the logical link ID corresponds to an authorized SCEP binding
+    // both conventional SCEP and trunked SNDCP carry the same validated IPv4
+    // datagram at this boundary; their bearer-specific framing is applied later
     const IPBinding* binding = m_bindings.findByLLId(llId);
-    if (binding == nullptr || !binding->authorized ||
-        binding->convergenceMode != DataConvergenceMode::SCEP)
+    if (binding == nullptr || !binding->authorized || 
+        (binding->convergenceMode != DataConvergenceMode::SCEP && binding->convergenceMode != DataConvergenceMode::SNDCP))
         return ConvergenceResult::NO_BINDING;
 
     // check if the source IP address of the packet matches the authorized binding
@@ -108,7 +109,7 @@ uint32_t SCEPService::routeDownlink(uint32_t destinationAddress) const
 {
     const IPBinding* binding = m_bindings.findByIPAddress(destinationAddress);
     if (binding == nullptr || !binding->authorized ||
-        binding->convergenceMode != DataConvergenceMode::SCEP)
+        (binding->convergenceMode != DataConvergenceMode::SCEP && binding->convergenceMode != DataConvergenceMode::SNDCP))
         return 0U;
 
     return binding->link.llId;
