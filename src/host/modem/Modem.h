@@ -76,6 +76,9 @@
 class HOST_SW_API Host;
 class HOST_SW_API HostCal;
 namespace host_restapi { class HOST_SW_API RESTAPI; }
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 class HOST_SW_API HostSetup;
 #if defined(ENABLE_SETUP_TUI)
@@ -787,6 +790,9 @@ namespace modem
         friend class ::Host;
         friend class ::HostCal;
         friend class ::host_restapi::RESTAPI;
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::HostTestHooks;
+#endif
 
         friend class ::HostSetup;
 #if defined(ENABLE_SETUP_TUI)

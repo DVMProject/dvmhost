@@ -389,6 +389,52 @@ public:
      */
     static void p25ClockU2U(p25::Control& control, uint32_t ms);
     /**
+     * @brief Queues a tagged DMR frame for transmission to the modem.
+     * @param control DMR control instance.
+     * @param slotNo DMR slot number (1 or 2).
+     * @param[in] data Tagged frame data.
+     */
+    static void dmrAddFrame(dmr::Control& control, uint32_t slotNo, const uint8_t* data);
+    /**
+     * @brief Queues a tagged P25 frame for transmission to the modem.
+     * @param control P25 control instance.
+     * @param[in] data Tagged frame data.
+     * @param length Length of the tagged frame in bytes.
+     * @returns bool True if the frame was queued; otherwise, false.
+     */
+    static bool p25AddFrame(p25::Control& control, const uint8_t* data, uint32_t length);
+    /**
+     * @brief Queues a tagged NXDN frame for transmission to the modem.
+     * @param control NXDN control instance.
+     * @param[in] data Tagged frame data.
+     */
+    static void nxdnAddFrame(nxdn::Control& control, const uint8_t* data);
+    /**
+     * @brief Sets the modem's reported DMR ring buffer space.
+     * @param modem Modem instance.
+     * @param slotNo DMR slot number (1 or 2).
+     * @param space Reported DMR space in bytes.
+     */
+    static void modemSetDMRSpace(modem::Modem& modem, uint32_t slotNo, uint32_t space);
+    /**
+     * @brief Sets the modem's reported P25 ring buffer space.
+     * @param modem Modem instance.
+     * @param space Reported P25 space in bytes.
+     */
+    static void modemSetP25Space(modem::Modem& modem, uint32_t space);
+    /**
+     * @brief Sets the modem's reported NXDN ring buffer space.
+     * @param modem Modem instance.
+     * @param space Reported NXDN space in bytes.
+     */
+    static void modemSetNXDNSpace(modem::Modem& modem, uint32_t space);
+    /**
+     * @brief Sets the modem protocol version reported by the test fixture.
+     * @param modem Modem instance.
+     * @param version Modem protocol version.
+     */
+    static void modemSetProtocolVersion(modem::Modem& modem, uint8_t version);
+    /**
      * @brief Stores an MFID transaction for P25 control-signaling tests.
      */
     static void p25StoreMFId(p25::Control& control, uint32_t srcId, uint32_t dstId,

@@ -4,7 +4,7 @@
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -75,7 +75,7 @@ void* Host::threadNXDNReader(void* arg)
                     };
 
                     if (host->m_nxdn != nullptr) {
-                        uint8_t nextLen = host->m_modem->peekNXDNFrameLength();
+                        uint32_t nextLen = host->m_modem->peekNXDNFrameLength();
                         if (nextLen > 0U) {
                             uint32_t len = host->m_modem->readNXDNFrame(data);
                             if (len > 0U) {

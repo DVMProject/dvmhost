@@ -1432,7 +1432,7 @@ bool Modem::hasP25P2Space2() const
 
 bool Modem::hasNXDNSpace() const
 {
-    return m_nxdnSpace >= NXDDEF::NXDN_FRAME_LENGTH_BYTES;
+    return m_nxdnSpace >= (NXDDEF::NXDN_FRAME_LENGTH_BYTES + 2U);
 }
 
 /* Helper to test if the modem is a hotspot. */

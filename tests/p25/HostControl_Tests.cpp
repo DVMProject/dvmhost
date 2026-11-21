@@ -2183,3 +2183,66 @@ TEST_CASE("P25 grant authority follows configuration and FNE availability",
     local.network()->activateForTest();
     REQUIRE(local.m_control->isGrantAuthoritative());
 }
+
+TEST_CASE("P25 frame types wait for their complete variable-length modem space", "[p25][host][control][queue][pacing]")
+{
+    using namespace p25::defines;
+
+    struct FrameLengthCase {
+        const char* name;
+        uint32_t length;
+    };
+
+    const uint32_t minimumPDUBytes =
+        ((P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS + 7U) / 8U) + 2U;
+    const FrameLengthCase cases[] = {
+        { "TDU", P25_TDU_FRAME_LENGTH_BYTES + 2U },
+        { "null control fill", 25U + 2U },
+        { "TSDU", P25_TSDU_FRAME_LENGTH_BYTES + 2U },
+        { "TDULC", P25_TDULC_FRAME_LENGTH_BYTES + 2U },
+        { "double TSDU", P25_TSDU_DOUBLE_FRAME_LENGTH_BYTES + 2U },
+        { "triple TSDU", P25_TSDU_TRIPLE_FRAME_LENGTH_BYTES + 2U },
+        { "HDU", P25_HDU_FRAME_LENGTH_BYTES + 2U },
+        { "LDU1 or LDU2", P25_LDU_FRAME_LENGTH_BYTES + 2U },
+        { "minimum PDU", minimumPDUBytes },
+        { "last short modem frame", 251U },
+        { "first long modem frame", 252U },
+        { "last 8-bit length", 255U },
+        { "first length above 255", 256U },
+        { "14-block confirmed PDU", 395U },
+        { "maximum PDU", P25_PDU_FRAME_LENGTH_BYTES + 2U }
+    };
+
+    for (const FrameLengthCase& testCase : cases) {
+        DYNAMIC_SECTION(testCase.name << " (" << testCase.length << " bytes)") {
+            P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+            HostTestHooks::modemSetProtocolVersion(harness.m_modem, 4U);
+
+            std::vector<uint8_t> frame(testCase.length, 0U);
+            frame[0U] = modem::TAG_DATA;
+            for (uint32_t i = 2U; i < testCase.length; i++)
+                frame[i] = (uint8_t)i;
+
+            REQUIRE(HostTestHooks::p25AddFrame(*harness.m_control, frame.data(), testCase.length));
+
+            HostTestHooks::modemSetP25Space(harness.m_modem, testCase.length - 1U);
+            uint32_t nextLen = harness.m_control->peekFrameLength();
+            REQUIRE(nextLen == testCase.length);
+            REQUIRE_FALSE(harness.m_modem.hasP25Space(nextLen));
+            REQUIRE_FALSE(harness.m_modem.writeP25Frame(frame.data(), testCase.length));
+            CHECK(harness.m_control->peekFrameLength() == testCase.length);
+
+            HostTestHooks::modemSetP25Space(harness.m_modem, testCase.length);
+            nextLen = harness.m_control->peekFrameLength();
+            REQUIRE(nextLen == testCase.length);
+            REQUIRE(harness.m_modem.hasP25Space(nextLen));
+
+            std::vector<uint8_t> out(P25_PDU_FRAME_LENGTH_BYTES + 2U, 0U);
+            REQUIRE(harness.m_control->getFrame(out.data()) == testCase.length);
+            REQUIRE(::memcmp(out.data(), frame.data(), testCase.length) == 0);
+            REQUIRE(harness.m_modem.writeP25Frame(out.data(), testCase.length));
+            CHECK(harness.m_modem.getP25Space() == 0U);
+            CHECK(harness.m_control->peekFrameLength() == 0U);
+        }
+    }
+}

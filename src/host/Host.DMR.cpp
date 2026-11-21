@@ -4,7 +4,7 @@
 * GPLv2 Open Source. Use is subject to license terms.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
-*  Copyright (C) 2017-2024 Bryan Biedenkapp, N2PLL
+*  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
 *
 */
 #include "Defines.h"
@@ -95,7 +95,7 @@ void* Host::threadDMRReader1(void* arg)
                     };
 
                     if (host->m_dmr != nullptr) {
-                        uint8_t nextLen = host->m_modem->peekDMRFrame1Length();
+                        uint32_t nextLen = host->m_modem->peekDMRFrame1Length();
                         if (nextLen > 0U) {
                             // read DMR slot 1 frames from the modem, and if there is any
                             // write those frames to the DMR controller
@@ -381,7 +381,7 @@ void* Host::threadDMRReader2(void* arg)
                     };
 
                     if (host->m_dmr != nullptr) {
-                        uint8_t nextLen = host->m_modem->peekDMRFrame2Length();
+                        uint32_t nextLen = host->m_modem->peekDMRFrame2Length();
                         if (nextLen > 0U) {
                             // read DMR slot 2 frames from the modem, and if there is any
                             // write those frames to the DMR controller

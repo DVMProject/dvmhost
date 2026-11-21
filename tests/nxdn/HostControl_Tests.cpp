@@ -1066,3 +1066,27 @@ TEST_CASE("NXDN grant authority follows configuration and FNE availability",
     local.network()->activateForTest();
     REQUIRE(local.m_control->isGrantAuthoritative());
 }
+
+TEST_CASE("NXDN frames wait for complete modem space", "[nxdn][host][control][queue][pacing]")
+{
+    NXDNHostHarness harness;
+    const uint32_t frameLength = nxdn::defines::NXDN_FRAME_LENGTH_BYTES + 2U;
+    uint8_t frame[nxdn::defines::NXDN_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    frame[0U] = modem::TAG_DATA;
+
+    HostTestHooks::nxdnAddFrame(*harness.m_control, frame);
+    REQUIRE(harness.m_control->peekFrameLength() == frameLength);
+
+    HostTestHooks::modemSetNXDNSpace(harness.m_modem, frameLength - 1U);
+    REQUIRE_FALSE(harness.m_modem.hasNXDNSpace());
+    CHECK(harness.m_control->peekFrameLength() == frameLength);
+
+    HostTestHooks::modemSetNXDNSpace(harness.m_modem, frameLength);
+    REQUIRE(harness.m_modem.hasNXDNSpace());
+
+    uint8_t out[nxdn::defines::NXDN_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    REQUIRE(harness.m_control->getFrame(out) == frameLength);
+    REQUIRE(harness.m_modem.writeNXDNFrame(out, frameLength));
+    CHECK(harness.m_control->peekFrameLength() == 0U);
+    CHECK(harness.m_modem.getNXDNSpace() == 0U);
+}

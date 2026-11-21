@@ -594,6 +594,59 @@ void HostTestHooks::p25ClockU2U(p25::Control& control, uint32_t ms)
     control.m_control->clock(ms);
 }
 
+/* Queues a tagged DMR frame for transmission to the modem. */
+
+void HostTestHooks::dmrAddFrame(dmr::Control& control, uint32_t slotNo, const uint8_t* data)
+{
+    dmr::Slot* slot = slotNo == 1U ? control.m_slot1 : control.m_slot2;
+    slot->addFrame(data);
+}
+
+/* Queues a tagged P25 frame for transmission to the modem. */
+
+bool HostTestHooks::p25AddFrame(p25::Control& control, const uint8_t* data, uint32_t length)
+{
+    return control.addFrame(data, length);
+}
+
+/* Queues a tagged NXDN frame for transmission to the modem. */
+
+void HostTestHooks::nxdnAddFrame(nxdn::Control& control, const uint8_t* data)
+{
+    control.addFrame(data);
+}
+
+/* Sets the modem's reported DMR ring buffer space. */
+
+void HostTestHooks::modemSetDMRSpace(modem::Modem& modem, uint32_t slotNo, uint32_t space)
+{
+    if (slotNo == 1U)
+        modem.m_dmrSpace1 = space;
+    else
+        modem.m_dmrSpace2 = space;
+}
+
+/* Sets the modem's reported P25 ring buffer space. */
+
+void HostTestHooks::modemSetP25Space(modem::Modem& modem, uint32_t space)
+{
+    modem.m_p25Space = space;
+}
+
+/* Sets the modem's reported NXDN ring buffer space. */
+
+void HostTestHooks::modemSetNXDNSpace(modem::Modem& modem, uint32_t space)
+{
+    modem.m_nxdnSpace = space;
+}
+
+/* Sets the modem protocol version reported by the test fixture. */
+
+void HostTestHooks::modemSetProtocolVersion(modem::Modem& modem, uint8_t version)
+{
+    modem.m_protoVer = version;
+}
+
 /* Stores an MFID transaction for a control-signaling test. */
 
 void HostTestHooks::p25StoreMFId(p25::Control& control, uint32_t srcId, uint32_t dstId,

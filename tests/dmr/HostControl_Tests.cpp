@@ -1033,6 +1033,37 @@ TEST_CASE("DMR grant authority follows configuration and FNE availability",
     REQUIRE(localSlot->isGrantAuthoritative());
 }
 
+TEST_CASE("DMR frames wait for complete modem space", "[dmr][host][control][queue][pacing]")
+{
+    const uint32_t frameLength = dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U;
+    uint8_t frame[dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    frame[0U] = modem::TAG_DATA;
+
+    for (uint32_t slotNo = 1U; slotNo <= 2U; slotNo++) {
+        DYNAMIC_SECTION("slot " << slotNo) {
+            DMRHostHarness harness;
+            HostTestHooks::dmrAddFrame(*harness.m_control, slotNo, frame);
+            REQUIRE(harness.m_control->peekFrameLength(slotNo) == frameLength);
+
+            HostTestHooks::modemSetDMRSpace(harness.m_modem, slotNo, frameLength - 1U);
+            const bool insufficient = slotNo == 1U ? harness.m_modem.hasDMRSpace1() : harness.m_modem.hasDMRSpace2();
+            REQUIRE_FALSE(insufficient);
+            CHECK(harness.m_control->peekFrameLength(slotNo) == frameLength);
+
+            HostTestHooks::modemSetDMRSpace(harness.m_modem, slotNo, frameLength);
+            const bool sufficient = slotNo == 1U ? harness.m_modem.hasDMRSpace1() : harness.m_modem.hasDMRSpace2();
+            REQUIRE(sufficient);
+
+            uint8_t out[dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
+            REQUIRE(harness.m_control->getFrame(slotNo, out) == frameLength);
+            const bool written = slotNo == 1U ? harness.m_modem.writeDMRFrame1(out, frameLength) : harness.m_modem.writeDMRFrame2(out, frameLength);
+            REQUIRE(written);
+            CHECK(harness.m_control->peekFrameLength(slotNo) == 0U);
+            CHECK((slotNo == 1U ? harness.m_modem.getDMRSpace1() : harness.m_modem.getDMRSpace2()) == 0U);
+        }
+    }
+}
+
 TEST_CASE("DMR FNE grant responses are rebuilt with local channel assignments",
     "[dmr][host][control][grant-response]")
 {
