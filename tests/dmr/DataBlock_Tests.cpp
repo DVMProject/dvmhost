@@ -4,13 +4,14 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025,2026 Bryan Biedenkapp, N2PLL
  *
  */
 
 #include <catch2/catch_test_macros.hpp>
 #include <array>
 #include <cstring>
+#include <random>
 
 #include "common/Defines.h"
 #include "common/dmr/DMRDefines.h"
@@ -85,6 +86,29 @@ namespace {
             ::memcpy(frame, block, 12U);
             ::memcpy(frame + 21U, block + 12U, 12U);
         }
+    }
+
+    /** Shifts one rate-3/4 symbol by one sliced 4FSK level in a DMR burst. */
+    void shiftRate34Symbol(uint8_t* frame, uint32_t symbol, bool up)
+    {
+        uint32_t firstBit = symbol * 2U;
+        uint32_t secondBit = firstBit + 1U;
+        if (firstBit >= 98U)
+            firstBit += 68U;
+        if (secondBit >= 98U)
+            secondBit += 68U;
+
+        const bool b1 = READ_BIT(frame, firstBit) != 0U;
+        const bool b2 = READ_BIT(frame, secondBit) != 0U;
+        int32_t level = (!b1 && b2) ? 3 : (!b1 && !b2) ? 1 : (b1 && !b2) ? -1 : -3;
+        level += up ? 2 : -2;
+        if (level > 3)
+            level = 1;
+        if (level < -3)
+            level = -1;
+
+        WRITE_BIT(frame, firstBit, level < 0);
+        WRITE_BIT(frame, secondBit, level == 3 || level == -3);
     }
 }
 
@@ -165,6 +189,58 @@ TEST_CASE("DMR confirmed data blocks reject CRC-9 failures", "[dmr][datablock]")
         decoded.setDataType(rate);
         REQUIRE_FALSE(decoded.decode(frame.data(), header));
     }
+}
+
+TEST_CASE("DMR confirmed rate-3/4 resolves tied Trellis candidates by CRC-9", "[dmr][datablock][trellis]")
+{
+    std::array<uint8_t, DMR_PDU_UNCODED_LENGTH_BYTES> payload{};
+    for (uint32_t i = 0U; i < DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES; i++)
+        payload[i] = (uint8_t)(i * 23U + 5U);
+
+    DataBlock encoded;
+    encoded.setFormat(DPF::CONFIRMED_DATA);
+    encoded.setDataType(DataType::RATE_34_DATA);
+    encoded.setSerialNo(0x2AU);
+    encoded.setData(payload.data());
+
+    std::array<uint8_t, DMR_FRAME_LENGTH_BYTES> cleanFrame{};
+    encoded.encode(cleanFrame.data());
+    std::array<uint8_t, edac::TRELLIS_34_PAYLOAD_LENGTH_BYTES> expectedRaw{};
+    extractBlock(DataType::RATE_34_DATA, cleanFrame.data(), expectedRaw.data());
+
+    std::mt19937 rng(0x34D4U);
+    std::array<uint8_t, DMR_FRAME_LENGTH_BYTES> tiedFrame{};
+    bool found = false;
+    for (uint32_t trial = 0U; trial < 10000U && !found; trial++) {
+        tiedFrame = cleanFrame;
+        for (uint32_t error = 0U; error < 5U; error++)
+            shiftRate34Symbol(tiedFrame.data(), rng() % 98U, (rng() & 1U) != 0U);
+
+        uint8_t candidates[edac::TRELLIS_34_MAX_LIST_PATHS * edac::TRELLIS_34_PAYLOAD_LENGTH_BYTES];
+        bool truncated = false;
+        const uint32_t count = edac::Trellis().decode34List(tiedFrame.data(), candidates,
+            edac::TRELLIS_34_MAX_LIST_PATHS, truncated, true);
+        for (uint32_t candidate = 1U; candidate < count; candidate++) {
+            if (::memcmp(candidates + candidate * edac::TRELLIS_34_PAYLOAD_LENGTH_BYTES,
+                expectedRaw.data(), expectedRaw.size()) == 0) {
+                found = true;
+                break;
+            }
+        }
+    }
+
+    REQUIRE(found);
+
+    DataHeader header;
+    header.setDPF(DPF::CONFIRMED_DATA);
+    DataBlock decoded;
+    decoded.setDataType(DataType::RATE_34_DATA);
+    REQUIRE(decoded.decode(tiedFrame.data(), header));
+    REQUIRE(decoded.getSerialNo() == 0x2AU);
+
+    std::array<uint8_t, DMR_PDU_UNCODED_LENGTH_BYTES> output{};
+    REQUIRE(decoded.getData(output.data()) == DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);
+    REQUIRE(::memcmp(output.data(), payload.data(), DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES) == 0);
 }
 
 TEST_CASE("DMR unconfirmed Rate 1 maps all 24 payload octets around the burst centre", "[dmr][datablock]")

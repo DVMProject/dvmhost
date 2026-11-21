@@ -129,6 +129,14 @@ namespace dmr
              * @returns uint16_t CRC mask.
              */
             uint16_t crcMask(const defines::DataType::E dataType) const;
+            /**
+             * @brief Checks the CRC-9 of a decoded confirmed rate-3/4 data block.
+             * @param[in] buffer Decoded 18-byte rate-3/4 data block.
+             * @param[out] crc Unmasked CRC-9 carried in the block.
+             * @param[out] calculated CRC-9 computed over the block.
+             * @returns bool True if the carried and computed CRC-9 values match.
+             */
+            bool checkConfirmedRate34CRC9(const uint8_t* buffer, uint16_t& crc, uint16_t& calculated) const;
 
             /**
              * @brief Decodes a rate 1 encoded data block.

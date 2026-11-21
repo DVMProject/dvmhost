@@ -75,10 +75,40 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
     if (m_DPF == DPF::CONFIRMED_DATA) {
         try {
             if (m_dataType == DataType::RATE_34_DATA) {
-                bool valid = m_trellis.decode34(data, buffer, true);
-                if (!valid) {
+                uint8_t candidates[edac::TRELLIS_34_MAX_LIST_PATHS * edac::TRELLIS_34_PAYLOAD_LENGTH_BYTES];
+                ::memset(candidates, 0x00U, sizeof(candidates));
+
+                bool truncated = false;
+                const uint32_t candidateCnt = m_trellis.decode34List(data, candidates,
+                    edac::TRELLIS_34_MAX_LIST_PATHS, truncated, true);
+                if (candidateCnt == 0U) {
                     LogError(LOG_DMR, "DataBlock::decode(), failed to decode Trellis 3/4 rate coding");
                     return false;
+                }
+
+                uint32_t selected = 0U;
+                bool valid = false;
+                for (uint32_t i = 0U; i < candidateCnt; i++) {
+                    uint16_t candidateCRC = 0U;
+                    uint16_t candidateCalc = 0U;
+                    valid = checkConfirmedRate34CRC9(candidates + i * edac::TRELLIS_34_PAYLOAD_LENGTH_BYTES, candidateCRC, candidateCalc);
+                    if (valid) {
+                        selected = i;
+                        break;
+                    }
+                }
+
+                if (!valid && truncated) {
+                    LogWarning(LOG_DMR, "DMR, dataType = $%02X, Trellis 3/4 rate candidate list truncated before CRC-9 match",
+                        m_dataType);
+                }
+
+                ::memcpy(buffer, candidates + selected * edac::TRELLIS_34_PAYLOAD_LENGTH_BYTES,
+                    edac::TRELLIS_34_PAYLOAD_LENGTH_BYTES);
+
+                if (valid && selected != 0U) {
+                    LogDebug(LOG_DMR, "DMR, dataType = $%02X, Trellis 3/4 rate tie resolved by CRC-9, candidate %u of %u",
+                        m_dataType, selected + 1U, candidateCnt);
                 }
             }
             else if (m_dataType == DataType::RATE_12_DATA) {
@@ -96,21 +126,8 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
             Utils::dump(1U, "DMR, DataBlock::decode(), Confirmed PDU Data Block", buffer, DMR_PDU_UNCODED_LENGTH_BYTES);
 #endif
 
-            m_serialNo = (buffer[0] & 0xFEU) >> 1;                                          // Confirmed Data Serial No.
             uint16_t crc = ((buffer[0] & 0x01U) << 8) + buffer[1];                          // CRC-9 Check Sum
             crc ^= crcMask(m_dataType);
-
-            ::memset(m_data, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
-            if (m_dataType == DataType::RATE_34_DATA)
-                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);      // Payload Data
-            else if (m_dataType == DataType::RATE_12_DATA)
-                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);      // Payload Data
-            else if (m_dataType == DataType::RATE_1_DATA)
-                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES); // Payload Data
-            else {
-                LogError(LOG_DMR, "DataBlock::decode(), failed to decode block, invalid dataType = $%02X", m_dataType);
-                return false;
-            }
 
             uint8_t crcBuffer[DMR_PDU_UNCODED_LENGTH_BYTES];
             ::memset(crcBuffer, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
@@ -156,6 +173,16 @@ bool DataBlock::decode(const uint8_t* data, const DataHeader& header)
                 LogWarning(LOG_DMR, "DMR, dataType = $%02X, invalid crc = $%04X != $%04X (computed)", m_dataType, crc, calculated);
                 return false;
             }
+
+            m_serialNo = (buffer[0] & 0xFEU) >> 1;                                          // Confirmed Data Serial No.
+
+            ::memset(m_data, 0x00U, DMR_PDU_UNCODED_LENGTH_BYTES);
+            if (m_dataType == DataType::RATE_34_DATA)
+                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);      // Payload Data
+            else if (m_dataType == DataType::RATE_12_DATA)
+                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_HR_DATA_LENGTH_BYTES);      // Payload Data
+            else
+                ::memcpy(m_data, buffer + 2U, DMR_PDU_CONFIRMED_UNCODED_DATA_LENGTH_BYTES); // Payload Data
 
 #if DEBUG_DMR_PDU_DATA
             LogDebug(LOG_DMR, "DMR, dataType = $%02X, crc = $%04X, calculated = $%04X", m_dataType, crc, calculated);
@@ -477,6 +504,28 @@ uint16_t DataBlock::crcMask(const DataType::E dataType) const
     default:
         return 0U;
     }
+}
+
+/* Checks the CRC-9 of a decoded confirmed rate-3/4 data block. */
+
+bool DataBlock::checkConfirmedRate34CRC9(const uint8_t* buffer, uint16_t& crc, uint16_t& calculated) const
+{
+    assert(buffer != nullptr);
+
+    crc = (((buffer[0] & 0x01U) << 8) + buffer[1]) ^ crcMask(DataType::RATE_34_DATA);
+
+    uint8_t crcBuffer[DMR_PDU_UNCODED_LENGTH_BYTES];
+    ::memset(crcBuffer, 0x00U, sizeof(crcBuffer));
+    ::memcpy(crcBuffer, buffer + 2U, DMR_PDU_CONFIRMED_TQ_DATA_LENGTH_BYTES);
+
+    // append the seven CRC bits from the first byte to the CRC input
+    for (uint32_t i = 0U; i < 7U; i++) {
+        const bool bit = READ_BIT(buffer, i) != 0U;
+        WRITE_BIT(crcBuffer, i + 128U, bit);
+    }
+
+    calculated = ~edac::CRC::createCRC9(crcBuffer, 135U) & 0x1FFU;
+    return crc == calculated;
 }
 
 /* Decodes a rate 1 encoded data block. */
