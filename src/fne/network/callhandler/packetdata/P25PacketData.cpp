@@ -1371,6 +1371,13 @@ void P25PacketData::dispatchToFNE(uint32_t peerId)
     }
 }
 
+/* Determines whether an outbound PDU requires a new LLC send sequence. */
+
+bool P25PacketData::requiresSendSequence(uint8_t format, bool retransmit)
+{
+    return !retransmit && format == PDUFormatType::CONFIRMED;
+}
+
 /* Helper to dispatch PDU user data back to the local FNE network. (Will not transmit to neighbor FNE peers.) */
 
 bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool retransmit)
@@ -1399,9 +1406,10 @@ bool P25PacketData::dispatchUserFrameToFNE(DataHeader& dataHeader, bool extended
         return false;
     }
 
-    // update V(S) only after a usable RF route has been selected; a retransmission
-    // keeps the N(S) already in its header, so the SU can discard a duplicate
-    if (!retransmit) {
+    // N(S) and SYN exist only in confirmed-data headers; Responses, unconfirmed
+    // data, and AMBT packets must not consume V(S); a retransmission keeps the
+    // N(S) already in its header so the SU can discard a duplicate
+    if (requiresSendSequence(dataHeader.getFormat(), retransmit)) {
         bool synchronize = false;
         uint8_t sendSequence = m_dataLinkManager.nextSendSequence(srcId, synchronize);
         if (synchronize)

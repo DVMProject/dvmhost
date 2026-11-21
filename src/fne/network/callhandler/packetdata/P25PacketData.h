@@ -36,6 +36,14 @@
 #include <unordered_map>
 #include <vector>
 
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 namespace network
 {
     namespace callhandler
@@ -134,6 +142,9 @@ namespace network
                 void setDebug(bool debug) { m_debug = debug; }
 
             private:
+#if defined(CATCH2_TEST_COMPILATION)
+                friend class ::FNETestHooks;
+#endif
                 TrafficNetwork* m_network;
                 TagP25Data* m_tag;
 
@@ -287,6 +298,14 @@ namespace network
 
                 std::mutex m_sndcpPendingLock;          // never nested with m_sndcpContextLock
                 std::unordered_map<uint32_t, SNDCPPendingAck> m_sndcpPending;
+
+                /**
+                 * @brief Determines whether an outbound PDU requires a new LLC send sequence.
+                 * @param format PDU header format.
+                 * @param retransmit Flag indicating the PDU is a retransmission.
+                 * @return True when the PDU requires a new send sequence; otherwise, false.
+                 */
+                static bool requiresSendSequence(uint8_t format, bool retransmit);
 
                 /**
                  * @brief Helper to refresh SNDCP state when a PDU is received from a subscriber.

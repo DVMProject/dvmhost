@@ -8,6 +8,7 @@
  *
  */
 #include "host/Defines.h"
+#include "fne/FNETestHooks.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/ConventionalRegistration.h"
 #include "common/p25/data/IPv4Packet.h"
@@ -172,6 +173,15 @@ TEST_CASE("P25 LLC state is isolated by LLID", "[p25][packet-data][llc]")
     CHECK(links.isReady(2002U));
     links.erase(1001U);
     CHECK_FALSE(links.hasState(1001U));
+}
+
+TEST_CASE("P25 LLC send sequences are assigned only to new confirmed PDUs", "[p25][packet-data][llc]")
+{
+    CHECK(FNETestHooks::p25RequiresSendSequence(PDUFormatType::CONFIRMED, false));
+    CHECK_FALSE(FNETestHooks::p25RequiresSendSequence(PDUFormatType::CONFIRMED, true));
+    CHECK_FALSE(FNETestHooks::p25RequiresSendSequence(PDUFormatType::RSP, false));
+    CHECK_FALSE(FNETestHooks::p25RequiresSendSequence(PDUFormatType::UNCONFIRMED, false));
+    CHECK_FALSE(FNETestHooks::p25RequiresSendSequence(PDUFormatType::AMBT, false));
 }
 
 TEST_CASE("P25 LLC receive sequence wraps and suppresses duplicates", "[p25][packet-data][llc]")

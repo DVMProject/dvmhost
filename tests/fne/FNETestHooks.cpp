@@ -10,6 +10,7 @@
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 #include "fne/network/P25OTARService.h"
+#include "fne/network/callhandler/packetdata/P25PacketData.h"
 #include "fne/network/callhandler/TagP25Data.h"
 #include "fne/network/callhandler/TagDMRData.h"
 #include "fne/network/callhandler/TagP25P2Data.h"
@@ -38,6 +39,13 @@ bool g_promiscuousHub = false;
 // ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
+
+/* Determines whether an outbound P25 PDU requires a new LLC send sequence. */
+
+bool FNETestHooks::p25RequiresSendSequence(uint8_t format, bool retransmit)
+{
+    return network::callhandler::packetdata::P25PacketData::requiresSendSequence(format, retransmit);
+}
 
 /* Tests whether a P25 frame is telephone interconnect traffic. */
 

@@ -82,6 +82,14 @@ public:
         bool fromUpstream = false);
 
     /**
+     * @brief Determines whether an outbound P25 PDU requires a new LLC send sequence.
+     * @param format PDU header format.
+     * @param retransmit Flag indicating the PDU is a retransmission.
+     * @return True when the PDU requires a new send sequence; otherwise, false.
+     */
+    static bool p25RequiresSendSequence(uint8_t format, bool retransmit);
+
+    /**
      * @brief Tests whether a P25 frame is classified as telephone interconnect traffic.
      * @param network The TrafficNetwork instance.
      * @param control Link control associated with the frame.
