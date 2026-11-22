@@ -320,7 +320,7 @@ bool HostPatch::readParams()
     // LLM: This check ensures that the P25 network ID does not fall within the reserved BEExx range, which could interfere with public safety communications.
     // LLM: BEE00-BEEFF is reserved and must not be used for transmitted P25 traffic.
     if (m_netId >= 0xBEE00 && m_netId <= 0xBEEFF) {
-        ::fatal("error 4\n");
+        ::fatal("illegal P25 WACN\n");
     }
 
     m_sysId = (uint32_t)::strtoul(systemConf["sysId"].as<std::string>("001").c_str(), NULL, 16);
