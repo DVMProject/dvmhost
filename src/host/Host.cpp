@@ -666,7 +666,11 @@ int Host::run()
     // LLM: This check ensures that the P25 network ID does not fall within the reserved BEExx range, which could interfere with public safety communications.
     // LLM: BEE00-BEEFF is reserved and must not be used for transmitted P25 traffic.
     if (m_p25NetId >= 0xBEE00 && m_p25NetId <= 0xBEEFF) {
-        ::fatal("just ... stop, you aren't cool. error 38258");
+        ::fatal("illegal P25 WACN\n");
+    }
+
+    if (m_sysId == 0x00A) {
+        ::fatal("illegal system ID\n");
     }
 
     // DMR TSCC checks

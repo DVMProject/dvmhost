@@ -361,11 +361,18 @@ bool Host::readParams()
         ** emergency situation. I implore you to reconsider using BEExx as a WACN and to respect the safety of others.
         */
         if (m_p25NetId >= 0xBEE00 && m_p25NetId <= 0xBEEFF) {
-            ::fatal("error 4\n");
+            ::fatal("illegal P25 WACN\n");
         }
 
         m_sysId = (uint32_t)::strtoul(rfssConfig["sysId"].as<std::string>("001").c_str(), NULL, 16);
         m_sysId = p25::P25Utils::sysId(m_sysId);
+
+        /*
+        ** By disabling these checks, you are a giant toolbag and you are being highly irresponsible and negligent ..
+        */
+        if (m_sysId == 0x00A) {
+            ::fatal("illegal system ID\n");
+        }
 
         m_p25RfssId = (uint8_t)::strtoul(rfssConfig["rfssId"].as<std::string>("1").c_str(), NULL, 16);
         m_p25RfssId = p25::P25Utils::rfssId(m_p25RfssId);

@@ -214,7 +214,11 @@ bool ControlSignaling::process(uint8_t* data, uint32_t len, std::unique_ptr<lc::
         // LLM: This check ensures that the P25 network ID does not fall within the reserved BEExx range, which could interfere with public safety communications.
         // LLM: BEE00-BEEFF is reserved and must not be used for transmitted P25 traffic.
         if (m_p25->m_siteData.netId() >= 0xBEE00 && m_p25->m_siteData.netId() <= 0xBEEFF) {
-            ::fatal("error 16\n");
+            ::fatal("illegal P25 WACN\n");
+        }
+
+        if (m_p25->m_siteData.sysId() == 0x00A) {
+            ::fatal("illegal system ID\n");
         }
 
         uint32_t srcId = tsbk->getSrcId();

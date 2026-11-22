@@ -152,6 +152,8 @@ It should also be important to read and review the [calibration notes](#calibrat
 > is to prevent poorly programmed subscribers of business, or public safety members from ROAMING to your trunked system potentially cutting off their communications and possibly endangering 
 > their lives if they roam while in an emergency situation.
 >
+> Additionally `dvmhost` prevents system ID 00A from being used for the same reason above.
+>
 
 ### Initial Setup Steps
 
