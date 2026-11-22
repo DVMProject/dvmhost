@@ -469,7 +469,7 @@ namespace p25
          * @brief Helper to keep the outbound keyed on an idle, SNDCP-permitted data channel.
          * @param ms Elapsed time in milliseconds since the last clock.
          */
-        void clockDataChannelKeepAlive(uint32_t ms);
+        void handleDataChannelKeepAlive(uint32_t ms);
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.

@@ -1108,7 +1108,7 @@ void Control::clock()
         }
     }
 
-    clockDataChannelKeepAlive(ms);
+    handleDataChannelKeepAlive(ms);
 
     // reset states if we're in a rejected state and we're a control channel
     if (m_rfState == RS_RF_REJECTED && m_enableControl && m_dedicatedControl) {
@@ -1968,8 +1968,12 @@ void Control::processFrameLoss(RPT_RF_LOSS_TYPE type)
 
 /* Helper to keep the outbound keyed on an idle, SNDCP-permitted data channel. */
 
-void Control::clockDataChannelKeepAlive(uint32_t ms)
+void Control::handleDataChannelKeepAlive(uint32_t ms)
 {
+    // never key a data channel without SNDCP support, regardless of the caller
+    if (!m_sndcpSupport)
+        return;
+
     if (!m_permittedData)
         return;
 
@@ -1988,7 +1992,7 @@ void Control::clockDataChannelKeepAlive(uint32_t ms)
     // the keep-alive ends for the rest of the grant
     if (m_rfState != RS_RF_LISTENING) {
         if (m_dataChKeepAlive.isRunning() && m_debug) {
-            LogDebugEx(LOG_P25, "Control::clockDataChannelKeepAlive()", "SU transmitting, data channel keep-alive ended, dstId = %u", m_permittedDstId);
+            LogDebugEx(LOG_P25, "Control::handleDataChannelKeepAlive()", "SU transmitting, data channel keep-alive ended, dstId = %u", m_permittedDstId);
         }
 
         m_dataChKeepAlive.stop();

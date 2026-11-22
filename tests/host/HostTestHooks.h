@@ -405,7 +405,7 @@ public:
      * @param control P25 control instance.
      * @param ms Elapsed milliseconds.
      */
-    static void p25ClockDataChannelKeepAlive(p25::Control& control, uint32_t ms);
+    static void p25HandleDataChannelKeepAlive(p25::Control& control, uint32_t ms);
     /**
      * @brief Sets the remaining P25 native-modem PDU pacing guard.
      * @param control P25 control instance.

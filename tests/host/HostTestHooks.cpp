@@ -605,9 +605,9 @@ bool HostTestHooks::p25PermittedData(const p25::Control& control) { return contr
 
 /* Advances the P25 data channel keep-alive and permit hold timers. */
 
-void HostTestHooks::p25ClockDataChannelKeepAlive(p25::Control& control, uint32_t ms)
+void HostTestHooks::p25HandleDataChannelKeepAlive(p25::Control& control, uint32_t ms)
 {
-    control.clockDataChannelKeepAlive(ms);
+    control.handleDataChannelKeepAlive(ms);
 }
 
 /* Sets the remaining P25 native-modem PDU pacing guard. */
