@@ -66,6 +66,7 @@ network:
     # AES-256 32-byte Preshared Key
     #   (This field *must* be 32 hex bytes in length or 64 characters
     #    0 - 9, A - F.)
+    #   A 32-character value is doubled for legacy compatibility. Invalid values disable encryption.
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
     # AES-256 32-byte Preshared Key for peer-based key requests
@@ -81,7 +82,8 @@ network:
     # Flag indicating whether or not verbose debug logging is enabled.
     debug: false
 
-    # Source Talkgroup ID for transmitted/received audio frames.
+    # Source Talkgroup ID for transmitted/received audio frames. Must be nonzero and
+    # different from destinationTGID. Maximum: 16777215 for DMR, 65535 for P25.
     # In an MMDVM gateway mode, this is the DVM FNE-facing talkgroup.
     sourceTGID: 1
     # Source Slot for received/transmitted audio frames.
@@ -94,12 +96,14 @@ network:
       enable: false
       # Traffic Encryption Key Algorithm
       #   aes - AES-256 Encryption
+      #   des - DES Encryption
       #   arc4 - ARC4/ADP Encryption
       tekAlgo: "aes"
       # Traffic Encryption Key ID (Hex)
       tekKeyId: 1
 
-    # Destination Talkgroup ID for transmitted/received audio frames.
+    # Destination Talkgroup ID for transmitted/received audio frames. Must be nonzero and
+    # different from sourceTGID. Maximum: 16777215 for DMR, 65535 for P25.
     # In an MMDVM gateway mode, this is the gateway-facing talkgroup.
     destinationTGID: 1
     # Destination Slot for received/transmitted audio frames.
@@ -112,13 +116,11 @@ network:
       enable: false
       # Traffic Encryption Key Algorithm
       #   aes - AES-256 Encryption
+      #   des - DES Encryption
       #   arc4 - ARC4/ADP Encryption
       tekAlgo: "aes"
       # Traffic Encryption Key ID (Hex)
       tekKeyId: 1
-
-    # Amount of time (ms) from loss of active call before ending call.
-    dropTimeMs: 1000
 
     # Flag indicating whether or not the patch is two-way.
     #  NOTE: If false (one-way patch from source to destination), and patching clear to
@@ -144,12 +146,17 @@ system:
     netId: BB800
     # System ID.
     sysId: 001
+    # Local time offset from GMT used in generated P25 site data.
+    localTimeOffset: 0
 
-    # Digital mode (1 - DMR, 2 - P25).
+    # Digital mode (1 - DMR, 2 - P25). Out-of-range values are clamped.
     digiMode: 1
 
     # Flag indicating whether a network grant demand packet will be sent before audio.
     grantDemand: false
+
+    # Amount of time (ms) from loss of active call before ending call.
+    dropTimeMs: 1000
 
     # Flag indicating whether or not the patch is from/to a MMDVM P25 reflector.
     mmdvmP25Reflector: false

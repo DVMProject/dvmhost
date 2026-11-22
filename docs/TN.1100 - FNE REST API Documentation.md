@@ -1,7 +1,7 @@
 # DVM FNE REST API Technical Documentation
 
-**Version:** 1.2  
-**Date:** May 8, 2026  
+**Version:** 1.3
+**Date:** November 22, 2026
 **Author:** AI Assistant (updated based on current source code analysis)
 
 AI WARNING: This document was mainly generated using AI assistance. As such, there is the possibility of some error or inconsistency. Examples in Section 14 and Appendix C are *strictly* examples only for how the API *could* be used.
@@ -621,6 +621,27 @@ X-DVM-Auth-Token: {token}
 - Writes current in-memory state to configured RID file
 - Changes persist across FNE restarts after commit
 - Recommended workflow: Add/Delete multiple RIDs, then commit once
+
+---
+
+### 5.5 Radio Alias Endpoints
+
+The radio-alias table is managed independently from the RID ACL table:
+
+| Method | Endpoint | Request | Response/Effect |
+|--------|----------|---------|-----------------|
+| GET | `/rid/alias/query` | None | Returns `rids`, an array of `{ "id": uint32, "alias": string }` objects |
+| PUT | `/rid/alias/add` | `{ "rid": uint32, "alias": string }` | Adds or replaces the in-memory alias |
+| PUT | `/rid/alias/delete` | `{ "rid": uint32 }` | Removes an existing alias; `SYSTEM` and `UNKNOWN` sentinel results are not removable |
+| GET | `/rid/alias/commit` | None | Saves the current alias table |
+
+All four endpoints require `X-DVM-Auth-Token`. Add/delete changes are in memory until committed.
+
+### 5.6 Subscriber Operation Endpoints
+
+`GET /rid/operation/{operationId}` returns a stored subscriber operation. `GET /rid/operation/last/{count}` returns recent operations in `operations`; `count` is capped at 64. Each operation contains `operationId`, `protocol`, `operation`, `state`, `targetId`, `peerId`, `requestValue`, `resultValue`, `createdAt`, and `completedAt`. An unknown or zero operation ID returns HTTP 404.
+
+`GET /p25/rid/status/{subscriberId}` returns the latest stored P25 status with `protocol`, `subscriberId`, `peerId`, `statusValue`, `solicited`, and `observedAt`. An unknown or zero subscriber ID returns HTTP 404. These endpoints require authentication.
 
 ---
 
@@ -1446,7 +1467,28 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.7 Endpoint: GET /stat-reset-total-calls
+### 9.7 Endpoint: GET /health
+
+**Method:** `GET`
+
+**Description:** Return a passive health snapshot without resetting counters or changing network state.
+
+The authenticated response contains a `health` object with:
+
+- `overall`: `healthy`, `initializing`, `idle`, `degraded`, `partitioned`, or `failed`.
+- `fneId` and `observedAtMs` (Unix epoch milliseconds).
+- `process`: REST responsiveness.
+- `dataPlane`: traffic and metadata loop status, epochs, last-tick ages, and the 5000 ms stall threshold.
+- `queues`: submitted/completed/in-flight counts, progress age, enqueue failures, and queue progress state.
+- `connectivity`: configured/connected upstream counts, connected peer/child counts, and per-link details.
+- `traffic`: packet counters, last-packet ages, the 60000 ms idle threshold, and active calls.
+- `reasonCodes` and `reasons`: machine-readable and human-readable explanations for non-healthy states.
+
+The endpoint may still return HTTP 200 when `health.overall` reports a degraded or failed operational state; monitoring clients must inspect the payload.
+
+---
+
+### 9.8 Endpoint: GET /stat-reset-total-calls
 
 **Method:** `GET`
 
@@ -1470,7 +1512,7 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.8 Endpoint: GET /stat-reset-active-calls
+### 9.9 Endpoint: GET /stat-reset-active-calls
 
 **Method:** `GET`
 
@@ -1493,7 +1535,7 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.9 Endpoint: GET /stat-reset-call-collisions
+### 9.10 Endpoint: GET /stat-reset-call-collisions
 
 **Method:** `GET`
 
@@ -1516,7 +1558,17 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.10 Endpoint: GET /report-unit-regs
+### 9.11 Endpoint: GET /stat-reset-call-switches
+
+**Method:** `GET`
+
+**Description:** Reset the total call-switch counter exposed by `/stats`.
+
+Requires `X-DVM-Auth-Token` and returns the standard success response.
+
+---
+
+### 9.12 Endpoint: GET /report-unit-regs
 
 **Method:** `GET`
 
@@ -1545,7 +1597,7 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.11 Endpoint: GET /report-affiliations
+### 9.13 Endpoint: GET /report-affiliations
 
 **Method:** `GET`
 
@@ -1603,7 +1655,7 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.12 Endpoint: GET /report-grants
+### 9.14 Endpoint: GET /report-grants
 
 **Method:** `GET`
 
@@ -1646,7 +1698,7 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 9.13 Endpoint: GET /spanning-tree
+### 9.15 Endpoint: GET /spanning-tree
 
 **Method:** `GET`
 
@@ -2416,6 +2468,13 @@ if __name__ == "__main__":
 | PUT | /rid/add | Add radio ID | Yes |
 | PUT | /rid/delete | Delete radio ID | Yes |
 | GET | /rid/commit | Commit radio ID changes | Yes |
+| GET | /rid/alias/query | Query radio aliases | Yes |
+| PUT | /rid/alias/add | Add or replace a radio alias | Yes |
+| PUT | /rid/alias/delete | Delete a radio alias | Yes |
+| GET | /rid/alias/commit | Commit radio alias changes | Yes |
+| GET | /rid/operation/{operationId} | Get a subscriber operation | Yes |
+| GET | /rid/operation/last/{count} | Get recent subscriber operations (maximum 64) | Yes |
+| GET | /p25/rid/status/{subscriberId} | Get latest stored P25 subscriber status | Yes |
 | GET | /tg/query | Query talkgroups | Yes |
 | PUT | /tg/add | Add talkgroup | Yes |
 | PUT | /tg/delete | Delete talkgroup | Yes |
@@ -2434,9 +2493,11 @@ if __name__ == "__main__":
 | GET | /reload-peers | Reload peer list from disk | Yes |
 | GET | /reload-crypto | Reload crypto keys from disk | Yes |
 | GET | /stats | Get FNE statistics | Yes |
+| GET | /health | Get passive FNE health snapshot | Yes |
 | GET | /stat-reset-total-calls | Reset total calls counter | Yes |
 | GET | /stat-reset-active-calls | Reset active calls counter | Yes |
 | GET | /stat-reset-call-collisions | Reset call collisions counter | Yes |
+| GET | /stat-reset-call-switches | Reset call switches counter | Yes |
 | GET | /report-unit-regs | Get registered units | Yes |
 | GET | /report-affiliations | Get affiliations | Yes |
 | GET | /report-grants | Get active grants | Yes |
@@ -2594,6 +2655,7 @@ monitor_affiliations("fne.example.com", 9990, "your_token", 1)
 | 1.0 | Dec 3, 2025 | Initial documentation based on source code analysis |
 | 1.1 | Dec 6, 2025 | Added missing endpoints: `/reload-peers`, `/reload-crypto`, `/stats` |
 | 1.2 | May 8, 2026 | Updated for current FNE REST implementation, added peer NAK endpoints, stats reset/report endpoints, and corrected REST config/auth details |
+| 1.3 | Nov 22, 2026 | Added radio-alias, subscriber-operation, P25 status, health, and call-switch reset endpoints |
 
 ---
 

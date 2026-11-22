@@ -1,7 +1,7 @@
 # DVM Network Stack Technical Documentation
 
-**Version:** 1.2  
-**Date:** July 8, 2026  
+**Version:** 1.3
+**Date:** November 22, 2026
 **Author:** AI Assistant (updated based on current source code analysis)
 
 AI WARNING: This document was mainly generated using AI assistance. As such, there is the possibility of some error or inconsistency.
@@ -270,8 +270,9 @@ Representative current layout:
 ```cpp
 class TrafficNetwork : public BaseNetwork {
 private:
-    concurrent::shared_unordered_map<uint32_t, FNEPeerConnection*> m_peers;
-    concurrent::unordered_map<uint32_t, fne_lookups::AffiliationLookup*> m_peerAffiliations;
+    std::unordered_map<uint32_t, PeerConnectionPtr> m_peers;
+    concurrent::unordered_map<uint32_t,
+        std::shared_ptr<fne_lookups::AffiliationLookup>> m_peerAffiliations;
     concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
 
     lookups::RadioIdLookup* m_ridLookup;
@@ -283,7 +284,7 @@ private:
     Timer m_maintainenceTimer;
 
     bool m_enableSpanningTree;
-    bool m_disallowU2U;
+    bool m_privateCallRoutingEnabled;
 };
 
 class MetadataNetwork : public BaseNetwork {
@@ -312,7 +313,7 @@ The DVM network stack implements a layered protocol architecture:
 - **Socket Operations**: Standard UDP datagram socket (IPv4/IPv6)
 - **Buffer Sizes**: Configurable send/receive buffers (default 512KB)
 - **Non-Blocking**: Asynchronous I/O for high-throughput scenarios
-- **Encryption**: Optional AES-256-ECB UDP payload wrapping with preshared key and `0xC0FE` packet leader
+- **Encryption**: Optional AES-256-CBC UDP payload wrapping with a preshared key, per-datagram IV, and `0xC0FE` packet leader
 
 ### Layer 2: RTP (Real-time Transport Protocol)
 
@@ -1863,6 +1864,8 @@ m_mux->setSequence(streamId, sequence);
 
 Incoming packets are validated and routed by stream ID:
 
+On an FNE, accepted DMR, P25 Phase 1, P25 Phase 2, and NXDN traffic is dispatched through the shared inbound worker pool with a per-stream ordering key. Frames for one peer/SSRC, stream, direction, and protocol lane execute FIFO, while unrelated calls can execute concurrently. Dispatch does not wait for a missing sequence number or call header; RTP validation and the protocol late-entry rules continue to handle those cases.
+
 ```cpp
 MULTIPLEX_RET_CODE Network::verifyStream(uint16_t* lastRxSeq) {
     uint16_t rtpSeq = rtpHeader.getSequence();
@@ -1951,7 +1954,7 @@ sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out + 8U);
 
 ### Encryption
 
-Optional AES-256-ECB encryption is implemented as UDP payload wrapping at the socket layer:
+Optional AES-256-CBC encryption is implemented as UDP payload wrapping at the socket layer:
 
 ```cpp
 void Network::setPresharedKey(const uint8_t* presharedKey) {
@@ -1967,17 +1970,17 @@ void Network::setPresharedKey(const uint8_t* presharedKey) {
 
 **Encryption Algorithm:**
 
-The implementation uses AES-256-ECB (Electronic Codebook mode):
-- **Algorithm**: AES-256-ECB
+The implementation uses AES-256-CBC (Cipher Block Chaining mode):
+- **Algorithm**: AES-256-CBC
 - **Key Size**: 256 bits (32 bytes)
 - **Block Size**: 128 bits (16 bytes)
-- **Mode**: ECB - each 16-byte block encrypted independently
+- **IV**: A fresh 16-byte initialization vector is generated for each datagram and appended after the ciphertext
 - **Padding**: Zero-padding to the AES block boundary
-- **Packet Leader**: `0xC0FE` (`AES_WRAPPED_PCKT_MAGIC`) is prepended before encrypted payloads
+- **Wire Layout**: Two-byte `0xC0FE` leader, block-aligned ciphertext, then the 16-byte IV
 
 **Runtime Behavior:** When preshared-key wrapping is enabled, receive logic drops datagrams that do not carry the `0xC0FE` leader. This is transport wrapping around the existing RTP/FNE payload, not SRTP.
 
-**Note**: ECB mode is used for simplicity and performance in this implementation. While ECB has known cryptographic weaknesses (identical plaintext blocks produce identical ciphertext), the primary goal is to provide basic confidentiality for network traffic between trusted peers rather than military-grade security. For high-security deployments, additional network-layer security (IPsec, VPN) should be used.
+This wrapper provides transport confidentiality but does not authenticate the ciphertext. Deployments requiring authenticated transport should use an additional protected network layer such as a VPN or IPsec.
 
 ### Access Control
 
@@ -2005,12 +2008,14 @@ NET_FUNC::MASTER + NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS
 - IP address restrictions
 - Certificate-based authentication (with SSL/TLS)
 
-**Configuration Flags:**
+**Configuration and Policy Controls:**
 
-- `m_rejectUnknownRID`: Reject calls from unknown RIDs
-- `m_restrictGrantToAffOnly`: Require affiliation for grants
-- `m_restrictPVCallToRegOnly`: Require registration for private calls
-- `m_disallowU2U`: Disable unit-to-unit calls globally
+- RID and talkgroup lookup policy controls whether unknown or unauthorized sources are admitted.
+- Talkgroup rules control affiliation requirements and peer inclusion/exclusion.
+- `privateCallRouting.enable` controls whether private/unit-to-unit setup, grants, media, and signaling may be routed.
+- `privateCallRouting.unknownDestination` selects `reject` or `flood` behavior when no unit route is known.
+- `privateCallRouting.learnFromTraffic`, `routeLifetime`, and `queryTimeout` control dynamic unit-location learning and expiry.
+- Per-peer `allowUnitToUnit` policy can further restrict private-call ingress and egress.
 
 ---
 
@@ -2675,7 +2680,7 @@ Offset | Length | Field         | Description
 **Important Notes:**
 
 - KEY_REQ/KEY_RSP are for **call data encryption** (voice/data payload), not network transport encryption
-- Network transport uses the optional AES-256-ECB UDP wrapper described in Section 9
+- Network transport uses the optional AES-256-CBC UDP wrapper described in Section 9
 - Keys are transmitted encrypted over the already-secured network connection
 - Only authorized peers (verified during RPTK) can request keys
 - Key material format is algorithm-specific (AES keys, DES keys, etc.)
@@ -2785,32 +2790,31 @@ master:
     password: "SecurePassword123"
 
     # Scaling
-    workers: 8
+    workers: 16
     connectionLimit: 100
 
     # Transport security
     encrypted: false
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
   
-  # Network Features
-  spanningTree: true
-  spanningTreeFastReconnect: true
-  disallowU2U: false
-  
-  # Access Control
-  rejectUnknownRID: true
-  restrictGrantToAffOnly: true
-  restrictPVCallToRegOnly: false
-  
-  # Timers
-  pingTime: 5
-  updateLookupTime: 30
-  callCollisionTimeout: 5
-  
-  # Logging
-  reportPeerPing: false
-  logDenials: true
-  logUpstreamCallStartEnd: true
+    # Access control and routing
+    rejectUnknownRID: true
+    restrictGrantToAffiliatedOnly: true
+    privateCallRouting:
+        enable: false
+        unknownDestination: reject
+        learnFromTraffic: true
+        routeLifetime: 300
+        queryTimeout: 1000
+
+    # Timers
+    pingTime: 5
+    callCollisionTimeout: 5
+
+    # Logging
+    reportPeerPing: false
+    logDenials: true
+    logUpstreamCallStartEnd: true
 ```
 
 ---
@@ -2921,6 +2925,7 @@ tail -f /var/log/dvm/dvmhost.log | grep "NET"
 | 1.0 | Dec 3, 2025 | Initial documentation based on source code analysis |
 | 1.1 | May 8, 2026 | Update to match current state of the codebase |
 | 1.2 | Jul 8, 2026 | Corrected connection/auth flow, opcode tables, RPTC schema, ping payload, bitfields, and buffer/stream details to match current implementation |
+| 1.3 | Nov 22, 2026 | Updated UDP encryption to AES-256-CBC and replaced removed private-call policy flags |
 
 ---
 

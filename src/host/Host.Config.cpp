@@ -868,7 +868,7 @@ bool Host::createNetwork()
     std::string restApiSSLKey = networkConf["restSslKey"].as<std::string>("web.key");
     bool restApiDebug = networkConf["restDebug"].as<bool>(false);
     uint32_t id = networkConf["id"].as<uint32_t>(1000U);
-    uint32_t jitter = networkConf["talkgroupHang"].as<uint32_t>(360U);
+    uint32_t jitter = networkConf["jitter"].as<uint32_t>(360U);
     std::string password = networkConf["password"].as<std::string>();
     bool slot1 = networkConf["slot1"].as<bool>(true);
     bool slot2 = networkConf["slot2"].as<bool>(true);

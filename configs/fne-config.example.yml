@@ -66,7 +66,7 @@ log:
 #   (This is the endpoint that downstream peers connect to for this FNE instance.)
 #
 master:
-    # Network Peer ID
+    # Network Peer ID (maximum 999999999).
     #   NOTE: This ID is a uniquely identifying number. It *MUST* be a unique number across any networks this FNE
     #        instance connects to. Failure to use a unique number *WILL* cause network issues.
     peerId: 9000100
@@ -96,7 +96,8 @@ master:
     # Flag indicating whether or not analog traffic will be passed.
     allowAnalogTraffic: false
 
-    # Maximum number of concurrent packet processing workers.
+    # Maximum number of concurrent packet processing workers. Values are clamped to 4-128;
+    # values above 64 may reduce performance.
     workers: 16
 
     # Flag indicating whether or not master endpoint networking is encrypted.
@@ -104,6 +105,7 @@ master:
     # AES-256 32-byte Preshared Key
     #   (This field *must* be 32 hex bytes in length or 64 characters
     #    0 - 9, A - F.)
+    #   A 32-character value is doubled for legacy compatibility. Invalid values disable encryption.
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
     # Flag indicating whether or not peer pinging will be reported.
@@ -162,6 +164,7 @@ master:
     spanningTreeFastReconnect: true
 
     # Delay from when a call on a parrot TG ends to when the playback starts (in milliseconds).
+    # This cannot exceed pingTime; larger values are reduced to half the ping interval.
     parrotDelay: 2000
     # Flag indicating whether or not a parrot TG call will generate a grant demand.
     parrotGrantDemand: true
@@ -378,6 +381,7 @@ master:
 #
 # Upstream FNE Neighbor Peering
 #   (This is the list of connections to upstream FNEs this FNE instance should be connected to.)
+#   More than 8 configured upstream peers is supported but may reduce performance.
 #
 peers:
     - name: MASTERFNE
@@ -389,7 +393,7 @@ peers:
       masterPort: 32090
       # FNE access password.
       password: RPT1234
-      # Network Peer ID of this peer on the upstream FNE master.
+      # Network Peer ID of this peer on the upstream FNE master (maximum 999999999).
       peerId: 9000990
 
       # Flag indicating whether or not peer endpoint networking is encrypted.
@@ -397,6 +401,7 @@ peers:
       # AES-256 32-byte Preshared Key
       #   (This field *must* be 32 hex bytes in length or 64 characters
       #    0 - 9, A - F.)
+      #   A 32-character value is doubled for legacy compatibility. Invalid values disable encryption.
       presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
       # Latitude.
@@ -427,16 +432,20 @@ system:
     # Textual identity of this FNE (this is used when peering with upstream FNEs).
     identity: MASTERFNE
 
-    # Time in seconds between pings to peers.
+    # Time in seconds between pings to peers. 0 defaults to 5; values above 59 are capped at 59.
     pingTime: 5
-    # Maximum number of missable pings before a peer is considered disconnected.
+    # Maximum number of missable pings before a peer is considered disconnected. 0 defaults to 5.
     maxMissedPings: 10
 
-    # Time in minutes between updates of the ACL rules.
+    # Time in minutes between updates of the ACL rules. 0 defaults to 10.
     aclRuleUpdateTime: 10
 
     # Flag indicating the TGID information for this master will be sent to its peers.
     sendTalkgroups: true
+
+    # Flag indicating whether activity logs from peers are accepted by this FNE.
+    # Disabling this significantly limits normal activity logging and is not recommended.
+    allowActivityTransfer: true
 
     # Flag indicating when this FNE instance receives peer link configuration updates, it will save those
     # peer link configurations.

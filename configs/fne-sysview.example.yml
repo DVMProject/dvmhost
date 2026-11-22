@@ -87,7 +87,7 @@ fne:
     password: RPT1234
     # Textual identity of this peer.
     identity: SYSVIEW
-    # Network Peer ID
+    # Network Peer ID (maximum 999999999).
     peerId: 9000990
   
     # Flag indicating whether or not peer endpoint networking is encrypted.
@@ -95,6 +95,7 @@ fne:
     # AES-256 32-byte Preshared Key
     #   (This field *must* be 32 hex bytes in length or 64 characters
     #    0 - 9, A - F.)
+    #   A 32-character value is doubled for legacy compatibility. Invalid values disable encryption.
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
     # IP address of the FNE REST API.

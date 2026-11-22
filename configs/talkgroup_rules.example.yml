@@ -26,6 +26,9 @@
 # 
 # Talkgroup Rules
 #
+# Peer routing lists should use either inclusion or exclusion, not both. If both
+# lists are nonempty, inclusion takes precedence and exclusion is ignored.
+#
 groupVoice:
     # Textual name of the talkgroup.
   - name: Talkgroup 1

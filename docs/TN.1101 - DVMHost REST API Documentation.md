@@ -1,7 +1,7 @@
 # DVM Host REST API Technical Documentation
 
-**Version:** 1.0  
-**Date:** December 3, 2025  
+**Version:** 1.1
+**Date:** November 22, 2026
 **Author:** AI Assistant (based on source code analysis)
 
 AI WARNING: This document was mainly generated using AI assistance. As such, there is the possibility of some error or inconsistency. Examples in Section 13 are *strictly* examples only for how the API *could* be used.
@@ -32,9 +32,8 @@ The DVM (Digital Voice Modem) Host REST API provides a comprehensive interface f
 
 ### 1.1 Base Configuration
 
-**Default Ports:**
-- HTTP: User-configurable (typically 9990)
-- HTTPS: User-configurable (typically 9443)
+**Listener Port:**
+- HTTP or HTTPS: `network.restPort` (default `9990`); enabling TLS changes the transport, not the configured port
 
 **Transport:**
 - Protocol: HTTP/1.1 or HTTPS
@@ -43,7 +42,7 @@ The DVM (Digital Voice Modem) Host REST API provides a comprehensive interface f
 
 **SSL/TLS Support:**
 - Optional HTTPS with certificate-based security
-- Configurable via `keyFile` and `certFile` parameters
+- Configurable via `network.restSsl`, `network.restSslKey`, and `network.restSslCertificate`
 - Uses OpenSSL when `ENABLE_SSL` is defined
 
 ### 1.2 API Architecture
@@ -1575,6 +1574,8 @@ X-DVM-Auth-Token: {token}
 ### 8.1 Endpoint: GET /p25/cc
 
 **Method:** `GET`
+
+The header also reserves `/p25/cc-fallback/{enable}`, but the current host REST dispatcher does not register that route; clients must not treat it as an available endpoint.
 
 **Description:** Fire a P25 control channel transmission.
 
@@ -3716,7 +3717,7 @@ if __name__ == "__main__":
 | GET | /dmr/beacon | Fire DMR beacon | Yes | DMR |
 | GET | /dmr/debug[/{debug}/{verbose}] | Get/Set DMR debug | Yes | DMR |
 | GET | /dmr/dump-csbk[/{enable}] | Get/Set CSBK dump | Yes | DMR |
-| PUT | /dmr/rid | DMR RID operations (7 commands) | Yes | DMR |
+| PUT | /dmr/rid | DMR RID operations (4 commands) | Yes | DMR |
 | GET | /dmr/cc-enable | Toggle DMR CC | Yes | DMR |
 | GET | /dmr/cc-broadcast | Toggle DMR CC broadcast | Yes | DMR |
 | GET | /dmr/report-affiliations | Get DMR affiliations | Yes | DMR |
@@ -3736,12 +3737,11 @@ if __name__ == "__main__":
 
 ### Command Summaries
 
-**DMR /rid Commands (7 total):**
+**DMR /rid Commands (4 total):**
 - `page` - Page radio
 - `check` - Radio check
 - `inhibit` - Inhibit radio
 - `uninhibit` - Uninhibit radio
-- `dmr-setmfid` - Set manufacturer ID
 
 **P25 /rid Commands (12 total):**
 - `p25-setmfid` - Set manufacturer ID
@@ -3764,27 +3764,20 @@ if __name__ == "__main__":
 ### REST API Configuration (YAML)
 
 ```yaml
-restApi:
-  # Enable REST API
-  enable: true
-  
-  # Bind address (0.0.0.0 = all interfaces)
-  address: 0.0.0.0
-  
-  # Port number
-  port: 9990
-  
-  # SHA-256 hashed password (plaintext - hashed internally)
-  password: "your_secure_password"
-  
-  # SSL/TLS Configuration (optional)
-  ssl:
-    enable: false
-    keyFile: /path/to/private.key
-    certFile: /path/to/certificate.crt
-  
-  # Enable debug logging
-  debug: false
+network:
+    # Enable REST API.
+    restEnable: true
+    # Bind address (0.0.0.0 = all interfaces).
+    restAddress: 127.0.0.1
+    # Port used for HTTP or HTTPS.
+    restPort: 9990
+    # Enable HTTPS/TLS.
+    restSsl: false
+    restSslCertificate: web.crt
+    restSslKey: web.key
+    # Plain-text server password; clients send SHA-256(password) to /auth.
+    restPassword: "PASSWORD"
+    restDebug: false
 ```
 
 ---
@@ -3808,6 +3801,7 @@ restApi:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | Dec 3, 2025 | Initial documentation based on source code analysis |
+| 1.1 | Nov 22, 2026 | Corrected listener/TLS configuration and DMR RID command count |
 
 ---
 

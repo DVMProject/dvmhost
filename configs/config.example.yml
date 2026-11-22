@@ -94,6 +94,7 @@ network:
     # AES-256 32-byte Preshared Key
     #   (This field *must* be 32 hex bytes in length or 64 characters
     #    0 - 9, A - F.)
+    #   A 32-character value is doubled for legacy compatibility. Invalid values disable encryption.
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
     # AES-256 32-byte Preshared Key for peer-based key requests
@@ -101,7 +102,7 @@ network:
     #    0 - 9, A - F.)
     kmfPresharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
-    # Maximum allowable DMR network jitter.
+    # Maximum allowable DMR network jitter/hang value used by DMR traffic processing.
     jitter: 360
 
     # Flag indicating whether unit-to-unit calls will be discarded in both network directions.
@@ -439,7 +440,7 @@ protocols:
 # System Configuration
 #
 system:
-    # Textual label of this host.
+    # Textual label of this host. Values longer than 8 characters are truncated.
     identity: ABCD123
     # Total call transmit time maximum. (seconds)
     timeout: 180
@@ -449,6 +450,7 @@ system:
     # (instead of split frequency).
     simplexSameFrequency: false
     # Amount of time the host will "hang" on a digital mode in multi-mode operation. (seconds)
+    # When present, this compatibility option overrides both rfModeHang and netModeHang.
     modeHang: 10
     # Amount of time the host will "hang" on a RF received digital mode in multi-mode operation. (seconds)
 #    rfModeHang: 10
@@ -461,10 +463,12 @@ system:
     # traffic for the last TGID received.
     rfTalkgroupHang: 10
     # Sets the amount of delay between "ticks" of the processing loop when the host is active (i.e. 
-    # processing traffic). (ms) [Note: Default value is recommend, normally this should not be changed.]
+    # processing traffic). (ms) [Note: Default value is recommended, normally this should not be changed.]
+    # Values below 1 are clamped to 1.
     activeTickDelay: 5
     # Sets the amount of delay between "ticks" of the processing loop when the host is idle (i.e. not 
-    # processing traffic). (ms) [Note: Default value is recommend, normally this should not be changed.]
+    # processing traffic). (ms) [Note: Default value is recommended, normally this should not be changed.]
+    # Values below 1 are clamped to 1.
     idleTickDelay: 5
     # Sets the local time offset from GMT.
     localTimeOffset: 0

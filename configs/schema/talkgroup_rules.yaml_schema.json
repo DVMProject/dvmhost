@@ -1,115 +1,142 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "title": "Digital Voice Modem - Talkgroup Rules",
+    "description": "Schema for DVMHost and FNE group-voice admission, routing, rewrite, affiliation, encryption-strapping, and parrot rules.",
+    "type": "object",
+    "required": [ "groupVoice" ],
+    "additionalProperties": false,
+    "definitions": {
+        "peerId": {
+            "description": "Network peer ID. Peer IDs are positive integers and may not exceed the runtime network limit.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 999999999
+        },
+        "radioId": {
+            "description": "Subscriber radio ID. Protocol-specific limits may be narrower than the common 32-bit representation.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+        },
+        "talkgroupId": {
+            "description": "Talkgroup ID. Protocol-specific limits may be narrower than the common 32-bit representation.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+        },
+        "slot": {
+            "description": "DMR slot number. FDMA protocols use slot 1 in the shared rule representation.",
+            "type": "integer",
+            "enum": [ 1, 2 ]
+        },
+        "peerIdList": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+                "$ref": "#/definitions/peerId"
+            }
+        }
+    },
     "properties": {
         "groupVoice": {
-            "description": "List of talkgroups defined by this rules file.",
+            "description": "Nonempty list of canonical group-voice rules.",
             "type": "array",
+            "minItems": 1,
             "items": {
                 "type": "object",
                 "required": [ "name", "config", "source" ],
+                "additionalProperties": false,
                 "properties": {
                     "name": {
-                        "description": "Textual name of the talkgroup.",
-                        "type": "string"
+                        "description": "Human-readable rule name used by logs and management interfaces.",
+                        "type": "string",
+                        "minLength": 1
                     },
                     "alias": {
-                        "description": "Secondary name/group for the talkgroup.",
+                        "description": "Optional secondary display name or grouping label; it has no routing effect.",
                         "type": "string"
                     },
                     "config": {
-                        "description": "Talkgroup Configuration",
+                        "description": "Admission and routing policy for the canonical talkgroup.",
                         "type": "object",
                         "required": [ "active" ],
+                        "additionalProperties": false,
                         "properties": {
                             "active": {
-                                "description": "Flag indicating whether this talkgroup is active or not.",
+                                "description": "Whether the talkgroup is admitted and distributed as active.",
                                 "type": "boolean"
                             },
                             "affiliated": {
-                                "description": "Flag indicating whether this talkgroup will only repeat with affiliations.",
+                                "description": "Whether normal recipient sites must have a current group affiliation before traffic is repeated to them.",
+                                "type": "boolean"
+                            },
+                            "strapping": {
+                                "description": "Encryption-state policy: 0 selectable, 1 encrypted-only, 2 clear-only.",
+                                "type": "integer",
+                                "enum": [ 0, 1, 2 ]
+                            },
+                            "parrot": {
+                                "description": "Whether eligible calls on this talkgroup are recorded and replayed by the FNE parrot service.",
                                 "type": "boolean"
                             },
                             "inclusion": {
-                                "description": "List of peer IDs included for this talkgroup (peers listed here will be selected for traffic).",
-                                "type": "array",
-                                "items": {
-                                    "description": "Network Peer ID.",
-                                    "type": "number",
-                                    "uniqueItems": true
-                                }
+                                "description": "Peer allow-list. When nonempty, only listed normal peers are eligible; this takes precedence over exclusion.",
+                                "$ref": "#/definitions/peerIdList"
                             },
                             "exclusion": {
-                                "description": "List of peer IDs excluded for this talkgroup (peers listed here will be ignored for traffic).",
-                                "type": "array",
-                                "items": {
-                                    "description": "Network Peer ID.",
-                                    "type": "number",
-                                    "uniqueItems": true
-                                }
+                                "description": "Peer deny-list used only when inclusion is empty.",
+                                "$ref": "#/definitions/peerIdList"
                             },
                             "rewrite": {
-                                "description": "List of peer talkgroup rewrites.",
+                                "description": "Per-peer external TGID/slot representations for bidirectional translation at that FNE boundary.",
                                 "type": "array",
+                                "uniqueItems": true,
                                 "items": {
                                     "type": "object",
+                                    "required": [ "peerid", "tgid", "slot" ],
+                                    "additionalProperties": false,
                                     "properties": {
                                         "peerid": {
-                                            "description": "Network Peer ID to rewrite this TGID for.",
-                                            "type": "number"
+                                            "$ref": "#/definitions/peerId"
                                         },
                                         "tgid": {
-                                            "description": "Numerical talkgroup ID number to rewrite to.",
-                                            "type": "number"
+                                            "$ref": "#/definitions/talkgroupId"
                                         },
                                         "slot": {
-                                            "description": "DMR slot number.",
-                                            "type": "number"
+                                            "$ref": "#/definitions/slot"
                                         }
                                     }
                                 }
                             },
                             "always": {
-                                "description": "List of peer IDs that always receive traffic for this talkgroup regardless of affiliation rules.",
-                                "type": "array",
-                                "items": {
-                                    "description": "Network Peer ID.",
-                                    "type": "number",
-                                    "uniqueItems": true
-                                }
+                                "description": "Peers that bypass affiliation and applicable unknown-RID gating after inclusion/exclusion filtering.",
+                                "$ref": "#/definitions/peerIdList"
                             },
                             "preferred": {
-                                "description": "List of site CC peer IDs defining talkgroup access preference (peers listed here will be preferred for access, sites not listed here will be non-preferred and will cause a AFF_GRP_RSP DENY, typically triggering roaming). If this list is empty *all* peers are preferred. (Trunking Only)",
-                                "type": "array",
-                                "items": {
-                                    "description": "Network Peer ID.",
-                                    "type": "number",
-                                    "uniqueItems": true
-                                }
+                                "description": "Preferred trunking-site peer IDs. With a nonempty list, other visible peers are marked non-preferred to encourage subscriber roaming.",
+                                "$ref": "#/definitions/peerIdList"
                             },
                             "rid_permitted": {
-                                "description": "List of radio IDs admitted to affiliate with and originate traffic on the talkgroup. An empty list admits all radio IDs when talkgroup ACL enforcement is enabled.",
+                                "description": "Subscriber RIDs admitted to affiliate with and originate on the talkgroup. An empty list admits all otherwise-authorized RIDs.",
                                 "type": "array",
+                                "uniqueItems": true,
                                 "items": {
-                                    "description": "Radio ID.",
-                                    "type": "number",
-                                    "uniqueItems": true
+                                    "$ref": "#/definitions/radioId"
                                 }
                             }
                         }
                     },
                     "source": {
-                        "description": "Source Configuration",
+                        "description": "Canonical talkgroup identity used internally by the FNE and host.",
                         "type": "object",
                         "required": [ "tgid", "slot" ],
+                        "additionalProperties": false,
                         "properties": {
                             "tgid": {
-                                "description": "Numerical talkgroup ID number.",
-                                "type": "number"
+                                "$ref": "#/definitions/talkgroupId"
                             },
                             "slot": {
-                                "description": "DMR slot number.",
-                                "type": "number"
+                                "$ref": "#/definitions/slot"
                             }
                         }
                     }
