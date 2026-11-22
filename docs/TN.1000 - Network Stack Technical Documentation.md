@@ -1875,7 +1875,7 @@ metadata; bytes 0-7 are zero in subsequent blocks.
 | Block Number  |  Last Block   |                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
 |                                                               |
-|                    Fragment Payload (534 bytes)                |
+|                    Fragment Payload (534 bytes)               |
 |                                                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
                          544 bytes total
@@ -1902,7 +1902,7 @@ arrives. Its block fields are 16-bit big-endian values.
 |         Block Number          |          Last Block           |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
-|                    Fragment Payload (532 bytes)                |
+|                    Fragment Payload (532 bytes)               |
 |                                                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
                          544 bytes total
@@ -2177,15 +2177,15 @@ Key update is a two-phase inbound operation:
 
 ```text
 Remote requester                              FNE MetadataNetwork
-       |                                                |
-       | KEYS_UPDATE 80-byte authentication frame       |
+       |                                                 |
+       | KEYS_UPDATE 80-byte authentication frame        |
        |-----------------------------------------------> |
        |                    verify remote salt/hash      |
        |                    reserve peer/stream entry    |
-       |                                                |
-       | KEYS_UPDATE PacketBuffer fragment 0            |
+       |                                                 |
+       | KEYS_UPDATE PacketBuffer fragment 0             |
        |-----------------------------------------------> |
-       | KEYS_UPDATE PacketBuffer fragment 1..N         |
+       | KEYS_UPDATE PacketBuffer fragment 1..N          |
        |-----------------------------------------------> |
        |                    reassemble/decompress        |
        |                    write temporary container    |
