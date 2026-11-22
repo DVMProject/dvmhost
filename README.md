@@ -8,7 +8,12 @@ The Digital Voice Modem ("DVM") Core Software Suite, provides the a set of appli
 
 Please feel free to reach out to us for help, comments or otherwise, on our Discord: https://discord.gg/3pBe8xgrEz
 
-**THIS SOFTWARE MUST NEVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS! This software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by the authors. For full project policies and support limitations, see: [Usage & Support Guidelines](usage_guidelines.md).**
+> [!WARNING]
+>
+> ### IMPORTANT WARNING & DISCLAIMER
+>
+> **THIS SOFTWARE MUST NEVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS! This software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by the authors. For full project policies and support limitations, see: [Usage & Support Guidelines](usage_guidelines.md).**
+>
 
 This project suite generates a few executables:
 
@@ -59,13 +64,14 @@ Alternatively, if you download the ASIO library from the ASIO website and extrac
 
 If you want detailed stacktrace output on a crash, for compilation ensure `libdw-dev` is also installed. (`apt-get install libdw-dev`). For runtime you will need the `elfutils` package to be installed. (`apt-get install elfutils`).
 
-If cross-compiling ensure you install the appropriate libraries, for example for AARCH64/ARM64:
-```
-sudo dpkg --add-architecture arm64
-sudo apt-get update
-sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64 libssl-dev:arm64
-sudo apt-get install libdw-dev:arm64
-```
+> [!NOTE]
+> If cross-compiling ensure you install the appropriate libraries, for example for AARCH64/ARM64:
+> ```
+> sudo dpkg --add-architecture arm64
+> sudo apt-get update
+> sudo apt-get install libasio-dev:arm64 libncurses-dev:arm64 libssl-dev:arm64
+> sudo apt-get install libdw-dev:arm64
+> ```
 
 ### Build Instructions
 
@@ -446,6 +452,11 @@ This notice is informational and is intentionally included in the example config
 
 Portions of this project are licensed under the GPLv2 License - see the [LICENSE](LICENSE) file for details. Portions of this project are licensed under GPLv3 License - see the [LICENSE](GPL-3.0.txt). Use of this project is intended, for amateur and/or educational use ONLY. Any other use is at the risk of user and all commercial purposes is strictly discouraged.
 
-**THIS SOFTWARE MUST NEVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS! This software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by the authors.**
+> [!WARNING]
+>
+> ### IMPORTANT WARNING & DISCLAIMER
+>
+> **THIS SOFTWARE MUST NEVER BE USED IN PUBLIC SAFETY OR LIFE SAFETY CRITICAL APPLICATIONS! This software project is provided solely for personal, non-commercial, hobbyist use; any commercial, professional, governmental, or other non-hobbyist use is strictly discouraged, fully unsupported and expressly disclaimed by the authors. For full project policies and support limitations, see: [Usage & Support Guidelines](usage_guidelines.md).**
+>
 
 By using this software, you agree to indemnify, defend, and hold harmless the authors, contributors, and affiliated  parties from and against any and all claims, liabilities, damages, losses, or expenses (including reasonable  attorneys’ fees) arising out of or relating to any unlawful, unauthorized, or improper use of the software.
