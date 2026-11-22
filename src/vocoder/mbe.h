@@ -22,6 +22,8 @@
 #if !defined(__MBE_H__)
 #define __MBE_H__
 
+#include <stdint.h>
+
 /*
  * Copyright (C) 2010 mbelib Author
  * GPG Key ID: 0xEA5EFE2C (9E7A 5527 9CDC EBF7 BF1B  D772 4F98 E863 EA5E FE2C)
@@ -71,6 +73,8 @@ struct mbe_parameters
     float gamma;
     int un;
     int repeat;
+    /** Stream-local pseudo-random excitation state. */
+    uint32_t randomSeed;
 };
 
 typedef struct mbe_parameters mbe_parms;

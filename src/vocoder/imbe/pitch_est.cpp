@@ -37,30 +37,31 @@
 //  Constants
 // ---------------------------------------------------------------------------
 
-static const UWord16 min_max_tbl[203] =
+/** Number of half-sample pitch candidates from 20 through 122 samples. */
+static const Word16 PITCH_CANDIDATE_COUNT = 205;
+/** Twice the minimum supported pitch, used to convert candidate indices. */
+static const Word16 PITCH_INDEX_OFFSET = 40;
+/** Initial prediction-error denominator for the period-20 candidate. */
+static const Word16 PITCH_DEN_START_Q1_15 = 0x705C;
+
+/** Maximum three-frame error for accepting an unambiguous pitch submultiple. */
+static const Word16 SUBMULTIPLE_ERROR_THRESHOLD_Q4_12 = 0x019A;
+
+/* Returns the lower index of the allowed 20-percent pitch-tracking range. */
+static Word16 pitchMinIndex(Word16 index)
 {
-    0x0008, 0x0009, 0x000a, 0x000c, 0x000d, 0x000e, 0x000f, 0x0010, 0x0012, 0x0013,
-    0x0014, 0x0115, 0x0216, 0x0218, 0x0319, 0x041a, 0x051b, 0x061c, 0x061e, 0x071f,
-    0x0820, 0x0921, 0x0a22, 0x0a24, 0x0b25, 0x0c26, 0x0d27, 0x0e28, 0x0e2a, 0x0f2b,
-    0x102c, 0x112d, 0x122e, 0x1230, 0x1331, 0x1432, 0x1533, 0x1634, 0x1636, 0x1737,
-    0x1838, 0x1939, 0x1a3a, 0x1a3c, 0x1b3d, 0x1c3e, 0x1d3f, 0x1e40, 0x1e42, 0x1f43,
-    0x2044, 0x2145, 0x2246, 0x2248, 0x2349, 0x244a, 0x254b, 0x264c, 0x264e, 0x274f,
-    0x2850, 0x2951, 0x2a52, 0x2a54, 0x2b55, 0x2c56, 0x2d57, 0x2e58, 0x2e5a, 0x2f5b,
-    0x305c, 0x315d, 0x325e, 0x3260, 0x3361, 0x3462, 0x3563, 0x3664, 0x3666, 0x3767,
-    0x3868, 0x3969, 0x3a6a, 0x3a6c, 0x3b6d, 0x3c6e, 0x3d6f, 0x3e70, 0x3e72, 0x3f73,
-    0x4074, 0x4175, 0x4276, 0x4278, 0x4379, 0x447a, 0x457b, 0x467c, 0x467e, 0x477f,
-    0x4880, 0x4981, 0x4a82, 0x4a84, 0x4b85, 0x4c86, 0x4d87, 0x4e88, 0x4e8a, 0x4f8b,
-    0x508c, 0x518d, 0x528e, 0x5290, 0x5391, 0x5492, 0x5593, 0x5694, 0x5696, 0x5797,
-    0x5898, 0x5999, 0x5a9a, 0x5a9c, 0x5b9d, 0x5c9e, 0x5d9f, 0x5ea0, 0x5ea2, 0x5fa3,
-    0x60a4, 0x61a5, 0x62a6, 0x62a8, 0x63a9, 0x64aa, 0x65ab, 0x66ac, 0x66ae, 0x67af,
-    0x68b0, 0x69b1, 0x6ab2, 0x6ab4, 0x6bb5, 0x6cb6, 0x6db7, 0x6eb8, 0x6eba, 0x6fbb,
-    0x70bc, 0x71bd, 0x72be, 0x72c0, 0x73c1, 0x74c2, 0x75c3, 0x76c4, 0x76c6, 0x77c7,
-    0x78c8, 0x79c9, 0x7aca, 0x7aca, 0x7bca, 0x7cca, 0x7dca, 0x7eca, 0x7eca, 0x7fca,
-    0x80ca, 0x81ca, 0x82ca, 0x82ca, 0x83ca, 0x84ca, 0x85ca, 0x86ca, 0x86ca, 0x87ca,
-    0x88ca, 0x89ca, 0x8aca, 0x8aca, 0x8bca, 0x8cca, 0x8dca, 0x8eca, 0x8eca, 0x8fca,
-    0x90ca, 0x91ca, 0x92ca, 0x92ca, 0x93ca, 0x94ca, 0x95ca, 0x96ca, 0x96ca, 0x97ca,
-    0x98ca, 0x99ca, 0x9aca
-};
+    const Word16 pitch = index + PITCH_INDEX_OFFSET;
+    const Word16 minimum = ((4 * pitch + 4) / 5) - PITCH_INDEX_OFFSET;
+    return minimum > 0 ? minimum : 0;
+}
+
+/* Returns the upper index of the allowed 20-percent pitch-tracking range. */
+static Word16 pitchMaxIndex(Word16 index)
+{
+    const Word16 pitch = index + PITCH_INDEX_OFFSET;
+    const Word16 maximum = ((6 * pitch) / 5) - PITCH_INDEX_OFFSET;
+    return maximum < PITCH_CANDIDATE_COUNT ? maximum : PITCH_CANDIDATE_COUNT - 1;
+}
 
 // ---------------------------------------------------------------------------
 //  Private Class Members
@@ -68,7 +69,7 @@ static const UWord16 min_max_tbl[203] =
 
 void imbe_vocoder::pitch_est_init(void)
 {
-    prev_pitch = prev_prev_pitch = 158; // 100
+    prev_pitch = prev_prev_pitch = 160; // 100
     prev_e_p = prev_prev_e_p = 0;
 }
 
@@ -89,7 +90,7 @@ void imbe_vocoder::e_p(Word16* sigin, Word16* res_buf)
     Word16 i, j, den_part_acc, tmp;
     Word32 L_sum, L_num, L_den, L_e0, L_tmp;
     Word16 sig_wndwed[PITCH_EST_FRAME];
-    Word32 corr[259];
+    Word32 corr[261];
     Word16 index_beg, index_step;
     Word16 scale_shift;
 
@@ -117,28 +118,28 @@ void imbe_vocoder::e_p(Word16* sigin, Word16* res_buf)
     for (i = 0; i < PITCH_EST_FRAME; i++)
         L_e0 = L_add(L_e0, L_shr(L_mult(sig_wndwed[i], sig_wndwed[i]), scale_shift));              // sum(s^2 * wi^4) 
 
-    // Calculate correlation for time shift in range 21...150 with step 0.5
+    // Calculate correlation for time shift in range 20...150 with step 0.5
     // For integer shifts
-    for (tmp = 21, i = 0; tmp <= 150; tmp++, i += 2)
+    for (tmp = 20, i = 0; tmp <= 150; tmp++, i += 2)
         corr[i] = autocorr(sig_wndwed, tmp, scale_shift);
     // For intermediate shifts
-    for (i = 1; i < 258; i += 2)
+    for (i = 1; i < 260; i += 2)
         corr[i] = L_shr(L_add(corr[i - 1], corr[i + 1]), 1);
 
 
     // variable to calculate 1 - P * sum(wi ^4) in denominator
-    den_part_acc = CNST_0_8717_Q1_15;
+    den_part_acc = PITCH_DEN_START_Q1_15;
 
-    index_step = 42;               // Note: 42 = 21 in Q15.1 format, so index_step will be used also as p in Q15.1 format
+    index_step = PITCH_INDEX_OFFSET; // also represents the pitch in Q15.1 format
     index_beg = 0;
     L_e0 = L_shr(L_e0, 7);         // divide by 64 to compensate wi scaling
-    // p = 21...122 by step 0.5
-    for (i = 0; i < 203; i++) {
+    // p = 20...122 by step 0.5
+    for (i = 0; i < PITCH_CANDIDATE_COUNT; i++) {
 
         // Calculate sum( corr ( n * p) )
         L_tmp = 0;
         j = index_beg;
-        while (j <= 258) {
+        while (j <= 260) {
             L_tmp = L_add(L_tmp, corr[j]);
             j += index_step;
         }
@@ -177,20 +178,21 @@ void imbe_vocoder::e_p(Word16* sigin, Word16* res_buf)
 
 void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
 {
-    Word16 e_p_arr0[203], e_p_arr1[203], e_p_arr2[203], e1p1_e2p2_est_save[203];
+    Word16 e_p_arr0[PITCH_CANDIDATE_COUNT], e_p_arr1[PITCH_CANDIDATE_COUNT];
+    Word16 e_p_arr2[PITCH_CANDIDATE_COUNT], e1p1_e2p2_est_save[PITCH_CANDIDATE_COUNT];
     Word16 min_index, max_index, p, i, p_index;
     UWord16 tmp = 0, p_fp;
     UWord32 UL_tmp;
     Word16 e_p_cur, pb, pf, ceb, s_tmp;
     Word16 cef_est, cef, p0_est, p0, p1, p2, p1_max_index, p2_max_index, e1p1_e2p2_est, e1p1_e2p2;
-    Word16 e_p_arr2_min[203];
+    Word16 e_p_arr2_min[PITCH_CANDIDATE_COUNT];
 
     // Calculate E(p) function for current and two future frames
     e_p(&frames_buf[0], e_p_arr0);
 
     // Look-Back Pitch Tracking
-    min_index = HI_BYTE(min_max_tbl[prev_pitch]);
-    max_index = LO_BYTE(min_max_tbl[prev_pitch]);
+    min_index = pitchMinIndex(prev_pitch);
+    max_index = pitchMaxIndex(prev_pitch);
 
     p = pb = min_index;
     e_p_cur = e_p_arr0[min_index];
@@ -208,7 +210,7 @@ void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
         prev_prev_e_p = prev_e_p;
         prev_e_p = e_p_arr0[pb];
 
-        imbe_param->pitch = pb + 42;  // Result in Q15.1 format
+        imbe_param->pitch = pb + PITCH_INDEX_OFFSET;  // Result in Q15.1 format
         imbe_param->e_p = prev_e_p;
         return;
     }
@@ -223,9 +225,9 @@ void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
     e1p1_e2p2 = 1;
 
     p1 = 0;
-    while (p1 < 203) {
-        p2 = HI_BYTE(min_max_tbl[p1]);
-        p2_max_index = LO_BYTE(min_max_tbl[p1]);
+    while (p1 < PITCH_CANDIDATE_COUNT) {
+        p2 = pitchMinIndex(p1);
+        p2_max_index = pitchMaxIndex(p1);
         s_tmp = e_p_arr2[p1];
         while (p2 <= p2_max_index) {
             if (e_p_arr2[p2] < s_tmp)
@@ -235,10 +237,10 @@ void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
         e_p_arr2_min[p1] = s_tmp;
         p1++;
     }
-    while (p0 < 203) {
+    while (p0 < PITCH_CANDIDATE_COUNT) {
         e1p1_e2p2_est = e_p_arr1[p0] + e_p_arr2_min[p0];
-        p1 = HI_BYTE(min_max_tbl[p0]);
-        p1_max_index = LO_BYTE(min_max_tbl[p0]);
+        p1 = pitchMinIndex(p0);
+        p1_max_index = pitchMaxIndex(p0);
         while (p1 <= p1_max_index) {
             if (add(e_p_arr1[p1], e_p_arr2_min[p1]) < e1p1_e2p2_est)
                 e1p1_e2p2_est = add(e_p_arr1[p1], e_p_arr2_min[p1]);
@@ -255,18 +257,18 @@ void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
 
     pf = p0_est;
     // Sub-multiples analysis
-    if (pf >= 42)  // Check if Sub-multiples are possible
+    if (pf >= 44)  // Check if Sub-multiples are possible
     {
-        if (pf < 84)
+        if (pf < 86)
             i = 1;
-        else if (pf < 126)
+        else if (pf < 128)
             i = 2;
-        else if (pf < 168)
+        else if (pf < 170)
             i = 3;
         else
             i = 4;
 
-        p_fp = (pf + 42) << 8; // Convert pitch estimation from array index to unsigned Q7.19 format
+        p_fp = (pf + PITCH_INDEX_OFFSET) << 8; // Convert pitch estimation from array index to unsigned Q7.19 format
 
         while (i--) {
             switch (i) {
@@ -289,8 +291,7 @@ void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
                 break;
             }
 
-            p_index = ((tmp + 0x0080) >> 8) - 42;       // Convert fixed-point pitch value to integer array index with rounding
-
+            p_index = ((tmp + 0x0080) >> 8) - PITCH_INDEX_OFFSET; // Convert fixed-point pitch to an array index
             cef = add(e_p_arr0[p_index], e1p1_e2p2_est_save[p_index]);
 
             if (cef <= CNST_0_85_Q4_12 && mult_r(cef, CNST_0_5882_Q1_15) <= cef_est)  // 1/1.7 = 0.5882
@@ -305,7 +306,7 @@ void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
                 break;
             }
 
-            if (cef <= CNST_0_05_Q4_12) {
+            if (cef <= SUBMULTIPLE_ERROR_THRESHOLD_Q4_12) {
                 pf = p_index;
                 break;
             }
@@ -325,6 +326,6 @@ void imbe_vocoder::pitch_est(IMBE_PARAM* imbe_param, Word16* frames_buf)
     prev_e_p = e_p_arr0[p];
 
 
-    imbe_param->pitch = p + 42;  // Result in Q15.1 format
+    imbe_param->pitch = p + PITCH_INDEX_OFFSET;  // Result in Q15.1 format
     imbe_param->e_p = prev_e_p;
 }

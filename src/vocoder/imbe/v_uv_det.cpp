@@ -49,7 +49,8 @@
 #define CNST_0_0025_Q1_15   0x0051
 #define CNST_0_25_Q1_15     0x2000
 #define CNST_PI_4_Q1_15     0x6488
-#define CNST_0_55_Q4_12     0x08CD
+/** Pitch-error threshold above which only the lowest band may remain voiced. */
+#define PITCH_ERROR_UNVOICED_Q4_12 0x0800
 
 // ---------------------------------------------------------------------------
 //  Globals
@@ -209,7 +210,7 @@ void imbe_vocoder::v_uv_det(IMBE_PARAM* imbe_param, Cmplx16* fft_buf)
         // =========== v/uv determination threshold function ==
         if (num_harms_cnt == 0)   // calculate one time per band
         {
-            if (imbe_param->e_p > CNST_0_55_Q4_12 && band_cnt >= 1)
+            if (imbe_param->e_p > PITCH_ERROR_UNVOICED_Q4_12 && band_cnt >= 1)
                 dsn_thr = 0;
             else if (v_uv_dsn[band_cnt] == 1)
                 dsn_thr = mult(M_fcn, sub(CNST_0_5625_Q1_15, mult(CNST_0_1741_Q1_15, extract_h(fund_fr_acc))));

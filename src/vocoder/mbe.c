@@ -23,7 +23,6 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <stdlib.h>
 #include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -41,16 +40,21 @@
 
 /* A pseudo - random float between[0.0, 1.0]. */
 
-static float mbe_rand()
+static float mbe_rand(mbe_parms* cur_mp)
 {
-    return ((float)rand() / (float)RAND_MAX);
+    uint32_t value = cur_mp->randomSeed;
+    value ^= value << 13;
+    value ^= value >> 17;
+    value ^= value << 5;
+    cur_mp->randomSeed = value;
+    return (float)(value & 0x00FFFFFFU) / (float)0x01000000U;
 }
 
 /* A pseudo-random float between [-pi, +pi]. */
 
-static float mbe_rand_phase()
+static float mbe_rand_phase(mbe_parms* cur_mp)
 {
-    return mbe_rand() * (((float)M_PI) * 2.0F) - ((float)M_PI);
+    return mbe_rand(cur_mp) * (((float)M_PI) * 2.0F) - ((float)M_PI);
 }
 
 /* */
@@ -65,6 +69,7 @@ void mbe_moveMbeParms(mbe_parms* cur_mp, mbe_parms* prev_mp)
     prev_mp->Ml[0] = (float)0;
     prev_mp->gamma = cur_mp->gamma;
     prev_mp->repeat = cur_mp->repeat;
+    prev_mp->randomSeed = cur_mp->randomSeed;
 
     for (l = 0; l <= 56; l++) {
         prev_mp->Ml[l] = cur_mp->Ml[l];
@@ -87,6 +92,7 @@ void mbe_useLastMbeParms(mbe_parms* cur_mp, mbe_parms* prev_mp)
     cur_mp->Ml[0] = (float)0;
     cur_mp->gamma = prev_mp->gamma;
     cur_mp->repeat = prev_mp->repeat;
+    cur_mp->randomSeed = prev_mp->randomSeed;
 
     for (l = 0; l <= 56; l++) {
         cur_mp->Ml[l] = prev_mp->Ml[l];
@@ -117,6 +123,7 @@ void mbe_initMbeParms(mbe_parms* cur_mp, mbe_parms* prev_mp, mbe_parms* prev_mp_
     }
 
     prev_mp->repeat = 0;
+    prev_mp->randomSeed = 1U;
     mbe_moveMbeParms(prev_mp, cur_mp);
     mbe_moveMbeParms(prev_mp, prev_mp_enhanced);
 }
@@ -295,7 +302,7 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
             cur_mp->PHIl[l] = cur_mp->PSIl[l];
         }
         else {
-            cur_mp->PHIl[l] = cur_mp->PSIl[l] + ((numUv * mbe_rand_phase()) / cur_mp->L);
+            cur_mp->PHIl[l] = cur_mp->PSIl[l] + ((numUv * mbe_rand_phase(cur_mp)) / cur_mp->L);
         }
     }
 
@@ -306,7 +313,7 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
             Ss = aout_buf;
             // init random phase
             for (i = 0; i < uvquality; i++) {
-                rphase[i] = mbe_rand_phase();
+                rphase[i] = mbe_rand_phase(cur_mp);
             }
 
             for (n = 0; n < N; n++) {
@@ -321,7 +328,7 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
                     C3 = C3 + cosf((cw0 * (float)n * ((float)l + ((float)i * uvstep) - uvoffset)) + rphase[i]);
                     if (cw0l > uvthreshold)
                     {
-                        C3 = C3 + ((cw0l - uvthreshold) * uvrand * mbe_rand());
+                        C3 = C3 + ((cw0l - uvthreshold) * uvrand * mbe_rand(cur_mp));
                     }
                 }
                 C3 = C3 * uvsine * Ws[n] * cur_mp->Ml[l] * qfactor;
@@ -333,7 +340,7 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
             Ss = aout_buf;
             // init random phase
             for (i = 0; i < uvquality; i++) {
-                rphase[i] = mbe_rand_phase();
+                rphase[i] = mbe_rand_phase(cur_mp);
             }
             
             for (n = 0; n < N; n++) {
@@ -346,7 +353,7 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
                 for (i = 0; i < uvquality; i++) {
                     C3 = C3 + cosf((pw0 * (float)n * ((float)l + ((float)i * uvstep) - uvoffset)) + rphase[i]);
                     if (pw0l > uvthreshold) {
-                        C3 = C3 + ((pw0l - uvthreshold) * uvrand * mbe_rand());
+                        C3 = C3 + ((pw0l - uvthreshold) * uvrand * mbe_rand(cur_mp));
                     }
                 }
                 C3 = C3 * uvsine * Ws[n + N] * prev_mp->Ml[l] * qfactor;
@@ -393,12 +400,12 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
             Ss = aout_buf;
             // init random phase
             for (i = 0; i < uvquality; i++) {
-                rphase[i] = mbe_rand_phase();
+                rphase[i] = mbe_rand_phase(cur_mp);
             }
 
             // init random phase
             for (i = 0; i < uvquality; i++) {
-                rphase2[i] = mbe_rand_phase();
+                rphase2[i] = mbe_rand_phase(cur_mp);
             }
 
             for (n = 0; n < N; n++) {
@@ -408,7 +415,7 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
                 for (i = 0; i < uvquality; i++) {
                     C3 = C3 + cosf((pw0 * (float)n * ((float)l + ((float)i * uvstep) - uvoffset)) + rphase[i]);
                     if (pw0l > uvthreshold) {
-                        C3 = C3 + ((pw0l - uvthreshold) * uvrand * mbe_rand());
+                        C3 = C3 + ((pw0l - uvthreshold) * uvrand * mbe_rand(cur_mp));
                     }
                 }
 
@@ -419,7 +426,7 @@ void mbe_synthesizeSpeechF(float* aout_buf, mbe_parms* cur_mp, mbe_parms* prev_m
                 for (i = 0; i < uvquality; i++) {
                     C4 = C4 + cosf((cw0 * (float)n * ((float)l + ((float)i * uvstep) - uvoffset)) + rphase2[i]);
                     if (cw0l > uvthreshold) {
-                        C4 = C4 + ((cw0l - uvthreshold) * uvrand * mbe_rand());
+                        C4 = C4 + ((cw0l - uvthreshold) * uvrand * mbe_rand(cur_mp));
                     }
                 }
 

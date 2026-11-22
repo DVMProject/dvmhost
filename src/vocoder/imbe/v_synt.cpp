@@ -24,7 +24,6 @@
 #include "vocoder/imbe/imbe.h"
 #include "vocoder/imbe/aux_sub.h"
 #include "vocoder/imbe/math_sub.h"
-#include "vocoder/imbe/rand_gen.h"
 #include "vocoder/imbe/tbls.h"
 #include "vocoder/imbe/imbe_vocoder.h"
 
@@ -43,7 +42,7 @@ void imbe_vocoder::v_synt_init(void)
     Word16 i;
 
     for (i = 0; i < NUM_HARMS_MAX; i++) {
-        ph_mem[i] = L_deposit_h(rand_gen());
+        ph_mem[i] = L_deposit_h(randGen());
         vu_dsn_prev[i] = 0;
     }
 
@@ -99,10 +98,10 @@ void imbe_vocoder::v_synt(IMBE_PARAM* imbe_param, Word16* snd)
 
         if (i > num_harms_max_4) {
             if (num_uv == num_harms) {
-                dph[i] = L_deposit_h(rand_gen());
+                dph[i] = L_deposit_h(phaseRandom[i]);
             }
             else {
-                L_tmp = L_mult(rand_gen(), num_harms_inv);
+                L_tmp = L_mult(phaseRandom[i], num_harms_inv);
                 dph[i] = L_shr(L_tmp, 15 - num_harms_sh) * num_uv;
             }
             ph_mem[i] += dph[i];

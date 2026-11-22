@@ -57,6 +57,7 @@ void imbe_vocoder::decode(IMBE_PARAM* imbe_param, Word16* frame_vector, Word16* 
     v_uv_decode(imbe_param);
     sa_decode(imbe_param);
     sa_enh(imbe_param);
+    prepareRandomFrame();
     v_synt(imbe_param, snd);
     uv_synt(imbe_param, snd_tmp);
 

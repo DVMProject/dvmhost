@@ -22,6 +22,7 @@ extern "C" {
 }
 
 #include "common/Defines.h"
+#include "vocoder/imbe/imbe_vocoder.h"
 
 #include <stdlib.h>
 #include <queue>
@@ -120,6 +121,7 @@ namespace vocoder
 
     private:
         mbelibParms* m_mbelibParms;
+        imbe_vocoder* m_imbeVocoder;
 
         MBE_DECODER_MODE m_mbeMode;
 

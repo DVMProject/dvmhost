@@ -24,7 +24,6 @@
 #include "vocoder/imbe/imbe.h"
 #include "vocoder/imbe/aux_sub.h"
 #include "vocoder/imbe/math_sub.h"
-#include "vocoder/imbe/rand_gen.h"
 #include "vocoder/imbe/tbls.h"
 #include "vocoder/imbe/imbe_vocoder.h"
 
@@ -74,8 +73,8 @@ void imbe_vocoder::uv_synt(IMBE_PARAM* imbe_param, Word16* snd)
         }
         else {
             while (index_a < index_b) {
-                Uw[index_a].re = mult(sa, rand_gen());
-                Uw[index_a].im = mult(sa, rand_gen());
+                Uw[index_a].re = mult(sa, unvoicedRandom[2 * index_a]);
+                Uw[index_a].im = mult(sa, unvoicedRandom[2 * index_a + 1]);
                 //Uw[index_a].re = sa;
                 //Uw[index_a].im = sa;
 
