@@ -864,6 +864,21 @@ bool FNETestHooks::processP25PDUResponse(TrafficNetwork& network, uint32_t llId,
         1U, 0U, 1U);
 }
 
+/** Gets the number of PDU blocks the FNE packet-data receiver holds for a peer. */
+
+uint32_t FNETestHooks::p25HeldPDUBlocks(TrafficNetwork& network, uint32_t peerId)
+{
+    if (network.m_tagP25 == nullptr)
+        return 0U;
+
+    auto* packetData = network.m_tagP25->packetData();
+    auto it = packetData->m_status.find(peerId);
+    if (it == packetData->m_status.end() || it->second == nullptr)
+        return 0U;
+
+    return (uint32_t)it->second->receivedBlocks.size();
+}
+
 /**
  * @brief Passes a complete Version-0 DLI datagram through the network receive task.
  * @param network The TrafficNetwork instance.
