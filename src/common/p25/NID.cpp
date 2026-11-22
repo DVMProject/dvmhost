@@ -24,7 +24,7 @@ using namespace p25::defines;
 //  Constants
 // ---------------------------------------------------------------------------
 
-const uint32_t MAX_NID_ERRS = 7U;//5U;
+const uint32_t MAX_NID_ERRS = 11U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -68,56 +68,36 @@ bool NID::decode(const uint8_t* data)
     uint8_t nid[P25_NID_LENGTH_BYTES];
     P25Utils::decode(data, nid, 48U, 114U);
 
-    // handle digital "squelch" NAC
-    if ((m_nac == NAC_DIGITAL_SQ) || (m_nac == NAC_REUSE_RX_NAC)) {
-        uint32_t nac = ((nid[0U] << 4) + (nid[1U] >> 4)) & 0xFFFU;
-        cleanupArrays();
-        createRxTxNID(nac); // bryanb: I hate this and it'll be slow
-    }
+    edac::BCH bch;
+    uint32_t errs = 0U;
+    if (!bch.decode(nid, errs))
+        return false;
 
-    uint32_t errs = P25Utils::compare(nid, m_rxTx[DUID::LDU1], P25_NID_LENGTH_BYTES);
-    if (errs < MAX_NID_ERRS) {
-        m_duid = DUID::LDU1;
-        return true;
-    }
+    const uint8_t duid = nid[1U] & 0x0FU;
+    const bool expectedParity = (((duid >> 1) ^ duid) & 0x01U) != 0U;
+    const bool receivedParity = (nid[7U] & 0x01U) != 0U;
+    if (receivedParity != expectedParity)
+        errs++;
+    if (errs > MAX_NID_ERRS)
+        return false;
 
-    errs = P25Utils::compare(nid, m_rxTx[DUID::LDU2], P25_NID_LENGTH_BYTES);
-    if (errs < MAX_NID_ERRS) {
-        m_duid = DUID::LDU2;
-        return true;
-    }
+    const uint32_t nac = ((nid[0U] << 4) | (nid[1U] >> 4)) & 0xFFFU;
+    if ((m_nac != NAC_DIGITAL_SQ) && (m_nac != NAC_REUSE_RX_NAC) && (nac != m_nac))
+        return false;
 
-    errs = P25Utils::compare(nid, m_rxTx[DUID::PDU], P25_NID_LENGTH_BYTES);
-    if (errs < MAX_NID_ERRS) {
-        m_duid = DUID::PDU;
-        return true;
+    switch (duid) {
+        case DUID::HDU:
+        case DUID::TDU:
+        case DUID::LDU1:
+        case DUID::TSDU:
+        case DUID::PDU:
+        case DUID::LDU2:
+        case DUID::TDULC:
+            m_duid = static_cast<DUID::E>(duid);
+            return true;
+        default:
+            return false;
     }
-
-    errs = P25Utils::compare(nid, m_rxTx[DUID::TSDU], P25_NID_LENGTH_BYTES);
-    if (errs < MAX_NID_ERRS) {
-        m_duid = DUID::TSDU;
-        return true;
-    }
-
-    errs = P25Utils::compare(nid, m_rxTx[DUID::HDU], P25_NID_LENGTH_BYTES);
-    if (errs < MAX_NID_ERRS) {
-        m_duid = DUID::HDU;
-        return true;
-    }
-
-    errs = P25Utils::compare(nid, m_rxTx[DUID::TDULC], P25_NID_LENGTH_BYTES);
-    if (errs < MAX_NID_ERRS) {
-        m_duid = DUID::TDULC;
-        return true;
-    }
-
-    errs = P25Utils::compare(nid, m_rxTx[DUID::TDU], P25_NID_LENGTH_BYTES);
-    if (errs < MAX_NID_ERRS) {
-        m_duid = DUID::TDU;
-        return true;
-    }
-
-    return false;
 }
 
 /* Encodes P25 network identifier data. */
