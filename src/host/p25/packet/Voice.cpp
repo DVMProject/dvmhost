@@ -37,8 +37,8 @@ using namespace p25::packet;
 // ---------------------------------------------------------------------------
 
 const uint32_t PKT_LDU1_COUNT = 3U;
-const uint32_t ROAM_LDU1_COUNT = 1U;
-const uint8_t USER_ALIAS_PHASE_COUNT = 6U;
+const uint8_t EXPLICIT_SOURCE_LDU1_PHASE_COUNT = 3U;
+const uint8_t USER_ALIAS_PHASE_COUNT = 4U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -742,28 +742,45 @@ bool Voice::process(uint8_t* data, uint32_t len)
                 m_p25->notifyCC_TouchGrant(m_rfLC.getDstId());
             }
 
+            if (!m_rfLC.isStandardMFId()) {
+                if (m_debug) {
+                    LogDebug(LOG_RF, "P25, LDU1 LC, non-standard payload, lco = $%02X, mfId = $%02X", m_rfLC.getLCO(), m_rfLC.getMFId());
+                }
+
+                m_rfLC.setRS(rsValue);
+            }
+
+            lc::LC outboundLC(m_rfLC);
+            const bool trafficVoiceSlot = m_roamLDU1Count == 0U;
+            const bool voiceUserLC = outboundLC.isStandardMFId() && (outboundLC.getLCO() == LCO::GROUP || outboundLC.getLCO() == LCO::PRIVATE);
+            const bool signalingSlot = !trafficVoiceSlot;
+
+            // advance the phase after a signaling slot or a voice-user LC in a traffic slot
+            if (!trafficVoiceSlot || voiceUserLC)
+                m_roamLDU1Count = (m_roamLDU1Count + 1U) % EXPLICIT_SOURCE_LDU1_PHASE_COUNT;
+
             // are we swapping the LC out for the RFSS_STS_BCAST or LC_GROUP_UPDT?
             m_pktLDU1Count++;
-            if (m_pktLDU1Count > PKT_LDU1_COUNT) {
+            if (signalingSlot && m_pktLDU1Count > PKT_LDU1_COUNT) {
                 m_pktLDU1Count = 0U;
 
                 // conventional registration or DVRS support?
                 if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
                     // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
-                    m_rfLC.setMFId(MFG_STANDARD);
-                    m_rfLC.setLCO(LCO::RFSS_STS_BCAST);
+                    outboundLC.setMFId(MFG_STANDARD);
+                    outboundLC.setLCO(LCO::RFSS_STS_BCAST);
                 }
                 else {
                     std::lock_guard<std::mutex> lock(m_p25->s_activeTGLock);
                     if (m_p25->m_activeTG.size() > 0) {
-                        const uint32_t dstId = m_rfLC.getDstId();
+                        const uint32_t dstId = outboundLC.getDstId();
                         uint32_t dstIdB = 0U;
                         bool hasDstIdB = false;
                         if (nextActiveTalkgroups(m_p25->m_activeTG, m_grpUpdtCount, dstId, dstIdB, hasDstIdB)) {
                             if (hasDstIdB) {
-                                m_rfLC.setMFId(MFG_STANDARD);
-                                m_rfLC.setLCO(LCO::GROUP_UPDT);
-                                m_rfLC.setDstIdB(dstIdB);
+                                outboundLC.setMFId(MFG_STANDARD);
+                                outboundLC.setLCO(LCO::GROUP_UPDT);
+                                outboundLC.setDstIdB(dstIdB);
                             }
                         }
                     }
@@ -777,15 +794,8 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_p25->m_nid.encode(data + 2U, DUID::LDU1);
 
             // generate LDU1 Data
-            if (!m_rfLC.isStandardMFId()) {
-                if (m_debug) {
-                    LogDebug(LOG_RF, "P25, LDU1 LC, non-standard payload, lco = $%02X, mfId = $%02X", m_rfLC.getLCO(), m_rfLC.getMFId());
-                }
-                m_rfLC.setRS(rsValue);
-            }
-
-            lc::LC outboundLC(m_rfLC);
-            applyUserAlias(outboundLC, m_rfUserAliasPhase);
+            if (signalingSlot)
+                applyUserAlias(outboundLC, m_rfUserAliasPhase);
             outboundLC.encodeLDU1(data + 2U);
 
             // generate Low Speed Data
@@ -2105,50 +2115,62 @@ void Voice::writeNet_LDU1()
     if (sysId == 0U)
         sysId = lc::LC::getSiteData().sysId();
 
-    // is the network peer a different WACN or system ID?
-    if (m_p25->m_allowExplicitSourceId) {
-        if (sysId != lc::LC::getSiteData().sysId()) {
-            // per TIA-102.AABD-D transmit EXPLICIT_SOURCE_ID every other frame (e.g. every other LDU1)
-            m_roamLDU1Count++;
-            if (m_roamLDU1Count > ROAM_LDU1_COUNT) {
-                m_roamLDU1Count = 0U;
-                m_netLC.setNetId(netId);
-                m_netLC.setSysId(sysId);
-                m_netLC.setLCO(LCO::EXPLICIT_SOURCE_ID);
-            }
-            else {
-                // flag explicit block to follow in next LDU1
-                m_netLC.setExplicitId(true);
+    if (!m_netLC.isStandardMFId()) {
+        if (m_debug) {
+            LogDebug(LOG_NET, "P25, LDU1 LC, non-standard payload, lco = $%02X, mfId = $%02X", m_netLC.getLCO(), m_netLC.getMFId());
+        }
+        m_netLC.setRS(rsValue);
+    }
 
-                if (m_netLC.getLCO() == LCO::PRIVATE) {
-                    m_netLC.setLCO(LCO::PRIVATE_EXT);
-                }
+    lc::LC outboundLC(m_netLC);
+    const bool explicitSourceRequired = m_p25->m_allowExplicitSourceId && sysId != lc::LC::getSiteData().sysId();
+    const bool trafficVoiceSlot = m_roamLDU1Count == 0U;
+    const bool explicitSourceSlot = explicitSourceRequired && m_roamLDU1Count == 1U;
+    const bool signalingSlot = !trafficVoiceSlot && !explicitSourceSlot;
+    const bool voiceUserLC = outboundLC.isStandardMFId() && (outboundLC.getLCO() == LCO::GROUP || outboundLC.getLCO() == LCO::PRIVATE);
+
+    // reserve one voice-user LC in each three-LC traffic maintenance interval
+    if (trafficVoiceSlot) {
+        if (explicitSourceRequired && voiceUserLC) {
+            outboundLC.setExplicitId(true);
+
+            if (outboundLC.getLCO() == LCO::PRIVATE) {
+                outboundLC.setLCO(LCO::PRIVATE_EXT);
             }
         }
     }
+    else if (explicitSourceSlot) {
+        outboundLC.setNetId(netId);
+        outboundLC.setSysId(sysId);
+        outboundLC.setLCO(LCO::EXPLICIT_SOURCE_ID);
+    }
+
+    // advance the phase after a signaling slot or a voice-user LC in a traffic slot
+    if (!trafficVoiceSlot || voiceUserLC)
+        m_roamLDU1Count = (m_roamLDU1Count + 1U) % EXPLICIT_SOURCE_LDU1_PHASE_COUNT;
 
     // are we swapping the LC out for the RFSS_STS_BCAST or LC_GROUP_UPDT?
     m_pktLDU1Count++;
-    if (m_pktLDU1Count > PKT_LDU1_COUNT) {
+    if (signalingSlot && m_pktLDU1Count > PKT_LDU1_COUNT) {
         m_pktLDU1Count = 0U;
 
         // conventional registration or DVRS support?
         if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
             // per TIA-102.AABD-B transmit RFSS_STS_BCAST every 3 superframes (e.g. every 3 LDU1s)
-            m_netLC.setMFId(MFG_STANDARD);
-            m_netLC.setLCO(LCO::RFSS_STS_BCAST);
+            outboundLC.setMFId(MFG_STANDARD);
+            outboundLC.setLCO(LCO::RFSS_STS_BCAST);
         }
         else {
             std::lock_guard<std::mutex> lock(m_p25->s_activeTGLock);
             if (m_p25->m_activeTG.size() > 0) {
-                const uint32_t dstId = m_netLC.getDstId();
+                const uint32_t dstId = outboundLC.getDstId();
                 uint32_t dstIdB = 0U;
                 bool hasDstIdB = false;
                 if (nextActiveTalkgroups(m_p25->m_activeTG, m_grpUpdtCount, dstId, dstIdB, hasDstIdB)) {
                     if (hasDstIdB) {
-                        m_netLC.setMFId(MFG_STANDARD);
-                        m_netLC.setLCO(LCO::GROUP_UPDT);
-                        m_netLC.setDstIdB(dstIdB);
+                        outboundLC.setMFId(MFG_STANDARD);
+                        outboundLC.setLCO(LCO::GROUP_UPDT);
+                        outboundLC.setDstIdB(dstIdB);
                     }
                 }
             }
@@ -2165,15 +2187,8 @@ void Voice::writeNet_LDU1()
     m_p25->m_nid.encode(buffer + 2U, DUID::LDU1);
 
     // generate LDU1 data
-    if (!m_netLC.isStandardMFId()) {
-        if (m_debug) {
-            LogDebug(LOG_NET, "P25, LDU1 LC, non-standard payload, lco = $%02X, mfId = $%02X", m_netLC.getLCO(), m_netLC.getMFId());
-        }
-        m_netLC.setRS(rsValue);
-    }
-
-    lc::LC outboundLC(m_netLC);
-    applyUserAlias(outboundLC, m_netUserAliasPhase);
+    if (signalingSlot)
+        applyUserAlias(outboundLC, m_netUserAliasPhase);
     outboundLC.encodeLDU1(buffer + 2U);
 
     // add the Audio
@@ -2444,10 +2459,6 @@ bool Voice::applyUserAlias(lc::LC& control, uint8_t& phase)
     const uint8_t currentPhase = phase;
     phase = (phase + 1U) % USER_ALIAS_PHASE_COUNT;
 
-    // leave one normal voice-user LC between complete alias conveyances
-    if (currentPhase == 2U || currentPhase == 5U)
-        return false;
-
     control.setUserAlias(radioAlias);
     control.setMFId(MFG_HARRIS);
 
@@ -2458,10 +2469,10 @@ bool Voice::applyUserAlias(lc::LC& control, uint8_t& phase)
     case 1U:
         control.setLCO(LCO::HARRIS_USER_ALIAS_B_ODD);
         break;
-    case 3U:
+    case 2U:
         control.setLCO(LCO::HARRIS_USER_ALIAS_A_EVEN);
         break;
-    case 4U:
+    case 3U:
         control.setLCO(LCO::HARRIS_USER_ALIAS_B_EVEN);
         break;
     default:
