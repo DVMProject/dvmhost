@@ -389,6 +389,30 @@ public:
      */
     static void p25ClockU2U(p25::Control& control, uint32_t ms);
     /**
+     * @brief Sets whether P25 SNDCP support is enabled.
+     * @param control P25 control instance.
+     * @param enabled True to enable SNDCP support; otherwise, false.
+     */
+    static void p25SetSNDCPSupport(p25::Control& control, bool enabled);
+    /**
+     * @brief Tests whether the P25 voice channel holds an SNDCP data permit.
+     * @param control P25 control instance.
+     * @returns bool True if a data permit is held; otherwise, false.
+     */
+    static bool p25PermittedData(const p25::Control& control);
+    /**
+     * @brief Advances the P25 data channel keep-alive and permit hold timers.
+     * @param control P25 control instance.
+     * @param ms Elapsed milliseconds.
+     */
+    static void p25HandleDataChannelKeepAlive(p25::Control& control, uint32_t ms);
+    /**
+     * @brief Sets the remaining P25 native-modem PDU pacing guard.
+     * @param control P25 control instance.
+     * @param ms Remaining pacing guard in milliseconds (0 clears it).
+     */
+    static void p25SetRFPDUPacing(p25::Control& control, uint32_t ms);
+    /**
      * @brief Queues a tagged DMR frame for transmission to the modem.
      * @param control DMR control instance.
      * @param slotNo DMR slot number (1 or 2).
@@ -403,6 +427,14 @@ public:
      * @returns bool True if the frame was queued; otherwise, false.
      */
     static bool p25AddFrame(p25::Control& control, const uint8_t* data, uint32_t length);
+    /**
+     * @brief Copies the encoded data block that follows a response header out of a received RF PDU.
+     * @param[in] rfPDU Received RF PDU bits, starting with the preamble.
+     * @param rfPDUBits Number of valid bits held in rfPDU.
+     * @param[out] block Buffer of at least P25_PDU_FEC_LENGTH_BYTES receiving the encoded block.
+     * @returns bool True if the data block was received and copied; otherwise, false.
+     */
+    static bool p25ResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block);
     /**
      * @brief Queues a tagged NXDN frame for transmission to the modem.
      * @param control NXDN control instance.

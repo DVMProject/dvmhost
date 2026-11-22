@@ -17,6 +17,7 @@
 #include "common/network/NetRPC.h"
 #include "common/network/Network.h"
 #include "common/edac/CRC.h"
+#include "common/Utils.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
@@ -2001,6 +2002,239 @@ TEST_CASE("P25 non-authoritative unpermit clears active network state", "[p25][h
     REQUIRE_FALSE(HostTestHooks::p25NetworkWatchdog(*harness.m_control).isRunning());
 }
 
+/**
+ * @brief Drains every queued RF frame and counts the TDU frames among them.
+ * @param control P25 control instance.
+ * @param[out] tduCount Number of drained TDU frames.
+ * @returns uint32_t Total number of drained frames.
+ */
+uint32_t drainRFFrames(p25::Control& control, uint32_t& tduCount)
+{
+    uint8_t frame[p25::defines::P25_PDU_FRAME_LENGTH_BYTES + 2U] = { 0U };
+    uint32_t total = 0U;
+    tduCount = 0U;
+
+    uint32_t len = 0U;
+    while ((len = control.getFrame(frame)) > 0U) {
+        total++;
+        if (len == p25::defines::P25_TDU_FRAME_LENGTH_BYTES + 2U && frame[0U] == modem::TAG_EOT)
+            tduCount++;
+    }
+
+    return total;
+}
+
+TEST_CASE("P25 non-authoritative SNDCP data permit keys an idle data channel", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+
+    harness.m_control->permittedTG(9051U, true);
+    REQUIRE(HostTestHooks::p25PermittedData(*harness.m_control));
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    // first keep-alive tick on an idle channel emits one outbound TDU
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+    REQUIRE(tduCount == 1U);
+
+    // the channel stays keyed on every following tick while the permit is held
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+    REQUIRE(tduCount == 1U);
+}
+
+TEST_CASE("P25 SNDCP data channel keep-alive does not stack behind queued frames", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    // leave the first keep-alive TDU in the queue; later ticks must not add more
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+}
+
+TEST_CASE("P25 SNDCP data channel keep-alive yields to RF traffic", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    HostTestHooks::p25SetRFCall(*harness.m_control, 9051U, 9051U);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+}
+
+TEST_CASE("P25 SNDCP data channel keep-alive ends for the rest of the grant once the SU transmits", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+
+    // the SU keys up on the grant
+    HostTestHooks::p25SetRFCall(*harness.m_control, 9051U, 9051U);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+
+    // after the SU unkeys the channel stays unkeyed while the grant is still held
+    HostTestHooks::p25ClearRFCall(*harness.m_control);
+    for (uint32_t i = 0U; i < 10U; i++) {
+        HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+    REQUIRE(HostTestHooks::p25PermittedData(*harness.m_control));
+
+    // a new data grant keys the idle channel again
+    harness.m_control->permittedTG(0U, false);
+    drainRFFrames(*harness.m_control, tduCount);
+    harness.m_control->permittedTG(9051U, true);
+    drainRFFrames(*harness.m_control, tduCount);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+    REQUIRE(tduCount == 1U);
+}
+
+TEST_CASE("P25 SNDCP data channel keep-alive does not fill the native-modem PDU pacing guard", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    // a PDU was just transmitted (or is held); the guard must elapse on its own
+    HostTestHooks::p25SetRFPDUPacing(*harness.m_control, 500U);
+    for (uint32_t i = 0U; i < 5U; i++) {
+        HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+
+    // once the guard has elapsed the idle channel is kept keyed again
+    HostTestHooks::p25SetRFPDUPacing(*harness.m_control, 0U);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 1U);
+    REQUIRE(tduCount == 1U);
+}
+
+TEST_CASE("P25 SNDCP data channel keep-alive stops when the control channel releases the grant", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    harness.m_control->permittedTG(0U);
+    REQUIRE_FALSE(HostTestHooks::p25PermittedData(*harness.m_control));
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+}
+
+TEST_CASE("P25 SNDCP data channel permit hold expires without a control channel release", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+    harness.m_control->permittedTG(9051U, true);
+
+    uint32_t tduCount = 0U;
+    drainRFFrames(*harness.m_control, tduCount);
+
+    // 30 second failsafe; one second past it the hold must release
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 31000U);
+    REQUIRE_FALSE(HostTestHooks::p25PermittedData(*harness.m_control));
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+    REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+}
+
+TEST_CASE("P25 repeated SNDCP data permit refreshes the permit hold", "[p25][host][control][sndcp][data-channel]")
+{
+    P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+
+    harness.m_control->permittedTG(9051U, true);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 25000U);
+    harness.m_control->permittedTG(9051U, true);
+    HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 25000U);
+
+    REQUIRE(HostTestHooks::p25PermittedData(*harness.m_control));
+}
+
+TEST_CASE("P25 voice permits and authoritative hosts never key a data channel keep-alive", "[p25][host][control][sndcp][data-channel]")
+{
+    uint32_t tduCount = 0U;
+
+    SECTION("voice permit")
+    {
+        P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+        HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+        harness.m_control->permittedTG(2001U);
+        drainRFFrames(*harness.m_control, tduCount);
+
+        HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE_FALSE(HostTestHooks::p25PermittedData(*harness.m_control));
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+
+    SECTION("SNDCP support disabled")
+    {
+        P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+        harness.m_control->permittedTG(9051U, true);
+        drainRFFrames(*harness.m_control, tduCount);
+
+        HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE_FALSE(HostTestHooks::p25PermittedData(*harness.m_control));
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+
+    SECTION("SNDCP support disabled while a data permit is held")
+    {
+        P25HostHarness harness(false, false, 0U, 1U, false, false, true);
+        HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+        harness.m_control->permittedTG(9051U, true);
+        drainRFFrames(*harness.m_control, tduCount);
+        REQUIRE(HostTestHooks::p25PermittedData(*harness.m_control));
+
+        // the handler checks SNDCP support itself and does not rely on its caller
+        HostTestHooks::p25SetSNDCPSupport(*harness.m_control, false);
+        HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+
+    SECTION("authoritative host")
+    {
+        P25HostHarness harness(true, false, 0U, 1U, false, false, true);
+        HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+        harness.m_control->permittedTG(9051U, true);
+        drainRFFrames(*harness.m_control, tduCount);
+
+        HostTestHooks::p25HandleDataChannelKeepAlive(*harness.m_control, 20U);
+        REQUIRE_FALSE(HostTestHooks::p25PermittedData(*harness.m_control));
+        REQUIRE(drainRFFrames(*harness.m_control, tduCount) == 0U);
+    }
+}
+
 TEST_CASE("P25 telephone interconnect permit survives voice hang until explicitly released", "[p25][host][control][telephone]")
 {
     P25HostHarness harness(false);
@@ -2182,6 +2416,34 @@ TEST_CASE("P25 grant authority follows configuration and FNE availability",
     P25HostHarness local(true, true);
     local.network()->activateForTest();
     REQUIRE(local.m_control->isGrantAuthoritative());
+}
+
+TEST_CASE("P25 response data block is copied from behind the response header", "[p25][host][pdu][response]")
+{
+    using namespace p25::defines;
+
+    // preamble, header block, then the response data block (e.g. selective retry flags)
+    std::vector<uint8_t> rfPDU(P25_PDU_FRAME_LENGTH_BYTES + 2U, 0x00U);
+
+    uint8_t expected[P25_PDU_FEC_LENGTH_BYTES];
+    for (uint32_t i = 0U; i < P25_PDU_FEC_LENGTH_BYTES; i++)
+        expected[i] = uint8_t(0xA5U ^ (i * 7U));
+    // the last octet only carries the bits that fit in the encoded block
+    const uint32_t tailBits = P25_PDU_FEC_LENGTH_BITS % 8U;
+    if (tailBits != 0U)
+        expected[P25_PDU_FEC_LENGTH_BYTES - 1U] &= uint8_t(0xFFU << (8U - tailBits));
+
+    Utils::setBitRange(expected, rfPDU.data(), P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);
+
+    const uint32_t completeBits = P25_PREAMBLE_LENGTH_BITS + (2U * P25_PDU_FEC_LENGTH_BITS);
+
+    uint8_t block[P25_PDU_FEC_LENGTH_BYTES];
+    REQUIRE(HostTestHooks::p25ResponseDataBlock(rfPDU.data(), completeBits, block));
+    CHECK(::memcmp(block, expected, P25_PDU_FEC_LENGTH_BYTES) == 0);
+
+    // a response whose data block has not been received yet must not be forwarded as one
+    CHECK_FALSE(HostTestHooks::p25ResponseDataBlock(rfPDU.data(), completeBits - 1U, block));
+    CHECK_FALSE(HostTestHooks::p25ResponseDataBlock(rfPDU.data(), P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS, block));
 }
 
 TEST_CASE("P25 frame types wait for their complete variable-length modem space", "[p25][host][control][queue][pacing]")

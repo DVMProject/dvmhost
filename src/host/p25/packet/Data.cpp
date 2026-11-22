@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017,2018 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 David Andrzejewski
  *
  */
 #include "Defines.h"
@@ -192,8 +193,18 @@ bool Data::process(uint8_t* data, uint32_t len)
                     }
                 }
 
-                // rewrite the response to the network
-                writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, true);
+                // rewrite the response to the network; the network frame carries the header's
+                // blocks to follow, so a response with a data block (e.g. an ACK RETRY) must
+                // send that block too or the receiver waits for a block that never arrives
+                uint8_t rspBlock[P25_PDU_FEC_LENGTH_BYTES];
+                if (m_rfAssembler->dataHeader.getBlocksToFollow() > 0U &&
+                    getResponseDataBlock(m_rfPDU, m_rfPDUBits, rspBlock)) {
+                    writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, false);
+                    writeNetwork(1U, rspBlock, P25_PDU_FEC_LENGTH_BYTES, true);
+                }
+                else {
+                    writeNetwork(0U, buffer, P25_PDU_FEC_LENGTH_BYTES, true);
+                }
 
                 // only repeat the PDU locally if the packet isn't for the FNE
                 if (m_repeatPDU && m_rfAssembler->dataHeader.getLLId() != WUID_FNE) {
@@ -643,6 +654,14 @@ void Data::resetReceivedBlocks()
     m_netTotalBlocks = 0U;
 }
 
+/* Helper to determine whether an RF PDU is held by, or still spaced by, the native-modem pacing guard. */
+
+bool Data::isRFPDUPaced()
+{
+    std::lock_guard<std::mutex> lock(m_pduPacingMutex);
+    return m_pduPacingRemainingMs > 0U || !m_pendingPDUs.empty();
+}
+
 /* Helper to write user data as a P25 PDU packet. */
 
 bool Data::writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm)
@@ -995,6 +1014,22 @@ bool Data::processSNDCPControl(const uint8_t* pduUserData, uint32_t length)
 
     // always forward SNDCP control to FNE for processing
     // FNE will generate the accept/reject response
+    return true;
+}
+
+/* Helper to copy the encoded data block that follows a response header out of a received RF PDU. */
+
+bool Data::getResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block)
+{
+    assert(rfPDU != nullptr);
+    assert(block != nullptr);
+
+    // the data block follows the preamble and the header block
+    if (rfPDUBits < P25_PREAMBLE_LENGTH_BITS + (2U * P25_PDU_FEC_LENGTH_BITS))
+        return false;
+
+    ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+    Utils::getBitRange(rfPDU, block, P25_PREAMBLE_LENGTH_BITS + P25_PDU_FEC_LENGTH_BITS, P25_PDU_FEC_LENGTH_BITS);
     return true;
 }
 

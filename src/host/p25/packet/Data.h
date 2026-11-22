@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 David Andrzejewski
  *
  */
 /**
@@ -32,6 +33,14 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 namespace p25
 {
@@ -125,6 +134,9 @@ namespace p25
 
         private:
             friend class p25::Control;
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::HostTestHooks;
+#endif
             Control* m_p25;
 
             RPT_RF_STATE m_prevRfState;
@@ -215,6 +227,16 @@ namespace p25
             bool processSNDCPControl(const uint8_t* pduUserData, uint32_t length);
 
             /**
+             * @brief Helper to copy the encoded data block that follows a response header out of a
+             *  received RF PDU (e.g. the selective retry flags of an ACK RETRY response).
+             * @param[in] rfPDU Received RF PDU bits, starting with the preamble.
+             * @param rfPDUBits Number of valid bits held in rfPDU.
+             * @param[out] block Buffer of at least P25_PDU_FEC_LENGTH_BYTES receiving the encoded block.
+             * @returns bool True if the data block was received and copied; otherwise, false.
+             */
+            static bool getResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block);
+
+            /**
              * @brief Write data processed from RF to the network.
              * @param currentBlock Current Block ID.
              * @param data Buffer containing block data.
@@ -227,6 +249,11 @@ namespace p25
              * @brief Helper to reset received network blocks.
              */
             void resetReceivedBlocks();
+            /**
+             * @brief Helper to determine whether an RF PDU is held by, or still spaced by, the native-modem pacing guard.
+             * @returns bool True, if an RF PDU is held or the pacing guard is running, otherwise false.
+             */
+            bool isRFPDUPaced();
 
             /**
              * @brief Helper to queue a complete P25 PDU packet.

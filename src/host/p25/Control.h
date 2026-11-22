@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 David Andrzejewski
  *
  */
 /**
@@ -389,6 +390,8 @@ namespace p25
         Timer m_activeTGUpdate;
 
         Timer m_ccPacketInterval;
+        Timer m_dataChKeepAlive;
+        Timer m_dataChPermitHold;
 
         uint32_t m_rfCallTermSrcId;
         uint32_t m_rfCallTermDstId;
@@ -461,6 +464,11 @@ namespace p25
          * @param type Type of RF frame loss.
          */
         void processFrameLoss(RPT_RF_LOSS_TYPE type);
+        /**
+         * @brief Helper to keep the outbound keyed on an idle, SNDCP-permitted data channel.
+         * @param ms Elapsed time in milliseconds since the last clock.
+         */
+        void handleDataChannelKeepAlive(uint32_t ms);
         /**
          * @brief Helper to process an In-Call Control message.
          * @param command In-Call Control Command.

@@ -24,6 +24,7 @@
 #include "common/p25/lc/tsbk/TSBKFactory.h"
 #include "common/p25/P25Utils.h"
 #include "host/p25/packet/ControlSignaling.h"
+#include "host/p25/packet/Data.h"
 #include "host/p25/packet/Voice.h"
 
 #include <cstring>
@@ -594,6 +595,29 @@ void HostTestHooks::p25ClockU2U(p25::Control& control, uint32_t ms)
     control.m_control->clock(ms);
 }
 
+/* Sets whether P25 SNDCP support is enabled. */
+
+void HostTestHooks::p25SetSNDCPSupport(p25::Control& control, bool enabled) { control.m_sndcpSupport = enabled; }
+
+/* Tests whether the P25 voice channel holds an SNDCP data permit. */
+
+bool HostTestHooks::p25PermittedData(const p25::Control& control) { return control.m_dataChPermitHold.isRunning(); }
+
+/* Advances the P25 data channel keep-alive and permit hold timers. */
+
+void HostTestHooks::p25HandleDataChannelKeepAlive(p25::Control& control, uint32_t ms)
+{
+    control.handleDataChannelKeepAlive(ms);
+}
+
+/* Sets the remaining P25 native-modem PDU pacing guard. */
+
+void HostTestHooks::p25SetRFPDUPacing(p25::Control& control, uint32_t ms)
+{
+    std::lock_guard<std::mutex> lock(control.m_data->m_pduPacingMutex);
+    control.m_data->m_pduPacingRemainingMs = ms;
+}
+
 /* Queues a tagged DMR frame for transmission to the modem. */
 
 void HostTestHooks::dmrAddFrame(dmr::Control& control, uint32_t slotNo, const uint8_t* data)
@@ -607,6 +631,13 @@ void HostTestHooks::dmrAddFrame(dmr::Control& control, uint32_t slotNo, const ui
 bool HostTestHooks::p25AddFrame(p25::Control& control, const uint8_t* data, uint32_t length)
 {
     return control.addFrame(data, length);
+}
+
+/* Copies the encoded data block that follows a response header out of a received RF PDU. */
+
+bool HostTestHooks::p25ResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block)
+{
+    return p25::packet::Data::getResponseDataBlock(rfPDU, rfPDUBits, block);
 }
 
 /* Queues a tagged NXDN frame for transmission to the modem. */
