@@ -1306,7 +1306,7 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
             {
                 dfsi::LC dfsiLC = dfsi::LC(control, lsd);
 
-                uint8_t missing = BaseNetwork::reconstructLDUVectors(data.get(), frameLength, &dfsiLC, DUID::LDU1, m_netLDU1);
+                uint8_t missing = BaseNetwork::reconstructLDUVectors(data.get(), frameLength, &dfsiLC, DUID::LDU1, netLDU);
                 if (missing > 0) {
                     LogWarning(LOG_NET, P25_LDU1_STR ", missing %u voice frames, srcId = %u, dstId = %u", missing, srcId, dstId);
                 }
@@ -2251,13 +2251,11 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                         ::memcpy(patch->m_netLDU1 + 200U, buffer, 16U);
                         patch->checkNet_LDU2();
 
-                        if (patch->m_netState != RS_NET_IDLE) {
-                            patch->m_gotNetLDU1 = true;
-                            patch->writeNet_LDU1(true);
+                        patch->m_gotNetLDU1 = true;
+                        patch->writeNet_LDU1(true);
 
-                            if (patch->m_mmdvmCallEndTimer.isRunning())
-                                patch->m_mmdvmCallEndTimer.start();
-                        }
+                        if (patch->m_mmdvmCallEndTimer.isRunning())
+                            patch->m_mmdvmCallEndTimer.start();
                         break;
 
                     // LDU2
@@ -2287,11 +2285,7 @@ void* HostPatch::threadMMDVMProcess(void* arg)
                         break;
                     case DFSIFrameType::LDU2_VOICE18:
                         ::memcpy(patch->m_netLDU2 + 200U, buffer, 16U);
-                        if (patch->m_netState == RS_NET_IDLE) {
-                            patch->writeNet_LDU1(true);
-                        } else {
-                            patch->checkNet_LDU1();
-                        }
+                        patch->checkNet_LDU1();
                         
                         if (patch->m_netState != RS_NET_IDLE) {
                             patch->writeNet_LDU2(true);

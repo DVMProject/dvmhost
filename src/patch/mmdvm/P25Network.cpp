@@ -110,6 +110,8 @@ const uint8_t REC80[] = {
 };
 
 const uint32_t BUFFER_LENGTH = 100U;
+const uint32_t TX_BUFFER_LENGTH = 10000U;
+const uint32_t P25_FRAME_INTERVAL_MS = 20U;
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -122,7 +124,9 @@ P25Network::P25Network(const std::string& gatewayAddress, uint16_t gatewayPort, 
     m_addr(),
     m_addrLen(0U),
     m_debug(debug),
-    m_buffer(1000U, "MMDVM P25 Network")
+    m_buffer(1000U, "MMDVM P25 Network"),
+    m_txBuffer(TX_BUFFER_LENGTH, "MMDVM P25 Tx Network"),
+    m_txElapsed(P25_FRAME_INTERVAL_MS)
 {
     if (Socket::lookup(gatewayAddress, gatewayPort, m_addr, m_addrLen) != 0)
         m_addrLen = 0U;
@@ -171,7 +175,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $62 LDU1 Sent", buffer, 22U);
 
-    bool ret = m_socket.write(buffer, 22U, m_addr, m_addrLen);
+    bool ret = queueRecord(buffer, 22U);
     if (!ret)
         return false;
 
@@ -182,7 +186,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $63 LDU1 Sent", buffer, 14U);
 
-    ret = m_socket.write(buffer, 14U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 14U);
     if (!ret)
         return false;
 
@@ -195,7 +199,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $64 LDU1 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -210,7 +214,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $65 LDU1 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -225,7 +229,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $66 LDU1 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -236,7 +240,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $67 LDU1 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -247,7 +251,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $68 LDU1 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -258,7 +262,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $69 LDU1 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -271,7 +275,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network $6A LDU1 Sent", buffer, 16U);
 
-    ret = m_socket.write(buffer, 16U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 16U);
     if (!ret)
         return false;
 
@@ -279,7 +283,7 @@ bool P25Network::writeLDU1(const uint8_t* ldu1, const p25::lc::LC& control, cons
         if (m_debug)
             Utils::dump(1U, "P25, P25Network::writeLDU1(), MMDVM Network END Sent", REC80, 17U);
 
-        ret = m_socket.write(REC80, 17U, m_addr, m_addrLen);
+        ret = queueRecord(REC80, 17U);
         if (!ret)
             return false;
     }
@@ -302,7 +306,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $6B LDU2 Sent", buffer, 22U);
 
-    bool ret = m_socket.write(buffer, 22U, m_addr, m_addrLen);
+    bool ret = queueRecord(buffer, 22U);
     if (!ret)
         return false;
 
@@ -313,7 +317,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $6C LDU2 Sent", buffer, 14U);
 
-    ret = m_socket.write(buffer, 14U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 14U);
     if (!ret)
         return false;
 
@@ -330,7 +334,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $6D LDU2 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -344,7 +348,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $6E LDU2 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -358,7 +362,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $6F LDU2 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -373,7 +377,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $70 LDU2 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -384,7 +388,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $71 LDU2 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -395,7 +399,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $72 LDU2 Sent", buffer, 17U);
 
-    ret = m_socket.write(buffer, 17U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 17U);
     if (!ret)
         return false;
 
@@ -408,7 +412,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network $73 LDU2 Sent", buffer, 16U);
 
-    ret = m_socket.write(buffer, 16U, m_addr, m_addrLen);
+    ret = queueRecord(buffer, 16U);
     if (!ret)
         return false;
 
@@ -416,7 +420,7 @@ bool P25Network::writeLDU2(const uint8_t* ldu2, const p25::lc::LC& control, cons
         if (m_debug)
             Utils::dump(1U, "P25, P25Network::writeLDU2(), MMDVM Network END Sent", REC80, 17U);
 
-        ret = m_socket.write(REC80, 17U, m_addr, m_addrLen);
+        ret = queueRecord(REC80, 17U);
         if (!ret)
             return false;
     }
@@ -431,7 +435,7 @@ bool P25Network::writeTDU()
     if (m_debug)
         Utils::dump(1U, "P25, P25Network::writeTDU(), MMDVM Network END Sent", REC80, 17U);
 
-    bool ret = m_socket.write(REC80, 17U, m_addr, m_addrLen);
+    bool ret = queueRecord(REC80, 17U);
     if (!ret)
         return false;
 
@@ -442,6 +446,23 @@ bool P25Network::writeTDU()
 
 void P25Network::clock(uint32_t ms)
 {
+    if (m_txBuffer.isEmpty())
+        m_txElapsed = P25_FRAME_INTERVAL_MS;
+    else
+        m_txElapsed += ms;
+
+    if (m_txElapsed >= P25_FRAME_INTERVAL_MS && !m_txBuffer.isEmpty()) {
+        uint8_t length = 0U;
+        m_txBuffer.get(&length, 1U);
+
+        uint8_t txBuffer[BUFFER_LENGTH];
+        m_txBuffer.get(txBuffer, length);
+        if (!m_socket.write(txBuffer, length, m_addr, m_addrLen))
+            LogError(LOG_NET, "MMDVM, failed to write paced P25 record");
+
+        m_txElapsed = 0U;
+    }
+
     uint8_t buffer[BUFFER_LENGTH];
 
     sockaddr_storage address;
@@ -492,4 +513,26 @@ void P25Network::close()
     m_socket.close();
 
     LogInfoEx(LOG_NET, "MMDVM, Closing P25 network connection");
+}
+
+// ---------------------------------------------------------------------------
+//  Private Class Members
+// ---------------------------------------------------------------------------
+
+/* Queues one MMDVM P25 record for paced transmission. */
+
+bool P25Network::queueRecord(const uint8_t* data, uint8_t length)
+{
+    assert(data != nullptr);
+    assert(length > 0U);
+
+    if (!m_txBuffer.hasSpace(length + 1U)) {
+        LogError(LOG_NET, "MMDVM, P25 transmit queue overflow, record length = %u", length);
+        return false;
+    }
+
+    if (m_txBuffer.isEmpty())
+        m_txElapsed = P25_FRAME_INTERVAL_MS;
+
+    return m_txBuffer.addData(&length, 1U) && m_txBuffer.addData(data, length);
 }
