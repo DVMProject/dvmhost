@@ -1,6 +1,6 @@
 # DVM Network Stack Technical Documentation
 
-**Version:** 1.3
+**Version:** 1.5
 **Date:** November 22, 2026
 **Author:** AI Assistant (updated based on current source code analysis)
 
@@ -117,10 +117,10 @@ Alternative HA Configuration with Replica:
 - **Leaf-Only Peers**: dvmhost, dvmbridge, dvmpatch are always terminal leaf nodes
 - **Multi-Level FNE Hierarchy**: FNE nodes can be nested multiple levels deep
 - **Root Master**: Primary FNE master serves as spanning tree root
-- **Branch Pruning**: Automatic detection and removal of redundant paths
-- **Fast Reconvergence**: Quick recovery when topology changes occur
+- **Topology Cleanup**: Tree updates reconcile parents/children and remove disconnected peer state
+- **Fast Reconnect Policy**: Optional `spanningTreeFastReconnect` handling permits the configured reconnect behavior
 - **Mixed Children**: FNE nodes can have both child FNE nodes and leaf peers
-- **Replication Sync**: Network tree topology synchronized across all FNE nodes
+- **Topology Exchange**: Neighbor FNE links exchange serialized tree state using `NET_TREE` messages
 - **Peer Types**:
   - **dvmhost**: Repeater/hotspot hosts (always leaf)
   - **dvmbridge**: Network bridges connecting to other systems (always leaf)
@@ -149,8 +149,8 @@ Core Supporting Classes:
     │   └── RawFrameQueue (Raw UDP Socket Operations)
     │
     ├── RTPHeader (Standard RTP Header - RFC 3550)
-    │   └── RTPExtensionHeader (RTP Extension Base)
-    │       └── RTPFNEHeader (FNE-Specific Extension Header)
+    ├── RTPExtensionHeader (RTP Extension Base)
+    │   └── RTPFNEHeader (FNE-Specific Extension Header)
     │
     ├── RTPStreamMultiplex (Multi-Stream Management)
     ├── PacketBuffer (Fragmentation/Reassembly)
@@ -174,6 +174,7 @@ TrafficNetwork (Extends BaseNetwork)
     └── Call Handlers (Traffic Routing & Management):
         ├── TagDMRData (DMR Protocol Handler)
         ├── TagP25Data (P25 Protocol Handler)
+        ├── TagP25P2Data (P25 Phase 2 Protocol Handler)
         ├── TagNXDNData (NXDN Protocol Handler)
         └── TagAnalogData (Analog Protocol Handler)
 ```
@@ -284,7 +285,6 @@ private:
     Timer m_maintainenceTimer;
 
     bool m_enableSpanningTree;
-    bool m_privateCallRoutingEnabled;
 };
 
 class MetadataNetwork : public BaseNetwork {
@@ -311,8 +311,8 @@ The DVM network stack implements a layered protocol architecture:
 ### Layer 1: UDP Transport
 
 - **Socket Operations**: Standard UDP datagram socket (IPv4/IPv6)
-- **Buffer Sizes**: Configurable send/receive buffers (default 512KB)
-- **Non-Blocking**: Asynchronous I/O for high-throughput scenarios
+- **Socket Operations**: Datagram reads and writes through `udp::Socket`; address resolution supports IPv4 and IPv6
+- **Application Processing**: FNE packet work can be dispatched through configured worker pools
 - **Encryption**: Optional AES-256-CBC UDP payload wrapping with a preshared key, per-datagram IV, and `0xC0FE` packet leader
 
 ### Layer 2: RTP (Real-time Transport Protocol)
@@ -337,7 +337,7 @@ Standard RTP header format (RFC 3550):
 - **X (Extension)**: Extension header present (always 1 for DVM)
 - **CC (CSRC Count)**: Contributing source count (typically 0)
 - **M (Marker)**: Application-specific marker bit
-- **PT (Payload Type)**: 0x56 for DVM, 0x00 for G.711
+- **PT (Payload Type)**: `0x56` for DVM writes; the reader accepts `0x56` and `0x57`
 - **Sequence Number**: Incrementing packet sequence (0-65535)
 - **Timestamp**: RTP timestamp (8000 Hz clock rate)
 - **SSRC**: Synchronization source identifier
@@ -350,7 +350,7 @@ Custom FNE extension header:
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  Payload Type (0xFE)          | Payload Length (4)            |
+|  Extension Profile (0x00FE)   | Extension Length (0x0004)     |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |          CRC-16               | Function      | Sub-Function  |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -363,8 +363,8 @@ Custom FNE extension header:
 ```
 
 **Fields:**
-- **Payload Type**: 0xFE (DVM_FRAME_START)
-- **Payload Length**: Length of extension in 32-bit words (4)
+- **Extension Profile**: 0x00FE (`DVM_FRAME_START`), encoded as a 16-bit big-endian value
+- **Extension Length**: Length of the 16-byte FNE body in 32-bit words (4)
 - **CRC-16**: Checksum of payload data
 - **Function**: Primary operation code (see NET_FUNC)
 - **Sub-Function**: Secondary operation code (see NET_SUBFUNC)
@@ -376,58 +376,55 @@ Custom FNE extension header:
 
 Protocol-specific data follows the RTP+FNE headers:
 
-- **DMR**: 35-byte frames (metadata + 33-byte DMR data)
-- **P25**: Variable length (LDU1: 242 bytes, LDU2: 242 bytes, TSDU: variable)
-- **NXDN**: Variable length based on message type
-- **Analog**: Audio samples (typically G.711 encoded)
+- **DMR**: 55-byte logical network message plus 8 transmitted padding bytes
+- **P25**: DVM/DFSI application messages with DUID-specific lengths; these are not copied 242-byte air-interface LDUs
+- **P25 Phase 2**: 66-byte logical message plus 8 transmitted padding bytes
+- **NXDN**: 74-byte logical message plus 8 transmitted padding bytes
+- **Analog**: 344-byte logical message containing 320 opaque audio bytes, plus 8 transmitted padding bytes
 
 ### Complete Packet Example
 
-**DMR Voice Frame - Total Size: 67 bytes (UDP payload)**
+**DMR Voice Frame - Total Size: 95 bytes (UDP payload)**
 
 ```
 Complete Packet Structure:
 ┌─────────────┬─────────────┬──────────────┐
-│  RTP Header │  FNE Header │  DMR Payload │
-│   12 bytes  │   20 bytes  │   35 bytes   │
+│  RTP Header │ RTP Extension/FNE Header │ DMR Application Message │
+│   12 bytes  │          20 bytes        │        63 bytes         │
 └─────────────┴─────────────┴──────────────┘
 
-Hexadecimal representation (67 bytes):
+Structural hexadecimal representation (95 bytes; symbolic fields are not a known-answer vector):
 
 Offset 0-11 (RTP Header):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20
+90 56 SS SS TT TT TT TT XX XX XX XX
 
 Offset 12-31 (FNE Header):
-FE 04 A3 5C 00 00 00 00 12 34 56 78 00 00 4E 20 00 00 00 23
+00 FE 00 04 CC CC 00 00 12 34 56 78 00 00 4E 20 00 00 00 3F
 
-Offset 32-66 (DMR Payload):
-12 34 56 78 05 00 00 AA BB 00 CC DD 01 02 03 04 7F 00 
-[33 bytes of DMR frame data...]
+Offset 32-94 (DMR application message):
+44 4D 52 44 ...
+["DMRD", DMR network fields, raw DMR frame, BER/RSSI, and 8 padding bytes]
 
 Decoded values:
   RTP:
     - Version: 2, Extension: yes, Marker: no
-    - Payload Type: 0xFE (254)
-    - Sequence: 42
-    - Timestamp: 8000
-    - SSRC: 20000
+    - Payload Type: 0x56
+    - Sequence, timestamp, and SSRC: example-dependent
   
   FNE Header:
-    - CRC-16: 0xA35C
+    - Extension Profile: 0x00FE
+    - Extension Length: 4 words
+    - CRC-16: calculated over all 63 application-message bytes
     - Function: 0x00 (PROTOCOL)
     - Sub-Function: 0x00 (DMR)
     - Stream ID: 0x12345678
     - Peer ID: 20000
-    - Message Length: 35
+    - Message Length: 63
   
   DMR Payload:
-    - Stream ID: 0x12345678
-    - Sequence: 5
-    - Source ID: 43707
-    - Dest ID: 52445
-    - Slot: 1
-    - Call Type: Group Voice
-    - + 33 bytes DMR frame
+    - Tag: "DMRD"
+    - Sequence, source ID, destination ID, slot/call type, and raw DMR frame
+    - BER/RSSI trailer and eight zeroed padding bytes
 ```
 
 ---
@@ -472,12 +469,12 @@ Byte Offset | Field              | Size    | Description
 
 **Example RTP Header (hexadecimal):**
 ```
-90 FE 00 2A 00 00 1F 40 00 00 4E 20
+90 56 00 2A 00 00 1F 40 00 00 4E 20
 │  │  │  │  │        │  │        │
 │  │  │  │  │        │  └────────┴─ SSRC: 0x00004E20 (20000)
 │  │  │  │  └────────┴──────────── Timestamp: 0x00001F40 (8000)
 │  │  └──┴───────────────────────── Sequence: 0x002A (42)
-│  └─────────────────────────────── Payload Type: 0xFE (254, marker bit clear)
+│  └─────────────────────────────── Payload Type: 0x56 (marker bit clear)
 └────────────────────────────────── Version 2, no pad, extension set (0x90)
 ```
 
@@ -526,11 +523,11 @@ public:
 ```
 Byte Offset | Field              | Size    | Description
 ------------|--------------------|---------|---------------------------------
-0-1         | Extension Header   | 2 bytes | Payload Type (0xFE) + Length (4)
-2-3         | CRC-16            | 2 bytes | Payload checksum (big-endian)
-4           | Function          | 1 byte  | NET_FUNC opcode
-5           | Sub-Function      | 1 byte  | NET_SUBFUNC opcode
-6-7         | Reserved          | 2 bytes | Padding (0x00)
+0-1         | Extension Profile | 2 bytes | 0x00FE (big-endian)
+2-3         | Extension Length  | 2 bytes | 4 words (big-endian)
+4-5         | CRC-16            | 2 bytes | Application-message checksum (big-endian)
+6           | Function          | 1 byte  | NET_FUNC opcode
+7           | Sub-Function      | 1 byte  | NET_SUBFUNC opcode
 8-11        | Stream ID         | 4 bytes | Call/session identifier (big-endian)
 12-15       | Peer ID           | 4 bytes | Source peer ID (big-endian)
 16-19       | Message Length    | 4 bytes | Payload length (big-endian)
@@ -538,16 +535,15 @@ Byte Offset | Field              | Size    | Description
 
 **Example FNE Header (hexadecimal):**
 ```
-FE 04 A3 5C 00 00 00 00 12 34 56 78 00 00 4E 20 00 00 00 21
-│  │  │  │  │  │  │  │  │        │  │        │  │        │
-│  │  │  │  │  │  │  │  │        │  │        │  └────────┴─ Payload Length: 0x00000021 (33)
-│  │  │  │  │  │  │  │  │        │  └────────┴───────────── Peer ID: 0x00004E20 (20000)
-│  │  │  │  │  │  │  │  └────────┴───────────────────────── Stream ID: 0x12345678
-│  │  │  │  │  │  └──┴───────────────────────────────────── Reserved (0x0000)
-│  │  │  │  └──┴─────────────────────────────────────────── Function: 0x00, SubFunc: 0x00
-│  │  └──┴───────────────────────────────────────────────── CRC-16: 0xA35C
-│  └─────────────────────────────────────────────────────── Extension Length: 4 (words)
-└────────────────────────────────────────────────────────── Payload Type: 0xFE
+00 FE 00 04 A3 5C 00 00 12 34 56 78 00 00 4E 20 00 00 00 3F
+│     │     │     │  │  │           │           │           │
+│     │     │     │  │  │           │           └───────────┴─ Message Length: 63
+│     │     │     │  │  │           └───────────────────────── Peer ID: 20000
+│     │     │     │  │  └───────────────────────────────────── Stream ID: 0x12345678
+│     │     │     └──┴──────────────────────────────────────── Function/Subfunction: PROTOCOL/DMR
+│     │     └───────────────────────────────────────────────── CRC-16: example value
+│     └─────────────────────────────────────────────────────── Extension Length: 4 words
+└───────────────────────────────────────────────────────────── Extension Profile: 0x00FE
 ```
 
 **Encoding Example:**
@@ -637,14 +633,17 @@ The DVM protocol uses a two-level opcode system for message routing and handling
 | 0x71 | MST_DISC | Master disconnect notification |
 | 0x74 | PING | Connection keepalive request |
 | 0x75 | PONG | Connection keepalive response |
+| 0x79 | GRANT_REL | Channel grant release |
 | 0x7A | GRANT_REQ | Channel grant request |
 | 0x7B | INCALL_CTRL | In-call control (busy/reject) |
 | 0x7C | KEY_REQ | Encryption key request |
 | 0x7D | KEY_RSP | Encryption key response |
 | 0x7E | ACK | Acknowledgment |
 | 0x7F | NAK | Negative acknowledgment |
-| 0x80 | KEY_LLA_REQ | Encryption key LLA request |
-| 0x81 | KEY_LLA_RSP | Encryption key LLA response |
+| 0x80 | KEY_KEK_REQ | Encryption key LLA/UKEK request |
+| 0x81 | KEY_KEK_RSP | Encryption key LLA/UKEK response |
+| 0x84 | SUBSCRIBER_OP | Subscriber operation query/control |
+| 0x85 | RADIO_ALIAS_SYNC | Radio alias synchronization |
 | 0x8E | KEYS_INVENTORY | Encryption key inventory transfer |
 | 0x8F | KEYS_UPDATE | Encryption key container update |
 | 0x90 | TRANSFER | Activity/diagnostic/status transfer |
@@ -689,7 +688,7 @@ Reserved (6 bytes) + Peer ID (4 bytes) + Reason Code (2 bytes)
   - Set `m_enabled = false` to disable all network operations
   - Stop attempting to reconnect (unless `neverDisableOnACLNAK` configuration flag is set)
 
-- `FNE_MAX_CONN` (Code 8): If received while in `NET_STAT_RUNNING` state, indicates the FNE is overloaded or shutting down. Peer should implement exponential backoff before reconnecting.
+- `FNE_MAX_CONN` (Code 8): The FNE has reached its permitted connection count. The peer returns to its configured retry/reconnect behavior.
 
 - `FNE_DUPLICATE_CONN` (Code 9): The peer transitions to `NET_STAT_WAITING_CONNECT`, clears `m_remotePeerId`, sets the duplicate-connection flag, reduces retry count thresholds, and uses the extended duplicate-connection reconnect delay (`DUPLICATE_CONN_RETRY_TIME`) to avoid rapid reconnect storms.
 
@@ -713,6 +712,7 @@ Reserved (6 bytes) + Peer ID (4 bytes) + Reason Code (2 bytes)
 | 0x01 | MASTER_SUBFUNC_BL_RID | Blacklist RID update |
 | 0x02 | MASTER_SUBFUNC_ACTIVE_TGS | Active talkgroup list |
 | 0x03 | MASTER_SUBFUNC_DEACTIVE_TGS | Deactivate talkgroups |
+| 0x04 | MASTER_SUBFUNC_TG_ADMIT | Talkgroup RID admission lists |
 | 0xA3 | MASTER_HA_PARAMS | High availability parameters |
 
 #### Transfer Sub-Functions (TRANSFER)
@@ -722,6 +722,15 @@ Reserved (6 bytes) + Peer ID (4 bytes) + Reason Code (2 bytes)
 | 0x01 | TRANSFER_SUBFUNC_ACTIVITY | Activity log data |
 | 0x02 | TRANSFER_SUBFUNC_DIAG | Diagnostic log data |
 | 0x03 | TRANSFER_SUBFUNC_STATUS | Peer status JSON |
+| 0x04 | TRANSFER_SUBFUNC_PATCH_STATUS | Console patch status transfer |
+
+#### Subscriber Operation Sub-Functions (SUBSCRIBER_OP)
+
+| Code | Name | Purpose |
+|------|------|---------|
+| 0x00 | SUBSCRIBER_OP_OPERATION | Subscriber operation result query |
+| 0x01 | SUBSCRIBER_OP_P25_STATUS | P25 subscriber status query |
+| 0x02 | SUBSCRIBER_OP_START | Start subscriber operation |
 
 #### Announce Sub-Functions (ANNOUNCE)
 
@@ -742,8 +751,10 @@ Reserved (6 bytes) + Peer ID (4 bytes) + Reason Code (2 bytes)
 | 0x00 | REPL_TALKGROUP_LIST | Talkgroup rules replication |
 | 0x01 | REPL_RID_LIST | Radio ID replication |
 | 0x02 | REPL_PEER_LIST | Peer configuration list |
+| 0x03 | REPL_RID_ALIAS_LIST | Radio alias list transfer |
 | 0xA2 | REPL_ACT_PEER_LIST | Active peer list |
 | 0xA3 | REPL_HA_PARAMS | HA configuration parameters |
+| 0xA4 | REPL_PATCH_STATUS | Console patch status transfer |
 
 #### Network Tree Sub-Functions (NET_TREE)
 
@@ -758,6 +769,12 @@ Reserved (6 bytes) + Peer ID (4 bytes) + Reason Code (2 bytes)
 |------|------|---------|
 | 0x00 | BUSY_DENY | Reject call - channel busy |
 | 0x01 | REJECT_TRAFFIC | Reject active traffic |
+| 0xD2 | DMR_RC_CEASE_TRANSMIT | DMR reverse channel: cease transmit |
+| 0xD3 | DMR_RC_REQUEST_CEASE_TRANSMIT | DMR reverse channel: request cease transmit |
+| 0xD4 | DMR_RC_MAXIMUM_POWER | DMR reverse channel: maximum power |
+| 0xD5 | DMR_RC_MINIMUM_POWER | DMR reverse channel: minimum power |
+| 0xD6 | DMR_RC_POWER_INCREASE_ONE_STEP | DMR reverse channel: increase power one step |
+| 0xD7 | DMR_RC_POWER_DECREASE_ONE_STEP | DMR reverse channel: decrease power one step |
 
 ---
 
@@ -1126,6 +1143,11 @@ m_retryTimer.setTimeout(DUPLICATE_CONN_RETRY_TIME); // 3600s
 
 ## 7. Data Transport
 
+Code excerpts in this section are abbreviated to emphasize framing and flow.
+They are not declaration-accurate substitutes for `BaseNetwork.h`; consult the
+current method signatures and message builders when implementing or calling the
+API.
+
 ### Protocol Message Structure
 
 Each protocol has a specific message format for network transmission.
@@ -1171,21 +1193,23 @@ The DMR network packet uses the TAG_DMR_DATA identifier (`0x444D5244` or ASCII "
 | 53 | 1 | BER | Bit Error Rate (0-255) |
 | 54 | 1 | RSSI | Received Signal Strength Indicator (0-255) |
 
-**Total DMR Payload Size:** 55 bytes (`DMR_PACKET_LENGTH = 55U`)
+**Logical DMR Message Size:** 55 bytes (`DMR_PACKET_LENGTH = 55U`). The current
+writer includes the eight `PACKET_PAD` bytes in the FNE message length, so 63
+application-message bytes are transmitted.
 
 **Constants:**
 - `DMR_PACKET_LENGTH = 55U` (defined in `BaseNetwork.h`)
 - `DMR_FRAME_LENGTH_BYTES = 33U` (defined in `DMRDefines.h`)
 - `PACKET_PAD = 8U` (padding for buffer allocation)
-- Total allocated size: 55 + 8 = 63 bytes
+- Total transmitted application-message size: 55 + 8 = 63 bytes
 
 **Raw DMR Packet Example (hexadecimal):**
 ```
-[RTP Header: 12 bytes] [FNE Header: 20 bytes] [DMR Payload: 55 bytes]
+[RTP Header: 12 bytes] [FNE Header: 20 bytes] [DMR Application Message: 63 bytes]
 
-Complete Packet (87 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 00 12 34 56 78 00 00 4E 20 00 23 00 00 00 00 00 00 | 44 4D 52 44 05 00 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR data...] 00 7F
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├────────────────────────────────── DMR (55) ─────────────────────────────────────────────────┤
+Complete Packet (95 bytes):
+90 56 SS SS TT TT TT TT XX XX XX XX | 00 FE 00 04 CC CC 00 00 II II II II PP PP PP PP 00 00 00 3F | 44 4D 52 44 [DMR fields, frame, BER/RSSI, and padding]
+├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────────── DMR + padding (63) ────────────────────────────┤
 
 DMR Payload breakdown:
 44 4D 52 44 05 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR frame...] 00 7F
@@ -1302,7 +1326,8 @@ The P25 LDU1 message uses DFSI encoding to pack 9 IMBE voice frames with link co
 | 162-177 | 16 | DFSI Voice 9 + LSD | LDU1_VOICE9 with Low Speed Data (`DFSI_LDU1_VOICE9_FRAME_LENGTH_BYTES = 16U`) |
 | 178-192 | 15 | Additional Data | Frame type and encryption sync |
 
-**Total P25 LDU1 Size:** 193 bytes (`P25_LDU1_PACKET_LENGTH`)
+**Logical P25 LDU1 Size:** 193 bytes (`P25_LDU1_PACKET_LENGTH`); the FNE
+message length is 201 bytes after `PACKET_PAD`.
 
 **DFSI Encoding Details:**
 
@@ -1323,7 +1348,7 @@ The DFSI frames embed the Link Control (LC) and Low Speed Data (LSD) information
 **Raw P25 LDU1 Packet Example (partial):**
 
 ```
-[RTP: 12 bytes] [FNE: 20 bytes] [P25 LDU1 Payload: 193 bytes]
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 LDU1 Application Message: 201 bytes]
 
 [P25 Message Header 24 bytes]
 
@@ -1347,11 +1372,11 @@ Additional Data (offsets 178-192):
 - `P25_LDU_FRAME_LENGTH_BYTES = 216U` (raw P25 LDU over-the-air frame, not used in network)
 - `PACKET_PAD = 8U`
 - `MSG_HDR_SIZE = 24U`
-- Total allocated size: 193 + 8 = 201 bytes
+- Total transmitted application-message size: 193 + 8 = 201 bytes
 
 **P25 LDU2 Packet Structure:**
 
-LDU2 has a similar structure to LDU1 but uses different DFSI frame types and contains Encryption Sync (ESS) data instead of Link Control in frames 3-8. Total size is 181 bytes (`P25_LDU2_PACKET_LENGTH = 181U`).
+LDU2 has a similar structure to LDU1 but uses different DFSI frame types and contains Encryption Sync (ESS) data instead of Link Control in frames 3-8. Its logical size is 181 bytes (`P25_LDU2_PACKET_LENGTH = 181U`) and transmitted FNE message length is 189 bytes.
 
 **DFSI Frame Types for LDU2:**
 - **LDU2_VOICE10** (0x6B): First voice frame (22 bytes)
@@ -1366,7 +1391,7 @@ LDU2 has a similar structure to LDU1 but uses different DFSI frame types and con
 
 **Constants:**
 - `P25_LDU2_PACKET_LENGTH = 181U`
-- Total allocated size: 181 + 8 = 189 bytes
+- Total transmitted application-message size: 181 + 8 = 189 bytes
 
 ---
 
@@ -1387,11 +1412,11 @@ The TDU packet consists of:
 **Raw TDU Packet Example (hexadecimal):**
 
 ```
-[RTP: 12 bytes] [FNE: 20 bytes] [P25 TSDU: 24 bytes]
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 TDU Application Message: 32 bytes]
 
-Complete Packet (101 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 45 00 00 00 00 00 00 | 50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D
-├─────────── RTP (12) ────────────┤   ├────────────────────── FNE (20) ─────────────────────────┤   ├───────────────────────────────── P25 TSDU (24) ────────────────────────┤
+Complete Packet (64 bytes):
+90 56 SS SS TT TT TT TT XX XX XX XX | 00 FE 00 04 CC CC 00 01 II II II II PP PP PP PP 00 00 00 20 | 50 32 35 44 [24-byte P25 TDU header and 8 padding bytes]
+├─────────── RTP (12) ────────────┤   ├────────────────────── FNE (20) ─────────────────────────┤   ├──────── P25 TDU + padding (32) ────────┤
 ```
 
 **Constants:**
@@ -1400,7 +1425,8 @@ Complete Packet (101 bytes):
 - Total allocated size: 24 + 8 = 32 bytes
 - DUID value: `0x03` (TDU - Terminator Data Unit)
 
-Total packet ends at byte 56 - no additional payload bytes after the P25 header.
+The unencrypted UDP payload ends at byte 63. There is no DUID-specific payload
+after the 24-byte P25 header; the final eight bytes are `PACKET_PAD`.
 
 **Important Note:**
 
@@ -1452,11 +1478,11 @@ The 45-byte TSDU frame data at offset 24 is **transmitted in its raw over-the-ai
 **Raw TSDU Packet Example (hexadecimal):**
 
 ```
-[RTP: 12 bytes] [FNE: 20 bytes] [P25 TSDU: 69 bytes]
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 TSDU Application Message: 77 bytes]
 
-Complete Packet (101 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 45 00 00 00 00 00 00 | 50 32 35 44 07 00 00 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 2D [45 bytes raw TSDU frame...]
-├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├───────────────────────────────── P25 TSDU (69) ─────────────────────────────────────────────────────┤
+Complete Packet (109 bytes):
+90 56 SS SS TT TT TT TT XX XX XX XX | 00 FE 00 04 CC CC 00 01 II II II II PP PP PP PP 00 00 00 4D | 50 32 35 44 [P25 TSDU header, 45-byte TSDU, and padding]
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├──────────────────────────── P25 TSDU + padding (77) ────────────────────────────┤
 
 TSDU Frame Data (45 bytes starting at offset 24):
 55 75 F7 FF 5D 7F [NID: 2 bytes] [TSBK: 25 bytes FEC encoded] [Status: 12 bytes]
@@ -1517,11 +1543,11 @@ The 54-byte TDULC frame data at offset 24 is **transmitted in its raw over-the-a
 **Raw TDULC Packet Example (hexadecimal):**
 
 ```
-[RTP: 12 bytes] [FNE: 20 bytes] [P25 TDULC: 78 bytes]
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 TDULC Application Message: 86 bytes]
 
-Complete Packet (110 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 01 12 34 56 78 00 00 4E 20 00 4E 00 00 00 00 00 00 | 50 32 35 44 0F 00 03 90 00 00 AA BB 00 CC DD EE 00 00 00 7F 00 00 00 00 36 [54 bytes raw TDULC frame...]
-├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├──────────────────────────────── P25 TDULC (78) ──────────────────────────────────────────────────────┤
+Complete Packet (118 bytes):
+90 56 SS SS TT TT TT TT XX XX XX XX | 00 FE 00 04 CC CC 00 01 II II II II PP PP PP PP 00 00 00 56 | 50 32 35 44 [P25 TDULC header, 54-byte TDULC, and padding]
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├─────────────────────────── P25 TDULC + padding (86) ───────────────────────────┤
 
 TDULC Frame Data (54 bytes starting at offset 24):
 55 75 F7 FF 5D 7F [NID: 2 bytes] [LC: 36 bytes FEC encoded] [Status: 10 bytes]
@@ -1565,8 +1591,10 @@ The encapsulated Phase 2 format is fixed-length:
 |--------|--------|-------|-------------|
 | 0-23 | 24 | Message Header | Standard P25 network header created by `createP25_MessageHdr()` |
 | 24-63 | 40 | P25 Phase 2 Frame Data | Raw Phase 2 payload (`P25_P2_FRAME_LENGTH_BYTES = 40U`) |
+| 64-65 | 2 | Trailer | Reserved logical packet trailer |
 
-**Total P25 Phase 2 Size:** 66 bytes (`P25_P2_PACKET_LENGTH = 66U`)
+**Logical P25 Phase 2 Size:** 66 bytes (`P25_P2_PACKET_LENGTH = 66U`); the
+transmitted FNE message length is 74 bytes after padding.
 
 **Constants:**
 - `PROTOCOL_SUBFUNC_P25_P2 = 0x03U` (defined in `RTPFNEHeader.h`)
@@ -1574,7 +1602,7 @@ The encapsulated Phase 2 format is fixed-length:
 - `P25_P2_FRAME_LENGTH_BYTES = 40U` (defined in `P25Defines.h`)
 - `MSG_HDR_SIZE = 24U`
 - `PACKET_PAD = 8U`
-- Total allocated size: 66 + 8 = 74 bytes
+- Total transmitted application-message size: 66 + 8 = 74 bytes
 
 **Header Semantics:**
 
@@ -1598,7 +1626,7 @@ The encapsulated Phase 2 format is fixed-length:
 **Raw P25 Phase 2 Packet Example (layout):**
 
 ```
-[RTP: 12 bytes] [FNE: 20 bytes] [P25 Phase 2: 66 bytes]
+[RTP: 12 bytes] [FNE: 20 bytes] [P25 Phase 2 Application Message: 74 bytes]
 
 P25 Phase 2 payload breakdown:
 "P25D" | common P25 header fields | controlByte @ 14 | slot/DUID @ 19 | count=0x40 @ 23 | 40 bytes raw P25 Phase 2 payload
@@ -1610,7 +1638,9 @@ P25 Phase 2 is a separate transport lane in DVM documentation because it has its
 
 #### NXDN Message Format
 
-NXDN frames use a fixed-length network format created by `createNXDN_Message()` in `BaseNetwork.cpp`. The frame size is 70 bytes as defined by `NXDN_PACKET_LENGTH = 70U`.
+NXDN frames use a fixed-length network format created by `createNXDN_Message()`
+in `BaseNetwork.cpp`. The logical packet size is 74 bytes as defined by
+`NXDN_PACKET_LENGTH = 74U`.
 
 ```cpp
 bool BaseNetwork::writeNXDN(const nxdn::NXDNData& data) {
@@ -1642,22 +1672,24 @@ The NXDN network packet uses the TAG_NXDN_DATA identifier and includes the 48-by
 | 23 | 1 | Count | Total NXDN data length |
 | 24-71 | 48 | NXDN Frame Data | Raw NXDN frame (`NXDN_FRAME_LENGTH_BYTES = 48U`) |
 
-**Total NXDN Payload Size:** 70 bytes (`NXDN_PACKET_LENGTH`)
+**Logical NXDN Message Size:** 74 bytes (`NXDN_PACKET_LENGTH`). This includes a
+24-byte header, 48-byte CAI frame, and two-byte trailer. The writer transmits an
+additional eight padding bytes, for an FNE message length of 82 bytes.
 
 **Constants:**
-- `NXDN_PACKET_LENGTH = 70U` (defined in `BaseNetwork.h`: 20 byte header + 48 byte frame + 2 byte trailer)
+- `NXDN_PACKET_LENGTH = 74U` (defined in `BaseNetwork.h`: 24 byte header + 48 byte frame + 2 byte trailer)
 - `NXDN_FRAME_LENGTH_BYTES = 48U` (defined in `NXDNDefines.h`)
 - `PACKET_PAD = 8U`
-- Total allocated size: 70 + 8 = 78 bytes
+- Total transmitted application-message size: 74 + 8 = 82 bytes
 
 **Raw NXDN Packet Example (hexadecimal):**
 
 ```
-[RTP Header: 12 bytes] [FNE Header: 20 bytes] [NXDN Payload: 70 bytes]
+[RTP Header: 12 bytes] [FNE Header: 20 bytes] [NXDN Application Message: 82 bytes]
 
-Complete Packet (102 bytes):
-90 FE 00 2A 00 00 1F 40 00 00 4E 20 | A3 5C 00 00 12 34 56 78 00 00 4E 20 00 46 00 00 00 00 00 00 | 4E 58 44 44 02 00 10 00 00 20 00 00 01 00 00 00 00 00 00 00 00 00 00 30 [48 bytes NXDN frame...]
-├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├─────────────────────────────────── NXDN (70) ────────────────────────────────────────────────┤
+Complete Packet (114 bytes):
+90 56 SS SS TT TT TT TT XX XX XX XX | 00 FE 00 04 CC CC 00 02 II II II II PP PP PP PP 00 00 00 52 | 4E 58 44 44 [NXDN header, CAI frame, BER/RSSI, and padding]
+├─────────── RTP (12) ────────────┤   ├──────────────────────── FNE (20) ───────────────────────┤   ├──────────────────────────── NXDN + trailer + padding (82) ────────────────────────────┤
 
 NXDN Payload breakdown:
 4E 58 44 44 02 00 10 00 00 20 00 00 00 00 00 01 00 00 00 00 00 00 00 30 [48 bytes NXDN frame data...]
@@ -1712,13 +1744,14 @@ The analog audio packet uses the `TAG_ANALOG_DATA` identifier (`"ANOD"`) and con
 | 20-339 | 320 | Audio Data | Analog network audio payload (`AUDIO_SAMPLES_LENGTH_BYTES`) |
 | 340-343 | 4 | Trailer | Reserved trailer bytes |
 
-**Total Analog Payload Size:** 344 bytes (`ANALOG_PACKET_LENGTH`)
+**Logical Analog Message Size:** 344 bytes (`ANALOG_PACKET_LENGTH`); the FNE
+message length is 352 bytes after `PACKET_PAD`.
 
 **Constants:**
 - `ANALOG_PACKET_LENGTH = 344U` (defined in `BaseNetwork.h`: 20 byte header + `AUDIO_SAMPLES_LENGTH_BYTES` + 4 byte trailer)
 - `AUDIO_SAMPLES_LENGTH_BYTES = 320U`
 - `PACKET_PAD = 8U`
-- Total allocated size: 344 + 8 = 352 bytes
+- Total transmitted application-message size: 344 + 8 = 352 bytes
 
 **Audio Encoding Details:**
 - **Payload Length:** 320 bytes
@@ -1728,10 +1761,10 @@ The analog audio packet uses the `TAG_ANALOG_DATA` identifier (`"ANOD"`) and con
 **Raw Analog Packet Example (layout):**
 
 ```
-[RTP Header: 12 bytes] [FNE Header: 20 bytes] [Analog Payload: 344 bytes]
+[RTP Header: 12 bytes] [FNE Header: 20 bytes] [Analog Application Message: 352 bytes]
 
-Complete Packet (376 bytes):
-[RTP 12] [FNE 20] ["ANOD" + header bytes + 320 bytes audio + 4 byte trailer]
+Complete Packet (384 bytes):
+[RTP 12] [FNE 20] ["ANOD" + header bytes + 320 bytes audio + 4 byte trailer + 8 padding bytes]
 
 Analog Payload breakdown:
 "ANOD" | Seq | SrcID | DstID | Reserved | Control | FrameType/Group | Reserved | 320 bytes audio | 4 byte trailer
@@ -1772,43 +1805,419 @@ RingBuffer m_rxAnalogData(NET_RING_BUF_SIZE, "Analog Net Buffer"); // 4098 bytes
 - P25 LDU1 (`193 + 8 = 201` bytes): ~20 frames
 - P25 LDU2 (`181 + 8 = 189` bytes): ~21 frames
 - P25 Phase 2 (`66 + 8 = 74` bytes): ~55 frames
-- NXDN (`70 + 8 = 78` bytes): ~52 frames
+- NXDN (`74 + 8 = 82` bytes): ~49 frames
 - Analog (`344 + 8 = 352` bytes): ~11 frames
 
 ### Packet Fragmentation
 
-Large messages (peer lists, talkgroup rules, etc.) are fragmented:
+`PacketBuffer` transports logical objects that are too large for one ordinary
+DVM application message. Current users include replicated lookup files, active
+peer and patch-status JSON, radio aliases, FNE topology, talkgroup RID admission
+data, and encrypted key-container inventory/update data.
 
-```cpp
-class PacketBuffer {
-public:
-    // Fragment header structure
-    struct Fragment {
-        uint8_t blockId;           // Block number
-        uint32_t size;             // Total size
-        uint32_t compressedSize;   // Compressed size
-        uint8_t* data;             // Block data
-    };
-    
-    bool decode(const uint8_t* data, uint8_t** message, uint32_t* outLength);
-    void encode(uint8_t* data, uint32_t length);
-};
+Packet buffering is an application layer above RTP/FNE. Each fragment is a
+complete 544-byte DVM application message and receives its own RTP header, FNE
+header, CRC-16, function/subfunction, peer ID, and common transfer stream ID:
+
+```text
+Logical object
+    |
+    +-- optional zlib compression
+    |
+    +-- PacketBuffer fragment 0 (544 bytes) -- RTP/FNE datagram 0
+    +-- PacketBuffer fragment 1 (544 bytes) -- RTP/FNE datagram 1
+    +-- ...
+    +-- PacketBuffer fragment N (544 bytes) -- RTP/FNE datagram N
+
+Unencrypted fragment datagram:
++----------------+----------------------+---------------------------+
+| RTP header     | RTP extension/FNE    | PacketBuffer fragment     |
+| 12 bytes       | 20 bytes             | 544 bytes                 |
++----------------+----------------------+---------------------------+
+                         total UDP payload: 576 bytes
 ```
 
-**Fragment Format:**
+The function/subfunction identifies what the reassembled object means. The
+PacketBuffer header only describes fragmentation and compression; it does not
+contain an application type or transfer ID.
 
+#### PacketBuffer constants and limits
+
+| Constant | Value | Meaning |
+|---|---:|---|
+| `FRAG_SIZE` | 544 bytes | Fixed transmitted fragment size |
+| `FRAG_HDR_SIZE` | 10 bytes | Legacy fragment header |
+| `FRAG_BLOCK_SIZE` | 534 bytes | Legacy payload capacity per fragment |
+| `EXTENDED_FRAG_HDR_SIZE` | 12 bytes | Extended fragment header |
+| `EXTENDED_FRAG_BLOCK_SIZE` | 532 bytes | Extended payload capacity per fragment |
+| `MAX_FRAGMENT_SIZE` | 8 MiB | Maximum compressed and uncompressed logical size |
+| `MAX_BLOCK_CNT` | 256 | Maximum legacy block count |
+| `MAX_EX_BLOCK_CNT` | 65,535 | Maximum extended block count |
+
+The encoder selects the legacy format when compressed length is at most
+`256 * 534 = 136,704` bytes. A larger compressed object uses the extended
+format. Selection is implicit: the decoder makes the same decision from the
+encoded compressed-length field. There is no separate version bit.
+
+#### Legacy fragment format
+
+The legacy format uses 8-bit block fields. Only block zero carries nonzero size
+metadata; bytes 0-7 are zero in subsequent blocks.
+
+```text
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                 Uncompressed Length (block 0)                 |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                  Compressed Length (block 0)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Block Number  |  Last Block   |                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+|                                                               |
+|                    Fragment Payload (534 bytes)                |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                         544 bytes total
 ```
-| 0-3: Total Size | 4-7: Compressed Size | 8: Block# | 9: Block Count | 10+: Data |
+
+`Last Block` is the zero-based final block number, not the number of blocks.
+Therefore `blockCount = lastBlock + 1`. For example, a three-fragment transfer
+uses block numbers 0, 1, and 2 and encodes `Last Block = 2`.
+
+#### Extended fragment format
+
+The extended format repeats both size fields in every fragment. This allows any
+extended block to establish and validate the transfer metadata before block zero
+arrives. Its block fields are 16-bit big-endian values.
+
+```text
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     Uncompressed Length                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                       Compressed Length                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|         Block Number          |          Last Block           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
+|                    Fragment Payload (532 bytes)                |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                         544 bytes total
 ```
 
-**Process:**
+The final fragment is zero-padded to 544 bytes on the wire. `Fragment::blockSize`
+records the meaningful bytes generated for that block, but senders transmit
+`FRAG_SIZE`; reassembly copies only the bytes remaining in `compressedLength`.
 
-1. Large message split into FRAG_BLOCK_SIZE chunks (typically 1024 bytes)
-2. Optional zlib compression applied
-3. Each fragment transmitted with block number and count
-4. Receiver reassembles fragments
-5. Decompression applied if enabled
-6. Complete message delivered to application
+#### Encode operation
+
+`PacketBuffer::encode(data, length)` performs the following operation:
+
+```text
+Input object and uncompressed length
+              |
+              v
+       clear old fragment state
+              |
+              v
+   compression enabled for this PacketBuffer?
+       | yes                         | no
+       v                             v
+ zlib-compress                  copy input bytes
+       +-------------+---------------+
+                     v
+ validate nonzero compressed length and both lengths <= 8 MiB
+                     |
+                     v
+ compressed length > 136,704 bytes?
+       | yes                         | no
+       v                             v
+ extended header/532 B          legacy header/534 B
+       +-------------+---------------+
+                     v
+ blockCount = ceil(compressedLength / blockPayloadSize)
+                     |
+                     v
+ allocate and zero one 544-byte Fragment for each block
+                     |
+                     v
+ encode sizes, block number, last-block value, and payload slice
+                     |
+                     v
+ store Fragment objects in `fragments`, indexed by block ID
+```
+
+`encode()` returns `true` after building the in-memory fragment map. It does not
+send packets. The caller iterates `pkt.fragments`, sends each fragment with the
+chosen function/subfunction and one shared stream ID, commonly sleeps 60 ms
+between blocks to pace the transfer, and finally calls `clear()`.
+
+All current FNE PacketBuffer call sites construct buffers with compression
+enabled. The class also supports uncompressed operation; in that mode the
+compressed-length field equals the uncompressed length and decode skips zlib.
+
+#### Decode and reassembly operation
+
+`decode(fragment, &message, &outLength)` returns `true` only when that call
+completes the logical object. `false` means either that more blocks are required
+or that the fragment was rejected; callers use logging and buffer state to
+distinguish those cases.
+
+```text
+Receive one 544-byte fragment
+              |
+              v
+read uncompressed/compressed lengths
+              |
+              v
+select legacy or extended format from compressed length
+              |
+              v
+decode block number and last block; calculate blockCount
+              |
+              v
+validate block range, count, sizes, and format consistency
+              |
+              +-- invalid/duplicate --> log; reject (some errors clear assembly)
+              |
+              v
+copy fixed payload region into a newly owned Fragment
+              |
+              v
+insert by block number (arrival order need not be sequential)
+              |
+              v
+fragments.size() == blockCount?
+       | no                          | yes
+       v                             v
+ return false                 require block zero and size metadata
+                                     |
+                                     v
+                           revalidate expected block count
+                                     |
+                                     v
+                           copy blocks 0..N into compressed buffer
+                                     |
+                                     v
+                           compression enabled?
+                             | yes             | no
+                             v                 v
+                         decompress       require equal lengths
+                             +--------+--------+
+                                      v
+                           verify final uncompressed length
+                                      |
+                                      v
+                         allocate output with `new[]`, clear assembly,
+                         set outLength, and return true
+```
+
+Validation includes:
+
+- current block must be less than the declared block count;
+- legacy count cannot exceed 256 and extended count cannot exceed 65,535;
+- compressed and uncompressed sizes must be nonzero and no greater than 8 MiB;
+- calculated block count must match `ceil(compressedLength / blockSize)`;
+- legacy nonzero blocks must not claim size metadata;
+- fragments in one assembly must agree on format and block count;
+- extended fragments must also agree on both size fields;
+- duplicate block numbers are ignored; and
+- every block from zero through the declared final block must exist before copy.
+
+The returned `message` is allocated with `new[]`; the successful caller owns it
+and must release it with `delete[]`. `clear()` deletes every retained fragment
+payload and fragment object and empties the map. Destruction calls `clear()`.
+
+#### Transfer identity and concurrent receive state
+
+PacketBuffer itself has no stream field. FNE metadata handlers associate an
+assembly with both the authenticated peer and the RTP/FNE stream ID:
+
+```text
+PacketBufferMap
+  key: peerId
+  value: PacketBufferEntry
+           +-- mutex
+           +-- streamId
+           +-- unique_ptr<PacketBuffer>
+```
+
+`MetadataNetwork` maintains separate maps for key updates, active-peer
+replication, patch-status replication, and topology lists. A handler obtains the
+entry for the peer, locks its mutex, and compares the incoming stream ID. A
+stream mismatch clears or rejects the old assembly according to that operation.
+The entry is erased only if the map still refers to the same shared entry, so a
+stalled worker cannot erase a replacement transfer.
+
+Peer-side `Network` and FNE `PeerNetwork` receivers instead keep a distinct
+long-lived PacketBuffer member for each replicated dataset. The surrounding
+packet handler resets that member on stream changes and clears it after success
+or fatal validation/application errors.
+
+#### Functions and subfunctions using PacketBuffer
+
+The following table lists current PacketBuffer wire users. `NOP` means the
+primary function alone identifies the operation.
+
+| Function | Subfunction | Direction | Reassembled content and consumer |
+|---|---|---|---|
+| `MASTER` | `MASTER_SUBFUNC_TG_ADMIT` (`0x04`) | FNE -> peer | Binary talkgroup-to-admitted-RID dataset; decoded by the common peer `Master` handler |
+| `RADIO_ALIAS_SYNC` | `NOP` | FNE -> requesting peer | Radio alias lookup data; decoded by the common peer radio-alias handler |
+| `KEYS_INVENTORY` | `NOP` | FNE -> remote inventory requester | Serialized encrypted-key-container inventory response |
+| `KEYS_UPDATE` | `NOP` | Remote requester -> FNE metadata listener | Authenticated encrypted key-container update data phase |
+| `REPL` | `REPL_TALKGROUP_LIST` (`0x00`) | FNE -> neighbor `PeerNetwork` | Talkgroup-rules file; installed/reloaded by the receiving FNE peer link |
+| `REPL` | `REPL_RID_LIST` (`0x01`) | FNE -> neighbor `PeerNetwork` | RID ACL/lookup file |
+| `REPL` | `REPL_PEER_LIST` (`0x02`) | FNE -> neighbor `PeerNetwork` | Peer-list file |
+| `REPL` | `REPL_RID_ALIAS_LIST` (`0x03`) | FNE -> neighbor `PeerNetwork` | Radio-alias file |
+| `REPL` | `REPL_ACT_PEER_LIST` (`0xA2`) | Child/neighbor `PeerNetwork` -> FNE metadata listener | `REPL`-tagged JSON array of active peers |
+| `REPL` | `REPL_PATCH_STATUS` (`0xA4`) | FNE <-> neighbor FNE | `REPL`-tagged JSON patch-status object |
+| `NET_TREE` | `NET_TREE_LIST` (`0x00`) | Child/neighbor `PeerNetwork` -> FNE metadata listener | `REPL`-tagged serialized spanning-tree JSON array |
+
+The ordinary RID, talkgroup, peer, and alias replication subfunctions are
+decoded in `PeerNetwork` with dataset-specific PacketBuffer members. Active-peer,
+patch-status, and tree-list uploads are decoded in `MetadataNetwork` with
+per-peer `PacketBufferEntry` maps because worker tasks can process fragments from
+multiple neighbor FNEs concurrently.
+
+#### MASTER / TG admission transfer
+
+```text
+TrafficNetwork::writePeerTGIDAdmission
+  build binary payload:
+    repeated talkgroup records and admitted RID values
+  -> PacketBuffer(compression=true)
+  -> MASTER / MASTER_SUBFUNC_TG_ADMIT fragments
+  -> peer Network::PacketHandler::master
+  -> m_tgAdmissionPkt.decode()
+  -> replace in-memory talkgroup RID admission map
+```
+
+All fragments share the generated stream ID. The peer tracks the admission
+stream and clears partial state when a different stream supersedes it.
+
+#### REPL lookup-list transfers
+
+```text
+FNE TrafficNetwork                        Neighbor FNE PeerNetwork
+      |                                             |
+      | serialize lookup file/data                  |
+      | compress + fragment                         |
+      |                                             |
+      | REPL/TALKGROUP_LIST fragments ------------> | m_tgidPkt
+      | REPL/RID_LIST fragments ------------------> | m_ridPkt
+      | REPL/PEER_LIST fragments -----------------> | m_pidPkt
+      | REPL/RID_ALIAS_LIST fragments ------------> | m_ridAliasPkt
+      |                                             |
+      |                                  decode complete object
+      |                                  write temporary/target file
+      |                                  reload corresponding lookup
+```
+
+The receiving `PeerNetwork` can use a randomized temporary filename when it is
+not configured to persist the replicated ACL. After a successful reload it marks
+the neighbor link replica-capable and invokes the replica callback when present.
+
+#### Active-peer replication
+
+```text
+Child FNE PeerNetwork::writePeerLinkPeers
+  JSON array -> prepend `REPL` application tag/header
+  -> PacketBuffer -> REPL/REPL_ACT_PEER_LIST
+  -> upstream MetadataNetwork
+  -> validate connected neighbor + replica permission + source address
+  -> per-peer/stream reassembly
+  -> parse JSON array
+  -> update replicated active-peer state
+```
+
+#### Patch-status replication
+
+Patch status is bidirectional between eligible FNE neighbors. The sender
+serializes a JSON object, prepends the `REPL` tag/header, fragments it, and sends
+`REPL_PATCH_STATUS`. The receiver requires at least the eight-byte replication
+prefix after reassembly, parses the remaining bytes as a JSON object, and passes
+it to the local patch-status processor or callback.
+
+#### Network-tree transfer
+
+```text
+PeerNetwork::writeSpanningTree
+  SpanningTree::serializeTree(root) -> JSON array
+  -> prepend `REPL` tag/header
+  -> PacketBuffer
+  -> NET_TREE / NET_TREE_LIST fragments on metadata path
+  -> MetadataNetwork validates neighbor identity/address/class
+  -> per-peer and stream-locked reassembly
+  -> parse JSON array
+  -> SpanningTree::deserializeTree under tree lock
+  -> send NET_TREE_DISC for discovered duplicate peer paths
+```
+
+`NET_TREE_DISC` itself is a small control message and does not use PacketBuffer.
+
+#### Radio-alias synchronization
+
+The FNE answers a radio-alias synchronization request by encoding the alias data
+with PacketBuffer and returning `RADIO_ALIAS_SYNC/NOP` fragments on one stream.
+The peer's `m_radioAliasSyncPkt` reassembles the object, checks that lookup update
+is enabled and an alias lookup exists, then installs/reloads the data. The
+request/control frame itself is not a PacketBuffer object.
+
+#### Key inventory and key update
+
+Key inventory is a request/fragmented-response operation. The FNE serializes the
+inventory, compresses and fragments it, and directly responds to the requester's
+address with `KEYS_INVENTORY/NOP`; this special path can serve an authorized
+remote requester that is not logged in as a standard peer.
+
+Key update is a two-phase inbound operation:
+
+```text
+Remote requester                              FNE MetadataNetwork
+       |                                                |
+       | KEYS_UPDATE 80-byte authentication frame       |
+       |-----------------------------------------------> |
+       |                    verify remote salt/hash      |
+       |                    reserve peer/stream entry    |
+       |                                                |
+       | KEYS_UPDATE PacketBuffer fragment 0            |
+       |-----------------------------------------------> |
+       | KEYS_UPDATE PacketBuffer fragment 1..N         |
+       |-----------------------------------------------> |
+       |                    reassemble/decompress        |
+       |                    write temporary container    |
+       |                    atomically rename/install    |
+       |                    reload crypto lookup         |
+```
+
+The 80-byte authentication frame is not a PacketBuffer fragment. Data-phase
+frames must be at least `FRAG_SIZE`, must use the authenticated stream ID, and
+are rejected if no reserved update entry exists. A concurrent update for the
+same peer receives `KEYS_UPDATE/KEYS_UPDATE_STATUS` with busy status. The
+current implementation does not send a success-status frame after installation.
+Installation uses a peer/stream-specific temporary file and atomic rename before
+the crypto lookup is reloaded.
+
+#### Verification coverage
+
+`tests/network/PacketBuffer_Tests.cpp` exercises the wire and state-machine
+properties described above. Its focused `[network][packetbuffer]` cases cover:
+
+- uncompressed, compressed, and out-of-order reassembly;
+- duplicate-fragment handling and rejection of fragments beyond the declared
+  block count;
+- rejection of oversized metadata and invalid zlib data;
+- legacy encoding through the 256-block limit and transition to extended
+  encoding above that threshold; and
+- extended-format reassembly when block zero arrives last.
+
+These tests validate PacketBuffer itself. Application handlers separately remain
+responsible for authenticating the peer, binding fragments to the expected
+stream, validating the reassembled file or JSON schema, applying it atomically
+where required, and clearing operation-specific state on failure.
 
 ---
 
@@ -1914,7 +2323,8 @@ if (isTargetInCall(dstId)) {
 
 **Collision Timeout:**
 
-Configurable timeout (default 5 seconds) prevents stale call states.
+Configured call-state and hang timers prevent stale call records; the effective
+timeout is owned by the current FNE configuration and call handler.
 
 ---
 
@@ -1950,7 +2360,7 @@ sha256.buffer(in, (uint32_t)(size + sizeof(uint32_t)), out + 8U);
 
 - Reduces replay risk by using per-login random salt
 - Password never transmitted in cleartext
-- Resistant to offline dictionary attacks
+- A captured salt and digest can be used to test password guesses offline; use a strong, unique password
 
 ### Encryption
 
@@ -2006,15 +2416,13 @@ NET_FUNC::MASTER + NET_SUBFUNC::MASTER_SUBFUNC_DEACTIVE_TGS
 
 - Peer ID validation
 - IP address restrictions
-- Certificate-based authentication (with SSL/TLS)
+- Shared-password challenge-response authentication for the UDP peer protocol; REST HTTPS certificates are a separate facility
 
 **Configuration and Policy Controls:**
 
 - RID and talkgroup lookup policy controls whether unknown or unauthorized sources are admitted.
 - Talkgroup rules control affiliation requirements and peer inclusion/exclusion.
-- `privateCallRouting.enable` controls whether private/unit-to-unit setup, grants, media, and signaling may be routed.
-- `privateCallRouting.unknownDestination` selects `reject` or `flood` behavior when no unit route is known.
-- `privateCallRouting.learnFromTraffic`, `routeLifetime`, and `queryTimeout` control dynamic unit-location learning and expiry.
+- Unit-to-unit routing is controlled by the current FNE call handlers, talkgroup/RID policy, unit-route registry, and per-peer permissions.
 - Per-peer `allowUnitToUnit` policy can further restrict private-call ingress and egress.
 
 ---
@@ -2034,11 +2442,9 @@ rtpHeader.setSequence(m_pktSeq);
 
 **Monitoring:**
 
-Receiver tracks:
-- Expected sequence vs. received sequence
-- Gap count (missed packets)
-- Duplicate count
-- Out-of-order count
+Receiver stream state verifies the active stream ID and RTP sequence behavior.
+When enabled, `AdaptiveJitterBuffer` separately records total, reordered,
+dropped, and timed-out frames.
 
 ### Acknowledgments
 
@@ -2068,7 +2474,9 @@ if (response == NET_FUNC::ACK) {
 
 ### Connection Retry Logic
 
-Failed connections are retried with exponential backoff:
+Failed connections are retried on the configured retry timer. The standard
+retry timeout is fixed; duplicate-connection handling temporarily selects the
+longer duplicate retry timeout rather than applying exponential backoff:
 
 ```cpp
 Timer m_retryTimer(1000U, DEFAULT_RETRY_TIME); // 10 seconds
@@ -2100,12 +2508,16 @@ if (m_retryTimer.isRunning() && m_retryTimer.hasExpired()) {
 
 ### Jitter Buffering
 
-Ring buffers provide jitter buffering:
+The 4098-byte protocol ring buffers are receive queues. RTP reordering is
+implemented separately by `AdaptiveJitterBuffer` on enabled FNE peer paths:
 
-- 4KB buffers smooth out network variations
-- Application reads at constant rate
-- Network fills buffer at variable rate
-- Buffer absorbs timing jitter
+- in-order frames use a fast delivery path;
+- out-of-order frames can be retained and released in sequence;
+- missing-frame gaps are released after a configured wait; and
+- total, reordered, dropped, and timed-out frame counters are maintained.
+
+The supported depth range is 2-8 frames and wait range is 10,000-200,000
+microseconds. Defaults are four frames and 40,000 microseconds.
 
 **Buffer Management:**
 
@@ -2125,18 +2537,17 @@ if (m_rxDMRData.dataSize() >= DMR_FRAME_LENGTH_BYTES) {
 
 **Low-Latency Techniques:**
 
-1. **Zero-Copy Operations**: Use pointers instead of buffer copies
+1. **Bounded Copies**: Keep framing and routing copies limited to validated message lengths
 2. **Thread Pool**: Asynchronous packet processing
-3. **UDP Socket Tuning**: Large buffers (512KB)
-4. **Priority Scheduling**: Real-time thread priorities
+3. **UDP Socket Tuning**: Platform socket buffers should be tuned from observed drops and queue behavior
+4. **Stream Separation**: Keep concurrent stream state isolated per peer
 5. **Direct Routing**: Minimize master-side processing
 
-**Typical Latencies:**
+**Latency:**
 
-- Peer-to-master: 10-50ms (network dependent)
-- Master processing: 1-5ms
-- Master-to-peer: 10-50ms (network dependent)
-- **End-to-End: 20-100ms typical**
+No universal end-to-end latency is asserted. Network path, worker load,
+encryption, protocol cadence, jitter-buffer wait, and downstream RF/audio
+processing all contribute and should be measured in the target deployment.
 
 ---
 
@@ -2216,7 +2627,10 @@ bool BaseNetwork::writePeerStatus(json::object obj) {
 }
 ```
 
-**Status Fields:**
+**Illustrative Status Fields:**
+
+The exact JSON object is produced by the calling application. The following is
+an example shape, not a mandatory FNE wire schema:
 
 ```json
 {
@@ -2260,31 +2674,19 @@ public:
 
 ### Network Statistics
 
-Key metrics tracked:
-
-**Per-Peer Statistics:**
-
-- Packets received/transmitted
-- Bytes received/transmitted
-- Packet loss rate
-- Average latency
-- Jitter measurements
-- Last activity timestamp
-
-**Global Statistics:**
-
-- Total peers connected
-- Total calls in progress
-- Aggregate bandwidth
-- Queue depths
-- Error counts
+The FNE records subsystem-specific call, grant, activity, and packet-data events
+through its metrics logging implementation. Adaptive jitter buffers expose
+total, reordered, dropped, and timed-out frame counts. UDP sockets maintain
+their implemented counters, and runtime maps expose connected-peer/call state to
+the owning services. This does not imply that packet-loss percentage, average
+latency, aggregate bandwidth, and every queue depth are universally calculated.
 
 **Monitoring Tools:**
 
 - Real-time web dashboard
 - REST API for metrics
-- Prometheus/InfluxDB integration
-- SNMP support (optional)
+- Optional InfluxDB integration in `src/fne/network/influxdb`
+- Additional external monitoring may consume logs or REST data, but Prometheus and SNMP exporters are not implemented by this stack
 
 ---
 
@@ -2294,19 +2696,19 @@ Key metrics tracked:
 
 **FNE Master Scalability:**
 
-- **Peers**: Tested with 250+ concurrent peers
-- **Calls**: 50+ simultaneous calls
-- **Throughput**: 100+ Mbps aggregate
-- **CPU**: ~10-20% per 100 peers (modern CPU)
-- **Memory**: ~50-100MB base + 1-2MB per peer
+The configured connection limit has a hard maximum of 250 peers. This is a
+configuration bound, not a published benchmark result. Supported call count,
+throughput, CPU load, and memory depend on hardware, enabled protocols, traffic
+mix, logging, encryption, and topology. Numerical capacity claims require a
+reproducible benchmark and build revision.
 
 **Scaling Techniques:**
 
 1. **Thread Pool**: Asynchronous packet processing
-2. **Lock-Free Queues**: Minimize contention
-3. **Buffer Pooling**: Reduce allocation overhead
-4. **Zero-Copy**: Direct buffer passing
-5. **Efficient Lookups**: Hash maps for O(1) peer lookup
+2. **Concurrent Collections**: Used for selected shared maps and runtime state
+3. **Per-Peer State**: Separates sessions and stream multiplexing
+4. **Metadata Listener**: Moves eligible auxiliary transfers off the traffic port
+5. **Efficient Lookups**: Hash maps are used for peer and stream lookup
 
 ### Network Bandwidth
 
@@ -2317,7 +2719,7 @@ Key metrics tracked:
 | DMR | AMBE+2 | ~7 kbps |
 | P25 | IMBE | ~9 kbps |
 | NXDN | AMBE+2 | ~7 kbps |
-| Analog | G.711 | ~64 kbps |
+| Analog | Application-selected 8-bit audio | payload rate depends on packet cadence; 320 audio bytes per network message |
 
 **Overhead:**
 
@@ -2346,43 +2748,38 @@ Key metrics tracked:
 
 **Profiling Results:**
 
-- RTP encode: ~0.5 µs per packet
-- RTP decode: ~0.7 µs per packet
-- Frame queue operation: ~1-2 µs
-- Protocol message creation: ~2-5 µs
-- **Total processing: ~5-10 µs per packet**
+No reproducible profiling results are currently included with this note. RTP
+encoding, CRC calculation, allocation/copying, worker dispatch, policy lookup,
+and protocol routing should be profiled together under a representative workload.
 
 ### Memory Management
 
 **Memory Allocation:**
 
 - **Static Buffers**: Ring buffers allocated at initialization
-- **Object Pooling**: Reuse packet buffers
+- **Packet Buffers**: Fragmentation/reassembly objects retain fragment state for large logical transfers
 - **Smart Pointers**: Automatic cleanup (UInt8Array)
 - **Stack Allocation**: Prefer stack for small, temporary buffers
 
 **Memory Footprint:**
 
-- BaseNetwork: ~20KB
-- Network (Peer): ~50KB
-- TrafficNetwork + MetadataNetwork (FNE runtime): ~100KB base before peer/session maps and call-handler state
-- Per-peer state: ~1-2KB
-- **Total for 100 peers: ~300-400MB**
+No fixed memory-footprint figures are asserted. Object size alone does not
+include ring-buffer storage, maps, queued datagrams, fragment buffers, lookup
+data, call handlers, worker state, encryption buffers, or allocator overhead.
 
 ### Configuration Tuning
 
 **UDP Socket Buffers:**
 
-```cpp
-m_socket->recvBufSize(524288U); // 512KB recv buffer
-m_socket->sendBufSize(524288U); // 512KB send buffer
-```
+Socket buffer behavior is platform-dependent. Tune operating-system buffers
+from observed drops and queue behavior rather than assuming a universal 512KB
+project default.
 
 **Thread Pool Sizing:**
 
 ```cpp
 ThreadPool m_threadPool(workerCnt, "fne");
-// Recommended: 2-4 workers per CPU core
+// Worker count is configured and clamped by the FNE loader.
 ```
 
 **Timer Intervals:**
@@ -2743,40 +3140,34 @@ Peer A                      FNE Master              All Other Peers
 
 ```yaml
 network:
-  enable: true
-  address: master.example.com
-  port: 62031
-  localPort: 0          # 0 = random port
-  password: "SecurePassword123"
-  
-  # High Availability
-  haEnabled: true
-  haAddresses:
-    - master1.example.com
-    - master2.example.com
-    - master3.example.com
-  
-  # Protocol Support
-  dmr: true
-  p25: true
-  nxdn: false
-  analog: false
-  
-  # Timing
-  pingTime: 5           # Ping interval (seconds)
-  updateLookupTime: 15  # Lookup update interval (minutes)
-  
-  # Security
-  presharedKey: "0123456789ABCDEF0123456789ABCDEF"
-  
-  # Metadata
-  identity: "Peer-12345"
-  rxFrequency: 449000000
-  txFrequency: 444000000
-  latitude: 40.7128
-  longitude: -74.0060
-  location: "New York, NY"
+    enable: true
+    id: 100000
+    address: master.example.com
+    port: 62031
+    password: "SecurePassword123"
+
+    encrypted: false
+    presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+    kmfPresharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+    jitter: 360
+    disallowUnitToUnit: false
+    slot1: true
+    slot2: true
+
+    updateLookups: false
+    saveLookups: false
+    allowActivityTransfer: true
+    allowDiagnosticTransfer: true
+    allowStatusTransfer: true
+
+    packetDump: false
+    debug: false
 ```
+
+Protocol enablement and RF/site metadata are configured in their maintained
+sections outside `network`; HA endpoints are learned through the FNE HA exchange,
+not configured through `haEnabled` or `haAddresses` keys in this host section.
 
 ### Master Configuration (YAML)
 
@@ -2797,25 +3188,34 @@ master:
     encrypted: false
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
   
-    # Access control and routing
-    rejectUnknownRID: true
-    restrictGrantToAffiliatedOnly: true
-    privateCallRouting:
-        enable: false
-        unknownDestination: reject
-        learnFromTraffic: true
-        routeLifetime: 300
-        queryTimeout: 1000
+    # Protocol traffic permissions
+    allowDMRTraffic: true
+    allowP25Traffic: true
+    allowP25P2Traffic: false
+    allowNXDNTraffic: true
+    allowAnalogTraffic: false
 
-    # Timers
-    pingTime: 5
-    callCollisionTimeout: 5
+    # High availability advertisements
+    ha:
+        enable: false
+        advertisedWANAddress: 1.2.3.4
+        advertisedWANPort: 62031
+
+    # Adaptive jitter defaults
+    jitterBuffer:
+        enable: false
+        defaultMaxSize: 4
+        defaultMaxWait: 40000
 
     # Logging
     reportPeerPing: false
     logDenials: true
     logUpstreamCallStartEnd: true
 ```
+
+These are illustrative excerpts, not complete configurations. Use
+`configs/config.example.yml`, `configs/fne-config.example.yml`, their schemas,
+and `tools/dvmcfggen` for complete current configuration.
 
 ---
 
@@ -2926,6 +3326,8 @@ tail -f /var/log/dvm/dvmhost.log | grep "NET"
 | 1.1 | May 8, 2026 | Update to match current state of the codebase |
 | 1.2 | Jul 8, 2026 | Corrected connection/auth flow, opcode tables, RPTC schema, ping payload, bitfields, and buffer/stream details to match current implementation |
 | 1.3 | Nov 22, 2026 | Updated UDP encryption to AES-256-CBC and replaced removed private-call policy flags |
+| 1.4 | Nov 22, 2026 | Source audit corrected RTP/FNE framing, packet lengths/examples, opcode tables, security statements, configuration excerpts, and unsupported performance claims while preserving the original document structure. |
+| 1.5 | Nov 22, 2026 | Added detailed PacketBuffer encode/decode, legacy and extended fragment formats, validation, concurrency, ownership, and function/subfunction usage documentation with transfer diagrams. |
 
 ---
 
