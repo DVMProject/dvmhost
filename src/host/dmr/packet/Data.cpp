@@ -252,6 +252,7 @@ bool Data::process(uint8_t* data, uint32_t len)
         m_slot->writeNetwork(data, DataType::DATA_HEADER, controlByte);
 
         m_slot->m_rfState = RS_RF_DATA;
+        m_slot->m_rfLossWatchdog.start();
         m_slot->m_rfLastDstId = dstId;
         m_slot->m_rfLastSrcId = srcId;
 

@@ -18,6 +18,7 @@
 #include "common/dmr/DMRDefines.h"
 #include "common/dmr/Sync.h"
 #include "common/dmr/SlotType.h"
+#include "common/dmr/data/DataHeader.h"
 #include "common/dmr/lc/LC.h"
 #include "common/dmr/lc/FullLC.h"
 #include "common/dmr/data/NetData.h"
@@ -179,6 +180,36 @@ void buildDMRVoiceSyncPayload(uint8_t* payload)
 {
     ::memset(payload, 0x00U, dmr::defines::DMR_FRAME_LENGTH_BYTES);
     dmr::Sync::addDMRAudioSync(payload, false);
+}
+
+/**
+ * @brief Builds a DMR unconfirmed packet-data header payload.
+ * @param[out] payload The buffer to store the DMR data header payload.
+ * @param[in] srcId The source ID for the DMR header.
+ * @param[in] dstId The destination ID for the DMR header.
+ * @param[in] blocksToFollow Number of packet-data blocks expected after the header.
+ */
+void buildDMRDataHeaderPayload(uint8_t* payload, uint32_t srcId, uint32_t dstId, uint32_t blocksToFollow)
+{
+    using namespace dmr;
+    using namespace dmr::defines;
+
+    ::memset(payload, 0x00U, DMR_FRAME_LENGTH_BYTES);
+
+    data::DataHeader header;
+    header.setGI(true);
+    header.setDPF(DPF::UNCONFIRMED_DATA);
+    header.setSAP(0x00U);
+    header.setSrcId(srcId);
+    header.setDstId(dstId);
+    header.setBlocksToFollow(blocksToFollow);
+    header.encode(payload);
+
+    SlotType slotType;
+    slotType.setColorCode(1U);
+    slotType.setDataType(DataType::DATA_HEADER);
+    slotType.encode(payload);
+    Sync::addDMRDataSync(payload, false);
 }
 
 } // namespace
@@ -996,18 +1027,62 @@ TEST_CASE("DMR rfTGHang expiry ends active RF call and returns slot to listening
     REQUIRE_FALSE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
 }
 
-TEST_CASE("DMR rfTGHang zero fallback arms rfLossWatchdog and recovers RF state", "[dmr][host][control][rf]")
+TEST_CASE("DMR active RF traffic refreshes loss watchdog and recovers RF state", "[dmr][host][control][rf]")
 {
     DMRHostHarness harness;
     dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
 
     REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1101U, 2101U));
     REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_AUDIO);
+    REQUIRE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
 
     HostTestHooks::dmrRFTGHang(*slot).setTimeout(0U);
+    HostTestHooks::dmrRFLossWatchdog(*slot).stop();
     REQUIRE_FALSE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
 
     REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, 1101U, 2101U));
+    REQUIRE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
+
+    HostTestHooks::dmrRFLossWatchdog(*slot).clock(expireTimerTicks(HostTestHooks::dmrRFLossWatchdog(*slot)));
+    slot->clock();
+
+    REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_LISTENING);
+    REQUIRE_FALSE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
+}
+
+TEST_CASE("DMR incomplete RF late-entry voice recovers through loss watchdog", "[dmr][host][control][rf]")
+{
+    DMRHostHarness harness;
+    dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+    uint8_t frame[dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
+
+    frame[0U] = modem::TAG_DATA;
+    frame[1U] = dmr::defines::SYNC_VOICE;
+    buildDMRVoiceSyncPayload(frame + 2U);
+
+    REQUIRE_FALSE(slot->processFrame(frame, sizeof(frame)));
+    REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_LATE_ENTRY);
+    REQUIRE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
+
+    HostTestHooks::dmrRFLossWatchdog(*slot).clock(expireTimerTicks(HostTestHooks::dmrRFLossWatchdog(*slot)));
+    slot->clock();
+
+    REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_LISTENING);
+    REQUIRE_FALSE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
+}
+
+TEST_CASE("DMR incomplete RF data sequence recovers through loss watchdog", "[dmr][host][control][rf]")
+{
+    DMRHostHarness harness;
+    dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+    uint8_t frame[dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U] = { 0U };
+
+    frame[0U] = modem::TAG_DATA;
+    frame[1U] = dmr::defines::SYNC_DATA | dmr::defines::DataType::DATA_HEADER;
+    buildDMRDataHeaderPayload(frame + 2U, 1201U, 2201U, 1U);
+
+    REQUIRE(slot->processFrame(frame, sizeof(frame)));
+    REQUIRE(HostTestHooks::dmrRFState(*slot) == RS_RF_DATA);
     REQUIRE(HostTestHooks::dmrRFLossWatchdog(*slot).isRunning());
 
     HostTestHooks::dmrRFLossWatchdog(*slot).clock(expireTimerTicks(HostTestHooks::dmrRFLossWatchdog(*slot)));

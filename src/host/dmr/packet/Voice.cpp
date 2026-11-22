@@ -215,6 +215,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_slot->writeNetwork(data, DataType::VOICE_LC_HEADER, controlByte);
 
             m_slot->m_rfState = RS_RF_AUDIO;
+            m_slot->m_rfLossWatchdog.start();
             m_slot->m_rfLastDstId = dstId;
             m_slot->m_rfLastSrcId = srcId;
 
@@ -366,6 +367,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
         else if (m_slot->m_rfState == RS_RF_LISTENING) {
             m_rfEmbeddedLC.reset();
             m_slot->m_rfState = RS_RF_LATE_ENTRY;
+            m_slot->m_rfLossWatchdog.start();
             return false;
         }
     }
@@ -376,6 +378,7 @@ bool Voice::process(uint8_t* data, uint32_t len)
             m_rfEmbeddedLC.reset();
             m_lastRfN = 0xFFU;
             m_slot->m_rfState = RS_RF_LATE_ENTRY;
+            m_slot->m_rfLossWatchdog.start();
         }
 
         if (m_slot->m_rfState == RS_RF_AUDIO) {

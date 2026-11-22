@@ -228,12 +228,10 @@ bool Slot::processFrame(uint8_t *data, uint32_t len)
         }
     }
 
-    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
-        // if RF TG hang is disabled, keep the loss watchdog alive from inbound
-        // RF frames so abrupt stream loss can still recover state.
-        if (m_rfTGHang.getTimeout() == 0U || m_rfLossWatchdog.isRunning()) {
-            m_rfLossWatchdog.start();
-        }
+    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA || m_rfState == RS_RF_LATE_ENTRY) {
+        // Keep the loss watchdog alive from inbound RF frames so abrupt or
+        // incomplete streams recover even before the TG hang timer is armed.
+        m_rfLossWatchdog.start();
     }
 
     // Have we got RSSI bytes on the end?
@@ -751,7 +749,7 @@ void Slot::clock()
         }
     }
 
-    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
+    if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA || m_rfState == RS_RF_LATE_ENTRY) {
         if (m_rfLossWatchdog.isRunning()) {
             m_rfLossWatchdog.clock(ms);
 
