@@ -117,7 +117,6 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_permittedSrcId(0U),
     m_permittedU2U(false),
     m_permittedTelInt(false),
-    m_permittedData(false),
     m_tailOnIdle(false),
     m_ccRunning(false),
     m_ccPrevRunning(false),
@@ -1329,14 +1328,15 @@ void Control::permittedTG(uint32_t dstId, bool dataPermit, bool telInt, uint32_t
     m_permittedSrcId = (dstId != 0U && unitToUnit) ? srcId : 0U;
     m_permittedU2U = (dstId != 0U) && unitToUnit;
     m_permittedTelInt = (dstId != 0U) && telInt;
-    m_permittedData = (dstId != 0U) && dataPermit && m_sndcpSupport;
 
     // is this a data permit?
-    if (m_permittedData) {
+    if (dataPermit && m_sndcpSupport) {
         m_data->sndcpInitialize(dstId);
+    }
 
-        // an SU directed here listens for outbound frame sync before it transmits
-        // a packet; an idle data channel must therefore key up on its own
+    // an SU directed here listens for outbound frame sync before it transmits
+    // a packet; an idle data channel must therefore key up on its own
+    if (dstId != 0U && dataPermit && m_sndcpSupport) {
         m_dataChPermitHold.start();
         m_dataChKeepAlive.start();
     }
@@ -1974,15 +1974,15 @@ void Control::handleDataChannelKeepAlive(uint32_t ms)
     if (!m_sndcpSupport)
         return;
 
-    if (!m_permittedData)
+    // the permit hold runs for as long as a data permit is held
+    if (!m_dataChPermitHold.isRunning())
         return;
 
     m_dataChPermitHold.clock(ms);
-    if (m_dataChPermitHold.isRunning() && m_dataChPermitHold.hasExpired()) {
+    if (m_dataChPermitHold.hasExpired()) {
         // a lost unpermit must not leave the transmitter keyed indefinitely
         LogWarning(LOG_P25, "data channel permit hold expired without a control channel release, dstId = %u", m_permittedDstId);
 
-        m_permittedData = false;
         m_dataChPermitHold.stop();
         m_dataChKeepAlive.stop();
         return;

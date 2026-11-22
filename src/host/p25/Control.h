@@ -373,7 +373,6 @@ namespace p25
         uint32_t m_permittedSrcId;
         bool m_permittedU2U;
         bool m_permittedTelInt;
-        bool m_permittedData;
 
         bool m_tailOnIdle;
         bool m_ccRunning;

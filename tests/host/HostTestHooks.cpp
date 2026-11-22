@@ -601,7 +601,7 @@ void HostTestHooks::p25SetSNDCPSupport(p25::Control& control, bool enabled) { co
 
 /* Tests whether the P25 voice channel holds an SNDCP data permit. */
 
-bool HostTestHooks::p25PermittedData(const p25::Control& control) { return control.m_permittedData; }
+bool HostTestHooks::p25PermittedData(const p25::Control& control) { return control.m_dataChPermitHold.isRunning(); }
 
 /* Advances the P25 data channel keep-alive and permit hold timers. */
 
