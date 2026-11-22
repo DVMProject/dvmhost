@@ -13,6 +13,10 @@
 #include "fne/FNETestHooks.h"
 #include "fne/HostFNE.h"
 #include "fne/network/callhandler/TagAnalogData.h"
+#include "fne/network/callhandler/TagP25Data.h"
+#include "fne/network/callhandler/packetdata/P25PacketData.h"
+#include "common/p25/P25Defines.h"
+#include "common/p25/data/DataHeader.h"
 #include "fne/network/UnitRouteRegistry.h"
 #include "common/analog/AnalogDefines.h"
 #include "common/BitManipulation.h"
@@ -24,6 +28,7 @@
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -1748,4 +1753,106 @@ TEST_CASE("FNE metadata dispatcher rejects truncated log transfers", "[fne][hook
         network::NET_FUNC::TRANSFER, network::NET_SUBFUNC::TRANSFER_SUBFUNC_DIAG,
         1001U, std::vector<uint8_t>(10U)));
     REQUIRE(FNETestHooks::peerState(harness.traffic, 1001U) == network::NET_STAT_RUNNING);
+}
+
+namespace {
+    /**
+     * @brief Builds a network PDU frame carrying one encoded CAI block, as a peer forwards it.
+     * @param blocksToFollow Blocks to follow announced by the PDU header.
+     * @param currentBlock Index of the carried block (0 is the header block).
+     * @param[in] block Encoded CAI block (P25_PDU_FEC_LENGTH_BYTES).
+     * @returns std::vector<uint8_t> Network PDU frame.
+     */
+    std::vector<uint8_t> p25PDUNetworkFrame(uint8_t blocksToFollow, uint8_t currentBlock, const uint8_t* block)
+    {
+        using namespace p25::defines;
+
+        std::vector<uint8_t> frame(24U + P25_PDU_FEC_LENGTH_BYTES, 0x00U);
+        SET_UINT24(P25_PDU_FEC_LENGTH_BYTES, frame.data(), 8U);
+        frame[20U] = blocksToFollow;
+        frame[21U] = currentBlock;
+        frame[22U] = DUID::PDU;
+        ::memcpy(frame.data() + 24U, block, P25_PDU_FEC_LENGTH_BYTES);
+        return frame;
+    }
+
+    /**
+     * @brief Encodes an inbound P25 response header block.
+     * @param ackClass Response class.
+     * @param ackType Response type.
+     * @param blocksToFollow Blocks to follow announced by the header.
+     * @param[out] block Buffer receiving the encoded header block (P25_PDU_FEC_LENGTH_BYTES).
+     */
+    void p25ResponseHeader(uint8_t ackClass, uint8_t ackType, uint8_t blocksToFollow, uint8_t* block)
+    {
+        using namespace p25::defines;
+
+        p25::data::DataHeader header;
+        header.setFormat(PDUFormatType::RSP);
+        header.setMFId(MFG_STANDARD);
+        header.setOutbound(false);
+        header.setResponseClass(ackClass);
+        header.setResponseType(ackType);
+        header.setResponseStatus(3U);
+        header.setLLId(9051U);
+        header.setBlocksToFollow(blocksToFollow);
+        ::memset(block, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+        header.encode(block);
+    }
+}
+
+TEST_CASE("FNE P25 PDU assembly recovers from a response missing its data block",
+    "[fne][p25][packet-data][pdu]")
+{
+    using namespace p25::defines;
+
+    constexpr uint32_t PEER_ID = 71002U;
+    constexpr uint32_t STREAM_ID = 4242U;
+
+    FNEHarness harness;
+    network::callhandler::packetdata::P25PacketData* packetData = harness.traffic.p25TrafficHandler()->packetData();
+    REQUIRE(packetData != nullptr);
+
+    uint8_t sackHeader[P25_PDU_FEC_LENGTH_BYTES];
+    p25ResponseHeader(PDUAckClass::ACK_RETRY, PDUAckType::ACK, 1U, sackHeader);
+    uint8_t ackHeader[P25_PDU_FEC_LENGTH_BYTES];
+    p25ResponseHeader(PDUAckClass::ACK, PDUAckType::ACK, 0U, ackHeader);
+
+    // a peer that forwards only the header of a selective retry response leaves the
+    // announced data block outstanding
+    std::vector<uint8_t> frame = p25PDUNetworkFrame(1U, 0U, sackHeader);
+    REQUIRE(packetData->processFrame(frame.data(), uint32_t(frame.size()), PEER_ID, 0U, STREAM_ID));
+    CHECK(FNETestHooks::p25HeldPDUBlocks(harness.traffic, PEER_ID) == 1U);
+
+    // a header announcing more blocks than the receiver supports does not replace the
+    // held transaction
+    uint8_t longHeader[P25_PDU_FEC_LENGTH_BYTES];
+    p25ResponseHeader(PDUAckClass::ACK_RETRY, PDUAckType::ACK, uint8_t(P25_MAX_PDU_BLOCKS), longHeader);
+    frame = p25PDUNetworkFrame(uint8_t(P25_MAX_PDU_BLOCKS), 0U, longHeader);
+    CHECK_FALSE(packetData->processFrame(frame.data(), uint32_t(frame.size()), PEER_ID, 0U, STREAM_ID));
+    CHECK(FNETestHooks::p25HeldPDUBlocks(harness.traffic, PEER_ID) == 1U);
+
+    // the next header from the same peer opens a new transaction and must be processed,
+    // not rejected as a conflicting duplicate of the stale header
+    frame = p25PDUNetworkFrame(0U, 0U, ackHeader);
+    CHECK(packetData->processFrame(frame.data(), uint32_t(frame.size()), PEER_ID, 0U, STREAM_ID));
+    CHECK(FNETestHooks::p25HeldPDUBlocks(harness.traffic, PEER_ID) == 0U);
+
+    // a complete selective retry response (header and its data block) leaves no state behind
+    uint8_t retryBlock[P25_PDU_FEC_LENGTH_BYTES];
+    ::memset(retryBlock, 0x00U, P25_PDU_FEC_LENGTH_BYTES);
+    frame = p25PDUNetworkFrame(1U, 0U, sackHeader);
+    REQUIRE(packetData->processFrame(frame.data(), uint32_t(frame.size()), PEER_ID, 0U, STREAM_ID));
+    frame = p25PDUNetworkFrame(1U, 1U, retryBlock);
+    REQUIRE(packetData->processFrame(frame.data(), uint32_t(frame.size()), PEER_ID, 0U, STREAM_ID));
+    CHECK(FNETestHooks::p25HeldPDUBlocks(harness.traffic, PEER_ID) == 0U);
+
+    // a data block that arrives ahead of its own header is kept, and the transaction
+    // completes when the header follows
+    frame = p25PDUNetworkFrame(1U, 1U, retryBlock);
+    REQUIRE(packetData->processFrame(frame.data(), uint32_t(frame.size()), PEER_ID, 0U, STREAM_ID));
+    CHECK(FNETestHooks::p25HeldPDUBlocks(harness.traffic, PEER_ID) == 1U);
+    frame = p25PDUNetworkFrame(1U, 0U, sackHeader);
+    REQUIRE(packetData->processFrame(frame.data(), uint32_t(frame.size()), PEER_ID, 0U, STREAM_ID));
+    CHECK(FNETestHooks::p25HeldPDUBlocks(harness.traffic, PEER_ID) == 0U);
 }

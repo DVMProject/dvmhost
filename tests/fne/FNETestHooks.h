@@ -573,6 +573,13 @@ public:
     static bool processP25PDUResponse(network::TrafficNetwork& network, uint32_t llId,
         uint8_t responseStatus);
     /**
+     * @brief Gets the number of PDU blocks the FNE packet-data receiver holds for a peer.
+     * @param network The TrafficNetwork that owns the packet-data receiver.
+     * @param peerId Peer ID.
+     * @return Number of blocks held for the peer; 0 when no receive state exists.
+     */
+    static uint32_t p25HeldPDUBlocks(network::TrafficNetwork& network, uint32_t peerId);
+    /**
      * @brief Passes a complete Version-0 DLI datagram through the network receive task.
      * @param network The TrafficNetwork that owns the OTAR service.
      * @param datagram Encoded DLI bytes.
