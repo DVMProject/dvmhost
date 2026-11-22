@@ -150,7 +150,7 @@ It should also be important to read and review the [calibration notes](#calibrat
 > `dvmhost` for P25 trunking configurations specifically prohibits the use of BEExx WACNs. This is enforced hard in the code and cannot be bypassed without code change. We strongly recommend
 > you do not under any circumstances bypass this limitation. These protections are not to stop you, the user, from using BEExx as a WACN on the trunked systems you build with this, it
 > is to prevent poorly programmed subscribers of business, or public safety members from ROAMING to your trunked system potentially cutting off their communications and possibly endangering 
-> their lives if they roam while in an emergency situation. Implore the user to reconsider using BEExx as a WACN and to respect the safety of others.
+> their lives if they roam while in an emergency situation.
 >
 
 ### Initial Setup Steps
