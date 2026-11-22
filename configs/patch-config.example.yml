@@ -82,8 +82,10 @@ network:
     debug: false
 
     # Source Talkgroup ID for transmitted/received audio frames.
+    # In an MMDVM gateway mode, this is the DVM FNE-facing talkgroup.
     sourceTGID: 1
     # Source Slot for received/transmitted audio frames.
+    # In an MMDVM DMRGateway mode, this is the DVM FNE-facing slot.
     sourceSlot: 1
 
     # Source Traffic Encryption
@@ -98,8 +100,10 @@ network:
       tekKeyId: 1
 
     # Destination Talkgroup ID for transmitted/received audio frames.
+    # In an MMDVM gateway mode, this is the gateway-facing talkgroup.
     destinationTGID: 1
     # Destination Slot for received/transmitted audio frames.
+    # In an MMDVM DMRGateway mode, this is the gateway-facing slot.
     destinationSlot: 1
 
     # Destination Traffic Encryption
@@ -128,6 +132,9 @@ network:
     mmdvmGatewayPort: 42020
     # Local port number for gateway to connect to.
     localGatewayPort: 32010
+    # Numeric repeater ID presented to DMRGateway when MMDVM DMRGateway patching is enabled.
+    # If omitted, the network peer ID above is used.
+    mmdvmGatewayId: 9000123
 
 system:
     # Textual Name
@@ -146,6 +153,9 @@ system:
 
     # Flag indicating whether or not the patch is from/to a MMDVM P25 reflector.
     mmdvmP25Reflector: false
+    # Flag indicating whether or not the patch is from/to a MMDVM DMRGateway.
+    # This mode is mutually exclusive with mmdvmP25Reflector and requires digiMode 1.
+    mmdvmDMRGateway: false
 
     # Flag indicating whether or not trace logging is enabled.
     trace: false
