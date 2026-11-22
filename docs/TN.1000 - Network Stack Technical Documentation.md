@@ -1209,7 +1209,7 @@ application-message bytes are transmitted.
 
 Complete Packet (95 bytes):
 90 56 SS SS TT TT TT TT XX XX XX XX | 00 FE 00 04 CC CC 00 00 II II II II PP PP PP PP 00 00 00 3F | 44 4D 52 44 [DMR fields, frame, BER/RSSI, and padding]
-├─────────── RTP (12) ───────────┤ ├──────────────────────── FNE (20) ────────────────────────┤ ├──────────────────────────── DMR + padding (63) ────────────────────────────┤
+├─────────── RTP (12) ────────────┤   ├─────────────────────── FNE (20) ────────────────────────┤   ├──────────── DMR + padding (63) ────────────────────┤
 
 DMR Payload breakdown:
 44 4D 52 44 05 00 AA BB 00 CC DD 00 00 00 01 02 00 00 00 00 [33 bytes DMR frame...] 00 7F
