@@ -183,25 +183,20 @@ namespace p25
             friend class ::HostTestHooks;
 #endif
 
-            /* Interfaces */
             modem::Modem* m_modem;
             network::Network* m_network;
 
-            /* TDMA Slots */
             Slot* m_slot1;
             Slot* m_slot2;
 
-            /* Access and Grant Lookups */
             ::lookups::RadioIdLookup* m_ridLookup;
             ::lookups::TalkgroupRulesLookup* m_tidLookup;
             lookups::P25AffiliationLookup* m_affiliations;
 
-            /* Call Timing */
             uint32_t m_callHang;
             uint32_t m_timeout;
             uint32_t m_tgHang;
 
-            /* Logging */
             bool m_debug;
             bool m_verbose;
 

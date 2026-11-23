@@ -50,6 +50,11 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
                         slotNo + 1U, peerId, length, rtpHeader.getSequence(), streamId);
                 }
 
+                // allow the DMR preprocessor to discard packets before stream state is updated
+                if (network->m_dmrRxPacketPreprocessor && network->m_dmrRxPacketPreprocessor(buffer, length, streamId, network->m_rxDMRStreamId[slotNo]) == RX_PACKET_PREPROCESS_RESULT::DROP) {
+                    break;
+                }
+
                 if (network->m_promiscuousPeer) {
                     network->m_rxDMRStreamId[slotNo] = streamId;
                     network->m_pktLastSeq = network->m_pktSeq;
@@ -130,6 +135,11 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
                 if (network->m_debug) {
                     LogDebug(LOG_NET, "P25, peer = %u, len = %u, pktSeq = %u, streamId = %u",
                         peerId, length, rtpHeader.getSequence(), streamId);
+                }
+
+                // allow the P25 preprocessor to discard packets before stream state is updated
+                if (network->m_p25RxPacketPreprocessor && network->m_p25RxPacketPreprocessor(buffer, length, streamId, network->m_rxP25StreamId) == RX_PACKET_PREPROCESS_RESULT::DROP) {
+                    break;
                 }
 
                 if (network->m_promiscuousPeer) {
@@ -229,6 +239,11 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
                         slotNo + 1U, peerId, length, rtpHeader.getSequence(), streamId);
                 }
 
+                // allow the P25 Phase 2 preprocessor to discard packets before stream state is updated
+                if (network->m_p25P2RxPacketPreprocessor && network->m_p25P2RxPacketPreprocessor(buffer, length, streamId, network->m_rxP25P2StreamId[slotNo]) == RX_PACKET_PREPROCESS_RESULT::DROP) {
+                    break;
+                }
+
                 if (network->m_promiscuousPeer) {
                     network->m_rxP25P2StreamId[slotNo] = streamId;
                     network->m_pktLastSeq = network->m_pktSeq;
@@ -320,6 +335,11 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
                         peerId, length, rtpHeader.getSequence(), streamId);
                 }
 
+                // allow the NXDN preprocessor to discard packets before stream state is updated
+                if (network->m_nxdnRxPacketPreprocessor && network->m_nxdnRxPacketPreprocessor(buffer, length, streamId, network->m_rxNXDNStreamId) == RX_PACKET_PREPROCESS_RESULT::DROP) {
+                    break;
+                }
+
                 if (network->m_promiscuousPeer) {
                     network->m_rxNXDNStreamId = streamId;
                     network->m_pktLastSeq = network->m_pktSeq;
@@ -406,6 +426,11 @@ bool Network::PacketHandler::protocol(Network* network, uint32_t peerId, uint32_
                 if (network->m_debug) {
                     LogDebug(LOG_NET, "Analog, peer = %u, len = %u, pktSeq = %u, streamId = %u",
                         peerId, length, rtpHeader.getSequence(), streamId);
+                }
+
+                // allow the analog preprocessor to discard packets before stream state is updated
+                if (network->m_analogRxPacketPreprocessor && network->m_analogRxPacketPreprocessor(buffer, length, streamId, network->m_rxAnalogStreamId) == RX_PACKET_PREPROCESS_RESULT::DROP) {
+                    break;
                 }
 
                 if (network->m_promiscuousPeer) {

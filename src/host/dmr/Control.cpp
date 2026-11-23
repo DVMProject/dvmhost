@@ -77,6 +77,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_ccRunning(false),
     m_ccHalted(false),
     m_dumpCSBKData(dumpCSBKData),
+    m_debugIgnPktAdmission(false),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -88,6 +89,111 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     assert(rssiMapper != nullptr);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
+    if (network != nullptr) {
+        network->setDMRRxPacketPreprocessor([this](const uint8_t* data, uint32_t length, uint32_t streamId, uint32_t rxStreamId) {
+            if (m_debugIgnPktAdmission)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            if (data == nullptr || length <= 15U)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+
+            // allow packets matching the currently locked receive stream to bypass destination filtering
+            if (rxStreamId != 0U && streamId == rxStreamId)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            DataType::E dataType = DataType::VOICE;
+            if ((data[15U] & 0x20U) == 0x20U)
+                dataType = (DataType::E)(data[15U] & 0x0FU);
+            else if ((data[15U] & 0x10U) == 0x10U)
+                dataType = DataType::VOICE_SYNC;
+
+            // only apply destination filtering to voice calls
+            if (dataType == DataType::TERMINATOR_WITH_LC ||
+                (dataType != DataType::VOICE_LC_HEADER && dataType != DataType::VOICE_PI_HEADER &&
+                 dataType != DataType::VOICE_SYNC && dataType != DataType::VOICE)) {
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+            }
+
+            const uint32_t srcId = GET_UINT24(data, 5U);
+            const uint32_t dstId = GET_UINT24(data, 8U);
+
+            // enforce source ID access control
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "DMR packet denial, RID rejection, srcId = %u", srcId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            const uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
+
+            //LogDebug(LOG_NET, "DMR packet, slot = %u, srcId = %u, dstId = %u, streamId = %u, rxStreamId = %u", slotNo, srcId, dstId, streamId, rxStreamId);
+
+            // enforce the permitted destination for non-authoritative hosts
+            if (!m_authoritative) {
+                switch (slotNo) {
+                case 1U:
+                    // allow packets on a dedicated control channel to bypass destination filtering
+                    if (m_slot1->m_dedicatedTSCC)
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+                    // reject packets when no destination is permitted for non-authoritative hosts
+                    if (m_slot1->m_permittedDstId == 0U) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 1 packet denial, no permitted destination");
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+
+                    // enforce the permitted destination for non-authoritative hosts
+                    if (dstId != m_slot1->m_permittedDstId) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 1 packet denial, destination rejection, dstId = %u, permittedDstId = %u",
+                                dstId, m_slot1->m_permittedDstId);
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+                    break;
+                case 2U:
+                    // allow packets on a dedicated control channel to bypass destination filtering
+                    if (m_slot2->m_dedicatedTSCC)
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+                    // reject packets when no destination is permitted for non-authoritative hosts
+                    if (m_slot2->m_permittedDstId == 0U) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 2 packet denial, no permitted destination");
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+
+                    // enforce the permitted destination for non-authoritative hosts
+                    if (dstId != m_slot2->m_permittedDstId) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 2 packet denial, destination rejection, dstId = %u, permittedDstId = %u",
+                                dstId, m_slot2->m_permittedDstId);
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+                    break;
+                }
+            }
+
+            // enforce talkgroup or source ID access control
+            const bool group = (data[15U] & 0x40U) != 0x40U;
+            if (group) {
+                if (!acl::AccessControl::validateTGId(slotNo, dstId) || !acl::AccessControl::validateTGAccess(slotNo, srcId, dstId)) {
+                    if (m_debug)
+                        LogDebug(LOG_NET, "DMR Slot %u packet denial, TGID/RID admission rejection, srcId = %u, dstId = %u",
+                            slotNo, srcId, dstId);
+                    return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                }
+            }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "DMR Slot %u packet denial, RID rejection, dstId = %u", slotNo, dstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+        });
+    }
+
     Slot::init(this, authoritative, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, chLookup, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
     lc::CSBK::setVerbose(m_dumpCSBKData);
 
@@ -107,6 +213,9 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
 
 Control::~Control()
 {
+    if (Slot::s_network != nullptr)
+        Slot::s_network->setDMRRxPacketPreprocessor({});
+
     delete m_slot2;
     delete m_slot1;
 }
@@ -241,6 +350,9 @@ void Control::setOptions(yaml::Node& conf, ::lookups::VoiceChData controlChData,
     m_slot1->m_convNetGrantDemand = convNetGrantDemand;
     m_slot2->m_convNetGrantDemand = convNetGrantDemand;
 
+    m_debugIgnPktAdmission = dmrProtocol["debugIgnPktAdmission"].as<bool>(false);
+    if (m_debugIgnPktAdmission)
+        LogWarning(LOG_DMR, "Ignoring network packet admission checks. This may cause odd behavior, proceed with caution.");
 
     if (printOptions) {
         if (enableTSCC) {
@@ -273,6 +385,10 @@ void Control::setOptions(yaml::Node& conf, ::lookups::VoiceChData controlChData,
 
         LogInfo("    Verify Registration: %s", Slot::s_verifyReg ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", convNetGrantDemand ? "yes" : "no");
+
+        if (m_debugIgnPktAdmission) {
+            LogInfo("    Ignore Network Packet Admission: yes");
+        }
     }
 }
 

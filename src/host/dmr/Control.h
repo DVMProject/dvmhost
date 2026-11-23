@@ -333,6 +333,7 @@ namespace dmr
         bool m_ccHalted;
 
         bool m_dumpCSBKData;
+        bool m_debugIgnPktAdmission;
         bool m_verbose;
         bool m_debug;
 

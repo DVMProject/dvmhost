@@ -679,7 +679,7 @@ TEST_CASE("P25 Harris radio aliases preserve scheduled link control", "[p25][hos
     }
 }
 
-TEST_CASE("P25 Harris radio aliases follow the odd-even conveyance cadence", "[p25][host][radio-alias][harris]")
+TEST_CASE("P25 Harris radio aliases follow the four-part conveyance cadence", "[p25][host][radio-alias][harris]")
 {
     P25HostHarness harness;
     harness.m_ridAliasLookup.addEntry(1001U, "TEST RADIO");
@@ -689,10 +689,8 @@ TEST_CASE("P25 Harris radio aliases follow the odd-even conveyance cadence", "[p
     const uint8_t expected[] = {
         p25::defines::LCO::HARRIS_USER_ALIAS_A_ODD,
         p25::defines::LCO::HARRIS_USER_ALIAS_B_ODD,
-        p25::defines::LCO::GROUP,
         p25::defines::LCO::HARRIS_USER_ALIAS_A_EVEN,
-        p25::defines::LCO::HARRIS_USER_ALIAS_B_EVEN,
-        p25::defines::LCO::GROUP
+        p25::defines::LCO::HARRIS_USER_ALIAS_B_EVEN
     };
 
     for (uint8_t i = 0U; i < sizeof(expected); ++i) {
@@ -703,12 +701,10 @@ TEST_CASE("P25 Harris radio aliases follow the odd-even conveyance cadence", "[p
         control.setDstId(2001U);
 
         const bool applied = HostTestHooks::p25ApplyRadioAlias(*harness.m_control, control, phase);
-        CHECK(applied == (i != 2U && i != 5U));
+        CHECK(applied);
         CHECK(control.getLCO() == expected[i]);
-        if (applied) {
-            CHECK(control.getMFId() == p25::defines::MFG_HARRIS);
-            CHECK(control.getUserAlias() == "TEST RADIO");
-        }
+        CHECK(control.getMFId() == p25::defines::MFG_HARRIS);
+        CHECK(control.getUserAlias() == "TEST RADIO");
     }
     CHECK(phase == 0U);
 }
@@ -1971,6 +1967,101 @@ TEST_CASE("P25 host e2e loopback enforces stream lock until active stream termin
     }
 
     REQUIRE(harness.network()->rxP25StreamId() == streamB);
+}
+
+TEST_CASE("P25 host drops denied streams before receive stream selection", "[p25][host][control][net][e2e][acl]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 6013U;
+    const uint32_t deniedStream = 0x500301U;
+    const uint32_t allowedStream = 0x500302U;
+    const uint32_t srcId = 5199083U;
+    const uint32_t deniedDstId = 8384U;
+    const uint32_t allowedDstId = 212U;
+
+    P25HostHarness harness(true, true, hostPort, hostPeerId, false, true);
+    P25TestNetwork sender(senderPort, 6014U);
+    harness.m_tidLookup.addEntry(admissionRule(allowedDstId, {}));
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, deniedStream, 800U, srcId, deniedDstId));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, deniedStream, 801U, srcId, deniedDstId));
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, allowedStream, 802U, srcId, allowedDstId));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, allowedStream, 803U, srcId, allowedDstId));
+
+    for (uint32_t i = 0U; i < 50U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO)
+            break;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25NetLastSrcId(*harness.m_control) == srcId);
+    REQUIRE(HostTestHooks::p25NetLastDstId(*harness.m_control) == allowedDstId);
+    REQUIRE(harness.network()->rxP25StreamId() == allowedStream);
+    REQUIRE(harness.network()->resetP25Count() == 0U);
+}
+
+TEST_CASE("P25 non-authoritative packet admission requires a matching permit", "[p25][host][control][net][e2e][acl][non-authoritative]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 6015U;
+    const uint32_t unpermittedStream = 0x500401U;
+    const uint32_t mismatchedStream = 0x500402U;
+    const uint32_t permittedStream = 0x500403U;
+    const uint32_t srcId = 5199083U;
+    const uint32_t dstId = 212U;
+
+    P25HostHarness harness(false, true, hostPort, hostPeerId, false, true);
+    P25TestNetwork sender(senderPort, 6016U);
+    harness.m_tidLookup.addEntry(admissionRule(dstId, {}));
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, unpermittedStream, 900U, srcId, dstId));
+    for (uint32_t i = 0U; i < 10U; i++)
+        harness.network()->clock(1U);
+    REQUIRE(harness.network()->rxP25StreamId() == 0U);
+
+    harness.m_control->permittedTG(313U, false, false, 0U, false);
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, mismatchedStream, 901U, srcId, dstId));
+    for (uint32_t i = 0U; i < 10U; i++)
+        harness.network()->clock(1U);
+    REQUIRE(harness.network()->rxP25StreamId() == 0U);
+
+    harness.m_control->permittedTG(dstId, false, false, 0U, false);
+    REQUIRE(sender.sendP25LDU1Frame(hostPeerId, permittedStream, 902U, srcId, dstId));
+    REQUIRE(sender.sendP25LDU2Frame(hostPeerId, permittedStream, 903U, srcId, dstId));
+    for (uint32_t i = 0U; i < 50U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO)
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(harness.network()->rxP25StreamId() == permittedStream);
 }
 
 TEST_CASE("P25 host network terminator clears active network voice state", "[p25][host][control]")

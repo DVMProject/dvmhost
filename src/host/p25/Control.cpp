@@ -155,6 +155,7 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_ccNotifyActiveTG(false),
     m_disableAdjSiteBroadcast(false),
     m_notifyCC(true),
+    m_debugIgnPktAdmission(false),
     m_ccDebug(debug),
     m_verbose(verbose),
     m_debug(debug)
@@ -175,6 +176,71 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
     m_interval.start();
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
+    if (m_network != nullptr) {
+        m_network->setP25RxPacketPreprocessor([this](const uint8_t* data, uint32_t length, uint32_t streamId, uint32_t rxStreamId) {
+            if (m_debugIgnPktAdmission)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            if (data == nullptr || length <= 22U)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+
+            // allow packets on a dedicated control channel to bypass destination filtering
+            if (m_dedicatedControl)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            // allow packets matching the currently locked receive stream to bypass destination filtering
+            if (rxStreamId != 0U && streamId == rxStreamId)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            const DUID::E duid = (DUID::E)data[22U];
+            if (duid == DUID::TDU || duid == DUID::TDULC)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            const uint32_t srcId = GET_UINT24(data, 5U);
+            const uint32_t dstId = GET_UINT24(data, 8U);
+
+            //LogDebug(LOG_NET, "P25 packet, srcId = %u, dstId = %u, streamId = %u, rxStreamId = %u", srcId, dstId, streamId, rxStreamId);
+
+            // reject packets when no destination is permitted for non-authoritative hosts
+            if (!m_authoritative && m_permittedDstId == 0U) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "[NON-AUTHORITATIVE] P25 packet denial, no permitted destination");
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce the permitted destination for non-authoritative hosts
+            if (!m_authoritative && m_permittedDstId != 0U && dstId != m_permittedDstId) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "[NON-AUTHORITATIVE] P25 packet denial, destination rejection, dstId = %u, permittedDstId = %u",
+                        dstId, m_permittedDstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce source ID access control
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "P25 packet denial, RID rejection, srcId = %u", srcId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce talkgroup or source ID access control
+            if (data[4U] == LCO::GROUP) {
+                if (!acl::AccessControl::validateTGId(dstId) || !acl::AccessControl::validateTGAccess(srcId, dstId)) {
+                    if (m_debug)
+                        LogDebug(LOG_NET, "P25 packet denial, TGID/RID admission rejection, srcId = %u, dstId = %u",
+                            srcId, dstId);
+                    return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                }
+            }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "P25 packet denial, RID rejection, dstId = %u", dstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+        });
+    }
 
     m_hangCount = callHang * 4U;
 
@@ -198,6 +264,9 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
 
 Control::~Control()
 {
+    if (m_network != nullptr)
+        m_network->setP25RxPacketPreprocessor({});
+
     if (m_affiliations != nullptr) {
         delete m_affiliations;
     }
@@ -497,6 +566,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const :
         LogWarning(LOG_P25, "We are configured as a dedicated trunked voice channel but, have control data enabled. Don't do this, control data for a dedicated trunked voice channel should be disabled. This can cause unintended behavior.");
     }
 
+    m_debugIgnPktAdmission = p25Protocol["debugIgnPktAdmission"].as<bool>(false);
+    if (m_debugIgnPktAdmission)
+        LogWarning(LOG_P25, "Ignoring network packet admission checks. This may cause odd behavior, proceed with caution.");
+
     if (printOptions) {
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
         LogInfo("    Frame Loss Threshold: %u", m_frameLossThreshold);
@@ -590,6 +663,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, const :
 
         if (m_ccDebug) {
             LogInfo("    Control Message Debug: yes");
+        }
+
+        if (m_debugIgnPktAdmission) {
+            LogInfo("    Ignore Network Packet Admission: yes");
         }
     }
 

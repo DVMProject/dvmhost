@@ -792,6 +792,96 @@ TEST_CASE("DMR host e2e loopback enforces stream lock until active stream termin
     REQUIRE(harness.network()->rxDMRStreamId(1U) == streamB);
 }
 
+TEST_CASE("DMR host drops denied streams before receive stream selection", "[dmr][host][control][net][e2e][acl]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 7013U;
+    const uint32_t deniedStream = 0x610301U;
+    const uint32_t allowedStream = 0x610302U;
+    const uint32_t srcId = 5199083U;
+    const uint32_t deniedDstId = 8384U;
+    const uint32_t allowedDstId = 212U;
+
+    DMRHostHarness harness(true, true, hostPort, hostPeerId, false, true);
+    DMRTestNetwork sender(senderPort, 7014U);
+    harness.m_tidLookup.addEntry(admissionRule(allowedDstId, 1U, { srcId }));
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendDMRVoiceHeader(hostPeerId, deniedStream, 800U, 1U, srcId, deniedDstId));
+    REQUIRE(sender.sendDMRVoiceHeader(hostPeerId, allowedStream, 801U, 1U, srcId, allowedDstId));
+
+    for (uint32_t i = 0U; i < 50U; i++) {
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::dmrNetState(*HostTestHooks::dmrSlot1(*harness.m_control)) == RS_NET_AUDIO)
+            break;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::dmrNetState(*HostTestHooks::dmrSlot1(*harness.m_control)) == RS_NET_AUDIO);
+    REQUIRE(harness.m_control->getLastSrcId(1U) == srcId);
+    REQUIRE(harness.m_control->getLastDstId(1U) == allowedDstId);
+    REQUIRE(harness.network()->rxDMRStreamId(1U) == allowedStream);
+    REQUIRE(harness.network()->resetDMRCount() == 0U);
+}
+
+TEST_CASE("DMR non-authoritative packet admission requires the matching slot permit", "[dmr][host][control][net][e2e][acl][non-authoritative]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 7015U;
+    const uint32_t unpermittedStream = 0x610401U;
+    const uint32_t mismatchedStream = 0x610402U;
+    const uint32_t permittedStream = 0x610403U;
+    const uint32_t srcId = 5199083U;
+    const uint32_t dstId = 212U;
+
+    DMRHostHarness harness(false, true, hostPort, hostPeerId, false, true);
+    DMRTestNetwork sender(senderPort, 7016U);
+    harness.m_tidLookup.addEntry(admissionRule(dstId, 1U, { srcId }));
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendDMRVoiceHeader(hostPeerId, unpermittedStream, 900U, 1U, srcId, dstId));
+    for (uint32_t i = 0U; i < 10U; i++)
+        harness.network()->clock(1U);
+    REQUIRE(harness.network()->rxDMRStreamId(1U) == 0U);
+
+    harness.m_control->permittedTG(313U, 1U);
+    REQUIRE(sender.sendDMRVoiceHeader(hostPeerId, mismatchedStream, 901U, 1U, srcId, dstId));
+    for (uint32_t i = 0U; i < 10U; i++)
+        harness.network()->clock(1U);
+    REQUIRE(harness.network()->rxDMRStreamId(1U) == 0U);
+
+    harness.m_control->permittedTG(dstId, 1U);
+    REQUIRE(sender.sendDMRVoiceHeader(hostPeerId, permittedStream, 902U, 1U, srcId, dstId));
+    for (uint32_t i = 0U; i < 50U; i++) {
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::dmrNetState(*HostTestHooks::dmrSlot1(*harness.m_control)) == RS_NET_AUDIO)
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::dmrNetState(*HostTestHooks::dmrSlot1(*harness.m_control)) == RS_NET_AUDIO);
+    REQUIRE(harness.network()->rxDMRStreamId(1U) == permittedStream);
+}
+
 TEST_CASE("DMR slot network voice start arms watchdog on the targeted slot", "[dmr][host][control]")
 {
     DMRHostHarness harness;

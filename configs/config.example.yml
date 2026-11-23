@@ -243,6 +243,8 @@ protocols:
         # Internal data queue size (in DMR frames). This is the queue used internally to buffer frames before they
         # are sent to the air interface modem.
         queueSize: 31
+        # Flag indicating whether or not network packet admission checks are ignored.
+        debugIgnPktAdmission: false
         # Flag indicating whether or not verbose logging is enabled.
         verbose: true
         # Flag indicating whether or not debug logging is enabled.
@@ -377,6 +379,8 @@ protocols:
         # Internal data queue size (in P25 LDU frames). This is the queue used internally to buffer frames before they
         # are sent to the air interface modem.
         queueSize: 12
+        # Flag indicating whether or not network packet admission checks are ignored.
+        debugIgnPktAdmission: false
         # Flag indicating whether or not verbose logging is enabled.
         verbose: true
         # Flag indicating whether or not debug logging is enabled.
@@ -431,6 +435,8 @@ protocols:
         # Internal data queue size (in NXDN frames). This is the queue used internally to buffer frames before they
         # are sent to the air interface modem.
         queueSize: 31
+        # Flag indicating whether or not network packet admission checks are ignored.
+        debugIgnPktAdmission: false
         # Flag indicating whether or not verbose logging is enabled.
         verbose: true
         # Flag indicating whether or not debug logging is enabled.

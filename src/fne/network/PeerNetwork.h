@@ -65,6 +65,17 @@ namespace network
     class HOST_SW_API PeerNetwork : public Network {
     public:
         /**
+         * @brief Callback for protocol packet processing.
+         * @param peer Pointer to the PeerNetwork instance.
+         * @param data Pointer to the packet data.
+         * @param length Length of the packet data.
+         * @param peerId Peer ID associated with the packet.
+         * @param fneHeader RTP FNE header.
+         * @param rtpHeader RTP header.
+         */
+        using ProtocolCallback = std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)>;
+
+        /**
          * @brief Initializes a new instance of the PeerNetwork class.
          * @param address Network Hostname/IP address to connect to.
          * @param port Network port number.
@@ -121,27 +132,27 @@ namespace network
          * @brief Helper to set the DMR protocol callback.
          * @param callback 
          */
-        void setDMRCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_dmrCallback = callback; }
+        void setDMRCallback(ProtocolCallback&& callback) { m_dmrCallback = callback; }
         /**
          * @brief Helper to set the P25 protocol callback.
          * @param callback 
          */
-        void setP25Callback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_p25Callback = callback; }
+        void setP25Callback(ProtocolCallback&& callback) { m_p25Callback = callback; }
         /**
          * @brief Helper to set the P25 Phase 2 protocol callback.
          * @param callback 
          */
-        void setP25P2Callback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_p25P2Callback = callback; }
+        void setP25P2Callback(ProtocolCallback&& callback) { m_p25P2Callback = callback; }
         /**
          * @brief Helper to set the NXDN protocol callback.
          * @param callback 
          */
-        void setNXDNCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_nxdnCallback = callback; }
+        void setNXDNCallback(ProtocolCallback&& callback) { m_nxdnCallback = callback; }
         /**
          * @brief Helper to set the analog protocol callback.
          * @param callback 
          */
-        void setAnalogCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_analogCallback = callback; }
+        void setAnalogCallback(ProtocolCallback&& callback) { m_analogCallback = callback; }
 
         /**
          * @brief Helper to set the network tree disconnect callback.

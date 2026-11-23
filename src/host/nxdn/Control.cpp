@@ -118,6 +118,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_netTimeout(false),
     m_dumpRCCH(dumpRCCHData),
     m_notifyCC(true),
+    m_debugIgnPktAdmission(false),
     m_ccDebug(debug),
     m_verbose(verbose),
     m_debug(debug)
@@ -133,6 +134,71 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_interval.start();
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
+    if (m_network != nullptr) {
+        m_network->setNXDNRxPacketPreprocessor([this](const uint8_t* data, uint32_t length, uint32_t streamId, uint32_t rxStreamId) {
+            if (m_debugIgnPktAdmission)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            if (data == nullptr || length <= 15U)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+
+            // allow packets on a dedicated control channel to bypass destination filtering
+            if (m_dedicatedControl)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            // allow packets matching the currently locked receive stream to bypass destination filtering
+            if (rxStreamId != 0U && streamId == rxStreamId)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            // only apply destination filtering to voice calls
+            if (data[4U] != MessageType::RTCH_VCALL)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            const uint32_t srcId = GET_UINT24(data, 5U);
+            const uint32_t dstId = GET_UINT24(data, 8U);
+
+            //LogDebug(LOG_NET, "NXDN packet, srcId = %u, dstId = %u, streamId = %u, rxStreamId = %u", srcId, dstId, streamId, rxStreamId);
+
+            // reject packets when no destination is permitted for non-authoritative hosts
+            if (!m_authoritative && m_permittedDstId == 0U) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "[NON-AUTHORITATIVE] NXDN packet denial, no permitted destination");
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce the permitted destination for non-authoritative hosts
+            if (!m_authoritative && m_permittedDstId != 0U && dstId != m_permittedDstId) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "[NON-AUTHORITATIVE] NXDN packet denial, destination rejection, dstId = %u, permittedDstId = %u",
+                        dstId, m_permittedDstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce source ID access control
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "NXDN packet denial, RID rejection, srcId = %u", srcId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce talkgroup or source ID access control
+            const bool group = (data[15U] & 0x40U) != 0x40U;
+            if (group) {
+                if (!acl::AccessControl::validateTGId(dstId)) {
+                    if (m_debug)
+                        LogDebug(LOG_NET, "NXDN packet denial, TGID rejection, dstId = %u", dstId);
+                    return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                }
+            }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "NXDN packet denial, RID rejection, dstId = %u", dstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+        });
+    }
 
     m_voice = new Voice(this, debug, verbose);
     m_control = new ControlSignaling(this, debug, verbose);
@@ -151,6 +217,9 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
 
 Control::~Control()
 {
+    if (m_network != nullptr)
+        m_network->setNXDNRxPacketPreprocessor({});
+
     if (m_affiliations != nullptr) {
         delete m_affiliations;
     }
@@ -325,6 +394,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, lookups
             uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId); });
     }
 
+    m_debugIgnPktAdmission = nxdnProtocol["debugIgnPktAdmission"].as<bool>(false);
+    if (m_debugIgnPktAdmission)
+        LogWarning(LOG_NXDN, "Ignoring network packet admission checks. This may cause odd behavior, proceed with caution.");
+
     if (printOptions) {
         LogInfo("    Site Location ID: $%04X", m_siteData.locId());
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
@@ -357,6 +430,10 @@ void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, lookups
 
         if (m_ccDebug) {
             LogInfo("    Control Message Debug: yes");
+        }
+
+        if (m_debugIgnPktAdmission) {
+            LogInfo("    Ignore Network Packet Admission: yes");
         }
     }
 
@@ -732,6 +809,27 @@ void Control::clock()
                 if (m_verbose) {
                     LogInfoEx(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
                 }
+
+                // if the group is still granted at this point -- forcibly release it
+                if (m_affiliations->isGranted(m_netLastDstId)) {
+                    if (!m_dedicatedControl) {
+                        m_affiliations->releaseGrant(m_netLastDstId, false);
+                        if (m_network != nullptr)
+                            m_network->resetNXDN();
+                    }
+                }
+
+                if (m_network != nullptr)
+                    m_network->resetNXDN();
+
+                m_netState = RS_NET_IDLE;
+
+                m_voice->resetNet();
+
+                m_netTimeoutTimer.stop();
+                m_netTimeout = false;
+                m_networkWatchdog.stop();
+
                 m_netLastDstId = 0U;
                 m_netLastSrcId = 0U;
             }

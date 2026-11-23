@@ -800,6 +800,7 @@ void Slot::clock()
                 if (m_verbose) {
                     LogInfoEx(LOG_NET, "Slot %u, talkgroup hang has expired, lastDstId = %u", m_slotNo, m_netLastDstId);
                 }
+
                 m_netLastDstId = 0U;
                 m_netLastSrcId = 0U;
             }

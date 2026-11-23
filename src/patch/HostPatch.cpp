@@ -1165,17 +1165,17 @@ void HostPatch::processP25Network(uint8_t* buffer, uint32_t length)
     lsd.setLSD2(lsd2);
 
     if ((duid == DUID::TDU) || (duid == DUID::TDULC)) {
-        // ensure destination ID matches
-        if (dstId != m_srcTGId && dstId != m_dstTGId) {
-            // ignore TDU's that are grant demands
-            if (grantDemand) {
-                m_network->resetP25();
-                return;
-            }
-
-            resetP25Call(srcId);
+        // Grant demands use a TDU envelope but do not terminate the active call.
+        if (grantDemand) {
+            m_network->resetP25();
             return;
         }
+
+        // A terminator may carry either configured TGID (or no IDs for a bare
+        // TDU). Handle it before group-call rewriting so it cannot restart the
+        // call-drop timer and bypass call termination.
+        resetP25Call(srcId);
+        return;
     }
 
     if (control.getLCO() == LCO::GROUP) {

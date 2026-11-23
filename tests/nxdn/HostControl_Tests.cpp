@@ -891,6 +891,98 @@ TEST_CASE("NXDN host e2e loopback enforces stream lock until active stream termi
     REQUIRE(harness.network()->rxNXDNStreamId() == streamB);
 }
 
+TEST_CASE("NXDN host drops denied streams before receive stream selection", "[nxdn][host][control][net][e2e][acl]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 8013U;
+    const uint32_t deniedStream = 0x620301U;
+    const uint32_t allowedStream = 0x620302U;
+    const uint16_t srcId = 5199U;
+    const uint16_t deniedDstId = 8384U;
+    const uint16_t allowedDstId = 212U;
+
+    NXDNHostHarness harness(true, true, hostPort, hostPeerId, false, true);
+    NXDNTestNetwork sender(senderPort, 8014U);
+    harness.m_tidLookup.addEntry(admissionRule(allowedDstId, { srcId }));
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, deniedStream, 800U, srcId, deniedDstId));
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, allowedStream, 801U, srcId, allowedDstId));
+
+    for (uint32_t i = 0U; i < 50U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO)
+            break;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::nxdnNetLastSrcId(*harness.m_control) == srcId);
+    REQUIRE(HostTestHooks::nxdnNetLastDstId(*harness.m_control) == allowedDstId);
+    REQUIRE(harness.network()->rxNXDNStreamId() == allowedStream);
+    REQUIRE(harness.network()->resetNXDNCount() == 0U);
+}
+
+TEST_CASE("NXDN non-authoritative packet admission requires a matching permit", "[nxdn][host][control][net][e2e][acl][non-authoritative]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 8015U;
+    const uint32_t unpermittedStream = 0x620401U;
+    const uint32_t mismatchedStream = 0x620402U;
+    const uint32_t permittedStream = 0x620403U;
+    const uint16_t srcId = 5199U;
+    const uint16_t dstId = 212U;
+
+    NXDNHostHarness harness(false, true, hostPort, hostPeerId, false, true);
+    NXDNTestNetwork sender(senderPort, 8016U);
+    harness.m_tidLookup.addEntry(admissionRule(dstId, { srcId }));
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, unpermittedStream, 900U, srcId, dstId));
+    for (uint32_t i = 0U; i < 10U; i++)
+        harness.network()->clock(1U);
+    REQUIRE(harness.network()->rxNXDNStreamId() == 0U);
+
+    harness.m_control->permittedTG(313U);
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, mismatchedStream, 901U, srcId, dstId));
+    for (uint32_t i = 0U; i < 10U; i++)
+        harness.network()->clock(1U);
+    REQUIRE(harness.network()->rxNXDNStreamId() == 0U);
+
+    harness.m_control->permittedTG(dstId);
+    REQUIRE(sender.sendNXDNCallHeader(hostPeerId, permittedStream, 902U, srcId, dstId));
+    for (uint32_t i = 0U; i < 50U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        harness.m_control->clock();
+        if (HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO)
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(harness.network()->rxNXDNStreamId() == permittedStream);
+}
+
 TEST_CASE("NXDN host arms the network watchdog when network voice starts", "[nxdn][host][control]")
 {
     NXDNHostHarness harness;

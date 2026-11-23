@@ -9,6 +9,7 @@
  */
 #include "Defines.h"
 #include "common/Log.h"
+#include "common/p25/acl/AccessControl.h"
 #include "p25/phase2/Control.h"
 
 #include <cassert>
@@ -38,6 +39,48 @@ Control::Control(bool authoritative, uint32_t callHang, uint32_t timeout, uint32
     m_debug(debug),
     m_verbose(verbose)
 {
+    if (m_network != nullptr) {
+        m_network->setP25P2RxPacketPreprocessor([this](const uint8_t* data, uint32_t length, uint32_t streamId, uint32_t rxStreamId) {
+            if (data == nullptr || length <= 19U)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+
+            // allow packets matching the currently locked receive stream to bypass destination filtering
+            if (rxStreamId != 0U && streamId == rxStreamId)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            const uint32_t srcId = GET_UINT24(data, 5U);
+            const uint32_t dstId = GET_UINT24(data, 8U);
+
+            //LogDebug(LOG_NET, "P25 Phase 2 packet, srcId = %u, dstId = %u, streamId = %u, rxStreamId = %u", srcId, dstId, streamId, rxStreamId);
+
+            // enforce source ID access control
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "P25 Phase 2 packet denial, RID rejection, srcId = %u", srcId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce talkgroup or source ID access control
+            const bool group = (data[14U] & network::NET_CTRL_U2U) != network::NET_CTRL_U2U;
+            if (group) {
+                if (!acl::AccessControl::validateTGId(dstId) ||
+                    !acl::AccessControl::validateTGAccess(srcId, dstId)) {
+                    if (m_debug)
+                        LogDebug(LOG_NET, "P25 Phase 2 packet denial, TGID/RID admission rejection, srcId = %u, dstId = %u",
+                            srcId, dstId);
+                    return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                }
+            }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "P25 Phase 2 packet denial, RID rejection, dstId = %u", dstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+        });
+    }
+
     Slot::init(this, authoritative, callHang, modem, network, affiliations, ridLookup, tidLookup, colorCode);
     m_slot1 = new Slot(0U, timeout, tgHang, queueSize, debug, verbose);
     m_slot2 = new Slot(1U, timeout, tgHang, queueSize, debug, verbose);
@@ -47,6 +90,9 @@ Control::Control(bool authoritative, uint32_t callHang, uint32_t timeout, uint32
 
 Control::~Control()
 {
+    if (m_network != nullptr)
+        m_network->setP25P2RxPacketPreprocessor({});
+
     delete m_slot2;
     delete m_slot1;
 }
