@@ -185,6 +185,7 @@ HostBridge::HostBridge(const std::string& confFile) :
     m_grantDemand(false),
     m_txMode(1U),
     m_duplicateToAnalog(false),
+    m_dupAnalogRtpSeq(0U),
     m_rxAudioGain(1.0f),
     m_vocoderDecoderAudioGain(3.0f),
     m_vocoderDecoderAutoGain(false),
@@ -730,6 +731,8 @@ int HostBridge::run()
                     m_network->resetNXDN();
 
                     m_network->resetAnalog();
+
+                    m_dupAnalogRtpSeq = 0U;
                 }
             }
         }
@@ -2078,6 +2081,8 @@ void HostBridge::callEnd(uint32_t srcId, uint32_t dstId)
     m_network->resetP25();
     m_network->resetNXDN();
     m_network->resetAnalog();
+
+    m_dupAnalogRtpSeq = 0U;
 }
 
 /* Helper to process a FNE KMM TEK response. */

@@ -173,6 +173,7 @@ private:
 
     uint8_t m_txMode;
     bool m_duplicateToAnalog;
+    uint16_t m_dupAnalogRtpSeq;
 
     float m_rxAudioGain;
     float m_vocoderDecoderAudioGain;

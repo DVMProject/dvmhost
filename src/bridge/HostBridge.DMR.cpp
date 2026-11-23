@@ -519,7 +519,13 @@ void HostBridge::encodeDMRAudioFrame(uint8_t* pcm, uint32_t forcedSrcId, uint32_
             LogInfoEx(LOG_HOST, ANO_VOICE ", audio, srcId = %u, dstId = %u, seqNo = %u", srcId, dstId, analogData.getSeqNo());
         }
 
-        m_network->writeAnalog(analogData);
+        uint16_t curr = m_dupAnalogRtpSeq;
+        ++m_dupAnalogRtpSeq;
+        if (m_dupAnalogRtpSeq > (RTP_END_OF_CALL_SEQ - 1U)) {
+            m_dupAnalogRtpSeq = 0U;
+        }
+
+        m_network->writeAnalog(analogData, true, curr);
         m_analogN++;
     }
 }

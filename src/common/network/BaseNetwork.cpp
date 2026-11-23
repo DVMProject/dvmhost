@@ -1286,7 +1286,7 @@ UInt8Array BaseNetwork::readAnalog(bool& ret, uint32_t& frameLength)
 
 /* Writes analog frame data to the network. */
 
-bool BaseNetwork::writeAnalog(const analog::data::NetData& data, bool noSequence)
+bool BaseNetwork::writeAnalog(const analog::data::NetData& data, bool noSequence, uint16_t seqNo)
 {
     using namespace analog::defines;
     if (m_status != NET_STAT_RUNNING && m_status != NET_STAT_MST_RUNNING)
@@ -1306,13 +1306,14 @@ bool BaseNetwork::writeAnalog(const analog::data::NetData& data, bool noSequence
         return false;
     }
 
-    uint16_t seq = pktSeq(resetSeq);
-    if (frameType == AudioFrameType::TERMINATOR) {
-        seq = RTP_END_OF_CALL_SEQ;
-    }
-
+    uint16_t seq = RTP_END_OF_CALL_SEQ;
     if (noSequence) {
-        seq = RTP_END_OF_CALL_SEQ;
+        seq = seqNo;
+    } else {
+        seq = pktSeq(resetSeq);
+        if (frameType == AudioFrameType::TERMINATOR) {
+            seq = RTP_END_OF_CALL_SEQ;
+        }
     }
 
     return writeMaster({ NET_FUNC::PROTOCOL, NET_SUBFUNC::PROTOCOL_SUBFUNC_ANALOG }, message.get(), messageLength, seq, m_analogStreamId);

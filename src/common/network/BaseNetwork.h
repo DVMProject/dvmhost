@@ -1036,10 +1036,11 @@ namespace network
         /**
          * @brief Writes analog MuLaw audio frame data to the network.
          * @param[in] data Instance of the analog::data::NetData class containing the analog message.
-         * @param noSequence Flag indicating the message should be sent with no RTP sequence (65535).
+         * @param noSequence Flag indicating the message should use seqNo instead of the network RTP sequence (which defaults to 65535).
+         * @param seqNo RTP sequence number to use when noSequence is true.
          * @returns bool True, if message was sent, otherwise false.
          */
-        virtual bool writeAnalog(const analog::data::NetData& data, bool noSequence = false);
+        virtual bool writeAnalog(const analog::data::NetData& data, bool noSequence = false, uint16_t seqNo = RTP_END_OF_CALL_SEQ);
 
         /**
          * @brief Helper to test if the analog ring buffer has data.
