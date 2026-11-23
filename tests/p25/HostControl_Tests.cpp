@@ -1581,6 +1581,41 @@ TEST_CASE("P25 watchdog expiry resets network stream state", "[p25][host][contro
     REQUIRE(harness.network()->resetP25Count() == 1U);
 }
 
+TEST_CASE("P25 network watchdog expiry preserves RF steering until RF hang expiry", "[p25][host][control][grant-steering]")
+{
+    P25HostHarness harness;
+    const uint32_t channelNo = 1U;
+    const uint32_t srcId = 1001U;
+    const uint32_t dstId = 2001U;
+
+    harness.m_chLookup.setRFChData(channelNo, lookups::VoiceChData(1U, channelNo, "", 0U, ""));
+    REQUIRE(harness.m_chLookup.initializeRFCh(channelNo));
+    HostTestHooks::p25ConfigureRFGrantSteering(*harness.m_control, true, false);
+
+    harness.m_control->grantTG(srcId, dstId, true);
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == dstId);
+    REQUIRE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+
+    harness.startNetworkVoiceCall(srcId, dstId);
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+
+    HostTestHooks::p25NetworkWatchdog(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::p25NetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == dstId);
+    REQUIRE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+
+    HostTestHooks::p25RFTGHang(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::p25RFTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::p25RFLastDstId(*harness.m_control) == 0U);
+    REQUIRE_FALSE(HostTestHooks::p25RFTGHang(*harness.m_control).isRunning());
+}
+
 TEST_CASE("P25 host net hang expiry clears active network voice state", "[p25][host][control]")
 {
     P25HostHarness harness;

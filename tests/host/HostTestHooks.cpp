@@ -85,6 +85,7 @@ Timer& HostTestHooks::dmrNetTGHang(dmr::Slot& slot) { return slot.m_netTGHang; }
 /* Gets DMR RF talkgroup hang timer. */
 
 Timer& HostTestHooks::dmrRFTGHang(dmr::Slot& slot) { return slot.m_rfTGHang; }
+uint32_t HostTestHooks::dmrRFLastDstId(const dmr::Slot& slot) { return slot.m_rfLastDstId; }
 
 /* Gets DMR RF loss watchdog timer. */
 
@@ -929,6 +930,7 @@ Timer& HostTestHooks::nxdnNetTGHang(nxdn::Control& control) { return control.m_n
 /* Gets NXDN RF talkgroup hang timer. */
 
 Timer& HostTestHooks::nxdnRFTGHang(nxdn::Control& control) { return control.m_rfTGHang; }
+uint32_t HostTestHooks::nxdnRFLastDstId(const nxdn::Control& control) { return control.m_rfLastDstId; }
 
 /* Gets NXDN RF loss watchdog timer. */
 

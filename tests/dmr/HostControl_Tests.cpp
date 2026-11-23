@@ -936,7 +936,7 @@ TEST_CASE("DMR slot rejects mismatched network traffic while RF hang is active",
     REQUIRE(HostTestHooks::dmrNetState(*HostTestHooks::dmrSlot1(*harness.m_control)) == RS_NET_IDLE);
 }
 
-TEST_CASE("DMR slot admits matching network traffic during RF hang", "[dmr][host][control][rf-steering]")
+TEST_CASE("DMR network watchdog expiry preserves RF steering until RF hang expiry", "[dmr][host][control][rf-steering]")
 {
     DMRHostHarness harness;
     dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
@@ -945,6 +945,19 @@ TEST_CASE("DMR slot admits matching network traffic during RF hang", "[dmr][host
     HostTestHooks::dmrStartNetVoiceCall(*slot, 1001U, 4001U);
 
     REQUIRE(HostTestHooks::dmrNetState(*slot) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::dmrRFTGHang(*slot).isRunning());
+
+    HostTestHooks::dmrNetworkWatchdog(*slot).clock(expireTimerTicks(HostTestHooks::dmrNetworkWatchdog(*slot)));
+    slot->clock();
+
+    REQUIRE(HostTestHooks::dmrNetState(*slot) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::dmrRFLastDstId(*slot) == 4001U);
+    REQUIRE(HostTestHooks::dmrRFTGHang(*slot).isRunning());
+
+    HostTestHooks::dmrRFTGHang(*slot).clock(expireTimerTicks(HostTestHooks::dmrRFTGHang(*slot)));
+    slot->clock();
+
+    REQUIRE(HostTestHooks::dmrRFLastDstId(*slot) == 0U);
     REQUIRE_FALSE(HostTestHooks::dmrRFTGHang(*slot).isRunning());
 }
 

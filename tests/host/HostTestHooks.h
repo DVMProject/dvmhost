@@ -82,6 +82,12 @@ public:
      */
     static Timer& dmrRFTGHang(dmr::Slot& slot);
     /**
+     * @brief Gets the retained DMR RF destination for a slot.
+     * @param slot DMR slot instance.
+     * @return uint32_t Last RF destination ID.
+     */
+    static uint32_t dmrRFLastDstId(const dmr::Slot& slot);
+    /**
      * @brief Gets the DMR RF loss watchdog timer for a slot.
      * @param slot DMR slot instance.
      * @return Timer& Reference to the RF loss watchdog timer.
@@ -817,6 +823,12 @@ public:
      * @return Timer& Reference to the RF TG hang timer.
      */
     static Timer& nxdnRFTGHang(nxdn::Control& control);
+    /**
+     * @brief Gets the retained NXDN RF destination.
+     * @param control NXDN control instance.
+     * @return uint32_t Last RF destination ID.
+     */
+    static uint32_t nxdnRFLastDstId(const nxdn::Control& control);
     /**
      * @brief Gets the NXDN RF loss watchdog timer.
      * @param control NXDN control instance.

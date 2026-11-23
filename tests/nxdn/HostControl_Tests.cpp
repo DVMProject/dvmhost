@@ -1013,7 +1013,7 @@ TEST_CASE("NXDN host net hang expiry clears active network voice state", "[nxdn]
     HostTestHooks::nxdnNetTGHang(*harness.m_control).clock(expireTimerTicks(HostTestHooks::nxdnNetTGHang(*harness.m_control)));
     harness.m_control->clock();
 
-    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
     REQUIRE(HostTestHooks::nxdnNetLastDstId(*harness.m_control) == 0U);
     REQUIRE(HostTestHooks::nxdnNetLastSrcId(*harness.m_control) == 0U);
 }
@@ -1044,7 +1044,7 @@ TEST_CASE("NXDN rejects mismatched network traffic while RF hang is active", "[n
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
 }
 
-TEST_CASE("NXDN admits matching network traffic during RF hang", "[nxdn][host][control][rf-steering]")
+TEST_CASE("NXDN network watchdog expiry preserves RF steering until RF hang expiry", "[nxdn][host][control][rf-steering]")
 {
     NXDNHostHarness harness;
     HostTestHooks::nxdnSetRFHang(*harness.m_control, 3001U, 4001U);
@@ -1058,6 +1058,21 @@ TEST_CASE("NXDN admits matching network traffic during RF hang", "[nxdn][host][c
 
     REQUIRE(HostTestHooks::nxdnStartNetCall(*harness.m_control, control));
     REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_AUDIO);
+    REQUIRE(HostTestHooks::nxdnRFTGHang(*harness.m_control).isRunning());
+
+    HostTestHooks::nxdnNetworkWatchdog(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::nxdnNetworkWatchdog(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::nxdnNetState(*harness.m_control) == RS_NET_IDLE);
+    REQUIRE(HostTestHooks::nxdnRFLastDstId(*harness.m_control) == 4001U);
+    REQUIRE(HostTestHooks::nxdnRFTGHang(*harness.m_control).isRunning());
+
+    HostTestHooks::nxdnRFTGHang(*harness.m_control).clock(
+        expireTimerTicks(HostTestHooks::nxdnRFTGHang(*harness.m_control)));
+    harness.m_control->clock();
+
+    REQUIRE(HostTestHooks::nxdnRFLastDstId(*harness.m_control) == 0U);
     REQUIRE_FALSE(HostTestHooks::nxdnRFTGHang(*harness.m_control).isRunning());
 }
 

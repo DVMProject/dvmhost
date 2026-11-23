@@ -1675,15 +1675,6 @@ bool Voice::checkNetTrafficCollision(uint32_t srcId, uint32_t dstId, bool group,
         }
     }
 
-    // bryanb: only perform tail ride fix if default net idle talkgroup is not set
-    if (m_p25->m_defaultNetIdleTalkgroup == 0U) {
-        // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
-        // the RF TG hangtimer is running
-        if (m_p25->m_rfTGHang.isRunning() && !m_p25->m_rfTGHang.hasExpired()) {
-            m_p25->m_rfTGHang.stop();
-        }
-    }
-
     // perform authoritative network TG hangtimer and traffic preemption
     if (m_p25->m_authoritative) {
         // don't process network frames if the destination ID's don't match and the network TG hang timer is running

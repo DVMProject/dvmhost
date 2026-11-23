@@ -1351,12 +1351,6 @@ bool Voice::checkNetTrafficCollision(uint32_t dstId)
         }
     }
 
-    // bryanb: possible fix for a "tail ride" condition where network traffic immediately follows RF traffic *while*
-    // the RF TG hangtimer is running
-    if (m_slot->m_rfTGHang.isRunning() && !m_slot->m_rfTGHang.hasExpired()) {
-        m_slot->m_rfTGHang.stop();
-    }
-
     // don't process network frames if the RF TG hang timer isn't running, the default net idle talkgroup is set and
     // the destination ID doesn't match the default net idle talkgroup
     if (m_slot->m_defaultNetIdleTalkgroup != 0U && dstId != 0U && !m_slot->m_rfTGHang.isRunning()) {
