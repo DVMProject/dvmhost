@@ -149,10 +149,12 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     bool extendedFuncResponse = false;
     if (csbk != nullptr && csbk->getCSBKO() == CSBKO::EXT_FNCT) {
         lc::csbk::CSBK_EXT_FNCT* extendedFunction = static_cast<lc::csbk::CSBK_EXT_FNCT*>(csbk.get());
-        const uint8_t function = extendedFunction->getExtendedFunction();
-        extendedFuncResponse = function == ExtendedFunctions::CHECK_ACK ||
-            function == ExtendedFunctions::INHIBIT_ACK || 
-            function == ExtendedFunctions::UNINHIBIT_ACK;
+        if (extendedFunction != nullptr) {
+            const uint8_t function = extendedFunction->getExtendedFunction();
+            extendedFuncResponse = function == ExtendedFunctions::CHECK_ACK ||
+                function == ExtendedFunctions::INHIBIT_ACK || 
+                function == ExtendedFunctions::UNINHIBIT_ACK;
+        }
     }
 
     std::unique_ptr<lc::LC> voiceLC;
@@ -636,8 +638,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     continue;
                 if (peerId != peer.first) {
                     TrafficNetwork::PeerConnectionPtr conn = peer.second;
-                    if (extendedFuncResponse && conn->peerClass() != PEER_CONN_CLASS_NEIGHBOR &&
-                        conn->peerClass() != PEER_CONN_CLASS_CONSOLE) {
+                    if (extendedFuncResponse && conn->peerClass() != PEER_CONN_CLASS_NEIGHBOR && conn->peerClass() != PEER_CONN_CLASS_CONSOLE) {
                         continue;
                     }
 
