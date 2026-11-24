@@ -50,6 +50,7 @@ PeerNetwork::PeerNetwork(const std::string& address, uint16_t port, uint16_t loc
     m_netTreeDiscCallback(nullptr),
     m_peerReplicaCallback(nullptr),
     m_patchStatusCallback(nullptr),
+    m_subscriberOperationProxyCallback(nullptr),
     m_masterPeerId(0U),
     m_ridAliasLookup(nullptr),
     m_pidLookup(nullptr),
@@ -339,6 +340,14 @@ void PeerNetwork::userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opco
             }
         }
         break;
+
+    case NET_FUNC::SUBSCRIBER_OP:                                   // Subscriber Operation
+    {
+        if (opcode.second == NET_SUBFUNC::SUBSCRIBER_OP_PROXY_RESPONSE && m_subscriberOperationProxyCallback != nullptr) {
+            m_subscriberOperationProxyCallback(this, data, length, peerId);
+        }
+    }
+    break;
 
     case NET_FUNC::REPL:                                            // Peer Replication
     {

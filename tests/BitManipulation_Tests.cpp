@@ -41,6 +41,18 @@ TEST_CASE("BitManipulation integer macros round-trip values", "[common][bitmanip
 {
     std::array<uint8_t, 16U> buffer = {};
 
+    SET_UINT64(0x0123456789ABCDEFULL, buffer.data(), 0U);
+    uint64_t value64 = GET_UINT64(buffer.data(), 0U);
+    REQUIRE(value64 == 0x0123456789ABCDEFULL);
+    REQUIRE(buffer[0U] == 0x01U);
+    REQUIRE(buffer[1U] == 0x23U);
+    REQUIRE(buffer[2U] == 0x45U);
+    REQUIRE(buffer[3U] == 0x67U);
+    REQUIRE(buffer[4U] == 0x89U);
+    REQUIRE(buffer[5U] == 0xABU);
+    REQUIRE(buffer[6U] == 0xCDU);
+    REQUIRE(buffer[7U] == 0xEFU);
+
     SET_UINT32(0x12345678U, buffer.data(), 0U);
     uint32_t value32 = GET_UINT32(buffer.data(), 0U);
     REQUIRE(value32 == 0x12345678U);

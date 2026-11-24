@@ -107,6 +107,27 @@ void FNETestHooks::clearPeerWriteCapture(TrafficNetwork& network)
     network.m_testPeerWriteHandler = nullptr;
 }
 
+/* Captures complete payloads selected by subsequent peer writes. */
+
+void FNETestHooks::capturePeerPayloadWrite(TrafficNetwork& network,
+    std::vector<uint8_t>& payload, uint8_t& function, uint8_t& subFunction)
+{
+    network.m_testPeerPayloadWriteHandler = [&payload, &function, &subFunction](uint32_t,
+                                                FrameQueue::OpcodePair opcode,
+                                                const uint8_t* data, uint32_t length) {
+        function = opcode.first;
+        subFunction = opcode.second;
+        payload.assign(data, data + length);
+    };
+}
+
+/* Clears the peer payload write capture callback. */
+
+void FNETestHooks::clearPeerPayloadWrite(TrafficNetwork& network)
+{
+    network.m_testPeerPayloadWriteHandler = nullptr;
+}
+
 /* Captures the next metadata response payload and opcodes. */
 
 void FNETestHooks::captureMetadataWrite(MetadataNetwork& metadata, std::vector<uint8_t>& payload,
@@ -125,6 +146,46 @@ void FNETestHooks::captureMetadataWrite(MetadataNetwork& metadata, std::vector<u
 void FNETestHooks::clearMetadataWriteCapture(MetadataNetwork& metadata)
 {
     metadata.m_testPeerMetadataWriteHandler = nullptr;
+}
+
+/* Captures subscriber operation proxy requests written upstream. */
+
+void FNETestHooks::captureSubscriberOperationProxyWrite(TrafficNetwork& network,
+    std::vector<uint8_t>& payload)
+{
+    network.m_testSubscriberOperationProxyWriteHandler = [&payload](FrameQueue::OpcodePair opcode,
+                                                            const uint8_t* data, uint32_t length) {
+        if (opcode.first != NET_FUNC::SUBSCRIBER_OP ||
+            opcode.second != NET_SUBFUNC::SUBSCRIBER_OP_PROXY_REQUEST) {
+            return false;
+        }
+        payload.assign(data, data + length);
+        return true;
+    };
+}
+
+/* Clears the subscriber operation proxy write capture callback. */
+
+void FNETestHooks::clearSubscriberOperationProxyWrite(TrafficNetwork& network)
+{
+    network.m_testSubscriberOperationProxyWriteHandler = nullptr;
+}
+
+/* Marks a peer network as an enabled replica for proxy response tests. */
+
+void FNETestHooks::enableReplicaPeer(PeerNetwork& peer)
+{
+    peer.enable(true);
+    peer.m_peerReplica = true;
+}
+
+/* Delivers a packed subscriber operation proxy response. */
+
+void FNETestHooks::deliverSubscriberOperationProxyResponse(TrafficNetwork& network,
+    PeerNetwork& peer, const std::vector<uint8_t>& payload)
+{
+    network.processSubscriberOperationProxyResponse(&peer, payload.data(),
+        static_cast<uint32_t>(payload.size()), peer.getPeerId());
 }
 
 /* Queues and plays one synthetic parrot frame through a protocol handler. */

@@ -64,7 +64,9 @@ public:
     ~FNEHarness()
     {
         FNETestHooks::clearPeerWriteCapture(traffic);
+        FNETestHooks::clearPeerPayloadWrite(traffic);
         FNETestHooks::clearMetadataWriteCapture(metadata);
+        FNETestHooks::clearSubscriberOperationProxyWrite(traffic);
         FNETestHooks::clearPeers(traffic);
     }
 
@@ -177,6 +179,144 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     CHECK(statusResponse["subscriberId"].get<uint32_t>() == SUBSCRIBER_ID);
     CHECK(statusResponse["status"].get<uint16_t>() == 0x1234U);
     CHECK(statusResponse["solicited"].get<bool>());
+}
+
+TEST_CASE("FNE metadata proxies subscriber operation queries and correlates responses",
+    "[fne][metadata][subscriber-operations][proxy]")
+{
+    constexpr uint32_t CONSOLE_PEER_ID = 1001U;
+    constexpr uint64_t OPERATION_ID = 0x0012030405060708ULL;
+    constexpr uint32_t TARGET_ID = 123456U;
+    constexpr uint32_t RADIO_PEER_ID = 2001U;
+
+    FNEHarness harness;
+    network::FNEPeerConnection& console = FNETestHooks::addPeer(
+        harness.traffic, CONSOLE_PEER_ID, network::NET_STAT_RUNNING, true);
+    console.peerClass(network::PEER_CONN_CLASS_CONSOLE);
+
+    std::vector<uint8_t> proxyRequest;
+    std::vector<uint8_t> consoleResponse;
+    uint8_t responseFunction = network::NET_FUNC::ILLEGAL;
+    uint8_t responseSubFunction = network::NET_SUBFUNC::NOP;
+    FNETestHooks::captureSubscriberOperationProxyWrite(harness.traffic, proxyRequest);
+    FNETestHooks::captureMetadataWrite(harness.metadata, consoleResponse,
+        responseFunction, responseSubFunction);
+
+    json::object request = json::object();
+    request["operationId"].set<uint64_t>(OPERATION_ID);
+    const std::string requestJson = json::value(request).serialize();
+    std::vector<uint8_t> requestPayload(11U + requestJson.length(), 0U);
+    ::memcpy(requestPayload.data() + 11U, requestJson.data(), requestJson.length());
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION,
+        CONSOLE_PEER_ID, requestPayload);
+
+    REQUIRE(proxyRequest.size() == 27U);
+    CHECK(proxyRequest[11U] == 16U);
+    CHECK(proxyRequest[12U] == 0U);
+    CHECK(proxyRequest[13U] == 0U);
+    CHECK(proxyRequest[14U] == 0U);
+    const uint32_t transactionId = GET_UINT32(proxyRequest.data(), 15U)
+    CHECK(transactionId != 0U);
+    const uint32_t operationHigh = GET_UINT32(proxyRequest.data(), 19U)
+    const uint32_t operationLow = GET_UINT32(proxyRequest.data(), 23U)
+    CHECK(operationHigh == 0x00120304U);
+    CHECK(operationLow == 0x05060708U);
+    CHECK(consoleResponse.empty());
+
+    std::vector<uint8_t> proxyResponse(63U, 0U);
+    proxyResponse[11U] = 0U;
+    SET_UINT32(transactionId, proxyResponse.data(), 15U);
+    SET_UINT32(operationHigh, proxyResponse.data(), 19U);
+    SET_UINT32(operationLow, proxyResponse.data(), 23U);
+    proxyResponse[27U] = 1U;
+    proxyResponse[28U] = static_cast<uint8_t>(network::SubscriberOperationStore::Protocol::P25);
+    proxyResponse[29U] = static_cast<uint8_t>(network::SubscriberOperationStore::Kind::STATUS_QUERY);
+    proxyResponse[30U] = static_cast<uint8_t>(network::SubscriberOperationStore::State::SUCCEEDED);
+    SET_UINT32(TARGET_ID, proxyResponse.data(), 31U);
+    SET_UINT32(RADIO_PEER_ID, proxyResponse.data(), 35U);
+    SET_UINT32(0U, proxyResponse.data(), 39U);
+    SET_UINT32(0x1234U, proxyResponse.data(), 43U);
+    SET_UINT32(0U, proxyResponse.data(), 47U);
+    SET_UINT32(1000U, proxyResponse.data(), 51U);
+    SET_UINT32(0U, proxyResponse.data(), 55U);
+    SET_UINT32(2000U, proxyResponse.data(), 59U);
+
+    network::PeerNetwork upstream("127.0.0.1", 62041U, 0U, 888888U,
+        "test-password", true, false, true, true, true, true, true, true,
+        true, true, false, false);
+    FNETestHooks::enableReplicaPeer(upstream);
+    FNETestHooks::deliverSubscriberOperationProxyResponse(harness.traffic, upstream, proxyResponse);
+
+    REQUIRE(consoleResponse.size() > 11U);
+    CHECK(responseFunction == network::NET_FUNC::SUBSCRIBER_OP);
+    CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION);
+    json::value responseValue;
+    REQUIRE(json::parse(responseValue,
+        std::string(reinterpret_cast<const char*>(consoleResponse.data() + 11U),
+            consoleResponse.size() - 11U)).empty());
+    REQUIRE(responseValue.is<json::object>());
+    json::object& response = responseValue.get<json::object>();
+    CHECK(response["found"].get<bool>());
+    CHECK(response["operationId"].get<uint64_t>() == OPERATION_ID);
+    CHECK(response["targetId"].get<uint32_t>() == TARGET_ID);
+    CHECK(response["peerId"].get<uint32_t>() == RADIO_PEER_ID);
+    CHECK(response["resultValue"].get<uint32_t>() == 0x1234U);
+    REQUIRE(response["operations"].is<json::array>());
+    CHECK(response["operations"].get<json::array>().size() == 1U);
+}
+
+TEST_CASE("FNE metadata answers packed subscriber operation proxy requests",
+    "[fne][metadata][subscriber-operations][proxy]")
+{
+    constexpr uint32_t NEIGHBOR_PEER_ID = 3001U;
+    constexpr uint32_t TRANSACTION_ID = 0x11223344U;
+    constexpr uint32_t TARGET_ID = 123456U;
+
+    FNEHarness harness;
+    network::FNEPeerConnection& neighbor = FNETestHooks::addPeer(
+        harness.traffic, NEIGHBOR_PEER_ID, network::NET_STAT_RUNNING, true);
+    neighbor.peerClass(network::PEER_CONN_CLASS_NEIGHBOR);
+    neighbor.isReplica(true);
+
+    const uint64_t operationId = harness.traffic.subscriberOperations().oneShot(
+        network::SubscriberOperationStore::Protocol::P25,
+        network::SubscriberOperationStore::Kind::RADIO_CHECK, TARGET_ID, 2001U);
+    REQUIRE(operationId != 0U);
+
+    std::vector<uint8_t> responsePayload;
+    uint8_t responseFunction = network::NET_FUNC::ILLEGAL;
+    uint8_t responseSubFunction = network::NET_SUBFUNC::NOP;
+    FNETestHooks::capturePeerPayloadWrite(harness.traffic, responsePayload,
+        responseFunction, responseSubFunction);
+
+    std::vector<uint8_t> requestPayload(27U, 0U);
+    requestPayload[11U] = 4U;
+    SET_UINT32(TRANSACTION_ID, requestPayload.data(), 15U);
+    SET_UINT32(static_cast<uint32_t>(operationId >> 32U), requestPayload.data(), 19U);
+    SET_UINT32(static_cast<uint32_t>(operationId & 0xFFFFFFFFU), requestPayload.data(), 23U);
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP,
+        network::NET_SUBFUNC::SUBSCRIBER_OP_PROXY_REQUEST,
+        NEIGHBOR_PEER_ID, requestPayload);
+
+    REQUIRE(responsePayload.size() == 63U);
+    CHECK(responseFunction == network::NET_FUNC::SUBSCRIBER_OP);
+    CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_PROXY_RESPONSE);
+    CHECK(responsePayload[11U] == 0U);
+    CHECK(responsePayload[27U] == 1U);
+    const uint32_t responseTransactionId = GET_UINT32(responsePayload.data(), 15U)
+    const uint32_t responseTargetId = GET_UINT32(responsePayload.data(), 31U)
+    CHECK(responseTransactionId == TRANSACTION_ID);
+    CHECK(responseTargetId == TARGET_ID);
+
+    responsePayload.clear();
+    requestPayload.pop_back();
+    FNETestHooks::dispatchMetadata(harness.traffic, harness.metadata,
+        network::NET_FUNC::SUBSCRIBER_OP,
+        network::NET_SUBFUNC::SUBSCRIBER_OP_PROXY_REQUEST,
+        NEIGHBOR_PEER_ID, requestPayload);
+    CHECK(responsePayload.empty());
 }
 
 TEST_CASE("FNE metadata starts subscriber operations before transmission",

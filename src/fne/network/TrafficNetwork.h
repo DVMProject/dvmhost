@@ -81,6 +81,8 @@ namespace network { namespace callhandler { class HOST_SW_API TagP25Data; } }
 namespace network { namespace callhandler { namespace packetdata { class HOST_SW_API P25PacketData; } } }
 namespace network { namespace callhandler { class HOST_SW_API TagP25P2Data; } }
 namespace network { class HOST_SW_API P25OTARService; }
+namespace network { class HOST_SW_API MetadataNetwork; }
+namespace network { class HOST_SW_API PeerNetwork; }
 namespace network { namespace callhandler { class HOST_SW_API TagNXDNData; } }
 namespace network { namespace callhandler { class HOST_SW_API TagAnalogData; } }
 
@@ -140,6 +142,23 @@ namespace network
      */
     struct MetadataUpdateRequest : thread_t {
         uint32_t peerId;        //!< Peer ID for this request.
+    };
+
+    // ---------------------------------------------------------------------------
+    //  Structure Declaration
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @brief Correlation state for one subscriber operation query forwarded upstream.
+     * @ingroup fne_network
+     */
+    struct SubscriberOperationProxyPending {
+        MetadataNetwork* metadata;               //!< Metadata network for a local console response.
+        uint32_t downstreamPeerId;               //!< Console or downstream FNE peer ID.
+        uint32_t downstreamStreamId;             //!< Original downstream stream ID.
+        uint32_t downstreamTransactionId;        //!< Downstream proxy transaction ID, or zero for a console.
+        uint64_t operationId;                    //!< Requested subscriber operation ID.
+        uint64_t expiresAt;                      //!< Expiration time in Unix milliseconds.
     };
 
     // ---------------------------------------------------------------------------
@@ -261,6 +280,27 @@ namespace network
         SubscriberOperationStore& subscriberOperations() { return m_subscriberOperations; }
 
         /**
+         * @brief Proxies a subscriber operation result query to the upstream replica parent.
+         * @param metadata Metadata network used to return a locally originated console response.
+         * @param downstreamPeerId Console or downstream FNE peer ID awaiting the response.
+         * @param downstreamStreamId Stream ID supplied by the downstream requestor.
+         * @param downstreamTransactionId Proxy transaction ID supplied by a downstream FNE, or zero for a console.
+         * @param operationId Subscriber operation ID to query.
+         * @param hopLimit Number of additional upstream hops permitted.
+         * @returns True if the request was forwarded, otherwise false.
+         */
+        bool proxySubscriberOperation(MetadataNetwork* metadata, uint32_t downstreamPeerId, uint32_t downstreamStreamId, uint32_t downstreamTransactionId,
+            uint64_t operationId, uint8_t hopLimit);
+        /**
+         * @brief Processes a packed subscriber operation proxy response received from an upstream parent.
+         * @param peer Upstream peer network that supplied the response.
+         * @param data Packed response buffer.
+         * @param length Length of the packed response buffer.
+         * @param peerId Destination peer ID carried in the response.
+         */
+        void processSubscriberOperationProxyResponse(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId);
+
+        /**
          * @brief Sets the instances of the Radio ID, Radio Alias, Talkgroup ID, Peer List, and Crypto lookup tables.
          * @param ridLookup Radio ID Lookup Table Instance
          * @param ridAliasLookup Radio Alias Lookup Table Instance
@@ -349,6 +389,8 @@ namespace network
 #if defined(CATCH2_TEST_COMPILATION)
         friend class ::FNETestHooks;
         std::function<void(uint32_t, FrameQueue::OpcodePair)> m_testPeerWriteHandler;
+        std::function<bool(FrameQueue::OpcodePair, const uint8_t*, uint32_t)> m_testSubscriberOperationProxyWriteHandler;
+        std::function<void(uint32_t, FrameQueue::OpcodePair, const uint8_t*, uint32_t)> m_testPeerPayloadWriteHandler;
 #endif
         friend class MetadataNetwork;
         friend class callhandler::TagDMRData;
@@ -423,6 +465,9 @@ namespace network
         mutable std::mutex m_affiliationUpdateMutex;
         UnitRouteRegistry m_unitRouteRegistry;
         SubscriberOperationStore m_subscriberOperations;
+        std::unordered_map<uint32_t, SubscriberOperationProxyPending> m_subscriberOperationProxyPending;
+        std::mutex m_subscriberOperationProxyMutex;
+        std::atomic<uint32_t> m_subscriberOperationProxyNextId;
         concurrent::shared_unordered_map<uint32_t, std::vector<uint32_t>> m_ccPeerMap;
         static std::timed_mutex s_keyQueueMutex;
         std::unordered_map<uint32_t, uint16_t> m_peerReplicaKeyQueue;

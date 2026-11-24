@@ -112,6 +112,9 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_affiliationUpdateMutex(),
     m_unitRouteRegistry(),
     m_subscriberOperations(5, 10),
+    m_subscriberOperationProxyPending(),
+    m_subscriberOperationProxyMutex(),
+    m_subscriberOperationProxyNextId(1U),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
     m_peerReplicaKEKKeyQueue(),
@@ -883,6 +886,19 @@ void TrafficNetwork::clock(uint32_t ms)
 
     // expire any pending subscriber operations and remove retained results
     m_subscriberOperations.expire();
+    {
+        std::lock_guard<std::mutex> lock(m_subscriberOperationProxyMutex);
+        for (auto it = m_subscriberOperationProxyPending.begin();
+            it != m_subscriberOperationProxyPending.end();) {
+            if (it->second.expiresAt <= now) {
+                LogWarning(LOG_MASTER, "Subscriber operation proxy request timed out, transactionId = %u",
+                    it->first);
+                it = m_subscriberOperationProxyPending.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
     // check jitter buffer timeouts for all peers
     for (const auto& peer : peersSnapshot()) {
@@ -3455,6 +3471,10 @@ bool TrafficNetwork::writePeerQueue(udp::BufferQueue* buffers, uint32_t peerId, 
     PeerConnectionPtr connection = findPeer(peerId);
     if (connection != nullptr) {
 #if defined(CATCH2_TEST_COMPILATION)
+        if (m_testPeerPayloadWriteHandler) {
+            m_testPeerPayloadWriteHandler(peerId, opcode, data, length);
+            return true;
+        }
         if (m_testPeerWriteHandler) {
             m_testPeerWriteHandler(peerId, opcode);
             return true;

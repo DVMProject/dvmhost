@@ -931,6 +931,7 @@ bool HostFNE::createPeerNetworks()
             network->setNetTreeDiscCallback(std::bind(&HostFNE::processNetworkTreeDisconnect, this, std::placeholders::_1, std::placeholders::_2));
             network->setNotifyPeerReplicaCallback(std::bind(&HostFNE::processPeerReplicaNotify, this, std::placeholders::_1));
             network->setPatchStatusCallback(std::bind(&HostFNE::processPeerPatchStatus, this, std::placeholders::_1, std::placeholders::_2));
+            network->setSubscriberOperationProxyCallback(std::bind(&HostFNE::processSubscriberOperationProxyResponse, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
 
             network->enable(enabled);
             if (enabled) {
@@ -1320,5 +1321,14 @@ void HostFNE::processPeerPatchStatus(network::PeerNetwork* peerNetwork, json::ob
 {
     if (m_network != nullptr && peerNetwork != nullptr) {
         m_network->processReplicatedPatchStatus(peerNetwork->getPeerId(), obj);
+    }
+}
+
+/* Processes a subscriber operation proxy response from an upstream FNE. */
+
+void HostFNE::processSubscriberOperationProxyResponse(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t peerId)
+{
+    if (m_network != nullptr && peerNetwork != nullptr) {
+        m_network->processSubscriberOperationProxyResponse(peerNetwork, data, length, peerId);
     }
 }

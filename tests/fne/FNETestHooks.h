@@ -137,6 +137,20 @@ public:
      */
     static void clearPeerWriteCapture(network::TrafficNetwork& network);
     /**
+     * @brief Captures complete payloads selected by subsequent peer writes.
+     * @param network Traffic network instance.
+     * @param[out] payload Complete peer payload.
+     * @param[out] function Function opcode.
+     * @param[out] subFunction Sub-function opcode.
+     */
+    static void capturePeerPayloadWrite(network::TrafficNetwork& network,
+        std::vector<uint8_t>& payload, uint8_t& function, uint8_t& subFunction);
+    /**
+     * @brief Clears the peer payload write capture callback.
+     * @param network Traffic network instance.
+     */
+    static void clearPeerPayloadWrite(network::TrafficNetwork& network);
+    /**
      * @brief Captures the next metadata response payload and opcodes.
      * @param metadata Metadata network instance.
      * @param[out] payload Complete metadata response payload.
@@ -150,6 +164,31 @@ public:
      * @param metadata Metadata network instance.
      */
     static void clearMetadataWriteCapture(network::MetadataNetwork& metadata);
+    /**
+     * @brief Captures subscriber operation proxy requests written upstream.
+     * @param network Traffic network instance.
+     * @param[out] payload Complete packed request payload.
+     */
+    static void captureSubscriberOperationProxyWrite(network::TrafficNetwork& network,
+        std::vector<uint8_t>& payload);
+    /**
+     * @brief Clears the subscriber operation proxy write capture callback.
+     * @param network Traffic network instance.
+     */
+    static void clearSubscriberOperationProxyWrite(network::TrafficNetwork& network);
+    /**
+     * @brief Marks a peer network as an enabled replica for proxy response tests.
+     * @param peer Peer network instance.
+     */
+    static void enableReplicaPeer(network::PeerNetwork& peer);
+    /**
+     * @brief Delivers a packed subscriber operation proxy response.
+     * @param network Traffic network instance.
+     * @param peer Upstream replica peer.
+     * @param payload Complete packed response payload.
+     */
+    static void deliverSubscriberOperationProxyResponse(network::TrafficNetwork& network,
+        network::PeerNetwork& peer, const std::vector<uint8_t>& payload);
     /**
      * @brief Queues and plays one synthetic parrot frame through a protocol handler.
      * @param network The TrafficNetwork instance.

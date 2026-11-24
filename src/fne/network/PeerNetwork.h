@@ -30,6 +30,10 @@
 #include <cstdint>
 #include <vector>
 
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
+
 namespace network
 {
     // ---------------------------------------------------------------------------
@@ -63,6 +67,9 @@ namespace network
      * @ingroup fne_network
      */
     class HOST_SW_API PeerNetwork : public Network {
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::FNETestHooks;
+#endif
     public:
         /**
          * @brief Callback for protocol packet processing.
@@ -169,6 +176,11 @@ namespace network
          * @param callback
          */
         void setPatchStatusCallback(std::function<void(PeerNetwork*, json::object)>&& callback) { m_patchStatusCallback = callback; }
+        /**
+         * @brief Sets the subscriber operation proxy response callback.
+         * @param callback Callback receiving the packed proxy response.
+         */
+        void setSubscriberOperationProxyCallback(std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId)>&& callback) { m_subscriberOperationProxyCallback = callback; }
 
         /**
          * @brief Writes a complete update of this CFNE's active peer list to the network.
@@ -321,27 +333,27 @@ namespace network
          * @brief DMR Protocol Callback.
          *  (This is called when the master sends a DMR packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_dmrCallback;
+        ProtocolCallback m_dmrCallback;
         /**
          * @brief P25 Protocol Callback.
          *  (This is called when the master sends a P25 packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_p25Callback;
+        ProtocolCallback m_p25Callback;
         /**
          * @brief P25 Phase 2 Protocol Callback.
          *  (This is called when the master sends a P25 Phase 2 packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_p25P2Callback;
+        ProtocolCallback m_p25P2Callback;
         /**
          * @brief NXDN Protocol Callback.
          *  (This is called when the master sends a NXDN packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_nxdnCallback;
+        ProtocolCallback m_nxdnCallback;
         /**
          * @brief Analog Protocol Callback.
          *  (This is called when the master sends a analog packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_analogCallback;
+        ProtocolCallback m_analogCallback;
 
         /**
          * @brief Network Tree Disconnect Callback.
@@ -355,6 +367,10 @@ namespace network
          * @brief Peer patch status callback.
          */
         std::function<void(PeerNetwork* peer, json::object obj)> m_patchStatusCallback;
+        /**
+         * @brief Subscriber operation proxy response callback.
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId)> m_subscriberOperationProxyCallback;
 
         /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.

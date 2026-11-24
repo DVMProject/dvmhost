@@ -306,6 +306,14 @@ private:
      * @param obj Patch status JSON payload.
      */
     void processPeerPatchStatus(network::PeerNetwork* peerNetwork, json::object obj);
+    /**
+     * @brief Processes a subscriber operation proxy response from an upstream FNE.
+     * @param peerNetwork Upstream peer network instance.
+     * @param data Packed response buffer.
+     * @param length Length of the packed response buffer.
+     * @param peerId Destination peer ID carried in the response.
+     */
+    void processSubscriberOperationProxyResponse(network::PeerNetwork* peerNetwork, const uint8_t* data, uint32_t length, uint32_t peerId);
 };
 
 #endif // __HOST_FNE_H__
