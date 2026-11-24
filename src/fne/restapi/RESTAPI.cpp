@@ -51,7 +51,6 @@ using namespace fne_restapi;
 #define HEALTH_FAILED                                   "FAILED"
 #define HEALTH_PARTITIONED                              "PARTITIONED"
 #define HEALTH_HEALTHY                                  "HEALTHY"
-#define HEALTH_FAILED                                   "FAILED"
 #define HEALTH_UNAVAILABLE                              "UNAVAILABLE"
 
 #define HEALTH_REASON_ALL_UPSTREAMS_DISCONNECTED        "ALL_UPSTREAMS_DISCONNECTED"
@@ -63,6 +62,9 @@ using namespace fne_restapi;
 #define HEALTH_REASON_UPSTREAM_CONNECTIVITY_DEGRADED    "UPSTREAM_CONNECTIVITY_DEGRADED"
 #define HEALTH_REASON_METADATA_UPDATES_MISSED           "METADATA_UPDATES_MISSED"
 #define HEALTH_REASON_TRAFFIC_NETWORK_UNAVAILABLE       "TRAFFIC_NETWORK_UNAVAILABLE"
+#define HEALTH_REASON_NO_RIDS_DEFINED                   "NO_RIDS_DEFINED"
+#define HEALTH_REASON_NO_TGIDS_DEFINES                  "NO_TGIDS_DEFINED"
+#define HEALTH_REASON_NO_PEERS_DEFINED                  "NO_PEERS_DEFINED"
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -2523,6 +2525,27 @@ void RESTAPI::restAPI_GetHealth(const HTTPPayload& request, HTTPPayload& reply, 
     if (metadataDegraded) {
         reasonCodes.push_back(json::value(HEALTH_REASON_METADATA_UPDATES_MISSED));
         reasons.push_back(json::value("one or more child FNEs have missed metadata updates"));
+    }
+
+    uint32_t ridTotalEntries = m_network->m_ridLookup->table().size();
+    if (ridTotalEntries == 0U) {
+        overall = HEALTH_DEGRADED;
+        reasonCodes.push_back(json::value(HEALTH_REASON_NO_RIDS_DEFINED));
+        reasons.push_back(json::value("no radio IDs are defined"));
+    }
+
+    uint32_t tgTotalEntries = m_network->m_tidLookup->groupVoice().size();
+    if (tgTotalEntries == 0U) {
+        overall = HEALTH_DEGRADED;
+        reasonCodes.push_back(json::value(HEALTH_REASON_NO_TGIDS_DEFINES));
+        reasons.push_back(json::value("no talkgroup IDs are defined"));
+    }
+
+    uint32_t peerListTotalEntries = m_peerListLookup->table().size();
+    if (peerListTotalEntries == 0U) {
+        overall = HEALTH_DEGRADED;
+        reasonCodes.push_back(json::value(HEALTH_REASON_NO_PEERS_DEFINED));
+        reasons.push_back(json::value("no peers are defined"));
     }
 
     health["overall"].set<std::string>(overall);
