@@ -257,6 +257,8 @@ const char* SubscriberOperationStore::kindName(Kind kind)
         return "emerg-alrm";
     case Kind::EMERG_CALL:
         return "emerg-call";
+    case Kind::RADIO_MONITOR:
+        return "radio-monitor";
     }
 
     return "unknown";

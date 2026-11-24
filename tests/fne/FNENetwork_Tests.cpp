@@ -267,7 +267,7 @@ TEST_CASE("FNE metadata starts subscriber operations before transmission",
     CHECK(operation.state == network::SubscriberOperationStore::State::PENDING);
 }
 
-TEST_CASE("FNE consumes radio-check responses without peer fanout",
+TEST_CASE("FNE records radio-check responses and permits selective relay",
     "[fne][subscriber-operations][routing]")
 {
     constexpr uint32_t SOURCE_PEER_ID = 1001U;
@@ -291,11 +291,8 @@ TEST_CASE("FNE consumes radio-check responses without peer fanout",
             network::SubscriberOperationStore::Kind::RADIO_CHECK, SUBSCRIBER_ID, SOURCE_PEER_ID);
         REQUIRE(operationId != 0U);
 
-        std::vector<uint32_t> writes;
-        FNETestHooks::capturePeerWrites(harness.traffic, writes);
-        CHECK_FALSE(FNETestHooks::processRadioCheckResponse(
+        CHECK(FNETestHooks::processRadioCheckResponse(
             harness.traffic, protocol, SOURCE_PEER_ID, SUBSCRIBER_ID));
-        CHECK(writes.empty());
 
         network::SubscriberOperationStore::Operation operation;
         REQUIRE(harness.traffic.subscriberOperations().get(operationId, operation));

@@ -62,7 +62,9 @@ namespace network
             KMM_CHANGERSI = 7U,     //!< Key management change RSI request.
 
             EMERG_ALRM = 8U,        //!< Emergency alarm request.
-            EMERG_CALL = 9U         //!< Emergency voice call.
+            EMERG_CALL = 9U,        //!< Emergency voice call.
+
+            RADIO_MONITOR = 10U,   //!< Radio monitor request.
         };
 
         /**

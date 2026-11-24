@@ -340,7 +340,7 @@ public:
      * @param protocol DMR or P25 protocol handler to exercise.
      * @param peerId Originating site peer ID.
      * @param subscriberId Responding subscriber ID.
-     * @returns bool Protocol handler result; false indicates the response was consumed.
+     * @returns bool True when the response remains eligible for selective forwarding.
      */
     static bool processRadioCheckResponse(network::TrafficNetwork& network,
         ParrotProtocol protocol, uint32_t peerId, uint32_t subscriberId);

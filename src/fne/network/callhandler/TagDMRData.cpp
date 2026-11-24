@@ -145,6 +145,16 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         csbk = lc::csbk::CSBKFactory::createCSBK(frame, dataType);
     }
 
+    // identify extended function request responses to restrict their routing
+    bool extendedFuncResponse = false;
+    if (csbk != nullptr && csbk->getCSBKO() == CSBKO::EXT_FNCT) {
+        lc::csbk::CSBK_EXT_FNCT* extendedFunction = static_cast<lc::csbk::CSBK_EXT_FNCT*>(csbk.get());
+        const uint8_t function = extendedFunction->getExtendedFunction();
+        extendedFuncResponse = function == ExtendedFunctions::CHECK_ACK ||
+            function == ExtendedFunctions::INHIBIT_ACK || 
+            function == ExtendedFunctions::UNINHIBIT_ACK;
+    }
+
     std::unique_ptr<lc::LC> voiceLC;
     if (dataSync && dataType == DataType::VOICE_LC_HEADER) {
         lc::FullLC fullLC;
@@ -158,7 +168,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
     // is the stream valid?
     if (validate(peerId, dmrData, csbk.get(), streamId)) {
         // is this peer ignored?
-        if (!isPeerPermitted(peerId, dmrData, streamId, fromUpstream)) {
+        if (!extendedFuncResponse && !isPeerPermitted(peerId, dmrData, streamId, fromUpstream)) {
             return false;
         }
 
@@ -626,13 +636,18 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     continue;
                 if (peerId != peer.first) {
                     TrafficNetwork::PeerConnectionPtr conn = peer.second;
+                    if (extendedFuncResponse && conn->peerClass() != PEER_CONN_CLASS_NEIGHBOR &&
+                        conn->peerClass() != PEER_CONN_CLASS_CONSOLE) {
+                        continue;
+                    }
+
                     if (ssrc == peer.first) {
                         // skip the peer if it is the source peer
                         continue;
                     }
 
                     // are we routing private calls?
-                    if (m_network->m_privateCallRoutingEnabled) {
+                    if (!extendedFuncResponse && m_network->m_privateCallRoutingEnabled) {
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
@@ -658,7 +673,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
 
                     // is this peer ignored?
-                    if (!isPeerPermitted(peer.first, dmrData, streamId)) {
+                    if (!extendedFuncResponse && !isPeerPermitted(peer.first, dmrData, streamId)) {
                         continue;
                     }
 
@@ -687,7 +702,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
         // if this is a private call, and we have already repeated to the connected peer that registered
         // the unit, don't repeat to any neighbor FNE peers
-        if (privateCallInProgress && !noConnectedPeerRepeat) {
+        if (!extendedFuncResponse && privateCallInProgress && !noConnectedPeerRepeat) {
             return true;
         }
 
@@ -714,7 +729,7 @@ bool TagDMRData::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
 
                     // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, dmrData, streamId, true)) {
+                    if (!extendedFuncResponse && !isPeerPermitted(dstPeerId, dmrData, streamId, true)) {
                         continue;
                     }
 
@@ -1143,27 +1158,27 @@ bool TagDMRData::processCSBK(uint8_t* buffer, uint32_t peerId, dmr::data::NetDat
                     case ExtendedFunctions::CHECK:
                         m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
                             SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::INHIBIT:
                         m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
                             SubscriberOperationStore::Kind::INHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::UNINHIBIT:
                         m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::DMR,
                             SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::CHECK_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::DMR,
                             SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::INHIBIT_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::DMR,
                             SubscriberOperationStore::Kind::INHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::UNINHIBIT_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::DMR,
                             SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     }
                 }
                 break;

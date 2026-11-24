@@ -190,6 +190,22 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
         tsbk = lc::tsbk::TSBKFactory::createTSBK(data);
     }
 
+    // identify extended function request responses to restrict their routing
+    bool extendedFuncResponse = false;
+    if (tsbk != nullptr && tsbk->getLCO() == TSBKO::IOSP_EXT_FNCT) {
+        lc::tsbk::IOSP_EXT_FNCT* extendedFunction = static_cast<lc::tsbk::IOSP_EXT_FNCT*>(tsbk.get());
+        if (extendedFunction != nullptr) {
+            const uint32_t function = extendedFunction->getExtendedFunction();
+            extendedFuncResponse = function == ExtendedFunctions::CHECK_ACK ||
+                function == ExtendedFunctions::INHIBIT_ACK || 
+                function == ExtendedFunctions::UNINHIBIT_ACK ||
+                function == ExtendedFunctions::DYN_REGRP_CANCEL_ACK ||
+                function == ExtendedFunctions::DYN_REGRP_LOCK_ACK ||
+                function == ExtendedFunctions::DYN_REGRP_REQ_ACK ||
+                function == ExtendedFunctions::DYN_REGRP_UNLOCK_ACK;
+        }
+    }
+
     // decode true LDU LC from the network frame into a DFSI LC class literal
     dfsi::LC dfsiLC = dfsi::LC(control, lsd);
     if (duid == DUID::LDU1 || duid == DUID::LDU2) {
@@ -757,6 +773,10 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     continue;
                 if (peerId != peer.first) {
                     TrafficNetwork::PeerConnectionPtr conn = peer.second;
+                    if (extendedFuncResponse && conn->peerClass() != PEER_CONN_CLASS_NEIGHBOR && conn->peerClass() != PEER_CONN_CLASS_CONSOLE) {
+                        continue;
+                    }
+
                     if (ssrc == peer.first) {
                         // skip the peer if it is the source peer
                         continue;
@@ -767,7 +787,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                         continue;
                     }
 
-                    if (m_network->m_privateCallRoutingEnabled) {
+                    if (!extendedFuncResponse && m_network->m_privateCallRoutingEnabled) {
                         // is this peer an upstream neighbor peer?
                         bool neighbor = false;
                         if (conn != nullptr) {
@@ -793,7 +813,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
 
                     // is this peer ignored?
-                    if (!isPeerPermitted(peer.first, control, duid, streamId)) {
+                    if (!extendedFuncResponse && !isPeerPermitted(peer.first, control, duid, streamId)) {
                         continue;
                     }
 
@@ -834,7 +854,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
 
         // if this is a private call, and we have already repeated to the connected peer that registered
         // the unit, don't repeat to any neighbor FNE peers
-        if (privateCallInProgress && !noConnectedPeerRepeat) {
+        if (!extendedFuncResponse && privateCallInProgress && !noConnectedPeerRepeat) {
             return true;
         }
 
@@ -873,7 +893,7 @@ bool TagP25Data::processFrame(const uint8_t* data, uint32_t len, uint32_t peerId
                     }
 
                     // is this peer ignored?
-                    if (!isPeerPermitted(dstPeerId, control, duid, streamId, true)) {
+                    if (!extendedFuncResponse && !isPeerPermitted(dstPeerId, control, duid, streamId, true)) {
                         continue;
                     }
 
@@ -1485,27 +1505,27 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                     case ExtendedFunctions::CHECK:
                         m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::INHIBIT:
                         m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::INHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::UNINHIBIT:
                         m_network->subscriberOperations().start(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::CHECK_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::RADIO_CHECK, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::INHIBIT_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::INHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     case ExtendedFunctions::UNINHIBIT_ACK:
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::UNINHIBIT, iosp->getDstId(), peerId);
-                        return false;
+                        break;
                     }
                 }
                 break;
@@ -1561,8 +1581,14 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
                 break;
             case TSBKO::IOSP_RAD_MON:
             case TSBKO::IOSP_RAD_MON_ENH:
-                if (m_network->m_disallowRadioMonitor)
-                    return false;
+                {
+                    if (m_network->m_disallowRadioMonitor)
+                        return false;
+
+                    lc::tsbk::IOSP_RAD_MON* isp = static_cast<lc::tsbk::IOSP_RAD_MON*>(tsbk.get());
+                    m_network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::P25,
+                        SubscriberOperationStore::Kind::RADIO_MONITOR, isp->getSrcId(), peerId);
+                }
                 break;
             default:
                 break;
