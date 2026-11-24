@@ -124,7 +124,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
 
             SubscriberOperationStore::Protocol protocol;
             SubscriberOperationStore::Kind kind;
-            uint16_t requestValue = 0U;
+            uint32_t requestValue = 0U;
             if (protocolName == SOP_P25) {
                 protocol = SubscriberOperationStore::Protocol::P25;
 
@@ -204,7 +204,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
                     network->p25TrafficHandler()->write_TSDU_Status_Query(operationPeerId, targetId);
                     break;
                 case SubscriberOperationStore::Kind::MESSAGE_UPDATE:
-                    network->p25TrafficHandler()->write_TSDU_Message_Update(operationPeerId, targetId, requestValue);
+                    network->p25TrafficHandler()->write_TSDU_Message_Update(operationPeerId, targetId, static_cast<uint16_t>(requestValue));
                     break;
                 case SubscriberOperationStore::Kind::INHIBIT:
                     network->p25TrafficHandler()->write_TSDU_Ext_Func(operationPeerId,
@@ -239,7 +239,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
             response["state"].set<std::string>("pending");
             response["targetId"].set<uint32_t>(targetId);
             response["peerId"].set<uint32_t>(operationPeerId);
-            response["requestValue"].set<uint16_t>(requestValue);
+            response["requestValue"].set<uint32_t>(requestValue);
         }
         break;
 
@@ -269,8 +269,8 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
                     response["state"].set<std::string>(SubscriberOperationStore::stateName(operation.state));
                     response["targetId"].set<uint32_t>(operation.targetId);
                     response["peerId"].set<uint32_t>(operation.peerId);
-                    response["requestValue"].set<uint16_t>(operation.requestValue);
-                    response["resultValue"].set<uint16_t>(operation.resultValue);
+                    response["requestValue"].set<uint32_t>(operation.requestValue);
+                    response["resultValue"].set<uint32_t>(operation.resultValue);
                     response["createdAt"].set<uint64_t>(operation.createdAt);
                     response["completedAt"].set<uint64_t>(operation.completedAt);
                 }
@@ -287,8 +287,8 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
                 operationObj["state"].set<std::string>(SubscriberOperationStore::stateName(historyOperation.state));
                 operationObj["targetId"].set<uint32_t>(historyOperation.targetId);
                 operationObj["peerId"].set<uint32_t>(historyOperation.peerId);
-                operationObj["requestValue"].set<uint16_t>(historyOperation.requestValue);
-                operationObj["resultValue"].set<uint16_t>(historyOperation.resultValue);
+                operationObj["requestValue"].set<uint32_t>(historyOperation.requestValue);
+                operationObj["resultValue"].set<uint32_t>(historyOperation.resultValue);
                 operationObj["createdAt"].set<uint64_t>(historyOperation.createdAt);
                 operationObj["completedAt"].set<uint64_t>(historyOperation.completedAt);
                 operationHistory.push_back(json::value(operationObj));

@@ -3111,8 +3111,8 @@ void RESTAPI::restAPI_GetRIDOperation(const HTTPPayload& request, HTTPPayload& r
     response["state"].set<std::string>(SubscriberOperationStore::stateName(operation.state));
     response["targetId"].set<uint32_t>(operation.targetId);
     response["peerId"].set<uint32_t>(operation.peerId);
-    response["requestValue"].set<uint16_t>(operation.requestValue);
-    response["resultValue"].set<uint16_t>(operation.resultValue);
+    response["requestValue"].set<uint32_t>(operation.requestValue);
+    response["resultValue"].set<uint32_t>(operation.resultValue);
     response["createdAt"].set<uint64_t>(operation.createdAt);
     response["completedAt"].set<uint64_t>(operation.completedAt);
 
@@ -3142,8 +3142,8 @@ void RESTAPI::restAPI_GetRIDOperationHistory(const HTTPPayload& request, HTTPPay
         operationObj["state"].set<std::string>(SubscriberOperationStore::stateName(operation.state));
         operationObj["targetId"].set<uint32_t>(operation.targetId);
         operationObj["peerId"].set<uint32_t>(operation.peerId);
-        operationObj["requestValue"].set<uint16_t>(operation.requestValue);
-        operationObj["resultValue"].set<uint16_t>(operation.resultValue);
+        operationObj["requestValue"].set<uint32_t>(operation.requestValue);
+        operationObj["resultValue"].set<uint32_t>(operation.resultValue);
         operationObj["createdAt"].set<uint64_t>(operation.createdAt);
         operationObj["completedAt"].set<uint64_t>(operation.completedAt);
         operationHistory.push_back(json::value(operationObj));

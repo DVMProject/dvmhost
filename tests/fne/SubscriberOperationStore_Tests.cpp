@@ -18,7 +18,7 @@ using namespace network;
 
 TEST_CASE("FNE subscriber operations correlate protocol results", "[fne][subscriber-operations]")
 {
-    SubscriberOperationStore store;
+    SubscriberOperationStore store(5U, 10U);
     const uint32_t targetId = 0x123456U;
 
     uint64_t operationId = store.start(SubscriberOperationStore::Protocol::P25,
@@ -42,7 +42,7 @@ TEST_CASE("FNE subscriber operations correlate protocol results", "[fne][subscri
 
 TEST_CASE("FNE subscriber operations isolate protocols and kinds", "[fne][subscriber-operations]")
 {
-    SubscriberOperationStore store;
+    SubscriberOperationStore store(5U, 10U);
     const uint32_t targetId = 0x654321U;
     const uint64_t dmrId = store.start(SubscriberOperationStore::Protocol::DMR,
         SubscriberOperationStore::Kind::RADIO_CHECK, targetId, 0U);
@@ -65,7 +65,7 @@ TEST_CASE("FNE subscriber operations isolate protocols and kinds", "[fne][subscr
 
 TEST_CASE("FNE subscriber operations return recent history newest first", "[fne][subscriber-operations]")
 {
-    SubscriberOperationStore store;
+    SubscriberOperationStore store(5U, 10U);
     const uint64_t firstId = store.start(SubscriberOperationStore::Protocol::DMR,
         SubscriberOperationStore::Kind::RADIO_CHECK, 1001U, 0U);
     const uint64_t secondId = store.start(SubscriberOperationStore::Protocol::P25,
@@ -86,10 +86,10 @@ TEST_CASE("FNE subscriber operations return recent history newest first", "[fne]
 
 TEST_CASE("FNE subscriber one-shot operations retain every occurrence", "[fne][subscriber-operations]")
 {
-    SubscriberOperationStore store;
+    SubscriberOperationStore store(5U, 10U);
     const uint32_t targetId = 0x2345U;
     const uint64_t operationId = store.oneShot(SubscriberOperationStore::Protocol::NXDN,
-        SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U);
+        SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U, 0x123456U, 0xFEDCBAU);
 
     REQUIRE(operationId != 0U);
     const uint64_t duplicateId = store.oneShot(SubscriberOperationStore::Protocol::NXDN,
@@ -106,6 +106,8 @@ TEST_CASE("FNE subscriber one-shot operations retain every occurrence", "[fne][s
     SubscriberOperationStore::Operation operation;
     REQUIRE(store.get(operationId, operation));
     CHECK(operation.state == SubscriberOperationStore::State::SUCCEEDED);
+    CHECK(operation.requestValue == 0x123456U);
+    CHECK(operation.resultValue == 0xFEDCBAU);
     CHECK(operation.completedAt == operation.createdAt);
     CHECK(std::string(SubscriberOperationStore::protocolName(operation.protocol)) == "nxdn");
     CHECK(std::string(SubscriberOperationStore::kindName(operation.kind)) == "emerg-call");

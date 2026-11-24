@@ -124,7 +124,7 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     CHECK(operationResponse["found"].get<bool>());
     CHECK(operationResponse["operationId"].get<uint64_t>() == operationId);
     CHECK(operationResponse["state"].get<std::string>() == "succeeded");
-    CHECK(operationResponse["resultValue"].get<uint16_t>() == 0x1234U);
+    CHECK(operationResponse["resultValue"].get<uint32_t>() == 0x1234U);
     REQUIRE(operationResponse["operations"].is<json::array>());
     json::array& operations = operationResponse["operations"].get<json::array>();
     REQUIRE(operations.size() == 1U);
