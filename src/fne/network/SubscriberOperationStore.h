@@ -43,7 +43,9 @@ namespace network
         enum class Protocol : uint8_t {
             DMR = 0U,               //!< Digital Mobile Radio.
             P25 = 1U,               //!< Project 25.
-            NXDN = 2U               //!< Next Generation Digital Narrowband.
+            NXDN = 2U,              //!< Next Generation Digital Narrowband.
+
+            SYSTEM = 3U,            //!< System-level operation.
         };
 
         /**
@@ -64,7 +66,11 @@ namespace network
             EMERG_ALRM = 8U,        //!< Emergency alarm request.
             EMERG_CALL = 9U,        //!< Emergency voice call.
 
-            RADIO_MONITOR = 10U,   //!< Radio monitor request.
+            RADIO_MONITOR = 10U,    //!< Radio monitor request.
+
+            UNIT_REG = 11U,         //!< Unit registration request.
+            UNIT_DEREG = 12U,       //!< Unit deregistration request.
+            GRP_AFFIL = 13U,        //!< Group affiliation request.
         };
 
         /**

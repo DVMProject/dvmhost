@@ -227,6 +227,8 @@ const char* SubscriberOperationStore::protocolName(Protocol protocol)
         return "p25";
     case Protocol::NXDN:
         return "nxdn";
+    case Protocol::SYSTEM:
+        return "system";
     }
 
     return "unknown";
@@ -259,6 +261,12 @@ const char* SubscriberOperationStore::kindName(Kind kind)
         return "emerg-call";
     case Kind::RADIO_MONITOR:
         return "radio-monitor";
+    case Kind::UNIT_REG:
+        return "unit-registration";
+    case Kind::UNIT_DEREG:
+        return "unit-deregistration";
+    case Kind::GRP_AFFIL:
+        return "group-affiliation";
     }
 
     return "unknown";

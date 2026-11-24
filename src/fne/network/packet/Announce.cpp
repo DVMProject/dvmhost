@@ -42,6 +42,7 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                     if (req->length >= static_cast<int>(MSG_ANNC_GRP_AFFIL)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                         uint32_t dstId = GET_UINT24(req->buffer, 3U);           // Destination Address
+                        network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::GRP_AFFIL, srcId, dstId);
                         network->updatePeerAffiliation(peerId, srcId, dstId);
                     }
                     else {
@@ -72,6 +73,7 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                 if (connection->connected() && connection->address() == ip && aff != nullptr) {
                     if (req->length >= static_cast<int>(MSG_ANNC_UNIT_REG)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
+                        network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::UNIT_REG, srcId, peerId);
                         network->updatePeerUnitRegistration(peerId, srcId, ssrc);
                     }
                     else {
@@ -101,6 +103,7 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                 if (connection->connected() && connection->address() == ip && aff != nullptr) {
                     if (req->length >= static_cast<int>(MSG_ANNC_UNIT_REG)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
+                        network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::UNIT_DEREG, srcId, peerId);
                         network->removePeerUnitRegistration(peerId, srcId);
                     }
                     else {
