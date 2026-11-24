@@ -18,8 +18,6 @@ using namespace network;
 // ---------------------------------------------------------------------------
 
 const std::chrono::seconds OPERATION_TIMEOUT(8U);
-const std::chrono::minutes RESULT_RETENTION(5U);
-const std::chrono::minutes STATUS_RETENTION(15U);
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -27,13 +25,14 @@ const std::chrono::minutes STATUS_RETENTION(15U);
 
 /* Initializes an empty operation store. */
 
-SubscriberOperationStore::SubscriberOperationStore() :
+SubscriberOperationStore::SubscriberOperationStore(uint32_t operationRetention, uint32_t statusRetention) :
     m_nextId(1U),
     m_operations(),
     m_p25Statuses(),
     m_mutex()
 {
-    /* stub */
+    RESULT_RETENTION = std::chrono::minutes(operationRetention);
+    STATUS_RETENTION = std::chrono::minutes(statusRetention);
 }
 
 /* Starts a uniquely correlatable operation. */

@@ -116,7 +116,18 @@ namespace network
         /**
          * @brief Initializes an empty operation store.
          */
-        SubscriberOperationStore();
+        SubscriberOperationStore(uint32_t operationRetention, uint32_t statusRetention);
+
+        /**
+         * @brief Updates operation and status retention periods.
+         * @param[in] operationRetention Operation retention in minutes.
+         * @param[in] statusRetention Status retention in minutes.
+         */
+        void setRetention(uint32_t operationRetention, uint32_t statusRetention)
+        {
+            RESULT_RETENTION = std::chrono::minutes(operationRetention);
+            STATUS_RETENTION = std::chrono::minutes(statusRetention);
+        }
 
         /**
          * @brief Starts a uniquely correlatable operation.
@@ -209,6 +220,9 @@ namespace network
         static const char* stateName(State state);
 
     private:
+        std::chrono::minutes RESULT_RETENTION;
+        std::chrono::minutes STATUS_RETENTION;
+
         /**
          * @brief Internal operation record with monotonic expiry deadlines.
          * @ingroup fne_network

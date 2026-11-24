@@ -251,6 +251,11 @@ master:
     # Amount of time in seconds for a call collision to last before switching over the source of a call.
     callCollisionTimeout: 5
 
+    # Time in minutes to retain subscriber operation records.
+    subscriberOpRetention: 5
+    # Time in minutes to retain subscriber operation status records.
+    subscriberOpStatusRetention: 10
+
     # Flag indicating whether or not a grant responses will only be sent to TGs with affiliations, if the TG is configured for affiliation gating.
     restrictGrantToAffiliatedOnly: false
     # Flag indicating whether or not a adjacent site broadcasts will pass to any peers.

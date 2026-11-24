@@ -111,7 +111,7 @@ TrafficNetwork::TrafficNetwork(HostFNE* host, const std::string& address, uint16
     m_peerAffiliationsMutex(),
     m_affiliationUpdateMutex(),
     m_unitRouteRegistry(),
-    m_subscriberOperations(),
+    m_subscriberOperations(5, 10),
     m_ccPeerMap(),
     m_peerReplicaKeyQueue(),
     m_peerReplicaKEKKeyQueue(),
@@ -416,6 +416,10 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
 
     m_callCollisionTimeout = conf["callCollisionTimeout"].as<uint32_t>(5U);
 
+    uint32_t subscriberOpRetention = conf["subscriberOpRetention"].as<uint32_t>(5U);
+    uint32_t subscriberOpStatusRetention = conf["subscriberOpStatusRetention"].as<uint32_t>(10U);
+    m_subscriberOperations.setRetention(subscriberOpRetention, subscriberOpStatusRetention);
+
     m_restrictGrantToAffOnly = conf["restrictGrantToAffiliatedOnly"].as<bool>(false);
     yaml::Node& privateCallRouting = conf["privateCallRouting"];
     m_privateCallRoutingEnabled = privateCallRouting["enable"].as<bool>(false);
@@ -499,6 +503,8 @@ void TrafficNetwork::setOptions(yaml::Node& conf, bool printOptions)
         if (m_callCollisionTimeout == 0U) {
             LogWarning(LOG_MASTER, "Call Collisions are disabled because the call collision timeout is set to 0 seconds. This is not recommended, and can cause undesired behavior.");
         }
+        LogInfo("    Subscriber Operation Retention: %u minutes", subscriberOpRetention);
+        LogInfo("    Subscriber Operation Status Retention: %u minutes", subscriberOpStatusRetention);
         LogInfo("    Restrict grant response by affiliation: %s", m_restrictGrantToAffOnly ? "yes" : "no");
         LogInfo("    Disable adjacent site broadcasts to any peers: %s", m_disallowAdjStsBcast ? "yes" : "no");
         if (m_disallowAdjStsBcast) {
