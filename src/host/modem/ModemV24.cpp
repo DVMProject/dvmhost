@@ -35,6 +35,13 @@ using namespace p25::dfsi::frames;
 #include <cassert>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+/** @brief Usable length in bytes of the DFSICallData PDU user data buffer. */
+const uint32_t RX_PDU_USER_DATA_LENGTH_BYTES = P25_MAX_PDU_BLOCKS * P25_PDU_CONFIRMED_LENGTH_BYTES;
+
+// ---------------------------------------------------------------------------
 //  Public Class Members
 // ---------------------------------------------------------------------------
 
@@ -482,6 +489,34 @@ int ModemV24::write(const uint8_t* data, uint32_t length, bool imm)
     } else {
         return Modem::write(data, length, imm);
     }
+}
+
+/* Copies the user data of confirmed PDU blocks out of a V.24 PDU frame. */
+
+bool ModemV24::copyConfirmedPDUBlocks(const uint8_t* frame, uint32_t frameLength, uint32_t frameOffset, uint32_t blockCnt,
+    uint8_t* userData, uint32_t userDataLength)
+{
+    assert(frame != nullptr);
+    assert(userData != nullptr);
+
+    if (blockCnt == 0U)
+        return true;
+
+    // each block on the wire is a sequence/flag byte, the block user data and a reserved byte; the reserved
+    // byte trailing the last block is not required to be present
+    const uint64_t wireLength = (uint64_t)frameOffset + ((uint64_t)(blockCnt - 1U) * DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES) +
+        1U + P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+    const uint64_t dataLength = (uint64_t)blockCnt * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+    if (wireLength > frameLength || dataLength > userDataLength)
+        return false;
+
+    for (uint32_t i = 0U; i < blockCnt; i++) {
+        // skip the sequence/flag byte leading each block
+        const uint32_t blockOffset = frameOffset + (i * DFSI_PDU_CONFIRMED_BLOCK_LENGTH_BYTES) + 1U;
+        ::memcpy(userData + (i * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES), frame + blockOffset, P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+    }
+
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1277,24 +1312,18 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             m_rxCall->dataCall = true;
             m_rxCall->dataHeader = pduHeader;
 
-            int skipBytes = 2U; // skip padding between PDU blocks -- and first block serial number
-            for (uint8_t i = 0U; i < pduHeader->getBlocksToFollow(); i++) {
-                uint32_t blockOffset = 9U + P25_PDU_HEADER_LENGTH_BYTES + (i * P25_PDU_CONFIRMED_LENGTH_BYTES) + skipBytes;
+            // blocks follow the embedded start of stream, the header and a reserved byte
+            const uint32_t blockCnt = pduHeader->getBlocksToFollow();
+            if (!copyConfirmedPDUBlocks(dfsiData, length - 1U, DFSI_MOT_START_LEN + P25_PDU_HEADER_LENGTH_BYTES + DFSI_PDU_RESERVED_LENGTH_BYTES,
+                blockCnt, m_rxCall->pduUserData, RX_PDU_USER_DATA_LENGTH_BYTES)) {
+                LogError(LOG_MODEM, P25_PDU_STR ", ISP, V.24 PDU frame too short for %u confirmed blocks, len = %u", blockCnt, length - 1U);
 
-                uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                ::memset(dataBlock, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
-                ::memcpy(dataBlock, dfsiData + blockOffset, P25_PDU_CONFIRMED_LENGTH_BYTES);
-
-                if (m_trace)
-                    Utils::dump(1U, "ModemV24::convertToAirV24(), PDU Confirmed Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
-
-                uint32_t offset = i * P25_PDU_CONFIRMED_LENGTH_BYTES;
-                ::memcpy(m_rxCall->pduUserData + offset, dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
-                skipBytes++; // each block is separated by a padding byte
+                m_rxCall->resetCallData();
+                break;
             }
 
             if (m_trace)
-                Utils::dump(1U, "ModemV24::convertToAirV24(), Final PDU Confirmed Data", m_rxCall->pduUserData, (pduHeader->getBlocksToFollow() + 1U) * P25_PDU_CONFIRMED_LENGTH_BYTES);
+                Utils::dump(1U, "ModemV24::convertToAirV24(), Final PDU Confirmed Data", m_rxCall->pduUserData, blockCnt * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
             storeConvertedRxPDU(pduHeader, m_rxCall->pduUserData);
         }
@@ -1335,23 +1364,21 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
             m_rxCall->dataCall = true;
             m_rxCall->dataHeader = pduHeader;
 
-            // PDU_CONF_HEADER only contains 3 blocks
-            int skipBytes = 2U; // skip padding between PDU blocks -- and first block serial number
-            for (uint8_t i = 0U; i < 3U; i++) {
-                uint32_t blockOffset = 9U + P25_PDU_HEADER_LENGTH_BYTES + (i * P25_PDU_CONFIRMED_LENGTH_BYTES) + skipBytes;
+            // PDU_CONF_HEADER only contains 3 blocks, following the embedded start of stream, the header and a reserved byte
+            const uint32_t blockCnt = DFSI_PDU_BLOCK_CNT - 1U;
+            if (!copyConfirmedPDUBlocks(dfsiData, length - 1U, DFSI_MOT_START_LEN + P25_PDU_HEADER_LENGTH_BYTES + DFSI_PDU_RESERVED_LENGTH_BYTES,
+                blockCnt, m_rxCall->pduUserData, RX_PDU_USER_DATA_LENGTH_BYTES)) {
+                LogError(LOG_MODEM, P25_PDU_STR ", ISP, V.24 PDU frame too short for %u confirmed blocks, len = %u", blockCnt, length - 1U);
 
-                uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                ::memset(dataBlock, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
-                ::memcpy(dataBlock, dfsiData + blockOffset, P25_PDU_CONFIRMED_LENGTH_BYTES);
-
-                if (m_trace)
-                    Utils::dump(1U, "ModemV24::convertToAirV24(), PDU Confirmed Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
-
-                ::memcpy(m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
-                m_rxCall->pduUserDataOffset += P25_PDU_CONFIRMED_LENGTH_BYTES;
-                m_rxCall->pduTotalBlocks++;
-                skipBytes++; // each block is separated by a padding byte
+                m_rxCall->resetCallData();
+                break;
             }
+
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertToAirV24(), PDU Confirmed Data Blocks", m_rxCall->pduUserData, blockCnt * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+
+            m_rxCall->pduUserDataOffset += blockCnt * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+            m_rxCall->pduTotalBlocks += blockCnt;
         }
         break;
         case DFSIFrameType::MOT_PDU_CONF_BLOCK_1:
@@ -1375,27 +1402,25 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
                 //  4 blocks of user data, and the PDU_CONF_END is always variable with at least the last data block
             }
 
-            // PDU_CONF_BLOCK_X only contains 4 blocks each
-            int skipBytes = 0U; // skip padding between PDU blocks
-            for (uint8_t i = 0U; i < blockCnt; i++) {
-                uint32_t blockOffset = 1U + (i * P25_PDU_CONFIRMED_LENGTH_BYTES) + skipBytes;
+            // PDU_CONF_BLOCK_X only contains 4 blocks each, following the frame type byte
+            const uint32_t userDataSpace = (m_rxCall->pduUserDataOffset < RX_PDU_USER_DATA_LENGTH_BYTES) ?
+                RX_PDU_USER_DATA_LENGTH_BYTES - m_rxCall->pduUserDataOffset : 0U;
+            if (!copyConfirmedPDUBlocks(dfsiData, length - 1U, 1U, blockCnt, m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, userDataSpace)) {
+                LogError(LOG_MODEM, P25_PDU_STR ", ISP, V.24 PDU frame too short for %u confirmed blocks, len = %u", blockCnt, length - 1U);
 
-                uint8_t dataBlock[P25_PDU_CONFIRMED_LENGTH_BYTES];
-                ::memset(dataBlock, 0x00U, P25_PDU_CONFIRMED_LENGTH_BYTES);
-                ::memcpy(dataBlock, dfsiData + blockOffset, P25_PDU_CONFIRMED_LENGTH_BYTES);
-
-                if (m_trace)
-                    Utils::dump(1U, "ModemV24::convertToAirV24(), PDU Confirmed Data Block", dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
-
-                ::memcpy(m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, dataBlock, P25_PDU_CONFIRMED_LENGTH_BYTES);
-                m_rxCall->pduUserDataOffset += P25_PDU_CONFIRMED_LENGTH_BYTES;
-                m_rxCall->pduTotalBlocks++;
-                skipBytes++; // each block is separated by a padding byte
+                m_rxCall->resetCallData();
+                break;
             }
+
+            if (m_trace)
+                Utils::dump(1U, "ModemV24::convertToAirV24(), PDU Confirmed Data Blocks", m_rxCall->pduUserData + m_rxCall->pduUserDataOffset, blockCnt * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
+
+            m_rxCall->pduUserDataOffset += blockCnt * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES;
+            m_rxCall->pduTotalBlocks += blockCnt;
 
             if (frameType == DFSIFrameType::MOT_PDU_CONF_END) {
                 if (m_trace)
-                    Utils::dump(1U, "ModemV24::convertToAirV24(), Final PDU Confirmed Data", m_rxCall->pduUserData, m_rxCall->pduTotalBlocks * P25_PDU_CONFIRMED_LENGTH_BYTES);
+                    Utils::dump(1U, "ModemV24::convertToAirV24(), Final PDU Confirmed Data", m_rxCall->pduUserData, m_rxCall->pduTotalBlocks * P25_PDU_CONFIRMED_DATA_LENGTH_BYTES);
 
                 storeConvertedRxPDU(m_rxCall->dataHeader, m_rxCall->pduUserData);
             }
