@@ -42,8 +42,20 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                     if (req->length >= static_cast<int>(MSG_ANNC_GRP_AFFIL)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                         uint32_t dstId = GET_UINT24(req->buffer, 3U);           // Destination Address
-                        network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::GRP_AFFIL, srcId, dstId);
-                        network->updatePeerAffiliation(peerId, srcId, dstId);
+                        network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::GRP_AFFIL, srcId, peerId, (uint16_t)dstId); // this is bugged and will truncate 24-bit TGIDs
+
+                        // update group affiliation only for non-replica peers
+                        if (!connection->isReplica())
+                            network->updatePeerAffiliation(peerId, srcId, dstId);
+
+                        // propagate the group affiliation to enabled replica peers
+                        for (auto& peer : network->m_host->m_peerNetworks) {
+                            PeerNetwork* upstream = peer.second;
+                            if (upstream == nullptr || !upstream->isEnabled() || !upstream->isReplica())
+                                continue;
+
+                            upstream->announceGroupAffiliation(srcId, dstId);
+                        }
                     }
                     else {
                         LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed group affiliation, length = %u",
@@ -74,7 +86,19 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                     if (req->length >= static_cast<int>(MSG_ANNC_UNIT_REG)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                         network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::UNIT_REG, srcId, peerId);
-                        network->updatePeerUnitRegistration(peerId, srcId, ssrc);
+
+                        // update unit registration only for non-replica peers
+                        if (!connection->isReplica())
+                            network->updatePeerUnitRegistration(peerId, srcId, ssrc);
+
+                        // propagate the unit registration to enabled replica peers
+                        for (auto& peer : network->m_host->m_peerNetworks) {
+                            PeerNetwork* upstream = peer.second;
+                            if (upstream == nullptr || !upstream->isEnabled() || !upstream->isReplica())
+                                continue;
+
+                            upstream->announceUnitRegistration(srcId);
+                        }
                     }
                     else {
                         LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed unit registration, length = %u",
@@ -104,7 +128,19 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                     if (req->length >= static_cast<int>(MSG_ANNC_UNIT_REG)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                         network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::UNIT_DEREG, srcId, peerId);
-                        network->removePeerUnitRegistration(peerId, srcId);
+
+                        // update unit deregistration only for non-replica peers
+                        if (!connection->isReplica())
+                            network->removePeerUnitRegistration(peerId, srcId);
+
+                        // propagate the unit deregistration to enabled replica peers
+                        for (auto& peer : network->m_host->m_peerNetworks) {
+                            PeerNetwork* upstream = peer.second;
+                            if (upstream == nullptr || !upstream->isEnabled() || !upstream->isReplica())
+                                continue;
+
+                            upstream->announceUnitDeregistration(srcId);
+                        }
                     }
                     else {
                         LogWarning(LOG_MASTER, "PEER %u (%s) announced malformed unit deregistration, length = %u",
