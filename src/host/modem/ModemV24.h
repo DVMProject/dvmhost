@@ -647,6 +647,19 @@ namespace modem
          */
         int write(const uint8_t* data, uint32_t length, bool imm = false) override;
 
+        /**
+         * @brief Copies the user data of confirmed PDU blocks out of a V.24 PDU frame.
+         * @param[in] frame Buffer containing the V.24 PDU frame.
+         * @param frameLength Length of the V.24 PDU frame in bytes.
+         * @param frameOffset Offset in bytes of the first confirmed block within the frame.
+         * @param blockCnt Number of confirmed blocks to copy.
+         * @param[out] userData Buffer receiving 16 bytes of user data per block; not owned.
+         * @param userDataLength Space available in the user data buffer in bytes.
+         * @returns bool True, if every block was copied, otherwise false when the frame or the buffer is too short.
+         */
+        static bool copyConfirmedPDUBlocks(const uint8_t* frame, uint32_t frameLength, uint32_t frameOffset, uint32_t blockCnt,
+            uint8_t* userData, uint32_t userDataLength);
+
     private:
         bool m_rtrt;
 
