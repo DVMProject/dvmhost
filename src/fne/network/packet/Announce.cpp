@@ -42,7 +42,7 @@ void MetadataNetwork::PacketHandler::announce(TrafficNetwork* network, MetadataN
                     if (req->length >= static_cast<int>(MSG_ANNC_GRP_AFFIL)) {
                         uint32_t srcId = GET_UINT24(req->buffer, 0U);           // Source Address
                         uint32_t dstId = GET_UINT24(req->buffer, 3U);           // Destination Address
-                        network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::GRP_AFFIL, srcId, peerId, (uint16_t)dstId); // this is bugged and will truncate 24-bit TGIDs
+                        network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::SYSTEM, SubscriberOperationStore::Kind::GRP_AFFIL, srcId, peerId, 0U, dstId);
 
                         // update group affiliation only for non-replica peers
                         if (!connection->isReplica())

@@ -38,7 +38,7 @@ SubscriberOperationStore::SubscriberOperationStore() :
 
 /* Starts a uniquely correlatable operation. */
 
-uint64_t SubscriberOperationStore::start(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint16_t requestValue)
+uint64_t SubscriberOperationStore::start(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint32_t requestValue)
 {
     const auto now = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -68,7 +68,7 @@ uint64_t SubscriberOperationStore::start(Protocol protocol, Kind kind, uint32_t 
 /* Completes the matching active operation. */
 
 bool SubscriberOperationStore::complete(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId,
-    uint16_t resultValue, bool success)
+    uint32_t resultValue, bool success)
 {
     const auto now = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -96,19 +96,12 @@ bool SubscriberOperationStore::complete(Protocol protocol, Kind kind, uint32_t t
 
 /* Adds a uniquely correlatable one-shot operation. */
 
-uint64_t SubscriberOperationStore::oneShot(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint16_t requestValue)
+uint64_t SubscriberOperationStore::oneShot(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint32_t requestValue,
+    uint32_t resultValue)
 {
     const auto now = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(m_mutex);
     expireLocked(now);
-
-    // suppress an equivalent one-shot while its result remains available
-    for (const auto& entry : m_operations) {
-        const Operation& operation = entry.second.value;
-        if (operation.protocol == protocol && operation.kind == kind && operation.targetId == targetId) {
-            return 0U;
-        }
-    }
 
     // create a new operation with a unique ID and store it with expiration times
     uint64_t id = m_nextId++;
@@ -117,7 +110,7 @@ uint64_t SubscriberOperationStore::oneShot(Protocol protocol, Kind kind, uint32_
     }
 
     const uint64_t createdAt = unixMilliseconds();
-    Operation operation { id, protocol, kind, State::SUCCEEDED, targetId, peerId, requestValue, 0U, createdAt, createdAt };
+    Operation operation { id, protocol, kind, State::SUCCEEDED, targetId, peerId, requestValue, resultValue, createdAt, createdAt };
     m_operations.emplace(id, StoredOperation { operation, now + OPERATION_TIMEOUT, now + RESULT_RETENTION });
     return id;
 }

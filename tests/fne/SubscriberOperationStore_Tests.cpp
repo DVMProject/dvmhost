@@ -84,7 +84,7 @@ TEST_CASE("FNE subscriber operations return recent history newest first", "[fne]
     CHECK(store.getLast(0U).empty());
 }
 
-TEST_CASE("FNE subscriber one-shot operations suppress retained duplicates", "[fne][subscriber-operations]")
+TEST_CASE("FNE subscriber one-shot operations retain every occurrence", "[fne][subscriber-operations]")
 {
     SubscriberOperationStore store;
     const uint32_t targetId = 0x2345U;
@@ -92,10 +92,14 @@ TEST_CASE("FNE subscriber one-shot operations suppress retained duplicates", "[f
         SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U);
 
     REQUIRE(operationId != 0U);
-    CHECK(store.oneShot(SubscriberOperationStore::Protocol::NXDN,
-              SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U) == 0U);
-    CHECK(store.oneShot(SubscriberOperationStore::Protocol::NXDN,
-              SubscriberOperationStore::Kind::EMERG_CALL, targetId, 43U) == 0U);
+    const uint64_t duplicateId = store.oneShot(SubscriberOperationStore::Protocol::NXDN,
+        SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U);
+    const uint64_t otherPeerId = store.oneShot(SubscriberOperationStore::Protocol::NXDN,
+        SubscriberOperationStore::Kind::EMERG_CALL, targetId, 43U);
+    CHECK(duplicateId != 0U);
+    CHECK(duplicateId != operationId);
+    CHECK(otherPeerId != 0U);
+    CHECK(otherPeerId != duplicateId);
     CHECK(store.oneShot(SubscriberOperationStore::Protocol::DMR,
               SubscriberOperationStore::Kind::EMERG_CALL, targetId, 42U) != 0U);
 

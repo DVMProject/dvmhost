@@ -95,8 +95,8 @@ namespace network
             State state;            //!< Current lifecycle state.
             uint32_t targetId;      //!< Target subscriber ID.
             uint32_t peerId;        //!< Requested or responding peer ID.
-            uint16_t requestValue;  //!< Optional requested status/message value.
-            uint16_t resultValue;   //!< Optional returned status value.
+            uint32_t requestValue;  //!< Optional requested status/message value.
+            uint32_t resultValue;   //!< Optional returned status value.
             uint64_t createdAt;     //!< Creation time in Unix milliseconds.
             uint64_t completedAt;   //!< Completion time in Unix milliseconds, or zero.
         };
@@ -127,7 +127,7 @@ namespace network
          * @param[in] requestValue Optional requested value.
          * @returns Operation identifier, or zero when an equivalent request is already pending.
          */
-        uint64_t start(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint16_t requestValue = 0U);
+        uint64_t start(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint32_t requestValue = 0U);
 
         /**
          * @brief Completes the matching active operation.
@@ -140,7 +140,7 @@ namespace network
          * @returns bool True when an active operation was completed.
          */
         bool complete(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId,
-            uint16_t resultValue = 0U, bool success = true);
+            uint32_t resultValue = 0U, bool success = true);
 
         /**
          * @brief Adds a uniquely correlatable one-shot operation.
@@ -149,9 +149,11 @@ namespace network
          * @param[in] targetId Target subscriber ID.
          * @param[in] peerId Requested peer ID, or zero for routed fanout.
          * @param[in] requestValue Optional requested value.
-         * @returns Operation identifier, or zero when an equivalent request is already pending.
+         * @param[in] resultValue Optional returned value.
+         * @returns Unique operation identifier.
          */
-        uint64_t oneShot(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint16_t requestValue = 0U);
+        uint64_t oneShot(Protocol protocol, Kind kind, uint32_t targetId, uint32_t peerId, uint32_t requestValue = 0U,
+            uint32_t resultValue = 0U);
 
         /**
          * @brief Adds a status report and completes a matching P25 status query.
