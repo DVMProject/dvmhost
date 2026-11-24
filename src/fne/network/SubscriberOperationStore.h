@@ -71,6 +71,8 @@ namespace network
             UNIT_REG = 11U,         //!< Unit registration request.
             UNIT_DEREG = 12U,       //!< Unit deregistration request.
             GRP_AFFIL = 13U,        //!< Group affiliation request.
+
+            CALL_ALERT_ACK = 14U,   //!< Call alert acknowledgement.
         };
 
         /**

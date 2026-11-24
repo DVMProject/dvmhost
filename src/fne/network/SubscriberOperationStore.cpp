@@ -259,6 +259,8 @@ const char* SubscriberOperationStore::kindName(Kind kind)
         return "unit-deregistration";
     case Kind::GRP_AFFIL:
         return "group-affiliation";
+    case Kind::CALL_ALERT_ACK:
+        return "call-alert-ack";
     }
 
     return "unknown";

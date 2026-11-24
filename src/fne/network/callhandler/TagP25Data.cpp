@@ -1491,9 +1491,17 @@ bool TagP25Data::processTSDUFrom(uint8_t* buffer, uint32_t peerId, uint8_t duid)
             case TSBKO::IOSP_ACK_RSP:
                 {
                     lc::tsbk::IOSP_ACK_RSP* iosp = static_cast<lc::tsbk::IOSP_ACK_RSP*>(tsbk.get());
+
+                    // complete the pending message update when the FNE acknowledges it
                     if (iosp->getService() == TSBKO::IOSP_MSG_UPDT && iosp->getDstId() == WUID_FNE) {
                         m_network->subscriberOperations().complete(SubscriberOperationStore::Protocol::P25,
                             SubscriberOperationStore::Kind::MESSAGE_UPDATE, iosp->getSrcId(), peerId);
+                    }
+
+                    // record a one-shot call alert acknowledgement for the source and destination IDs
+                    if (iosp->getService() == TSBKO::IOSP_CALL_ALRT) {
+                        m_network->subscriberOperations().oneShot(SubscriberOperationStore::Protocol::P25,
+                            SubscriberOperationStore::Kind::CALL_ALERT_ACK, iosp->getSrcId(), peerId, 0U, iosp->getDstId());
                     }
                 }
                 break;
