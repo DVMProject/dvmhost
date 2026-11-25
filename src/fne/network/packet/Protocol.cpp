@@ -27,7 +27,8 @@ using namespace network::callhandler;
 
 /* Handles NET_FUNC::PROTOCOL packets. */
 
-void TrafficNetwork::PacketHandler::protocol(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::protocol(TrafficNetwork* network, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     // process incoming message subfunction opcodes
     switch (req->fneHeader.getSubFunction()) {

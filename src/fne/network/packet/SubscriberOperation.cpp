@@ -3,6 +3,9 @@
  * Digital Voice Modem - Converged FNE Software
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
+ * 
  */
 /**
  * @file SubscriberOperation.cpp
@@ -29,22 +32,6 @@ using namespace network;
 #define SOP_DMR "dmr"
 #define SOP_P25 "p25"
 #define SOP_NXDN "nxdn"
-
-const uint32_t SUBSCRIBER_OPERATION_HEADER_LENGTH = 11U;
-const uint32_t SUBSCRIBER_OPERATION_PROXY_REQUEST_LENGTH = 16U;
-const uint32_t SUBSCRIBER_OPERATION_PROXY_RESPONSE_LENGTH = 52U;
-const uint32_t SUBSCRIBER_OPERATION_PROXY_TIMEOUT_MS = 5000U;
-const uint8_t SUBSCRIBER_OPERATION_PROXY_HOP_LIMIT = 16U;
-
-/**
- * @brief Result codes for subscriber operation proxy responses.
- * @ingroup fne_network
- */
-enum SubscriberOperationProxyResult : uint8_t {
-    SUBSCRIBER_OPERATION_PROXY_FOUND = 0U,
-    SUBSCRIBER_OPERATION_PROXY_NOT_FOUND = 1U,
-    SUBSCRIBER_OPERATION_PROXY_NO_ROUTE = 2U
-};
 
 // ---------------------------------------------------------------------------
 //  Global Functions
@@ -75,6 +62,10 @@ static void encodeProxyResponse(uint8_t* buffer, uint8_t result, uint32_t transa
     SET_UINT64(operation->createdAt, buffer, offset + 36U);             // Created At
     SET_UINT64(operation->completedAt, buffer, offset + 44U);           // Completed At
 }
+
+// ---------------------------------------------------------------------------
+//  Public Class Members
+// ---------------------------------------------------------------------------
 
 /* Proxies a subscriber operation result query to the upstream replica parent. */
 
@@ -149,130 +140,10 @@ bool TrafficNetwork::proxySubscriberOperation(uint32_t downstreamPeerId, uint32_
     return written;
 }
 
-/* Processes a packed subscriber operation proxy response received from an upstream parent. */
-
-void TrafficNetwork::processSubscriberOperationProxyResponse(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId)
-{
-    // validate the upstream peer, packet length, peer ID, and subfunction before parsing the response
-    const uint32_t packetLength = SUBSCRIBER_OPERATION_HEADER_LENGTH + SUBSCRIBER_OPERATION_PROXY_RESPONSE_LENGTH;
-    if (peer == nullptr || !peer->isEnabled() || !peer->isReplica() || data == nullptr || length != packetLength || peerId != peer->getPeerId()) {
-        LogWarning(LOG_MASTER, "Ignoring invalid subscriber operation proxy response");
-        return;
-    }
-
-    // validate the reserved bytes before parsing the response
-    const uint32_t offset = SUBSCRIBER_OPERATION_HEADER_LENGTH;
-    if (data[offset + 1U] != 0U || data[offset + 2U] != 0U || data[offset + 3U] != 0U) {
-        LogWarning(LOG_MASTER, "Ignoring subscriber operation proxy response with nonzero reserved bytes");
-        return;
-    }
-
-    // validate the result and response-found flag before looking up the pending transaction
-    const uint8_t result = data[offset];
-    const uint8_t responseFound = data[offset + 16U];
-    if (result > SUBSCRIBER_OPERATION_PROXY_NO_ROUTE || responseFound > 1U || (result == SUBSCRIBER_OPERATION_PROXY_FOUND) != (responseFound == 1U)) {
-        LogWarning(LOG_MASTER, "Ignoring malformed subscriber operation proxy response result");
-        return;
-    }
-
-    // match the response to a pending transaction by transaction ID and operation ID
-    const uint32_t transactionId = GET_UINT32(data, offset + 4U);
-    const uint64_t operationId = GET_UINT64(data, offset + 8U);
-    SubscriberOperationProxyPending pending{};
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> lock(m_subscriberOperationProxyMutex);
-        auto it = m_subscriberOperationProxyPending.find(transactionId);
-        if (transactionId == 0U || it == m_subscriberOperationProxyPending.end() || it->second.operationId != operationId) {
-            LogWarning(LOG_MASTER, "Ignoring unknown subscriber operation proxy response, transactionId = %u", transactionId);
-            return;
-        }
-
-        pending = it->second;
-        m_subscriberOperationProxyPending.erase(it);
-    }
-
-    // forward the response to the downstream peer when a downstream transaction is pending
-    if (pending.downstreamTransactionId != 0U) {
-        uint8_t response[SUBSCRIBER_OPERATION_HEADER_LENGTH + SUBSCRIBER_OPERATION_PROXY_RESPONSE_LENGTH];
-        ::memcpy(response, data, sizeof(response));
-
-        SET_UINT32(pending.downstreamTransactionId, response, offset + 4U);
-
-        writePeer(pending.downstreamPeerId, m_peerId, { NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_PROXY_RESPONSE },
-            response, sizeof(response), RTP_END_OF_CALL_SEQ, pending.downstreamStreamId);
-        return;
-    }
-
-    // send the response to the downstream console when no downstream transaction is pending
-    PeerConnectionPtr connection = findPeer(pending.downstreamPeerId);
-    if (connection == nullptr || !connection->connected() || connection->peerClass() != PEER_CONN_CLASS_CONSOLE) {
-        return;
-    }
-
-    json::object response = json::object();
-    response["type"].set<std::string>("operation");
-    response["operationId"].set<uint64_t>(operationId);
-
-    const bool found = result == SUBSCRIBER_OPERATION_PROXY_FOUND;
-    response["found"].set<bool>(found);
-
-    json::array operations = json::array();
-    if (found) {
-        const SubscriberOperationStore::Protocol protocol = static_cast<SubscriberOperationStore::Protocol>(data[offset + 17U]);
-        const SubscriberOperationStore::Kind kind = static_cast<SubscriberOperationStore::Kind>(data[offset + 18U]);
-        const SubscriberOperationStore::State state = static_cast<SubscriberOperationStore::State>(data[offset + 19U]);
-        response["protocol"].set<std::string>(SubscriberOperationStore::protocolName(protocol));
-        response["operation"].set<std::string>(SubscriberOperationStore::kindName(kind));
-        response["state"].set<std::string>(SubscriberOperationStore::stateName(state));
-
-        const uint32_t targetId = GET_UINT32(data, offset + 20U)
-        const uint32_t operationPeerId = GET_UINT32(data, offset + 24U)
-        const uint32_t requestValue = GET_UINT32(data, offset + 28U)
-        const uint32_t resultValue = GET_UINT32(data, offset + 32U)
-        response["targetId"].set<uint32_t>(targetId);
-        response["peerId"].set<uint32_t>(operationPeerId);
-        response["requestValue"].set<uint32_t>(requestValue);
-        response["resultValue"].set<uint32_t>(resultValue);
-
-        const uint64_t createdAt = GET_UINT64(data, offset + 36U);
-        const uint64_t completedAt = GET_UINT64(data, offset + 44U);
-        response["createdAt"].set<uint64_t>(createdAt);
-        response["completedAt"].set<uint64_t>(completedAt);
-
-        json::object operation = response;
-        operation.erase("type");
-        operation.erase("found");
-        operations.push_back(json::value(operation));
-    } else if (result == SUBSCRIBER_OPERATION_PROXY_NO_ROUTE) {
-        response["error"].set<std::string>("no upstream route");
-    }
-
-    response["operations"].set<json::array>(operations);
-
-    const std::string payload = json::value(response).serialize();
-    if (payload.length() + SUBSCRIBER_OPERATION_HEADER_LENGTH > DATA_PACKET_LENGTH)
-        return;
-
-    // build the response packet and write it to the peer metadata
-    uint8_t buffer[DATA_PACKET_LENGTH];
-    ::memset(buffer, 0x00U, sizeof(buffer));
-    ::memcpy(buffer + SUBSCRIBER_OPERATION_HEADER_LENGTH, payload.data(), payload.length());
-
-    writePeerCommand(connection->id(), { NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_OPERATION },
-        buffer, static_cast<uint32_t>(payload.length()) + SUBSCRIBER_OPERATION_HEADER_LENGTH, pending.downstreamStreamId, false);
-}
-
-// ---------------------------------------------------------------------------
-//  Public Class Members
-// ---------------------------------------------------------------------------
-
 /* Handles NET_FUNC::SUBSCRIBER_OP packets. */
 
-void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network,
-    MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc,
-    uint32_t streamId)
+void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network, MetadataNetwork* mdNetwork, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
 {
     (void)ssrc;
 

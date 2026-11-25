@@ -20,7 +20,8 @@ using namespace network;
 
 /* Handles NET_FUNC::RPTC packets. */
 
-void TrafficNetwork::PacketHandler::repeaterConfig(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::repeaterConfig(TrafficNetwork* network, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     // validate the incoming packet length for a repeater configuration packet
     if (req == nullptr || req->buffer == nullptr || !TrafficNetwork::validRepeaterConfigLength(req->length)) {

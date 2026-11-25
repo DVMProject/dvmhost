@@ -37,7 +37,8 @@ std::mutex s_keyUpdateCommitMutex;
 
 /* Handles NET_FUNC::KEYS_UPDATE packets. */
 
-void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+void MetadataNetwork::PacketHandler::keysUpdate(TrafficNetwork* network, MetadataNetwork* mdNetwork, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
 {
     (void)ssrc;
 

@@ -863,6 +863,121 @@ void TrafficNetwork::processReplicatedPatchStatus(uint32_t peerId, json::object 
     replicatePatchStatus(obj, peerId);
 }
 
+/* Processes a packed subscriber operation proxy response received from an upstream parent. */
+
+void TrafficNetwork::processSubscriberOperationProxyResponse(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId)
+{
+    // validate the upstream peer, packet length, peer ID, and subfunction before parsing the response
+    const uint32_t packetLength = SUBSCRIBER_OPERATION_HEADER_LENGTH + SUBSCRIBER_OPERATION_PROXY_RESPONSE_LENGTH;
+    if (peer == nullptr || !peer->isEnabled() || !peer->isReplica() || data == nullptr || length != packetLength || peerId != peer->getPeerId()) {
+        LogWarning(LOG_MASTER, "Ignoring invalid subscriber operation proxy response");
+        return;
+    }
+
+    // validate the reserved bytes before parsing the response
+    const uint32_t offset = SUBSCRIBER_OPERATION_HEADER_LENGTH;
+    if (data[offset + 1U] != 0U || data[offset + 2U] != 0U || data[offset + 3U] != 0U) {
+        LogWarning(LOG_MASTER, "Ignoring subscriber operation proxy response with nonzero reserved bytes");
+        return;
+    }
+
+    // validate the result and response-found flag before looking up the pending transaction
+    const uint8_t result = data[offset];
+    const uint8_t responseFound = data[offset + 16U];
+    if (result > SUBSCRIBER_OPERATION_PROXY_NO_ROUTE || responseFound > 1U || (result == SUBSCRIBER_OPERATION_PROXY_FOUND) != (responseFound == 1U)) {
+        LogWarning(LOG_MASTER, "Ignoring malformed subscriber operation proxy response result");
+        return;
+    }
+
+    // match the response to a pending transaction by transaction ID and operation ID
+    const uint32_t transactionId = GET_UINT32(data, offset + 4U);
+    const uint64_t operationId = GET_UINT64(data, offset + 8U);
+    SubscriberOperationProxyPending pending{};
+
+    // scope is intentional
+    {
+        std::lock_guard<std::mutex> lock(m_subscriberOperationProxyMutex);
+        auto it = m_subscriberOperationProxyPending.find(transactionId);
+        if (transactionId == 0U || it == m_subscriberOperationProxyPending.end() || it->second.operationId != operationId) {
+            LogWarning(LOG_MASTER, "Ignoring unknown subscriber operation proxy response, transactionId = %u", transactionId);
+            return;
+        }
+
+        pending = it->second;
+        m_subscriberOperationProxyPending.erase(it);
+    }
+
+    // forward the response to the downstream peer when a downstream transaction is pending
+    if (pending.downstreamTransactionId != 0U) {
+        uint8_t response[SUBSCRIBER_OPERATION_HEADER_LENGTH + SUBSCRIBER_OPERATION_PROXY_RESPONSE_LENGTH];
+        ::memcpy(response, data, sizeof(response));
+
+        SET_UINT32(pending.downstreamTransactionId, response, offset + 4U);
+
+        writePeer(pending.downstreamPeerId, m_peerId, { NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_PROXY_RESPONSE },
+            response, sizeof(response), RTP_END_OF_CALL_SEQ, pending.downstreamStreamId);
+        return;
+    }
+
+    // send the response to the downstream console when no downstream transaction is pending
+    PeerConnectionPtr connection = findPeer(pending.downstreamPeerId);
+    if (connection == nullptr || !connection->connected() || connection->peerClass() != PEER_CONN_CLASS_CONSOLE) {
+        return;
+    }
+
+    json::object response = json::object();
+    response["type"].set<std::string>("operation");
+    response["operationId"].set<uint64_t>(operationId);
+
+    const bool found = result == SUBSCRIBER_OPERATION_PROXY_FOUND;
+    response["found"].set<bool>(found);
+
+    json::array operations = json::array();
+    if (found) {
+        const SubscriberOperationStore::Protocol protocol = static_cast<SubscriberOperationStore::Protocol>(data[offset + 17U]);
+        const SubscriberOperationStore::Kind kind = static_cast<SubscriberOperationStore::Kind>(data[offset + 18U]);
+        const SubscriberOperationStore::State state = static_cast<SubscriberOperationStore::State>(data[offset + 19U]);
+        response["protocol"].set<std::string>(SubscriberOperationStore::protocolName(protocol));
+        response["operation"].set<std::string>(SubscriberOperationStore::kindName(kind));
+        response["state"].set<std::string>(SubscriberOperationStore::stateName(state));
+
+        const uint32_t targetId = GET_UINT32(data, offset + 20U)
+        const uint32_t operationPeerId = GET_UINT32(data, offset + 24U)
+        const uint32_t requestValue = GET_UINT32(data, offset + 28U)
+        const uint32_t resultValue = GET_UINT32(data, offset + 32U)
+        response["targetId"].set<uint32_t>(targetId);
+        response["peerId"].set<uint32_t>(operationPeerId);
+        response["requestValue"].set<uint32_t>(requestValue);
+        response["resultValue"].set<uint32_t>(resultValue);
+
+        const uint64_t createdAt = GET_UINT64(data, offset + 36U);
+        const uint64_t completedAt = GET_UINT64(data, offset + 44U);
+        response["createdAt"].set<uint64_t>(createdAt);
+        response["completedAt"].set<uint64_t>(completedAt);
+
+        json::object operation = response;
+        operation.erase("type");
+        operation.erase("found");
+        operations.push_back(json::value(operation));
+    } else if (result == SUBSCRIBER_OPERATION_PROXY_NO_ROUTE) {
+        response["error"].set<std::string>("no upstream route");
+    }
+
+    response["operations"].set<json::array>(operations);
+
+    const std::string payload = json::value(response).serialize();
+    if (payload.length() + SUBSCRIBER_OPERATION_HEADER_LENGTH > DATA_PACKET_LENGTH)
+        return;
+
+    // build the response packet and write it to the peer metadata
+    uint8_t buffer[DATA_PACKET_LENGTH];
+    ::memset(buffer, 0x00U, sizeof(buffer));
+    ::memcpy(buffer + SUBSCRIBER_OPERATION_HEADER_LENGTH, payload.data(), payload.length());
+
+    writePeerCommand(connection->id(), { NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_OPERATION },
+        buffer, static_cast<uint32_t>(payload.length()) + SUBSCRIBER_OPERATION_HEADER_LENGTH, pending.downstreamStreamId, false);
+}
+
 /* Helper to process an downstream peer In-Call Control message. */
 
 void TrafficNetwork::processDownstreamInCallCtrl(network::NET_ICC::ENUM command, network::NET_SUBFUNC::ENUM subFunc, uint32_t dstId, 
@@ -1848,258 +1963,6 @@ std::vector<TrafficNetwork::PeerAffiliationMapPair> TrafficNetwork::peerAffiliat
     }
 
     return snapshot;
-}
-
-/* Adds or updates one peer affiliation and publishes the aggregate upstream. */
-
-bool TrafficNetwork::updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint32_t dstId)
-{
-    std::unordered_map<uint32_t, uint32_t> aggregate;
-
-    if (srcId == P25DEF::WUID_FNE) {
-        LogWarning(LOG_MASTER, "PEER %u ignoring affiliation for FNE source ID", peerId);
-        return false;
-    }
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
-        std::shared_ptr<fne_lookups::AffiliationLookup> affiliations = getPeerAffiliations(peerId);
-        if (affiliations == nullptr)
-            return false;
-
-        affiliations->groupUnaff(srcId);
-        affiliations->groupAff(srcId, dstId);
-
-        aggregate = buildAggregatedAffiliations();
-    }
-
-    publishAggregatedAffiliations(aggregate);
-    return true;
-}
-
-/* Removes one peer affiliation and publishes the aggregate upstream. */
-
-bool TrafficNetwork::removePeerAffiliation(uint32_t peerId, uint32_t srcId)
-{
-    std::unordered_map<uint32_t, uint32_t> aggregate;
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
-        std::shared_ptr<fne_lookups::AffiliationLookup> affiliations = getPeerAffiliations(peerId);
-        if (affiliations == nullptr)
-            return false;
-
-        affiliations->groupUnaff(srcId);
-
-        aggregate = buildAggregatedAffiliations();
-    }
-
-    publishAggregatedAffiliations(aggregate);
-    return true;
-}
-
-/* Replaces one peer's affiliations and publishes the aggregate upstream. */
-
-bool TrafficNetwork::replacePeerAffiliations(uint32_t peerId, const std::unordered_map<uint32_t, uint32_t>& affiliations)
-{
-    std::unordered_map<uint32_t, uint32_t> aggregate;
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
-        std::shared_ptr<fne_lookups::AffiliationLookup> peerAffiliations = getPeerAffiliations(peerId);
-        if (peerAffiliations == nullptr)
-            return false;
-
-        peerAffiliations->replaceGroupAffiliations(affiliations);
-
-        aggregate = buildAggregatedAffiliations();
-    }
-
-    publishAggregatedAffiliations(aggregate);
-    return true;
-}
-
-/* Rebuilds the aggregate downstream affiliation snapshot. */
-
-std::unordered_map<uint32_t, uint32_t> TrafficNetwork::buildAggregatedAffiliations()
-{
-    std::vector<PeerAffiliationMapPair> peerSnapshot = peerAffiliationsSnapshot();
-    std::sort(peerSnapshot.begin(), peerSnapshot.end(), [](const PeerAffiliationMapPair& lhs, const PeerAffiliationMapPair& rhs) {
-        return lhs.first < rhs.first;
-    });
-
-    // build the aggregate affiliation map from the peer snapshot
-    std::unordered_map<uint32_t, uint32_t> aggregate;
-    for (const auto& peer : peerSnapshot) {
-        if (peer.second == nullptr)
-            continue;
-
-        // iterate over the peer's group affiliations and merge into the aggregate map
-        const std::unordered_map<uint32_t, uint32_t> affiliations = peer.second->grpAffTable();
-        for (const auto& affiliation : affiliations) {
-            const auto result = aggregate.emplace(affiliation.first, affiliation.second);
-/*
-            if (!result.second && result.first->second != affiliation.second) {
-                LogWarning(LOG_MASTER, "PEER %u affiliation conflict, srcId = %u, dstId = %u already represented by dstId = %u from a lower peer ID",
-                    peer.first, affiliation.first, affiliation.second, result.first->second);
-            }
-*/
-        }
-    }
-
-    m_globalAff->replaceGroupAffiliations(aggregate);
-    return aggregate;
-}
-
-/* Publishes an aggregate downstream affiliation snapshot upstream. */
-
-void TrafficNetwork::publishAggregatedAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations)
-{
-    for (auto& peer : m_host->m_peerNetworks) {
-        if (peer.second != nullptr && peer.second->isEnabled() && peer.second->isReplica())
-            peer.second->announceAffiliationUpdate(affiliations);
-    }
-}
-
-/* Adds one peer unit registration and publishes the aggregate upstream. */
-
-bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc, bool log)
-{
-    std::vector<uint32_t> aggregate;
-
-    if (srcId == P25DEF::WUID_FNE) {
-        //LogWarning(LOG_MASTER, "PEER %u ignoring unit registration for FNE source ID", peerId);
-        return false;
-    }
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
-        std::shared_ptr<fne_lookups::AffiliationLookup> registrations = getPeerAffiliations(peerId);
-        if (registrations == nullptr)
-            return false;
-
-        registrations->unitReg(srcId, ssrc, log);
-
-        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        m_unitRouteRegistry.update(srcId, peerId, ssrc, false, now);
-
-        aggregate = buildAggregatedUnitRegistrations();
-    }
-
-    publishAggregatedUnitRegistrations(aggregate);
-    return true;
-}
-
-/* Removes one peer unit registration and publishes the aggregate upstream. */
-
-bool TrafficNetwork::removePeerUnitRegistration(uint32_t peerId, uint32_t srcId, bool log)
-{
-    std::vector<uint32_t> aggregate;
-    std::unordered_map<uint32_t, uint32_t> aggregateAffiliations;
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
-        std::shared_ptr<fne_lookups::AffiliationLookup> registrations = getPeerAffiliations(peerId);
-        if (registrations == nullptr)
-            return false;
-
-        registrations->unitDereg(srcId, false, log);
-
-        m_unitRouteRegistry.erase(srcId, peerId);
-
-        aggregate = buildAggregatedUnitRegistrations();
-        aggregateAffiliations = buildAggregatedAffiliations();
-    }
-
-    publishAggregatedUnitRegistrations(aggregate);
-    publishAggregatedAffiliations(aggregateAffiliations);
-    return true;
-}
-
-/* Replaces one peer's unit registrations and publishes the aggregate upstream. */
-
-bool TrafficNetwork::replacePeerUnitRegistrations(uint32_t peerId, const std::vector<uint32_t>& registrations, uint32_t ssrc)
-{
-    std::vector<uint32_t> aggregate;
-
-    // scope is intentional
-    {
-        std::lock_guard<std::mutex> updateLock(m_affiliationUpdateMutex);
-        std::shared_ptr<fne_lookups::AffiliationLookup> peerRegistrations = getPeerAffiliations(peerId);
-        if (peerRegistrations == nullptr)
-            return false;
-
-        // build a map of source ID to SSRC for the new registrations
-        std::unordered_map<uint32_t, uint32_t> registrationOrigins;
-        registrationOrigins.reserve(registrations.size());
-        for (const uint32_t srcId : registrations)
-            registrationOrigins[srcId] = ssrc;
-
-        peerRegistrations->replaceUnitRegistrations(registrationOrigins);
-
-        const uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        m_unitRouteRegistry.replacePeer(peerId, registrations, ssrc, now);
-
-        aggregate = buildAggregatedUnitRegistrations();
-    }
-
-    publishAggregatedUnitRegistrations(aggregate);
-    return true;
-}
-
-/* Rebuilds the aggregate downstream unit registration snapshot. */
-
-std::vector<uint32_t> TrafficNetwork::buildAggregatedUnitRegistrations()
-{
-    std::vector<PeerAffiliationMapPair> peerSnapshot = peerAffiliationsSnapshot();
-    std::sort(peerSnapshot.begin(), peerSnapshot.end(), [](const PeerAffiliationMapPair& lhs, const PeerAffiliationMapPair& rhs) {
-        return lhs.first < rhs.first;
-    });
-
-    std::unordered_map<uint32_t, uint32_t> aggregateOrigins;
-    for (const auto& peer : peerSnapshot) {
-        if (peer.second == nullptr)
-            continue;
-
-        // iterate over the peer's unit registrations and merge into the aggregate map
-        const std::vector<uint32_t> registrations = peer.second->unitRegTable();
-        for (const uint32_t srcId : registrations) {
-            const uint32_t ssrc = peer.second->getSSRCByUnitReg(srcId);
-            const auto result = aggregateOrigins.emplace(srcId, ssrc);
-/*
-            if (!result.second && result.first->second != ssrc) {
-                LogWarning(LOG_MASTER, "PEER %u unit registration conflict, srcId = %u already represented by lower peer ID", peer.first, srcId);
-            }
-*/
-        }
-    }
-
-    m_globalAff->replaceUnitRegistrations(aggregateOrigins);
-
-    // build the aggregate list of unit registrations from the origins map
-    std::vector<uint32_t> aggregate;
-    aggregate.reserve(aggregateOrigins.size());
-    for (const auto& registration : aggregateOrigins)
-        aggregate.push_back(registration.first);
-
-    std::sort(aggregate.begin(), aggregate.end());
-
-    return aggregate;
-}
-
-/* Publishes an aggregate downstream unit registration snapshot upstream. */
-
-void TrafficNetwork::publishAggregatedUnitRegistrations(const std::vector<uint32_t>& registrations)
-{
-    for (auto& peer : m_host->m_peerNetworks) {
-        if (peer.second != nullptr && peer.second->isEnabled() && peer.second->isReplica())
-            peer.second->announceUnitRegUpdate(registrations);
-    }
 }
 
 /* Helper to disconnect a downstream peer. */

@@ -22,7 +22,8 @@ using namespace network;
 
 /* Handles NET_FUNC::KEY_REQ packets. */
 
-void TrafficNetwork::PacketHandler::keyRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::keyRequest(TrafficNetwork* network, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     using namespace p25::defines;
     using namespace p25::kmm;

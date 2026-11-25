@@ -125,6 +125,22 @@ namespace network
     const int32_t REPEATER_AUTH_HASH_LEN = 32;
     const int32_t TRANSFER_PCKT_HDR_LEN = 11;
 
+    const uint32_t SUBSCRIBER_OPERATION_HEADER_LENGTH = 11U;
+    const uint32_t SUBSCRIBER_OPERATION_PROXY_REQUEST_LENGTH = 16U;
+    const uint32_t SUBSCRIBER_OPERATION_PROXY_RESPONSE_LENGTH = 52U;
+    const uint32_t SUBSCRIBER_OPERATION_PROXY_TIMEOUT_MS = 5000U;
+    const uint8_t SUBSCRIBER_OPERATION_PROXY_HOP_LIMIT = 16U;
+
+    /**
+     * @brief Result codes for subscriber operation proxy responses.
+     * @ingroup fne_network
+     */
+    enum SubscriberOperationProxyResult : uint8_t {
+        SUBSCRIBER_OPERATION_PROXY_FOUND = 0U,
+        SUBSCRIBER_OPERATION_PROXY_NOT_FOUND = 1U,
+        SUBSCRIBER_OPERATION_PROXY_NO_ROUTE = 2U
+    };
+
     // ---------------------------------------------------------------------------
     //  Class Prototypes
     // ---------------------------------------------------------------------------
@@ -279,26 +295,6 @@ namespace network
         SubscriberOperationStore& subscriberOperations() { return m_subscriberOperations; }
 
         /**
-         * @brief Proxies a subscriber operation result query to the upstream replica parent.
-         * @param downstreamPeerId Console or downstream FNE peer ID awaiting the response.
-         * @param downstreamStreamId Stream ID supplied by the downstream requestor.
-         * @param downstreamTransactionId Proxy transaction ID supplied by a downstream FNE, or zero for a console.
-         * @param operationId Subscriber operation ID to query.
-         * @param hopLimit Number of additional upstream hops permitted.
-         * @returns True if the request was forwarded, otherwise false.
-         */
-        bool proxySubscriberOperation(uint32_t downstreamPeerId, uint32_t downstreamStreamId, uint32_t downstreamTransactionId,
-            uint64_t operationId, uint8_t hopLimit);
-        /**
-         * @brief Processes a packed subscriber operation proxy response received from an upstream parent.
-         * @param peer Upstream peer network that supplied the response.
-         * @param data Packed response buffer.
-         * @param length Length of the packed response buffer.
-         * @param peerId Destination peer ID carried in the response.
-         */
-        void processSubscriberOperationProxyResponse(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId);
-
-        /**
          * @brief Sets the instances of the Radio ID, Radio Alias, Talkgroup ID, Peer List, and Crypto lookup tables.
          * @param ridLookup Radio ID Lookup Table Instance
          * @param ridAliasLookup Radio Alias Lookup Table Instance
@@ -331,7 +327,14 @@ namespace network
          * @param obj Patch status JSON payload.
          */
         void processReplicatedPatchStatus(uint32_t peerId, json::object obj);
-
+        /**
+         * @brief Processes a packed subscriber operation proxy response received from an upstream parent.
+         * @param peer Upstream peer network that supplied the response.
+         * @param data Packed response buffer.
+         * @param length Length of the packed response buffer.
+         * @param peerId Destination peer ID carried in the response.
+         */
+        void processSubscriberOperationProxyResponse(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId);
         /**
          * @brief Helper to process an downstream peer In-Call Control message.
          * @param command In-Call Control Command.
@@ -896,75 +899,7 @@ namespace network
          * @returns std::vector<PeerAffiliationMapPair> Snapshot of peer affiliation entries.
          */
         std::vector<PeerAffiliationMapPair> peerAffiliationsSnapshot() const;
-        /**
-         * @brief Adds or updates one peer affiliation and publishes the aggregate upstream.
-         * @param peerId Peer ID.
-         * @param srcId Source Radio ID.
-         * @param dstId Talkgroup ID.
-         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
-         */
-        bool updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint32_t dstId);
-        /**
-         * @brief Removes one peer affiliation and publishes the aggregate upstream.
-         * @param peerId Peer ID.
-         * @param srcId Source Radio ID.
-         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
-         */
-        bool removePeerAffiliation(uint32_t peerId, uint32_t srcId);
-        /**
-         * @brief Replaces one peer's affiliations and publishes the aggregate upstream.
-         * @param peerId Peer ID.
-         * @param affiliations Complete source-to-talkgroup affiliation snapshot.
-         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
-         */
-        bool replacePeerAffiliations(uint32_t peerId, const std::unordered_map<uint32_t, uint32_t>& affiliations);
-        /**
-         * @brief Rebuilds the aggregate downstream affiliation snapshot.
-         * @note The caller must hold m_affiliationUpdateMutex.
-         * @returns std::unordered_map<uint32_t, uint32_t> Aggregate affiliation snapshot.
-         */
-        std::unordered_map<uint32_t, uint32_t> buildAggregatedAffiliations();
-        /**
-         * @brief Publishes an aggregate downstream affiliation snapshot upstream.
-         * @param affiliations Complete aggregate source-to-talkgroup affiliation snapshot.
-         */
-        void publishAggregatedAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations);
-        /**
-         * @brief Adds one peer unit registration and publishes the aggregate upstream.
-         * @param peerId Peer ID.
-         * @param srcId Source Radio ID.
-         * @param ssrc Originating peer ID.
-         * @param log Flag indicating whether the registration should be logged.
-         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
-         */
-        bool updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc, bool log = true);
-        /**
-         * @brief Removes one peer unit registration and publishes the aggregate upstream.
-         * @param peerId Peer ID.
-         * @param srcId Source Radio ID.
-         * @param log Flag indicating whether the deregistration should be logged.
-         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
-         */
-        bool removePeerUnitRegistration(uint32_t peerId, uint32_t srcId, bool log = true);
-        /**
-         * @brief Replaces one peer's unit registrations and publishes the aggregate upstream.
-         * @param peerId Peer ID.
-         * @param registrations Complete source ID registration snapshot.
-         * @param ssrc Originating peer ID.
-         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
-         */
-        bool replacePeerUnitRegistrations(uint32_t peerId, const std::vector<uint32_t>& registrations, uint32_t ssrc);
-        /**
-         * @brief Rebuilds the aggregate downstream unit registration snapshot.
-         * @note The caller must hold m_affiliationUpdateMutex.
-         * @returns std::vector<uint32_t> Aggregate unit registration snapshot.
-         */
-        std::vector<uint32_t> buildAggregatedUnitRegistrations();
-        /**
-         * @brief Publishes an aggregate downstream unit registration snapshot upstream.
-         * @param registrations Complete aggregate source ID registration snapshot.
-         */
-        void publishAggregatedUnitRegistrations(const std::vector<uint32_t>& registrations);
+        
         /**
          * @brief Helper to disconnect a downstream peer.
          * @param peerId Peer ID.
@@ -1402,6 +1337,96 @@ namespace network
          * @param keyLength Length of key in bytes.
          */
         void processKEKResponse(uint32_t srcId, p25::kmm::KeyItem* ki, uint8_t algId, uint8_t keyLength);
+
+        /*
+        ** NET_FUNC::ANNOUNCE Helper Functions (packet/Announce.cpp)
+        */
+
+        /**
+         * @brief Adds or updates one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param dstId Talkgroup ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerAffiliation(uint32_t peerId, uint32_t srcId, uint32_t dstId);
+        /**
+         * @brief Removes one peer affiliation and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerAffiliation(uint32_t peerId, uint32_t srcId);
+        /**
+         * @brief Replaces one peer's affiliations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param affiliations Complete source-to-talkgroup affiliation snapshot.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerAffiliations(uint32_t peerId, const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Rebuilds the aggregate downstream affiliation snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::unordered_map<uint32_t, uint32_t> Aggregate affiliation snapshot.
+         */
+        std::unordered_map<uint32_t, uint32_t> buildAggregatedAffiliations();
+        /**
+         * @brief Publishes an aggregate downstream affiliation snapshot upstream.
+         * @param affiliations Complete aggregate source-to-talkgroup affiliation snapshot.
+         */
+        void publishAggregatedAffiliations(const std::unordered_map<uint32_t, uint32_t>& affiliations);
+        /**
+         * @brief Adds one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param ssrc Originating peer ID.
+         * @param log Flag indicating whether the registration should be logged.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId, uint32_t ssrc, bool log = true);
+        /**
+         * @brief Removes one peer unit registration and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param srcId Source Radio ID.
+         * @param log Flag indicating whether the deregistration should be logged.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool removePeerUnitRegistration(uint32_t peerId, uint32_t srcId, bool log = true);
+        /**
+         * @brief Replaces one peer's unit registrations and publishes the aggregate upstream.
+         * @param peerId Peer ID.
+         * @param registrations Complete source ID registration snapshot.
+         * @param ssrc Originating peer ID.
+         * @returns bool True, if the peer affiliation lookup exists, otherwise false.
+         */
+        bool replacePeerUnitRegistrations(uint32_t peerId, const std::vector<uint32_t>& registrations, uint32_t ssrc);
+        /**
+         * @brief Rebuilds the aggregate downstream unit registration snapshot.
+         * @note The caller must hold m_affiliationUpdateMutex.
+         * @returns std::vector<uint32_t> Aggregate unit registration snapshot.
+         */
+        std::vector<uint32_t> buildAggregatedUnitRegistrations();
+        /**
+         * @brief Publishes an aggregate downstream unit registration snapshot upstream.
+         * @param registrations Complete aggregate source ID registration snapshot.
+         */
+        void publishAggregatedUnitRegistrations(const std::vector<uint32_t>& registrations);
+
+        /*
+        ** NET_FUNC::SUBSCRIBER_OP Helper Functions (packet/SubscriberOperation.cpp)
+        */
+
+        /**
+         * @brief Proxies a subscriber operation result query to the upstream replica parent.
+         * @param downstreamPeerId Console or downstream FNE peer ID awaiting the response.
+         * @param downstreamStreamId Stream ID supplied by the downstream requestor.
+         * @param downstreamTransactionId Proxy transaction ID supplied by a downstream FNE, or zero for a console.
+         * @param operationId Subscriber operation ID to query.
+         * @param hopLimit Number of additional upstream hops permitted.
+         * @returns True if the request was forwarded, otherwise false.
+         */
+        bool proxySubscriberOperation(uint32_t downstreamPeerId, uint32_t downstreamStreamId, uint32_t downstreamTransactionId,
+            uint64_t operationId, uint8_t hopLimit);
 
         /*
         ** Metrics Helpers

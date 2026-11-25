@@ -21,7 +21,8 @@ using namespace network;
 
 /* Handles NET_FUNC::TRANSFER packets. */
 
-void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+void MetadataNetwork::PacketHandler::transfer(TrafficNetwork* network, MetadataNetwork* mdNetwork, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
 {
     (void)mdNetwork;
     (void)ssrc;

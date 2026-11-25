@@ -20,7 +20,8 @@ using namespace network;
 
 /* Handles NET_FUNC::RPTL packets. */
 
-void TrafficNetwork::PacketHandler::repeaterLogin(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::repeaterLogin(TrafficNetwork* network, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     std::lock_guard<std::mutex> peerGuard(TrafficNetwork::getPeerStateLock(peerId));
 

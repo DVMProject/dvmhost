@@ -24,7 +24,8 @@ using namespace network::callhandler;
 
 /* Handles NET_FUNC::GRANT_REQ packets. */
 
-void TrafficNetwork::PacketHandler::grantRequest(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::grantRequest(TrafficNetwork* network, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     TrafficNetwork::PeerConnectionPtr connection = network->findPeer(peerId);
     if (peerId > 0 && connection != nullptr) {

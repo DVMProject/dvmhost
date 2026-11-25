@@ -22,7 +22,8 @@ using namespace network;
 
 /* Handles NET_FUNC::RADIO_ALIAS_SYNC packets. */
 
-void MetadataNetwork::PacketHandler::radioAliasSync(TrafficNetwork* network, MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+void MetadataNetwork::PacketHandler::radioAliasSync(TrafficNetwork* network, MetadataNetwork* mdNetwork, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
 {
     (void)mdNetwork;
 

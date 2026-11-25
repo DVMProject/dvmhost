@@ -21,7 +21,8 @@ using namespace network;
 
 /* Handles NET_FUNC::RPTK packets. */
 
-void TrafficNetwork::PacketHandler::repeaterAuth(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::repeaterAuth(TrafficNetwork* network, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     // validate the incoming packet length for a repeater authentication packet
     if (req == nullptr || req->buffer == nullptr || !TrafficNetwork::validRepeaterAuthLength(req->length)) {

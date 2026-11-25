@@ -20,7 +20,8 @@ using namespace network;
 
 /* Handles NET_FUNC::INCALL_CTRL packets. */
 
-void TrafficNetwork::PacketHandler::inCallControl(TrafficNetwork* network, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
+void TrafficNetwork::PacketHandler::inCallControl(TrafficNetwork* network, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId, uint64_t now)
 {
     if (network->m_disallowInCallCtrl)
         return;

@@ -23,7 +23,8 @@ using namespace network;
 
 /* Handles NET_FUNC::KEYS_INVENTORY packets. */
 
-void MetadataNetwork::PacketHandler::keysInventory(TrafficNetwork* network, MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+void MetadataNetwork::PacketHandler::keysInventory(TrafficNetwork* network, MetadataNetwork* mdNetwork, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
 {
     (void)ssrc;
 

@@ -20,7 +20,8 @@ using namespace network;
 
 /* Handles NET_FUNC::REPL packets. */
 
-void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, MetadataNetwork* mdNetwork, NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
+void MetadataNetwork::PacketHandler::replication(TrafficNetwork* network, MetadataNetwork* mdNetwork, 
+    NetPacketRequest* req, uint32_t peerId, uint32_t ssrc, uint32_t streamId)
 {
     (void)ssrc;
 
