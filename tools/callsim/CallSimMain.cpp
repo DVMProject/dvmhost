@@ -812,8 +812,7 @@ private:
 /* Initializes a worker for one simulated call. */
 
 CallWorker::CallWorker(CallSimNetwork& network, const Options& options, uint32_t callNumber, uint32_t totalCalls,
-    uint32_t srcId, uint32_t dstId, uint8_t slot, uint32_t durationMs, uint8_t& result,
-    std::atomic<uint32_t>& remaining) :
+    uint32_t srcId, uint32_t dstId, uint8_t slot, uint32_t durationMs, uint8_t& result, std::atomic<uint32_t>& remaining) :
     m_network(network),
     m_options(options),
     m_callNumber(callNumber),
@@ -832,8 +831,7 @@ CallWorker::CallWorker(CallSimNetwork& network, const Options& options, uint32_t
 
 void CallWorker::entry()
 {
-    m_result = emitCall(m_network, m_options, m_callNumber, m_totalCalls, m_srcId, m_dstId, m_slot,
-        m_durationMs) ? 1U : 0U;
+    m_result = emitCall(m_network, m_options, m_callNumber, m_totalCalls, m_srcId, m_dstId, m_slot, m_durationMs) ? 1U : 0U;
     m_remaining--;
 }
 

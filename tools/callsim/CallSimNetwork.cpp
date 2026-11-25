@@ -43,8 +43,7 @@ bool CallSimNetwork::writeDMRCall(const dmr::data::NetData& data, CallStreamStat
 
 /* Writes a P25 LDU1 using call-specific RTP state. */
 
-bool CallSimNetwork::writeP25LDU1Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-    const uint8_t* data, CallStreamState& stream)
+bool CallSimNetwork::writeP25LDU1Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, CallStreamState& stream)
 {
     std::lock_guard<std::mutex> lock(m_writeMutex);
     if (stream.streamId == 0U)
@@ -62,8 +61,7 @@ bool CallSimNetwork::writeP25LDU1Call(const p25::lc::LC& control, const p25::dat
 
 /* Writes a P25 LDU2 using call-specific RTP state. */
 
-bool CallSimNetwork::writeP25LDU2Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-    const uint8_t* data, CallStreamState& stream)
+bool CallSimNetwork::writeP25LDU2Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, CallStreamState& stream)
 {
     std::lock_guard<std::mutex> lock(m_writeMutex);
     if (stream.streamId == 0U)
@@ -81,8 +79,7 @@ bool CallSimNetwork::writeP25LDU2Call(const p25::lc::LC& control, const p25::dat
 
 /* Writes a terminating P25 TDU using call-specific RTP state. */
 
-bool CallSimNetwork::writeP25TDUCall(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-    CallStreamState& stream)
+bool CallSimNetwork::writeP25TDUCall(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, CallStreamState& stream)
 {
     std::lock_guard<std::mutex> lock(m_writeMutex);
     if (stream.streamId == 0U)
@@ -100,8 +97,7 @@ bool CallSimNetwork::writeP25TDUCall(const p25::lc::LC& control, const p25::data
 
 /* Writes an NXDN frame using call-specific RTP state. */
 
-bool CallSimNetwork::writeNXDNCall(const nxdn::lc::RTCH& control, const uint8_t* data, uint32_t length,
-    CallStreamState& stream, bool end)
+bool CallSimNetwork::writeNXDNCall(const nxdn::lc::RTCH& control, const uint8_t* data, uint32_t length, CallStreamState& stream, bool end)
 {
     std::lock_guard<std::mutex> lock(m_writeMutex);
     if (stream.streamId == 0U)

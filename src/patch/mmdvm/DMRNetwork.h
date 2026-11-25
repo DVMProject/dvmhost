@@ -44,7 +44,9 @@ namespace mmdvm
          * @param debug Flag indicating whether packet debugging is enabled.
          */
         DMRNetwork(const std::string& gatewayAddress, uint16_t gatewayPort, uint16_t localPort, uint32_t repeaterId, bool debug);
-        /** @brief Finalizes an instance of the DMRNetwork class. */
+        /** 
+         * @brief Finalizes an instance of the DMRNetwork class. 
+         */
         ~DMRNetwork();
 
         /**
@@ -66,25 +68,40 @@ namespace mmdvm
          * @param ms Elapsed milliseconds.
          */
         void clock(uint32_t ms);
-        /** @brief Opens the UDP transport. @return bool True on success. */
+        /** 
+         * @brief Opens the UDP transport.
+         * @return bool True on success.
+         */
         bool open();
-        /** @brief Closes the UDP transport. */
+        /** 
+         * @brief Closes the UDP transport.
+         */
         void close();
 
     private:
-        network::udp::Socket m_socket;    //!< UDP transport bound to the MMDVM-facing port.
-        sockaddr_storage m_addr;          //!< Resolved DMRGateway endpoint.
-        uint32_t m_addrLen;               //!< Length of the resolved endpoint structure.
-        uint32_t m_repeaterId;            //!< Repeater ID serialized in DMRD records.
-        bool m_debug;                     //!< Enables packet dumps.
-        RingBuffer<uint8_t> m_rxBuffer;   //!< Length-prefixed received DMRD records.
-        RingBuffer<uint8_t> m_txBuffer;   //!< Complete DMRD records awaiting paced transmission.
-        uint32_t m_txElapsed;              //!< Milliseconds accumulated toward the next DMR burst.
-        uint32_t m_pingElapsed;            //!< Milliseconds accumulated toward the next DMRP ping.
-        uint32_t m_streamId[2U];           //!< Outbound Homebrew stream identifier for each slot.
-        std::mt19937 m_random;             //!< Random source used to create Homebrew stream identifiers.
+        network::udp::Socket m_socket;
 
-        /** @brief Creates a non-zero Homebrew stream identifier. @return uint32_t Stream identifier. */
+        sockaddr_storage m_addr;
+        uint32_t m_addrLen;
+
+        uint32_t m_repeaterId;
+
+        bool m_debug;
+
+        RingBuffer<uint8_t> m_rxBuffer;
+        RingBuffer<uint8_t> m_txBuffer;
+
+        uint32_t m_txElapsed;
+        uint32_t m_pingElapsed;
+
+        uint32_t m_streamId[2U];
+
+        std::mt19937 m_random;
+
+        /** 
+         * @brief Creates a non-zero Homebrew stream identifier.
+         * @return uint32_t Stream identifier.
+         */
         uint32_t createStreamId();
     };
 } // namespace mmdvm

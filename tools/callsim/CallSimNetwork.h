@@ -68,8 +68,7 @@ public:
      * @param[in,out] stream RTP state for the simulated call.
      * @return True when the frame was accepted for transmission.
      */
-    bool writeP25LDU1Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-        const uint8_t* data, CallStreamState& stream);
+    bool writeP25LDU1Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, CallStreamState& stream);
 
     /**
      * @brief Writes a P25 LDU2 using call-specific RTP state.
@@ -79,8 +78,7 @@ public:
      * @param[in,out] stream RTP state for the simulated call.
      * @return True when the frame was accepted for transmission.
      */
-    bool writeP25LDU2Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-        const uint8_t* data, CallStreamState& stream);
+    bool writeP25LDU2Call(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, const uint8_t* data, CallStreamState& stream);
 
     /**
      * @brief Writes a terminating P25 TDU using call-specific RTP state.
@@ -89,8 +87,7 @@ public:
      * @param[in,out] stream RTP state for the simulated call.
      * @return True when the frame was accepted for transmission.
      */
-    bool writeP25TDUCall(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd,
-        CallStreamState& stream);
+    bool writeP25TDUCall(const p25::lc::LC& control, const p25::data::LowSpeedData& lsd, CallStreamState& stream);
 
     /**
      * @brief Writes an NXDN frame using call-specific RTP state.
@@ -101,8 +98,7 @@ public:
      * @param end Flag indicating that this is the final call frame.
      * @return True when the frame was accepted for transmission.
      */
-    bool writeNXDNCall(const nxdn::lc::RTCH& control, const uint8_t* data, uint32_t length,
-        CallStreamState& stream, bool end = false);
+    bool writeNXDNCall(const nxdn::lc::RTCH& control, const uint8_t* data, uint32_t length, CallStreamState& stream, bool end = false);
 
     /**
      * @brief Writes a group-call grant request while excluding concurrent frame writers.
