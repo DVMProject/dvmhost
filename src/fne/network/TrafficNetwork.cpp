@@ -1971,7 +1971,7 @@ bool TrafficNetwork::updatePeerUnitRegistration(uint32_t peerId, uint32_t srcId,
     std::vector<uint32_t> aggregate;
 
     if (srcId == P25DEF::WUID_FNE) {
-        LogWarning(LOG_MASTER, "PEER %u ignoring unit registration for FNE source ID", peerId);
+        //LogWarning(LOG_MASTER, "PEER %u ignoring unit registration for FNE source ID", peerId);
         return false;
     }
 
