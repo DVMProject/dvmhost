@@ -1941,9 +1941,6 @@ void Voice::writeNet_LDU1()
 
         m_p25->writeRF_Preamble();
 
-        ::ActivityLogEx(LOG_P25, false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
-        LogInfoEx(LOG_NET, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
-
         // conventional registration or DVRS support?
         if ((m_p25->m_enableControl && !m_p25->m_dedicatedControl) || m_p25->m_voiceOnControl) {
             uint8_t serviceOptions = (m_netLC.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
@@ -2025,6 +2022,9 @@ void Voice::writeNet_LDU1()
                     m_p25->m_control->writeRF_TSDU_SBF_Imm(osp.get(), true);
             }
         }
+
+        ::ActivityLogEx(LOG_P25, false, "network %svoice transmission from %u to %s%u", m_netLC.getEncrypted() ? "encrypted " : "", srcId, group ? "TG " : "", dstId);
+        LogInfoEx(LOG_NET, "P25 Voice Call, srcId = %u, dstId = %u", srcId, dstId);
 
         m_hadVoice = true;
         m_p25->m_netState = RS_NET_AUDIO;

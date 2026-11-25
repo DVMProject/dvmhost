@@ -2740,6 +2740,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
             ::ActivityLogEx(LOG_P25, true, "group grant request from %u to TG %u denied", srcId, dstId);
             m_p25->m_rfState = RS_RF_REJECTED;
         }
+
         return false;
     }
 
@@ -2763,7 +2764,7 @@ bool ControlSignaling::writeRF_TSDU_Grant(uint32_t srcId, uint32_t dstId, uint8_
         // check if an RF grant is currently active and if it should preempt network traffic
         if (rfGrantSteering && activeGrantDstId != 0U) {
             if (!activeGrantFromNetwork) {
-                // An RF-originated grant owns the channel until it is released or expires.
+                // an RF-originated grant owns the channel until it is released or expires
                 if (activeGrantDstId != dstId) {
                     LogWarning(LOG_RF, P25_TSDU_STR ", TSBKO, IOSP_GRP_VCH (Group Voice Channel Request) denied, RF grant active, grantedDstId = %u, dstId = %u",
                         activeGrantDstId, dstId);
