@@ -110,11 +110,14 @@ void FNETestHooks::clearPeerWriteCapture(TrafficNetwork& network)
 /* Captures complete payloads selected by subsequent peer writes. */
 
 void FNETestHooks::capturePeerPayloadWrite(TrafficNetwork& network,
-    std::vector<uint8_t>& payload, uint8_t& function, uint8_t& subFunction)
+    std::vector<uint8_t>& payload, uint8_t& function, uint8_t& subFunction,
+    std::vector<uint32_t>* peerIds)
 {
-    network.m_testPeerPayloadWriteHandler = [&payload, &function, &subFunction](uint32_t,
+    network.m_testPeerPayloadWriteHandler = [&payload, &function, &subFunction, peerIds](uint32_t peerId,
                                                 FrameQueue::OpcodePair opcode,
                                                 const uint8_t* data, uint32_t length) {
+        if (peerIds != nullptr)
+            peerIds->push_back(peerId);
         function = opcode.first;
         subFunction = opcode.second;
         payload.assign(data, data + length);

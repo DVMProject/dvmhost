@@ -78,8 +78,8 @@ static void encodeProxyResponse(uint8_t* buffer, uint8_t result, uint32_t transa
 
 /* Proxies a subscriber operation result query to the upstream replica parent. */
 
-bool TrafficNetwork::proxySubscriberOperation(MetadataNetwork* metadata, uint32_t downstreamPeerId,
-    uint32_t downstreamStreamId, uint32_t downstreamTransactionId, uint64_t operationId, uint8_t hopLimit)
+bool TrafficNetwork::proxySubscriberOperation(uint32_t downstreamPeerId, uint32_t downstreamStreamId, uint32_t downstreamTransactionId,
+    uint64_t operationId, uint8_t hopLimit)
 {
     if (operationId == 0U || hopLimit == 0U || m_host == nullptr)
         return false;
@@ -117,7 +117,7 @@ bool TrafficNetwork::proxySubscriberOperation(MetadataNetwork* metadata, uint32_
         } while (transactionId == 0U || m_subscriberOperationProxyPending.find(transactionId) != m_subscriberOperationProxyPending.end());
 
         m_subscriberOperationProxyPending[transactionId] = {
-            metadata, downstreamPeerId, downstreamStreamId, downstreamTransactionId,
+            downstreamPeerId, downstreamStreamId, downstreamTransactionId,
             operationId, now + SUBSCRIBER_OPERATION_PROXY_TIMEOUT_MS
         };
     }
@@ -134,9 +134,7 @@ bool TrafficNetwork::proxySubscriberOperation(MetadataNetwork* metadata, uint32_
     bool written = false;
 #if defined(CATCH2_TEST_COMPILATION)
     if (m_testSubscriberOperationProxyWriteHandler) {
-        written = m_testSubscriberOperationProxyWriteHandler(
-            { NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_PROXY_REQUEST },
-            buffer, sizeof(buffer));
+        written = m_testSubscriberOperationProxyWriteHandler({ NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_PROXY_REQUEST }, buffer, sizeof(buffer));
     } else
 #endif
     {
@@ -209,8 +207,7 @@ void TrafficNetwork::processSubscriberOperationProxyResponse(PeerNetwork* peer, 
 
     // send the response to the downstream console when no downstream transaction is pending
     PeerConnectionPtr connection = findPeer(pending.downstreamPeerId);
-    if (pending.metadata == nullptr || connection == nullptr || !connection->connected() ||
-        connection->peerClass() != PEER_CONN_CLASS_CONSOLE) {
+    if (connection == nullptr || !connection->connected() || connection->peerClass() != PEER_CONN_CLASS_CONSOLE) {
         return;
     }
 
@@ -262,8 +259,9 @@ void TrafficNetwork::processSubscriberOperationProxyResponse(PeerNetwork* peer, 
     uint8_t buffer[DATA_PACKET_LENGTH];
     ::memset(buffer, 0x00U, sizeof(buffer));
     ::memcpy(buffer + SUBSCRIBER_OPERATION_HEADER_LENGTH, payload.data(), payload.length());
-    pending.metadata->writePeerMetadata(connection.get(), m_peerId, { NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_OPERATION }, buffer,
-        static_cast<uint32_t>(payload.length()) + SUBSCRIBER_OPERATION_HEADER_LENGTH, RTP_END_OF_CALL_SEQ, pending.downstreamStreamId);
+
+    writePeerCommand(connection->id(), { NET_FUNC::SUBSCRIBER_OP, NET_SUBFUNC::SUBSCRIBER_OP_OPERATION },
+        buffer, static_cast<uint32_t>(payload.length()) + SUBSCRIBER_OPERATION_HEADER_LENGTH, pending.downstreamStreamId, false);
 }
 
 // ---------------------------------------------------------------------------
@@ -315,8 +313,8 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
         ::memset(buffer, 0x00U, DATA_PACKET_LENGTH);
         ::memcpy(buffer + SUBSCRIBER_OPERATION_HEADER_LENGTH, responsePayload.data(), responseLength);
 
-        return mdNetwork->writePeerMetadata(connection.get(), network->m_peerId, { NET_FUNC::SUBSCRIBER_OP, subFunction }, buffer,
-            responseLength + SUBSCRIBER_OPERATION_HEADER_LENGTH, RTP_END_OF_CALL_SEQ, streamId);
+        return network->writePeerCommand(connection->id(), { NET_FUNC::SUBSCRIBER_OP, subFunction },
+            buffer, responseLength + SUBSCRIBER_OPERATION_HEADER_LENGTH, streamId, false);
     };
 
     // handle proxy requests by checking the local store before forwarding to another peer
@@ -357,7 +355,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
             return;
         }
 
-        if (hopLimit > 1U && network->proxySubscriberOperation(nullptr, peerId, streamId, transactionId, operationId, hopLimit - 1U)) {
+        if (hopLimit > 1U && network->proxySubscriberOperation(peerId, streamId, transactionId, operationId, hopLimit - 1U)) {
             return;
         }
 
@@ -556,8 +554,7 @@ void MetadataNetwork::PacketHandler::subscriberOperation(TrafficNetwork* network
                 SubscriberOperationStore::Operation operation;
 
                 const bool found = operationId != 0U && network->subscriberOperations().get(operationId, operation);
-                if (!found && operationId != 0U && network->proxySubscriberOperation(mdNetwork,
-                    peerId, streamId, 0U, operationId, SUBSCRIBER_OPERATION_PROXY_HOP_LIMIT)) {
+                if (!found && operationId != 0U && network->proxySubscriberOperation(peerId, streamId, 0U, operationId, SUBSCRIBER_OPERATION_PROXY_HOP_LIMIT)) {
                     return;
                 }
                 response["found"].set<bool>(found);

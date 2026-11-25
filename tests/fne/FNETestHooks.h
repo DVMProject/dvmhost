@@ -142,9 +142,11 @@ public:
      * @param[out] payload Complete peer payload.
      * @param[out] function Function opcode.
      * @param[out] subFunction Sub-function opcode.
+     * @param[out] peerIds Optional destination peer IDs selected for writes.
      */
     static void capturePeerPayloadWrite(network::TrafficNetwork& network,
-        std::vector<uint8_t>& payload, uint8_t& function, uint8_t& subFunction);
+        std::vector<uint8_t>& payload, uint8_t& function, uint8_t& subFunction,
+        std::vector<uint32_t>* peerIds = nullptr);
     /**
      * @brief Clears the peer payload write capture callback.
      * @param network Traffic network instance.

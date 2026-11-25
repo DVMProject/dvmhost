@@ -35,6 +35,13 @@
 #include <vector>
 
 // ---------------------------------------------------------------------------
+//  Constants
+// ---------------------------------------------------------------------------
+
+/** @brief Length in bytes of the command prefix added by TrafficNetwork::writePeerCommand(). */
+constexpr uint32_t FNE_COMMAND_PREFIX_LENGTH = 6U;
+
+// ---------------------------------------------------------------------------
 //  Class Declaration
 // ---------------------------------------------------------------------------
 
@@ -100,7 +107,7 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     std::vector<uint8_t> responsePayload;
     uint8_t responseFunction = network::NET_FUNC::ILLEGAL;
     uint8_t responseSubFunction = network::NET_SUBFUNC::NOP;
-    FNETestHooks::captureMetadataWrite(harness.metadata, responsePayload,
+    FNETestHooks::capturePeerPayloadWrite(harness.traffic, responsePayload,
         responseFunction, responseSubFunction);
 
     json::object operationRequest = json::object();
@@ -113,13 +120,13 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
         network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION,
         CONSOLE_PEER_ID, requestPayload);
 
-    REQUIRE(responsePayload.size() > 11U);
+    REQUIRE(responsePayload.size() > FNE_COMMAND_PREFIX_LENGTH + 11U);
     CHECK(responseFunction == network::NET_FUNC::SUBSCRIBER_OP);
     CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION);
     json::value operationResponseValue;
     REQUIRE(json::parse(operationResponseValue,
-        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
-            responsePayload.size() - 11U))
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + FNE_COMMAND_PREFIX_LENGTH + 11U),
+            responsePayload.size() - FNE_COMMAND_PREFIX_LENGTH - 11U))
                 .empty());
     REQUIRE(operationResponseValue.is<json::object>());
     json::object& operationResponse = operationResponseValue.get<json::object>();
@@ -146,8 +153,8 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     REQUIRE(responsePayload.size() > 11U);
     json::value historyResponseValue;
     REQUIRE(json::parse(historyResponseValue,
-        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
-            responsePayload.size() - 11U))
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + FNE_COMMAND_PREFIX_LENGTH + 11U),
+            responsePayload.size() - FNE_COMMAND_PREFIX_LENGTH - 11U))
                 .empty());
     REQUIRE(historyResponseValue.is<json::object>());
     json::object& historyResponse = historyResponseValue.get<json::object>();
@@ -170,8 +177,8 @@ TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_P25_STATUS);
     json::value statusResponseValue;
     REQUIRE(json::parse(statusResponseValue,
-        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
-            responsePayload.size() - 11U))
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + FNE_COMMAND_PREFIX_LENGTH + 11U),
+            responsePayload.size() - FNE_COMMAND_PREFIX_LENGTH - 11U))
                 .empty());
     REQUIRE(statusResponseValue.is<json::object>());
     json::object& statusResponse = statusResponseValue.get<json::object>();
@@ -199,7 +206,7 @@ TEST_CASE("FNE metadata proxies subscriber operation queries and correlates resp
     uint8_t responseFunction = network::NET_FUNC::ILLEGAL;
     uint8_t responseSubFunction = network::NET_SUBFUNC::NOP;
     FNETestHooks::captureSubscriberOperationProxyWrite(harness.traffic, proxyRequest);
-    FNETestHooks::captureMetadataWrite(harness.metadata, consoleResponse,
+    FNETestHooks::capturePeerPayloadWrite(harness.traffic, consoleResponse,
         responseFunction, responseSubFunction);
 
     json::object request = json::object();
@@ -248,13 +255,13 @@ TEST_CASE("FNE metadata proxies subscriber operation queries and correlates resp
     FNETestHooks::enableReplicaPeer(upstream);
     FNETestHooks::deliverSubscriberOperationProxyResponse(harness.traffic, upstream, proxyResponse);
 
-    REQUIRE(consoleResponse.size() > 11U);
+    REQUIRE(consoleResponse.size() > FNE_COMMAND_PREFIX_LENGTH + 11U);
     CHECK(responseFunction == network::NET_FUNC::SUBSCRIBER_OP);
     CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_OPERATION);
     json::value responseValue;
     REQUIRE(json::parse(responseValue,
-        std::string(reinterpret_cast<const char*>(consoleResponse.data() + 11U),
-            consoleResponse.size() - 11U)).empty());
+        std::string(reinterpret_cast<const char*>(consoleResponse.data() + FNE_COMMAND_PREFIX_LENGTH + 11U),
+            consoleResponse.size() - FNE_COMMAND_PREFIX_LENGTH - 11U)).empty());
     REQUIRE(responseValue.is<json::object>());
     json::object& response = responseValue.get<json::object>();
     CHECK(response["found"].get<bool>());
@@ -336,10 +343,9 @@ TEST_CASE("FNE metadata starts subscriber operations before transmission",
     std::vector<uint8_t> responsePayload;
     uint8_t responseFunction = network::NET_FUNC::ILLEGAL;
     uint8_t responseSubFunction = network::NET_SUBFUNC::NOP;
-    FNETestHooks::captureMetadataWrite(harness.metadata, responsePayload,
-        responseFunction, responseSubFunction);
     std::vector<uint32_t> peerWrites;
-    FNETestHooks::capturePeerWrites(harness.traffic, peerWrites);
+    FNETestHooks::capturePeerPayloadWrite(harness.traffic, responsePayload,
+        responseFunction, responseSubFunction, &peerWrites);
 
     json::object request = json::object();
     request["protocol"].set<std::string>("p25");
@@ -354,16 +360,17 @@ TEST_CASE("FNE metadata starts subscriber operations before transmission",
         network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_START,
         CONSOLE_PEER_ID, requestPayload);
 
-    REQUIRE(responsePayload.size() > 11U);
+    REQUIRE(responsePayload.size() > FNE_COMMAND_PREFIX_LENGTH + 11U);
     CHECK(responseFunction == network::NET_FUNC::SUBSCRIBER_OP);
     CHECK(responseSubFunction == network::NET_SUBFUNC::SUBSCRIBER_OP_START);
-    REQUIRE(peerWrites.size() == 1U);
+    REQUIRE(peerWrites.size() == 2U);
     CHECK(peerWrites.front() == RADIO_PEER_ID);
+    CHECK(peerWrites.back() == CONSOLE_PEER_ID);
 
     json::value responseValue;
     REQUIRE(json::parse(responseValue,
-        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
-            responsePayload.size() - 11U))
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + FNE_COMMAND_PREFIX_LENGTH + 11U),
+            responsePayload.size() - FNE_COMMAND_PREFIX_LENGTH - 11U))
                 .empty());
     REQUIRE(responseValue.is<json::object>());
     json::object& response = responseValue.get<json::object>();
@@ -390,12 +397,13 @@ TEST_CASE("FNE metadata starts subscriber operations before transmission",
         network::NET_FUNC::SUBSCRIBER_OP, network::NET_SUBFUNC::SUBSCRIBER_OP_START,
         CONSOLE_PEER_ID, requestPayload);
 
-    REQUIRE(responsePayload.size() > 11U);
-    REQUIRE(peerWrites.size() == 1U);
+    REQUIRE(responsePayload.size() > FNE_COMMAND_PREFIX_LENGTH + 11U);
+    REQUIRE(peerWrites.size() == 2U);
     CHECK(peerWrites.front() == RADIO_PEER_ID);
+    CHECK(peerWrites.back() == CONSOLE_PEER_ID);
     REQUIRE(json::parse(responseValue,
-        std::string(reinterpret_cast<const char*>(responsePayload.data() + 11U),
-            responsePayload.size() - 11U))
+        std::string(reinterpret_cast<const char*>(responsePayload.data() + FNE_COMMAND_PREFIX_LENGTH + 11U),
+            responsePayload.size() - FNE_COMMAND_PREFIX_LENGTH - 11U))
                 .empty());
     REQUIRE(responseValue.is<json::object>());
     json::object& dmrResponse = responseValue.get<json::object>();

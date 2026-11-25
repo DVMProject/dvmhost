@@ -153,7 +153,6 @@ namespace network
      * @ingroup fne_network
      */
     struct SubscriberOperationProxyPending {
-        MetadataNetwork* metadata;               //!< Metadata network for a local console response.
         uint32_t downstreamPeerId;               //!< Console or downstream FNE peer ID.
         uint32_t downstreamStreamId;             //!< Original downstream stream ID.
         uint32_t downstreamTransactionId;        //!< Downstream proxy transaction ID, or zero for a console.
@@ -281,7 +280,6 @@ namespace network
 
         /**
          * @brief Proxies a subscriber operation result query to the upstream replica parent.
-         * @param metadata Metadata network used to return a locally originated console response.
          * @param downstreamPeerId Console or downstream FNE peer ID awaiting the response.
          * @param downstreamStreamId Stream ID supplied by the downstream requestor.
          * @param downstreamTransactionId Proxy transaction ID supplied by a downstream FNE, or zero for a console.
@@ -289,7 +287,7 @@ namespace network
          * @param hopLimit Number of additional upstream hops permitted.
          * @returns True if the request was forwarded, otherwise false.
          */
-        bool proxySubscriberOperation(MetadataNetwork* metadata, uint32_t downstreamPeerId, uint32_t downstreamStreamId, uint32_t downstreamTransactionId,
+        bool proxySubscriberOperation(uint32_t downstreamPeerId, uint32_t downstreamStreamId, uint32_t downstreamTransactionId,
             uint64_t operationId, uint8_t hopLimit);
         /**
          * @brief Processes a packed subscriber operation proxy response received from an upstream parent.
