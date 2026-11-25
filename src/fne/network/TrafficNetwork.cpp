@@ -2651,8 +2651,7 @@ bool TrafficNetwork::writePatchStatusPayload(FNEPeerConnection* connection, json
         LogDebug(LOG_MASTER, "PEER %u (%s) sending patch status registry, len = %u", connection->id(), connection->identWithQualifier().c_str(), len);
     }
 
-    return writePeerCommand(connection->id(),
-        { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_PATCH_STATUS },
+    return writePeerCommand(connection->id(), { NET_FUNC::TRANSFER, NET_SUBFUNC::TRANSFER_SUBFUNC_PATCH_STATUS }, 
         buffer, len + 5U, createStreamId(), false);
 }
 
