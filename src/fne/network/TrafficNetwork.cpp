@@ -1006,7 +1006,7 @@ void TrafficNetwork::clock(uint32_t ms)
         // expire old unit routes
         const std::vector<UnitRoute> expiredRoutes = m_unitRouteRegistry.expire(now);
         for (const UnitRoute& route : expiredRoutes) {
-            LogInfoEx(LOG_MASTER, "Private call route expired, srcId = %u, peerId = %u", route.unitId, route.peerId);
+            LogInfoEx(LOG_MASTER, "Unit call route expired, srcId = %u, peerId = %u", route.unitId, route.peerId);
             removePeerUnitRegistration(route.peerId, route.unitId, false);
         }
 
