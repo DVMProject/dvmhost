@@ -161,8 +161,6 @@ void KMMWarmStartCommand::copy(const KMMWarmStartCommand& data)
 
     m_key = data.m_key;
 
-    if (data.m_mi != nullptr) {
-        ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
-        ::memcpy(m_mi, data.m_mi, MI_LENGTH_BYTES);
-    }
+    ::memset(m_mi, 0x00U, MI_LENGTH_BYTES);
+    ::memcpy(m_mi, data.m_mi, MI_LENGTH_BYTES);
 }
