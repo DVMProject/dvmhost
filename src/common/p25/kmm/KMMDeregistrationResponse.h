@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -44,7 +44,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMDeregistrationResponse : public KMMFrame {
+        /**
+         * @brief Represents a KMM deregistration response.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMDeregistrationResponse : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMDeregistrationResponse class.

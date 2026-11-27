@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -36,7 +36,7 @@ namespace p25
          * @brief Represents link control data for DFSI VHDR, LDU1 and 2 packets.
          * @ingroup p25_dfsi
          */
-        class HOST_SW_API LC {
+        class DVM_COMMON_API LC {
         public:
             /**
              * @brief Initializes a new instance of the LC class.

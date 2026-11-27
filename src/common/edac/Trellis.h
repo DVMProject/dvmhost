@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2016,2018 Jonathan Naylor, G4KLX
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -22,6 +22,20 @@
 namespace edac
 {
     // ---------------------------------------------------------------------------
+    //  Constants
+    // ---------------------------------------------------------------------------
+
+    /**
+     * @addtogroup edac
+     * @{
+     */
+
+    const uint32_t TRELLIS_34_MAX_LIST_PATHS = 8U;          // Maximum number of candidate paths returned by the 3/4 rate Trellis list decoder.
+    const uint32_t TRELLIS_34_PAYLOAD_LENGTH_BYTES = 18U;   // Length in bytes of one decoded 3/4 rate Trellis payload.
+
+    /** @} */
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
 
@@ -29,7 +43,7 @@ namespace edac
      * @brief Implements 1/2 rate and 3/4 rate Trellis for DMR/P25.
      * @ingroup edac
      */
-    class HOST_SW_API Trellis {
+    class DVM_COMMON_API Trellis {
     public:
         /**
          * @brief Initializes a new instance of the Trellis class.
@@ -42,12 +56,25 @@ namespace edac
 
         /**
          * @brief Decodes 3/4 rate Trellis.
+         *
+         * This performs a maximum-likelihood decode and always produces the closest retained
+         * codeword. The caller must use a CRC or another integrity check when one is available.
          * @param[in] data Trellis symbol bytes.
-         * @param[out] payload Output bytes.
+         * @param[out] payload Output buffer of TRELLIS_34_PAYLOAD_LENGTH_BYTES bytes.
          * @param skipSymbols Flag indicating symbols should be skipped (this is used for DMR).
-         * @returns bool True, if Trellis decoded, otherwise false.
+         * @returns bool True if a closest codeword was produced.
          */
         bool decode34(const uint8_t* data, uint8_t* payload, bool skipSymbols = false);
+        /**
+         * @brief Decodes 3/4 rate Trellis and returns up to maxPaths candidates tied for the best metric.
+         * @param[in] data Trellis symbol bytes.
+         * @param[out] payloads Output buffer of maxPaths * TRELLIS_34_PAYLOAD_LENGTH_BYTES bytes.
+         * @param maxPaths Maximum number of candidates to return, from 1 through TRELLIS_34_MAX_LIST_PATHS.
+         * @param[out] truncated True if additional equally likely candidates were omitted; otherwise false.
+         * @param skipSymbols Flag indicating symbols should be skipped (this is used for DMR).
+         * @returns uint32_t Number of candidates written, or zero when maxPaths is invalid.
+         */
+        uint32_t decode34List(const uint8_t* data, uint8_t* payloads, uint32_t maxPaths, bool& truncated, bool skipSymbols = false);
         /**
          * @brief Encodes 3/4 rate Trellis.
          * @param[in] payload Input bytes.
@@ -58,9 +85,11 @@ namespace edac
 
         /**
          * @brief Decodes 1/2 rate Trellis.
+         *
+         * This performs a maximum-likelihood decode and always produces the closest codeword.
          * @param[in] data Trellis symbol bytes.
          * @param[out] payload Output bytes.
-         * @returns bool True, if Trellis decoded, otherwise false.
+         * @returns bool True if a closest codeword was produced.
          */
         bool decode12(const uint8_t* data, uint8_t* payload);
         /**
@@ -123,36 +152,24 @@ namespace edac
         void dibitsToBits(const uint8_t* dibits, uint8_t* payload) const;
 
         /**
-         * @brief Helper to fix errors in Trellis coding.
-         * @param points Trellis constellation points.
-         * @param failPos Failure position.
-         * @param payload Byte payload.
-         * @returns bool True, if error corrected, otherwise false.
+         * @brief Runs a bounded list Viterbi decode of the 3/4 rate Trellis.
+         * @param[in] dibits Deinterleaved received dibits.
+         * @param[out] payloads Output buffer for maxPaths decoded payloads.
+         * @param[out] metrics Path metric for each returned candidate.
+         * @param maxPaths Number of survivors retained per state.
+         * @param[out] truncated True if an equal-metric survivor was discarded.
+         * @returns uint32_t Number of candidates written.
          */
-        bool fixCode34(uint8_t* points, uint32_t failPos, uint8_t* payload) const;
+        uint32_t viterbi34(const int8_t* dibits, uint8_t* payloads, uint32_t* metrics, uint32_t maxPaths,
+            bool& truncated) const;
         /**
-         * @brief Helper to detect errors in Trellis coding.
-         * @param points Trellis constellation points.
-         * @param tribits Tribits.
-         * @returns uint32_t Position.
+         * @brief Runs a Viterbi decode of the 1/2 rate Trellis.
+         * @param[in] dibits Deinterleaved received dibits.
+         * @param[out] payload Decoded 12-byte payload.
+         * @param[out] metric Best path metric.
+         * @returns bool True if a path terminating in the flushing state was decoded.
          */
-        uint32_t checkCode34(const uint8_t* points, uint8_t* tribits) const;
-
-        /**
-         * @brief Helper to fix errors in Trellis coding.
-         * @param points Trelli constellation points.
-         * @param failPos Failure position.
-         * @param payload Byte payload.
-         * @returns bool True, if error corrected, otherwise false.
-         */
-        bool fixCode12(uint8_t* points, uint32_t failPos, uint8_t* payload) const;
-        /**
-         * @brief Helper to detect errors in Trellis coding.
-         * @param points Trelli constellation points.
-         * @param dibits Dibits.
-         * @returns uint32_t Position.
-         */
-        uint32_t checkCode12(const uint8_t* points, uint8_t* dibits) const;
+        bool viterbi12(const int8_t* dibits, uint8_t* payload, uint32_t& metric) const;
     };
 } // namespace edac
 

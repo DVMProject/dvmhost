@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015-2020 Jonathan Naylor, G4KLX
- *  Copyright (C) 2022-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2022-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -20,7 +20,6 @@
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "nxdn/Control.h"
-#include "ActivityLog.h"
 #include "Host.h"
 
 using namespace nxdn;
@@ -62,7 +61,6 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_data(nullptr),
     m_control(nullptr),
     m_authoritative(authoritative),
-    m_supervisor(false),
     m_ran(ran),
     m_timeout(timeout),
     m_modem(modem),
@@ -70,6 +68,7 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_duplex(duplex),
     m_enableControl(false),
     m_dedicatedControl(false),
+    m_unitToUnitAvailCheck(false),
     m_ignoreAffiliationCheck(false),
     m_legacyGroupReg(false),
     m_defaultNetIdleTalkgroup(0U),
@@ -96,10 +95,10 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_ccRunning(false),
     m_ccPrevRunning(false),
     m_ccHalted(false),
-    m_rfTimeout(1000U, timeout),
+    m_rfTimeoutTimer(1000U, timeout),
     m_rfTGHang(1000U, tgHang),
     m_rfLossWatchdog(1000U, 0U, 1500U),
-    m_netTimeout(1000U, timeout),
+    m_netTimeoutTimer(1000U, timeout),
     m_netTGHang(1000U, 2U),
     m_networkWatchdog(1000U, 0U, 1500U),
     m_ccPacketInterval(1000U, 0U, 80U),
@@ -115,8 +114,11 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_minRSSI(0U),
     m_aveRSSI(0U),
     m_rssiCount(0U),
+    m_rfTimeout(false),
+    m_netTimeout(false),
     m_dumpRCCH(dumpRCCHData),
     m_notifyCC(true),
+    m_debugIgnPktAdmission(false),
     m_ccDebug(debug),
     m_verbose(verbose),
     m_debug(debug)
@@ -132,6 +134,71 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
     m_interval.start();
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
+    if (m_network != nullptr) {
+        m_network->setNXDNRxPacketPreprocessor([this](const uint8_t* data, uint32_t length, uint32_t streamId, uint32_t rxStreamId) {
+            if (m_debugIgnPktAdmission)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            if (data == nullptr || length <= 15U)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+
+            // allow packets on a dedicated control channel to bypass destination filtering
+            if (m_dedicatedControl)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            // allow packets matching the currently locked receive stream to bypass destination filtering
+            if (rxStreamId != 0U && streamId == rxStreamId)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            // only apply destination filtering to voice calls
+            if (data[4U] != MessageType::RTCH_VCALL)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            const uint32_t srcId = GET_UINT24(data, 5U);
+            const uint32_t dstId = GET_UINT24(data, 8U);
+
+            //LogDebug(LOG_NET, "NXDN packet, srcId = %u, dstId = %u, streamId = %u, rxStreamId = %u", srcId, dstId, streamId, rxStreamId);
+
+            // reject packets when no destination is permitted for non-authoritative hosts
+            if (!m_authoritative && m_permittedDstId == 0U) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "[NON-AUTHORITATIVE] NXDN packet denial, no permitted destination");
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce the permitted destination for non-authoritative hosts
+            if (!m_authoritative && m_permittedDstId != 0U && dstId != m_permittedDstId) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "[NON-AUTHORITATIVE] NXDN packet denial, destination rejection, dstId = %u, permittedDstId = %u",
+                        dstId, m_permittedDstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce source ID access control
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "NXDN packet denial, RID rejection, srcId = %u", srcId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            // enforce talkgroup or source ID access control
+            const bool group = (data[15U] & 0x40U) != 0x40U;
+            if (group) {
+                if (!acl::AccessControl::validateTGId(dstId)) {
+                    if (m_debug)
+                        LogDebug(LOG_NET, "NXDN packet denial, TGID rejection, dstId = %u", dstId);
+                    return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                }
+            }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "NXDN packet denial, RID rejection, dstId = %u", dstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+        });
+    }
 
     m_voice = new Voice(this, debug, verbose);
     m_control = new ControlSignaling(this, debug, verbose);
@@ -150,6 +217,9 @@ Control::Control(bool authoritative, uint32_t ran, uint32_t callHang, uint32_t q
 
 Control::~Control()
 {
+    if (m_network != nullptr)
+        m_network->setNXDNRxPacketPreprocessor({});
+
     if (m_affiliations != nullptr) {
         delete m_affiliations;
     }
@@ -195,13 +265,11 @@ void Control::reset()
 
 /* Helper to set NXDN configuration options. */
 
-void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cwCallsign, lookups::VoiceChData controlChData,
+void Control::setOptions(yaml::Node& conf, const std::string cwCallsign, lookups::VoiceChData controlChData,
     uint16_t siteId, uint32_t sysId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node nxdnProtocol = conf["protocols"]["nxdn"];
-
-    m_supervisor = supervisor;
 
     m_control->m_verifyAff = nxdnProtocol["verifyAff"].as<bool>(false);
     m_control->m_verifyReg = nxdnProtocol["verifyReg"].as<bool>(false);
@@ -216,6 +284,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
     }
 
     m_control->m_disableGrantSrcIdCheck = control["disableGrantSourceIdCheck"].as<bool>(false);
+    m_unitToUnitAvailCheck = control["unitToUnitAvailCheck"].as<bool>(false);
     m_ccDebug = control["debug"].as<bool>(false);
 
     m_ignoreAffiliationCheck = nxdnProtocol["ignoreAffiliationCheck"].as<bool>(false);
@@ -274,25 +343,31 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
 
     m_controlChData = controlChData;
 
+    bool disableGrpAffTimeout = nxdnProtocol["disableGrpAffTimeout"].as<bool>(false);
+    m_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
     bool disableUnitRegTimeout = nxdnProtocol["disableUnitRegTimeout"].as<bool>(false);
     m_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
 
     // set the grant release callback
     m_affiliations->setReleaseGrantCallback([=](uint32_t chNo, uint32_t srcId, uint32_t dstId, uint8_t slot) {
-        // callback REST API to clear TG permit for the granted TG on the specified voice channel
-        if (m_authoritative && m_supervisor) {
-            ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
-            if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
-                chNo != m_siteData.channelNo()) {
-                json::object req = json::object();
-                dstId = 0U; // clear TG value
-                req["dstId"].set<uint32_t>(dstId);
+        const bool networkGrant = m_affiliations->isNetGranted(dstId);
+        const bool unitToUnit = !m_affiliations->isGroup(dstId);
+        if (!m_authoritative && networkGrant && m_network != nullptr) {
+            m_network->writeGrantRelease(modem::DVM_STATE::STATE_NXDN, srcId, dstId, slot, unitToUnit);
+        }
 
-                g_RPC->req(RPC_PERMIT_NXDN_TG, req, nullptr, voiceChData.address(), voiceChData.port());
-            }
-            else {
-                ::LogError(LOG_NXDN, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to clear TG permit, chNo = %u", chNo);
-            }
+        // clear the TG permit on the selected remote voice channel
+        ::lookups::VoiceChData voiceChData = m_affiliations->rfCh()->getRFChData(chNo);
+        if (voiceChData.isValidCh() && !voiceChData.address().empty() && voiceChData.port() > 0 &&
+            chNo != m_siteData.channelNo()) {
+            json::object req = json::object();
+            dstId = 0U; // clear TG value
+            req["dstId"].set<uint32_t>(dstId);
+
+            g_RPC->req(RPC_PERMIT_NXDN_TG, req, nullptr, voiceChData.address(), voiceChData.port());
+        }
+        else if (chNo != m_siteData.channelNo()) {
+            ::LogError(LOG_NXDN, "NXDN, " NXDN_RTCH_MSG_TYPE_VCALL_RESP ", failed to clear TG permit, chNo = %u", chNo);
         }
     });
 
@@ -319,6 +394,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId); });
     }
 
+    m_debugIgnPktAdmission = nxdnProtocol["debugIgnPktAdmission"].as<bool>(false);
+    if (m_debugIgnPktAdmission)
+        LogWarning(LOG_NXDN, "Ignoring network packet admission checks. This may cause odd behavior, proceed with caution.");
+
     if (printOptions) {
         LogInfo("    Site Location ID: $%04X", m_siteData.locId());
         LogInfo("    Silence Threshold: %u (%.1f%%)", m_voice->m_silenceThreshold, float(m_voice->m_silenceThreshold) / 12.33F);
@@ -328,8 +407,7 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
             if (m_control->m_disableGrantSrcIdCheck) {
                 LogInfo("    Disable Grant Source ID Check: yes");
             }
-            if (m_supervisor)
-                LogInfoEx(LOG_NXDN, "Host is configured to operate as a NXDN control channel, site controller mode.");
+            LogInfoEx(LOG_NXDN, "Host is configured to operate as a NXDN control channel.");
         }
 
         if (m_defaultNetIdleTalkgroup != 0U) {
@@ -342,12 +420,20 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, const std::string cw
         LogInfo("    Verify Affiliation: %s", m_control->m_verifyAff ? "yes" : "no");
         LogInfo("    Verify Registration: %s", m_control->m_verifyReg ? "yes" : "no");
 
+        if (disableGrpAffTimeout) {
+            LogInfo("    Disable Group Affiliation Timeout: yes");
+        }
+
         if (disableUnitRegTimeout) {
             LogInfo("    Disable Unit Registration Timeout: yes");
         }
 
         if (m_ccDebug) {
             LogInfo("    Control Message Debug: yes");
+        }
+
+        if (m_debugIgnPktAdmission) {
+            LogInfo("    Ignore Network Packet Admission: yes");
         }
     }
 
@@ -373,7 +459,7 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
         if (m_frameLossCnt > m_frameLossThreshold) {
             m_frameLossCnt = 0U;
 
-            processFrameLoss();
+            processFrameLoss(RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD);
 
             return false;
         }
@@ -397,7 +483,9 @@ bool Control::processFrame(uint8_t* data, uint32_t len)
     }
 
     if (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA) {
-        if (m_rfLossWatchdog.isRunning()) {
+        // if RF TG hang is disabled, keep the loss watchdog alive from inbound
+        // RF frames so abrupt stream loss can still recover state.
+        if (m_rfTGHang.getTimeout() == 0U || m_rfLossWatchdog.isRunning()) {
             m_rfLossWatchdog.start();
         }
     }
@@ -587,6 +675,8 @@ void Control::clock()
     uint32_t ms = m_interval.elapsed();
     m_interval.start();
 
+    m_control->clock();
+
     if (m_network != nullptr) {
         processNetwork();
 
@@ -634,6 +724,13 @@ void Control::clock()
         if (m_adjSiteUpdate.isRunning() && m_adjSiteUpdate.hasExpired()) {
             if (m_rfState == RS_RF_LISTENING && m_netState == RS_NET_IDLE) {
                 if (m_network != nullptr) {
+                    // network announce our unit registration table if we have one
+                    if (m_affiliations->unitRegSize() > 0) {
+                        auto regs = m_affiliations->unitRegTable();
+                        m_network->announceUnitRegUpdate(regs);
+                    }
+
+                    // network announce our affiliation table if we have one
                     if (m_affiliations->grpAffSize() > 0) {
                         auto affs = m_affiliations->grpAffTable();
                         m_network->announceAffiliationUpdate(affs);
@@ -651,8 +748,15 @@ void Control::clock()
     }
 
     // handle timeouts and hang timers
-    m_rfTimeout.clock(ms);
-    m_netTimeout.clock(ms);
+    m_rfTimeoutTimer.clock(ms);
+    m_netTimeoutTimer.clock(ms);
+
+    if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired()) {
+        if (!m_rfTimeout) {
+            LogInfoEx(LOG_RF, "traffic timeout timer has expired, traffic will not transmit");
+            m_rfTimeout = true;
+        }
+    }
 
     if (m_rfTGHang.isRunning()) {
         m_rfTGHang.clock(ms);
@@ -669,6 +773,11 @@ void Control::clock()
             if (!m_authoritative && m_permittedDstId != 0U) {
                 m_permittedDstId = 0U;
             }
+
+            // has the talkgroup hang timer expired while the modem is in a non-listening state?
+            if (m_rfState != RS_RF_LISTENING) {
+                processFrameLoss(RF_LOSS_TYPE_TG_HANG_NOT_LISTENING);
+            }
         }
     }
     
@@ -679,8 +788,15 @@ void Control::clock()
             if (m_rfLossWatchdog.hasExpired()) {
                 m_rfLossWatchdog.stop();
 
-                processFrameLoss();
+                processFrameLoss(RF_LOSS_TYPE_LOSS_WATCHDOG);
             }
+        }
+    }
+
+    if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired()) {
+        if (!m_netTimeout) {
+            LogInfoEx(LOG_NET, "timeout timer has expired, traffic will not transmit");
+            m_netTimeout = true;
         }
     }
 
@@ -693,6 +809,27 @@ void Control::clock()
                 if (m_verbose) {
                     LogInfoEx(LOG_NET, "talkgroup hang has expired, lastDstId = %u", m_netLastDstId);
                 }
+
+                // if the group is still granted at this point -- forcibly release it
+                if (m_affiliations->isGranted(m_netLastDstId)) {
+                    if (!m_dedicatedControl) {
+                        m_affiliations->releaseGrant(m_netLastDstId, false);
+                        if (m_network != nullptr)
+                            m_network->resetNXDN();
+                    }
+                }
+
+                if (m_network != nullptr)
+                    m_network->resetNXDN();
+
+                m_netState = RS_NET_IDLE;
+
+                m_voice->resetNet();
+
+                m_netTimeoutTimer.stop();
+                m_netTimeout = false;
+                m_networkWatchdog.stop();
+
                 m_netLastDstId = 0U;
                 m_netLastSrcId = 0U;
             }
@@ -707,11 +844,16 @@ void Control::clock()
 
         if (m_networkWatchdog.hasExpired()) {
             if (m_netState == RS_NET_AUDIO) {
-                ::ActivityLog("NXDN", false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
-                    float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
+                if (m_voice->m_netFrames > 0U) {
+                    ::ActivityLogEx(LOG_NXDN, false, "network watchdog has expired, %.1f seconds, %u%% packet loss",
+                        float(m_voice->m_netFrames) / 50.0F, (m_voice->m_netLost * 100U) / m_voice->m_netFrames);
+                }
+                else {
+                    ::ActivityLogEx(LOG_NXDN, false, "network watchdog has expired");
+                }
             }
             else {
-                ::ActivityLog("NXDN", false, "network watchdog has expired");
+                ::ActivityLogEx(LOG_NXDN, false, "network watchdog has expired");
             }
 
             m_networkWatchdog.stop();
@@ -727,7 +869,8 @@ void Control::clock()
 
             m_netState = RS_NET_IDLE;
 
-            m_netTimeout.stop();
+            m_netTimeoutTimer.stop();
+            m_netTimeout = false;
 
             writeEndNet();
         }
@@ -741,7 +884,7 @@ void Control::clock()
     if (m_frameLossCnt > 0U && m_rfState == RS_RF_LISTENING)
         m_frameLossCnt = 0U;
     if (m_frameLossCnt >= m_frameLossThreshold && (m_rfState == RS_RF_AUDIO || m_rfState == RS_RF_DATA)) {
-        processFrameLoss();
+        processFrameLoss(RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD);
     }
 }
 
@@ -771,6 +914,13 @@ void Control::permittedTG(uint32_t dstId)
     }
 
     m_permittedDstId = dstId;
+}
+
+/* Determines whether this control channel currently owns grant decisions. */
+
+bool Control::isGrantAuthoritative() const
+{
+    return m_authoritative || m_network == nullptr || !m_network->hasGrantAuthority();
 }
 
 /* Grants a TGID on a non-authoritative host. */
@@ -874,10 +1024,10 @@ void Control::addFrame(const uint8_t *data, bool net, bool imm)
     std::lock_guard<std::mutex> lock(s_queueLock);
 
     if (!net) {
-        if (m_rfTimeout.isRunning() && m_rfTimeout.hasExpired())
+        if (m_rfTimeoutTimer.isRunning() && m_rfTimeoutTimer.hasExpired())
             return;
     } else {
-        if (m_netTimeout.isRunning() && m_netTimeout.hasExpired())
+        if (m_netTimeoutTimer.isRunning() && m_netTimeoutTimer.hasExpired())
             return;
     }
 
@@ -970,19 +1120,10 @@ void Control::processNetwork()
     lc.setGroup(group);
 
     // process raw NXDN data bytes
-    UInt8Array data;
-    uint8_t frameLength = buffer[23U];
-    if (frameLength <= 24) {
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-    }
-    else {
-        data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
-        ::memset(data.get(), 0x00U, frameLength);
-        ::memcpy(data.get(), buffer.get() + 24U, frameLength);
-    }
-
-    m_networkWatchdog.start();
+    const uint8_t frameLength = NXDN_FRAME_LENGTH_BYTES + 2U;
+    UInt8Array data = std::unique_ptr<uint8_t[]>(new uint8_t[frameLength]);
+    ::memset(data.get(), 0x00U, frameLength);
+    ::memcpy(data.get() + 2U, buffer.get() + network::MSG_HDR_SIZE, NXDN_FRAME_LENGTH_BYTES);
 
     if (m_debug) {
         Utils::dump(2U, "* !!! NXDN Network Frame", data.get(), frameLength);
@@ -1018,20 +1159,40 @@ void Control::processNetwork()
 
 /* Helper to process loss of frame stream from modem. */
 
-void Control::processFrameLoss()
+void Control::processFrameLoss(RPT_RF_LOSS_TYPE type)
 {
+    // resolve the type of RF frame loss into a human-readable string
+    std::string typeStr;
+    switch (type) {
+    case RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD:
+        typeStr = "exceeded frame loss threshold";
+        break;
+    case RF_LOSS_TYPE_LOSS_WATCHDOG:
+        typeStr = "loss watchdog timeout";
+        break;
+    case RF_LOSS_TYPE_IN_CALL_CONTROL:
+        typeStr = "in-call control request";
+        break;
+    case RF_LOSS_TYPE_TG_HANG_NOT_LISTENING:
+        typeStr = "TG hang RF not listening";
+        break;
+    default:
+        typeStr = "no loss type set BUGBUG";
+        break;
+    }
+
     if (m_rfState == RS_RF_AUDIO) {
         if (m_rssi != 0U) {
-            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
-                float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
+            ::ActivityLogEx(LOG_NXDN, true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, RSSI: -%u/-%u/-%u dBm, loss count: %u",
+                typeStr.c_str(), float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_minRSSI, m_maxRSSI, m_aveRSSI / m_rssiCount, m_frameLossCnt);
         }
         else {
-            ::ActivityLog("NXDN", true, "transmission lost, %.1f seconds, BER: %.1f%%, loss count: %u",
-                float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
+            ::ActivityLogEx(LOG_NXDN, true, "transmission lost, %s, %.1f seconds, BER: %.1f%%, loss count: %u",
+                typeStr.c_str(), float(m_voice->m_rfFrames) / 12.5F, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits), m_frameLossCnt);
         }
 
-        LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
-            m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
+        LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", transmission lost, %s, total frames: %d, bits: %d, undecodable LC: %d, errors: %d, BER: %.4f%%",
+            typeStr.c_str(), m_voice->m_rfFrames, m_voice->m_rfBits, m_voice->m_rfUndecodableLC, m_voice->m_rfErrs, float(m_voice->m_rfErrs * 100U) / float(m_voice->m_rfBits));
 
         m_affiliations->releaseGrant(m_rfLC.getDstId(), false);
         if (m_notifyCC) {
@@ -1046,6 +1207,17 @@ void Control::processFrameLoss()
     }
 
     m_rfState = RS_RF_LISTENING;
+    m_rfLastDstId = 0U;
+    m_rfLastSrcId = 0U;
+    m_rfTGHang.stop();
+    m_rfLossWatchdog.stop();
+
+    m_rfTimeoutTimer.stop();
+    m_rfTimeout = false;
+    m_txQueue.clear();
+
+    if (m_network != nullptr)
+        m_network->resetNXDN();
 
     m_rfMask = 0x00U;
     m_rfLC.reset();
@@ -1067,7 +1239,7 @@ void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId)
                     }
                 }
 
-                processFrameLoss();
+                processFrameLoss(RF_LOSS_TYPE_IN_CALL_CONTROL);
 
                 m_rfLastDstId = 0U;
                 m_rfLastSrcId = 0U;
@@ -1363,7 +1535,8 @@ void Control::writeEndRF()
     m_rfMask = 0x00U;
     m_rfLC.reset();
 
-    m_rfTimeout.stop();
+    m_rfTimeoutTimer.stop();
+    m_rfTimeout = false;
     //m_queue.clear();
 
     if (m_network != nullptr)
@@ -1379,7 +1552,8 @@ void Control::writeEndNet()
     m_netMask = 0x00U;
     m_netLC.reset();
 
-    m_netTimeout.stop();
+    m_netTimeoutTimer.stop();
+    m_netTimeout = false;
     m_networkWatchdog.stop();
 
     if (m_network != nullptr)

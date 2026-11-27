@@ -23,7 +23,7 @@ using namespace p25::kmm;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc]") {
+TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc][cap]") {
     bool failed = false;
 
     INFO("P25 KMM ReKey Test");
@@ -97,7 +97,7 @@ TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc]") {
     ks.keyLength(P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
 
     p25::kmm::KeyItem ki = p25::kmm::KeyItem();
-    ki.keyFormat(0U);
+    ki.keyFormat(KMM_KEY_FORMAT_TEK);
     ki.sln(0U);
     ki.kId(0x4983U);
 
@@ -112,6 +112,11 @@ TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc]") {
     UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.fullLength());
     outKmm.encode(kmmFrame.get());
     outKmm.generateMAC(macTek, kmmFrame.get());
+
+    REQUIRE(outKmm.verifyMAC(macTek, kmmFrame.get(), outKmm.fullLength()));
+    kmmFrame[20U] ^= 0x01U;
+    REQUIRE_FALSE(outKmm.verifyMAC(macTek, kmmFrame.get(), outKmm.fullLength()));
+    kmmFrame[20U] ^= 0x01U;
 
     Utils::dump(2U, "P25_KMM_ReKey_CBC_Test, GeneratedDataBlock", kmmFrame.get(), outKmm.fullLength());
 
@@ -140,4 +145,54 @@ TEST_CASE("KMM ReKey Command CBC Test", "[p25][kmm_cbc]") {
     }
 
     REQUIRE(failed==false);
+}
+
+TEST_CASE("KMM Rekey Encodes Message Number Zero When Present", "[p25][kmm_cbc][cap]") {
+    // Verify explicit MN presence works even when the message number value is zero.
+    KMMRekeyCommand outKmm = KMMRekeyCommand();
+
+    outKmm.setDecryptInfoFmt(KMM_DECRYPT_INSTRUCT_NONE);
+    outKmm.setSrcLLId(0x712B1DU);
+    outKmm.setDstLLId(0x643BA8U);
+
+    outKmm.setMACType(KMM_MAC::ENH_MAC);
+    outKmm.setMACAlgId(ALGO_AES_256);
+    outKmm.setMACKId(0x2F62U);
+    outKmm.setMACFormat(KMM_MAC_FORMAT_CBC);
+
+    outKmm.setHasMessageNumber(true);
+    outKmm.setMessageNumber(0x0000U);
+
+    outKmm.setAlgId(ALGO_AES_256);
+    outKmm.setKId(0x50BCU);
+
+    KeysetItem ks;
+    ks.keysetId(1U);
+    ks.algId(ALGO_AES_256);
+    ks.keyLength(P25DEF::MAX_WRAPPED_ENC_KEY_LENGTH_BYTES);
+
+    p25::kmm::KeyItem ki = p25::kmm::KeyItem();
+    ki.keyFormat(KMM_KEY_FORMAT_TEK);
+    ki.sln(0U);
+    ki.kId(0x4983U);
+
+    uint8_t testWrappedKeyFrame[40U] =
+    {
+        0x80, 0x28, 0x9C, 0xF6, 0x35, 0xFB, 0x68, 0xD3, 0x45, 0xD3, 0x4F, 0x62, 0xEF, 0x06, 0x3B, 0xA4,
+        0xE0, 0x5C, 0xAE, 0x47, 0x56, 0xE7, 0xD3, 0x04, 0x46, 0xD1, 0xF0, 0x7C, 0x6E, 0xB4, 0xE9, 0xE0,
+        0x84, 0x09, 0x45, 0x37, 0x23, 0x72, 0xFB, 0x80
+    };
+    ki.setKey(testWrappedKeyFrame, 40U);
+    ks.push_back(ki);
+
+    std::vector<KeysetItem> keysets;
+    keysets.push_back(ks);
+    outKmm.setKeysets(keysets);
+
+    UInt8Array kmmFrame = std::make_unique<uint8_t[]>(outKmm.fullLength());
+    outKmm.encode(kmmFrame.get());
+
+    REQUIRE((kmmFrame.get()[3U] & 0x30U) == 0x20U);
+    REQUIRE(kmmFrame.get()[10U] == 0x00U);
+    REQUIRE(kmmFrame.get()[11U] == 0x00U);
 }

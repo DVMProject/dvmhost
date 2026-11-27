@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB peered_SRC
+file(GLOB peered_SRC CONFIGURE_DEPENDS
     "src/peered/*.h"
     "src/peered/*.cpp"
 )

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - MBE Vocoder
  * GPLv2 Open Source. Use is subject to license terms.
@@ -21,6 +21,8 @@
  */
 #if !defined(__MBE_H__)
 #define __MBE_H__
+
+#include <stdint.h>
 
 /*
  * Copyright (C) 2010 mbelib Author
@@ -71,6 +73,8 @@ struct mbe_parameters
     float gamma;
     int un;
     int repeat;
+    /** Stream-local pseudo-random excitation state. */
+    uint32_t randomSeed;
 };
 
 typedef struct mbe_parameters mbe_parms;

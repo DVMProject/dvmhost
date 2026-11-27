@@ -9,7 +9,6 @@
  */
 #include "Defines.h"
 #include "common/Log.h"
-#include "patch/ActivityLog.h"
 #include "PatchMain.h"
 #include "HostPatch.h"
 
@@ -225,7 +224,6 @@ int main(int argc, char** argv)
     } while (g_signal == SIGHUP);
 
     ::LogFinalise();
-    ::ActivityLogFinalise();
 
     return ret;
 }

@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -33,18 +33,19 @@ SNDCPFactory::~SNDCPFactory() = default;
 
 /* Create an instance of a SNDCPPacket. */
 
-std::unique_ptr<SNDCPPacket> SNDCPFactory::create(const uint8_t* data)
+std::unique_ptr<SNDCPPacket> SNDCPFactory::create(const uint8_t* data, uint32_t length)
 {
-    assert(data != nullptr);
+    if (data == nullptr || length == 0U)
+        return nullptr;
 
     uint8_t pduType = (uint8_t)((data[0U] >> 4) & 0x0FU);                           // SNDCP PDU Message Type
 
     switch (pduType) {
     case SNDCP_PDUType::ACT_TDS_CTX:
-        return decode(new SNDCPCtxActRequest(), data);
+        return decode(new SNDCPCtxActRequest(), data, length);
         break;
     case SNDCP_PDUType::DEACT_TDS_CTX_REQ:
-        return decode(new SNDCPCtxDeactivation(), data);
+        return decode(new SNDCPCtxDeactivation(), data, length);
         break;
     case SNDCP_PDUType::RF_CONFIRMED:
         break;
@@ -64,14 +65,15 @@ std::unique_ptr<SNDCPPacket> SNDCPFactory::create(const uint8_t* data)
 
 /* Decode a SNDCP packet. */
 
-std::unique_ptr<SNDCPPacket> SNDCPFactory::decode(SNDCPPacket* packet, const uint8_t* data)
+std::unique_ptr<SNDCPPacket> SNDCPFactory::decode(SNDCPPacket* packet, const uint8_t* data, uint32_t length)
 {
     assert(packet != nullptr);
     assert(data != nullptr);
 
-    if (!packet->decode(data)) {
+    std::unique_ptr<SNDCPPacket> result(packet);
+    if (!result->decode(data, length)) {
         return nullptr;
     }
 
-    return std::unique_ptr<SNDCPPacket>(packet);
+    return result;
 }

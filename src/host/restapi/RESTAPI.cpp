@@ -25,6 +25,7 @@ using namespace network;
 using namespace restapi;
 using namespace restapi::http;
 using namespace modem;
+using namespace host_restapi;
 
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +45,7 @@ using namespace modem;
 // ---------------------------------------------------------------------------
 //  Global Functions
 // ---------------------------------------------------------------------------
+namespace host_restapi {
 
 /**
  * @brief Helper to format string.
@@ -129,6 +131,8 @@ bool parseRequestBody(const HTTPPayload& request, HTTPPayload& reply, json::obje
     obj = v.get<json::object>();
     return true;
 }
+
+} // namespace host_restapi
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -287,7 +291,6 @@ void RESTAPI::initializeEndpoints()
     m_dispatcher.match(PUT_MDM_MODE).put(REST_API_BIND(RESTAPI::restAPI_PutModemMode, this));
     m_dispatcher.match(PUT_MDM_KILL).put(REST_API_BIND(RESTAPI::restAPI_PutModemKill, this));
 
-    m_dispatcher.match(PUT_SET_SUPERVISOR).put(REST_API_BIND(RESTAPI::restAPI_PutSetSupervisor, this));
     m_dispatcher.match(PUT_PERMIT_TG).put(REST_API_BIND(RESTAPI::restAPI_PutPermitTG, this));
     m_dispatcher.match(PUT_GRANT_TG).put(REST_API_BIND(RESTAPI::restAPI_PutGrantTG, this));
     m_dispatcher.match(GET_RELEASE_GRNTS).get(REST_API_BIND(RESTAPI::restAPI_GetReleaseGrants, this));
@@ -407,9 +410,9 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         return;
     }
 
-    if (auth.size() > 64) {
+    if (auth.size() != 64) {
         invalidateHostToken(host);
-        errorPayload(reply, "auth cannot be longer than 64 characters");
+        errorPayload(reply, "auth must be 64 characters");
         return;
     }
 
@@ -442,6 +445,7 @@ void RESTAPI::restAPI_PutAuth(const HTTPPayload& request, HTTPPayload& reply, co
         invalidateHostToken(host);
         errorPayload(reply, "invalid password");
         LogError(LOG_REST, "failed authentication attempt from host %s", host.c_str());
+        delete[] passwordHash;
         return;
     }
 
@@ -649,79 +653,6 @@ void RESTAPI::restAPI_PutModemKill(const HTTPPayload& request, HTTPPayload& repl
     } else {
         g_killed = true;
         m_host->setState(HOST_STATE_QUIT);
-    }
-}
-
-/* REST API endpoint; implements set supervisory mode request. */
-
-void RESTAPI::restAPI_PutSetSupervisor(const HTTPPayload& request, HTTPPayload& reply, const RequestMatch& match)
-{
-    if (!validateAuth(request, reply)) {
-        return;
-    }
-
-    json::object req = json::object();
-    if (!parseRequestBody(request, reply, req)) {
-        return;
-    }
-
-    errorPayload(reply, "OK", HTTPPayload::OK);
-
-    if (!m_host->m_authoritative) {
-        errorPayload(reply, "Host is not authoritative, cannot set supervisory state");
-        return;
-    }
-
-    // validate state is a string within the JSON blob
-    if (!req["state"].is<int>()) {
-        errorPayload(reply, "state was not a valid integer");
-        return;
-    }
-
-    DVM_STATE state = (DVM_STATE)req["state"].get<int>();
-
-    // validate destination ID is a integer within the JSON blob
-    if (!req["enable"].is<bool>()) {
-        errorPayload(reply, "enable was not a boolean");
-        return;
-    }
-
-    bool enable = req["enable"].get<bool>();
-
-    switch (state) {
-    case STATE_DMR:
-    {
-        if (m_dmr != nullptr) {
-            m_dmr->setSupervisor(enable);
-        }
-        else {
-            errorPayload(reply, "DMR mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
-        }
-    }
-    break;
-    case STATE_P25:
-    {
-        if (m_p25 != nullptr) {
-            m_p25->setSupervisor(enable);
-        }
-        else {
-          errorPayload(reply, "P25 mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
-        }
-    }
-    break;
-    case STATE_NXDN:
-    {
-        if (m_nxdn != nullptr) {
-            m_nxdn->setSupervisor(enable);
-        }
-        else {
-            errorPayload(reply, "NXDN mode is not enabled", HTTPPayload::SERVICE_UNAVAILABLE);
-        }
-    }
-    break;
-    default:
-        errorPayload(reply, "invalid mode");
-        break;
     }
 }
 

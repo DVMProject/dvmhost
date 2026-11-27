@@ -66,6 +66,8 @@ private:
     /* data items originally static (moved from individual c++ sources) */
     Word16 prev_pitch, prev_prev_pitch, prev_e_p, prev_prev_e_p;
     UWord32 seed;
+    Word16 phaseRandom[NUM_HARMS_MAX];
+    Word16 unvoicedRandom[FFTLENGTH];
     Word16 num_harms_prev1;
     Word32 sa_prev1[NUM_HARMS_MAX + 2];
     Word16 num_harms_prev2;
@@ -92,6 +94,15 @@ private:
     void dct(Word16 *in, Word16 m_lim, Word16 i_lim, Word16 *out);
     void fft_init(void);
     void fft(Word16 *datam1, Word16 nn, Word16 isign);
+    /**
+     * @brief Generates the next pseudo-random sample for this vocoder stream.
+     * @returns Word16 Signed Q1.16 pseudo-random sample.
+     */
+    Word16 randGen(void);
+    /**
+     * @brief Prepares a fixed pseudo-random excitation schedule for one frame.
+     */
+    void prepareRandomFrame(void);
     void encode(IMBE_PARAM *imbe_param, Word16 *frame_vector, Word16 *snd);
     void pitch_est_init(void);
     Word32 autocorr(Word16 *sigin, Word16 shift, Word16 scale_shift);

@@ -116,7 +116,17 @@ namespace mmdvm
 
         bool m_debug;
 
-        RingBuffer<uint8_t> m_buffer;
+        RingBuffer<uint8_t> m_buffer;    //!< Received MMDVM P25 records.
+        RingBuffer<uint8_t> m_txBuffer;  //!< Length-prefixed MMDVM P25 records awaiting transmission.
+        uint32_t m_txElapsed;            //!< Milliseconds accumulated toward the next paced record.
+
+        /**
+         * @brief Queues one MMDVM P25 record for paced transmission.
+         * @param[in] data Buffer containing the record.
+         * @param[in] length Length of the record in bytes.
+         * @return bool True if the complete record was queued, otherwise false.
+         */
+        bool queueRecord(const uint8_t* data, uint8_t length);
     };
 } // namespace mmdvm
 

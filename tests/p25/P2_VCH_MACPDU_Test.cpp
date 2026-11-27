@@ -11,6 +11,7 @@
 #include "common/edac/RS634717.h"
 #include "common/p25/P25Defines.h"
 #include "common/p25/lc/LC.h"
+#include "common/p25/lc/mac/MACFactory.h"
 #include "common/p25/Sync.h"
 #include "common/Log.h"
 #include "common/Utils.h"
@@ -24,7 +25,34 @@ using namespace p25::lc;
 #include <stdlib.h>
 #include <time.h>
 
-TEST_CASE("P25 Phase 2 VCH MAC PDU I-OEMI (RS 52,30,23) Test", "[p25][p2_vch_macpdu_ioemi]") {
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+namespace {
+
+/**
+ * @brief Configures the LC instance with a P25 Phase 2 scramble context.
+ * @param lc LC instance to configure.
+ * @param scrambleOffset Scramble offset to set.
+ * @param colorCode Color code to set (default is DEFAULT_NAC).
+ * @note This function sets the site data for the LC instance if it has not been
+ */
+void configureP2ScrambleContext(LC& lc, uint16_t scrambleOffset, uint16_t colorCode = DEFAULT_NAC)
+{
+    static bool siteConfigured = false;
+    if (!siteConfigured) {
+        LC::setSiteData(SiteData(0xABCDEU, 0x123U, 1U, 1U, 1U, 1U, 1U,
+            ServiceClass::VOICE | ServiceClass::DATA, 0));
+        siteConfigured = true;
+    }
+
+    lc.setColorCode(colorCode);
+    lc.setP2ScrambleOffset(scrambleOffset);
+}
+
+}
+
+TEST_CASE("P25 Phase 2 VCH MAC PDU I-OEMI (RS 52,30,23) Test", "[p25][p2_vch_macpdu_ioemi][cap]") {
     bool failed = false;
 
     INFO("P25 Phase 2 VCH MAC PDU I-OEMI RS (52,30,23) FEC Test");
@@ -102,7 +130,7 @@ TEST_CASE("P25 Phase 2 VCH MAC PDU I-OEMI (RS 52,30,23) Test", "[p25][p2_vch_mac
     REQUIRE(failed == false);
 }
 
-TEST_CASE("P25 Phase 2 VCH MAC PDU S-OEMI (RS 45,26,20) Test", "[p25][p2_vch_macpdu_soemi]") {
+TEST_CASE("P25 Phase 2 VCH MAC PDU S-OEMI (RS 45,26,20) Test", "[p25][p2_vch_macpdu_soemi][cap]") {
     bool failed = false;
 
     INFO("P25 Phase 2 VCH MAC PDU S-OEMI RS (45,26,20) FEC Test");
@@ -177,7 +205,7 @@ TEST_CASE("P25 Phase 2 VCH MAC PDU S-OEMI (RS 45,26,20) Test", "[p25][p2_vch_mac
     REQUIRE(failed == false);
 }
 
-TEST_CASE("P25 Phase 2 VCH MAC PDU Round-Trip I-OEMI Test", "[p25][p2_vch_macpdu_roundtrip_ioemi]") {
+TEST_CASE("P25 Phase 2 VCH MAC PDU Round-Trip I-OEMI Test", "[p25][p2_vch_macpdu_roundtrip_ioemi][cap]") {
     bool failed = false;
 
     INFO("P25 Phase 2 VCH MAC PDU I-OEMI Round-Trip Test");
@@ -231,7 +259,7 @@ TEST_CASE("P25 Phase 2 VCH MAC PDU Round-Trip I-OEMI Test", "[p25][p2_vch_macpdu
     REQUIRE(failed == false);
 }
 
-TEST_CASE("P25 Phase 2 VCH MAC PDU Round-Trip S-OEMI Test", "[p25][p2_vch_macpdu_roundtrip_soemi]") {
+TEST_CASE("P25 Phase 2 VCH MAC PDU Round-Trip S-OEMI Test", "[p25][p2_vch_macpdu_roundtrip_soemi][cap]") {
     bool failed = false;
 
     INFO("P25 Phase 2 VCH MAC PDU S-OEMI Round-Trip Test");
@@ -318,6 +346,96 @@ TEST_CASE("P25 Phase 2 VCH MAC PDU Voice PDU Bypass Test", "[p25][p2_vch_macpdu_
     
     if (!ret2v) {
         ::LogError("T", "Failed to handle VTCH_2V bypass");
+        failed = true;
+    }
+
+    REQUIRE(failed == false);
+}
+
+TEST_CASE("P25 Phase 2 VCH MAC PDU Scrambled I-OEMI Round-Trip Test", "[p25][p2_vch_macpdu_scrambled_ioemi][!mayfail]") {
+    bool failed = false;
+
+    LC lc;
+    configureP2ScrambleContext(lc, 360U);
+    lc.setMFId(MFG_STANDARD);
+    lc.setLCO(P2_MAC_MCO::GROUP);
+    lc.setSrcId(0x123456U);
+    lc.setDstId(0x2345U);
+    lc.setEmergency(false);
+    lc.setEncrypted(false);
+    lc.setPriority(4U);
+    lc.setGroup(true);
+    lc.setP2DUID(P2_DUID::FACCH_SCRAMBLED);
+    lc.setMACPDUOpcode(P2_MAC_HEADER_OPCODE::IDLE);
+    lc.setMACPartition(P2_MAC_MCO_PARTITION::UNIQUE);
+
+    uint8_t encodedData[P25_P2_FRAME_LENGTH_BYTES];
+    ::memset(encodedData, 0x00U, P25_P2_FRAME_LENGTH_BYTES);
+    lc.encodeVCH_MACPDU(encodedData, false);
+
+    LC decodedLc;
+    configureP2ScrambleContext(decodedLc, 360U);
+    bool ret = decodedLc.decodeVCH_MACPDU_OEMI(encodedData, false);
+    if (!ret)
+        failed = true;
+
+    if (decodedLc.getLCO() != lc.getLCO() || decodedLc.getSrcId() != lc.getSrcId() ||
+        decodedLc.getDstId() != lc.getDstId() || decodedLc.getP2DUID() != lc.getP2DUID()) {
+        failed = true;
+    }
+
+    REQUIRE(failed == false);
+}
+
+TEST_CASE("P25 Phase 2 MAC Release preserves six-bit MCO on wire", "[p25][p2][mac-release]") {
+    LC lc;
+    lc.setLCO(P2_MAC_MCO::MAC_RELEASE);
+    lc.setSrcId(0x123456U);
+    lc.setP2DUID(P2_DUID::SACCH_UNSCRAMBLED);
+    lc.setMACPDUOpcode(P2_MAC_HEADER_OPCODE::ACTIVE);
+    lc.setMACPartition(P2_MAC_MCO_PARTITION::UNIQUE);
+
+    uint8_t encodedData[P25_P2_FRAME_LENGTH_BYTES] = { 0U };
+    lc.encodeVCH_MACPDU(encodedData, false);
+
+    LC decoded;
+    REQUIRE(decoded.decodeVCH_MACPDU_OEMI(encodedData, false));
+    REQUIRE(decoded.getMACPartition() == P2_MAC_MCO_PARTITION::UNIQUE);
+    REQUIRE(decoded.getLCO() == P2_MAC_MCO::MAC_RELEASE);
+    REQUIRE(decoded.getSrcId() == 0x123456U);
+    REQUIRE(p25::lc::mac::MACFactory::createMACPDU(decoded) != nullptr);
+}
+
+TEST_CASE("P25 Phase 2 VCH MAC PDU Scrambled S-OEMI Round-Trip Test", "[p25][p2_vch_macpdu_scrambled_soemi][!mayfail]") {
+    bool failed = false;
+
+    LC lc;
+    configureP2ScrambleContext(lc, 720U);
+    lc.setMFId(MFG_STANDARD);
+    lc.setLCO(P2_MAC_MCO::PRIVATE);
+    lc.setSrcId(0x223344U);
+    lc.setDstId(0x112233U);
+    lc.setEmergency(true);
+    lc.setEncrypted(false);
+    lc.setPriority(6U);
+    lc.setGroup(false);
+    lc.setP2DUID(P2_DUID::SACCH_SCRAMBLED);
+    lc.setMACPDUOpcode(P2_MAC_HEADER_OPCODE::IDLE);
+    lc.setMACPartition(P2_MAC_MCO_PARTITION::UNIQUE);
+
+    uint8_t encodedData[P25_P2_FRAME_LENGTH_BYTES];
+    ::memset(encodedData, 0x00U, P25_P2_FRAME_LENGTH_BYTES);
+    lc.encodeVCH_MACPDU(encodedData, true);
+
+    LC decodedLc;
+    configureP2ScrambleContext(decodedLc, 720U);
+    bool ret = decodedLc.decodeVCH_MACPDU_OEMI(encodedData, true);
+    if (!ret)
+        failed = true;
+
+    if (decodedLc.getLCO() != lc.getLCO() || decodedLc.getSrcId() != lc.getSrcId() ||
+        decodedLc.getDstId() != lc.getDstId() || decodedLc.getP2DUID() != lc.getP2DUID() ||
+        decodedLc.getEmergency() != lc.getEmergency()) {
         failed = true;
     }
 

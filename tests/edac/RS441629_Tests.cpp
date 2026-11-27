@@ -26,7 +26,9 @@ TEST_CASE("RS441629 preserves all-zero payload", "[edac][rs441629]") {
     rs.encode441629(data);
     Utils::dump(2U, "encode441629()", data, 33U);
 
-    REQUIRE(rs.decode441629(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode441629(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 12 bytes (16 symbols * 6 bits = 96 bits) should be zero
     for (size_t i = 0; i < 12U; i++) {
@@ -42,7 +44,9 @@ TEST_CASE("RS441629 preserves all-ones payload", "[edac][rs441629]") {
     rs.encode441629(data);
     Utils::dump(2U, "encode441629()", data, 33U);
 
-    REQUIRE(rs.decode441629(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode441629(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 12 bytes should be 0xFF
     for (size_t i = 0; i < 12U; i++) {
@@ -63,7 +67,9 @@ TEST_CASE("RS441629 preserves alternating pattern", "[edac][rs441629]") {
     rs.encode441629(data);
     Utils::dump(2U, "encode441629()", data, 33U);
 
-    REQUIRE(rs.decode441629(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode441629(data, &errs));
+    REQUIRE(errs == 0);
 
     // Verify first 12 bytes (data portion) match
     REQUIRE(::memcmp(data, original, 12U) == 0);
@@ -82,7 +88,9 @@ TEST_CASE("RS441629 preserves incrementing pattern", "[edac][rs441629]") {
     rs.encode441629(data);
     Utils::dump(2U, "encode441629()", data, 33U);
 
-    REQUIRE(rs.decode441629(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode441629(data, &errs));
+    REQUIRE(errs == 0);
 
     REQUIRE(::memcmp(data, original, 12U) == 0);
 }
@@ -112,10 +120,12 @@ TEST_CASE("RS441629 corrects symbol errors", "[edac][rs441629]") {
         corrupted[pos] ^= 0x3FU; // Flip 6 bits (1 symbol)
 
         RS634717 rsDec;
-        bool decoded = rsDec.decode441629(corrupted);
+        int8_t errs = -1;
+        bool decoded = rsDec.decode441629(corrupted, &errs);
 
         // RS(44,16,29) can correct up to 14 symbol errors (very strong code)
         if (decoded) {
+            REQUIRE(errs == 2);
             REQUIRE(::memcmp(corrupted, original, 12U) == 0);
         }
     }
@@ -141,7 +151,9 @@ TEST_CASE("RS441629 corrects multiple symbol errors", "[edac][rs441629]") {
     data[26] ^= 0x3FU;  // Parity region
     data[30] ^= 0x3FU;  // Parity region
 
-    REQUIRE(rs.decode441629(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode441629(data, &errs));
+    REQUIRE(errs == 8);
     REQUIRE(::memcmp(data, original, 12U) == 0);
 }
 
@@ -166,7 +178,9 @@ TEST_CASE("RS441629 corrects many symbol errors", "[edac][rs441629]") {
     data[26] ^= 0x0FU;
     data[30] ^= 0x0FU;
 
-    REQUIRE(rs.decode441629(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode441629(data, &errs));
+    REQUIRE(errs == 7);
     REQUIRE(::memcmp(data, original, 12U) == 0);
 }
 
@@ -188,6 +202,8 @@ TEST_CASE("RS441629 detects uncorrectable errors", "[edac][rs441629]") {
         data[i] ^= 0xFFU;
     }
 
-    bool result = rs.decode441629(data);
-    REQUIRE(!result);
+    int8_t errs = -1;
+    bool result = rs.decode441629(data, &errs);
+    REQUIRE_FALSE(result);
+    REQUIRE(errs == -1);
 }

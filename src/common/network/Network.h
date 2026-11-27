@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -20,6 +20,8 @@
 #include "common/network/BaseNetwork.h"
 #include "common/network/RTPHeader.h"
 #include "common/network/RTPFNEHeader.h"
+#include "common/network/PacketBuffer.h"
+#include "common/lookups/RadioAliasLookup.h"
 #include "common/lookups/RadioIdLookup.h"
 #include "common/lookups/TalkgroupRulesLookup.h"
 #include "common/p25/kmm/KeysetItem.h"
@@ -27,6 +29,7 @@
 #include <string>
 #include <cstdint>
 #include <functional>
+#include <unordered_map>
 
 namespace network
 {
@@ -122,6 +125,17 @@ namespace network
     };
 
     // ---------------------------------------------------------------------------
+    //  Constants
+    // ---------------------------------------------------------------------------
+
+    #define DEFAULT_RETRY_TIME 10U // 10 seconds
+    #define DUPLICATE_CONN_RETRY_TIME 3600U // 60 minutes
+
+    #define MAX_RETRY_BEFORE_RECONNECT 4U
+    #define MAX_RETRY_HA_RECONNECT 2U
+    #define MAX_RETRY_DUP_RECONNECT 2U
+
+    // ---------------------------------------------------------------------------
     //  Class Declaration
     // ---------------------------------------------------------------------------
 
@@ -129,13 +143,65 @@ namespace network
      * @brief Implements the core peer networking logic.
      * @ingroup network_core
      */
-    class HOST_SW_API Network : public BaseNetwork {
+    class DVM_COMMON_API Network : public BaseNetwork {
     public:
+        /**
+         * @brief Receive packet preprocessing result.
+         * @ingroup network_core
+         */
+        enum class RX_PACKET_PREPROCESS_RESULT : uint8_t {
+            ACCEPT, //!< Continue normal receive stream processing.
+            DROP    //!< Discard the packet without changing receive stream state.
+        };
+
+        /**
+         * @brief Protocol receive packet preprocessor callback.
+         * @param data Pointer to the packet data.
+         * @param length Length of the packet data.
+         * @param streamId Stream ID.
+         * @param rxStreamId Receive stream ID.
+         */
+        using RxPacketPreprocessor = std::function<RX_PACKET_PREPROCESS_RESULT(const uint8_t* data, uint32_t length, uint32_t streamId, uint32_t rxStreamId)>;
+        /**
+         * @brief Callback for ICC commands that include a slot number.
+         * @param command ICC command.
+         * @param dstId Destination ID.
+         * @param slotNo Slot number.
+         * @param peerId Peer ID.
+         * @param ssrc RTP SSRC.
+         * @param streamId Stream ID.
+         */
+        using ICCSlotCallback = std::function<void(NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId)>;
+        /**
+         * @brief Callback for ICC commands that do not include a slot number.
+         * @param command ICC command.
+         * @param dstId Destination ID.
+         * @param peerId Peer ID.
+         * @param ssrc RTP SSRC.
+         * @param streamId Stream ID.
+         */
+        using ICCCallback = std::function<void(NET_ICC::ENUM command, uint32_t dstId, uint32_t peerId, uint32_t ssrc, uint32_t streamId)>;
+        /**
+         * @brief Callback for key responses.
+         * @param ki Key item.
+         * @param algId Algorithm ID.
+         * @param keyLength Key length.
+         */
+        using KeyResponseCallback = std::function<void(p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)>;
+        /**
+         * @brief Callback for KEK key responses.
+         * @param rsi RSI.
+         * @param ki Key item.
+         * @param algId Algorithm ID.
+         * @param keyLength Key length.
+         */
+        using KEKKeyResponseCallback = std::function<void(uint32_t rsi, p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)>;
+
         /**
          * @brief Initializes a new instance of the Network class.
          * @param address Network Hostname/IP address to connect to.
          * @param port Network port number.
-         * @param localPort 
+         * @param localPort Local network port number to bind to.
          * @param peerId Unique ID on the network.
          * @param password Network authentication password.
          * @param duplex Flag indicating full-duplex operation.
@@ -149,14 +215,47 @@ namespace network
          * @param allowActivityTransfer Flag indicating that the system activity logs will be sent to the network.
          * @param allowDiagnosticTransfer Flag indicating that the system diagnostic logs will be sent to the network.
          * @param updateLookup Flag indicating that the system will accept radio ID and talkgroup ID lookups from the network.
+         * @param disallowUnitToUnit Flag indicating that network unit-to-unit traffic will be discarded.
          */
         Network(const std::string& address, uint16_t port, uint16_t localPort, uint32_t peerId, const std::string& password,
             bool duplex, bool debug, bool dmr, bool p25, bool nxdn, bool analog, bool slot1, bool slot2, 
-            bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup);
+            bool allowActivityTransfer, bool allowDiagnosticTransfer, bool updateLookup, bool saveLookup, bool disallowUnitToUnit = false);
         /**
          * @brief Finalizes a instance of the Network class.
          */
         ~Network() override;
+
+        /**
+         * @brief Writes a grant request unless unit-to-unit network traffic is disabled.
+         * @param mode DVM protocol mode requesting the grant.
+         * @param srcId Source subscriber ID.
+         * @param dstId Destination subscriber or talkgroup ID.
+         * @param slot DMR slot number, or zero for protocols without slots.
+         * @param unitToUnit Flag indicating an individual-call grant request.
+         * @param serviceOptions Protocol service-options octet for the requested grant.
+         * @return True if the request was written; otherwise false.
+         */
+        bool writeGrantReq(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit, const uint8_t serviceOptions);
+
+        /**
+         * @brief Releases a grant previously assigned by the connected FNE.
+         * @param mode DVM protocol mode owning the grant.
+         * @param srcId Source subscriber ID.
+         * @param dstId Destination subscriber or talkgroup ID.
+         * @param slot DMR or P25 Phase 2 slot number, or zero when not applicable.
+         * @param unitToUnit Flag indicating an individual-call grant.
+         * @param failed Flag indicating local RF grant commit failed.
+         * @return True if the release was written; otherwise false.
+         */
+        bool writeGrantRelease(const uint8_t mode, const uint32_t srcId, const uint32_t dstId,
+            const uint8_t slot, const bool unitToUnit, const bool failed = false);
+
+        /**
+         * @brief Determines whether the connected FNE can currently own grant decisions.
+         * @return True when the authenticated network session is running; otherwise false.
+         */
+        bool hasGrantAuthority() const;
 
         /**
          * @brief Resets the DMR ring buffer for the given slot.
@@ -186,6 +285,12 @@ namespace network
          * @param tidLookup Talkgroup Rules Lookup Table Instance
          */
         void setLookups(lookups::RadioIdLookup* ridLookup, lookups::TalkgroupRulesLookup* tidLookup);
+        /**
+         * @brief Sets the instance of the Radio Alias lookup table.
+         * @param ridAliasLookup Radio Alias Lookup Table Instance.
+         */
+        void setRadioAliasLookups(lookups::RadioAliasLookup* ridAliasLookup);
+
         /**
          * @brief Sets metadata configuration settings from the modem.
          * @param identity Peer Identity.
@@ -219,6 +324,11 @@ namespace network
          * @param presharedKey Encryption preshared key for networking.
          */
         void setPresharedKey(const uint8_t* presharedKey);
+        /**
+         * @brief Sets endpoint preshared encryption key for peer key requets.
+         * @param presharedKey Encryption preshared key for networking.
+         */
+        void setKMFPresharedKey(const uint8_t* presharedKey);
 
         /**
          * @brief Updates the timer by the passed number of milliseconds.
@@ -265,37 +375,78 @@ namespace network
         void setPeerDisconnectedCallback(std::function<void()>&& callback) { m_peerDisconnectedCallback = callback; }
 
         /**
+         * @brief Sets the optional DMR receive packet preprocessor.
+         * @param callback Callback invoked before DMR receive stream selection, or an empty callback to disable preprocessing.
+         */
+        void setDMRRxPacketPreprocessor(RxPacketPreprocessor&& callback) { m_dmrRxPacketPreprocessor = callback; }
+        /**
+         * @brief Sets the optional P25 receive packet preprocessor.
+         * @param callback Callback invoked before P25 receive stream selection, or an empty callback to disable preprocessing.
+         */
+        void setP25RxPacketPreprocessor(RxPacketPreprocessor&& callback) { m_p25RxPacketPreprocessor = callback; }
+        /**
+         * @brief Sets the optional P25 Phase 2 receive packet preprocessor.
+         * @param callback Callback invoked before P25 Phase 2 receive stream selection, or an empty callback to disable preprocessing.
+         */
+        void setP25P2RxPacketPreprocessor(RxPacketPreprocessor&& callback) { m_p25P2RxPacketPreprocessor = callback; }
+        /**
+         * @brief Sets the optional NXDN receive packet preprocessor.
+         * @param callback Callback invoked before NXDN receive stream selection, or an empty callback to disable preprocessing.
+         */
+        void setNXDNRxPacketPreprocessor(RxPacketPreprocessor&& callback) { m_nxdnRxPacketPreprocessor = callback; }
+        /**
+         * @brief Sets the optional analog receive packet preprocessor.
+         * @param callback Callback invoked before analog receive stream selection, or an empty callback to disable preprocessing.
+         */
+        void setAnalogRxPacketPreprocessor(RxPacketPreprocessor&& callback) { m_analogRxPacketPreprocessor = callback; }
+
+        /**
          * @brief Helper to set the DMR In-Call Control callback.
          * @param callback 
          */
-        void setDMRICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint8_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_dmrInCallCallback = callback; }
+        void setDMRICCCallback(ICCSlotCallback&& callback) { m_dmrInCallCallback = callback; }
         /**
          * @brief Helper to set the P25 In-Call Control callback.
          * @param callback 
          */
-        void setP25ICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_p25InCallCallback = callback; }
+        void setP25ICCCallback(ICCCallback&& callback) { m_p25InCallCallback = callback; }
+        /**
+         * @brief Helper to set the P25 Phase 2 In-Call Control callback.
+         * @param callback 
+         */
+        void setP25P2ICCCallback(ICCSlotCallback&& callback) { m_p25P2InCallCallback = callback; }
         /**
          * @brief Helper to set the NXDN In-Call Control callback.
          * @param callback 
          */
-        void setNXDNICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_nxdnInCallCallback = callback; }
+        void setNXDNICCCallback(ICCCallback&& callback) { m_nxdnInCallCallback = callback; }
         /**
          * @brief Helper to set the analog In-Call Control callback.
          * @param callback 
          */
-        void setAnalogICCCallback(std::function<void(NET_ICC::ENUM, uint32_t, uint32_t, uint32_t, uint32_t)>&& callback) { m_analogInCallCallback = callback; }
+        void setAnalogICCCallback(ICCCallback&& callback) { m_analogInCallCallback = callback; }
 
         /**
          * @brief Helper to set the enc. key response callback.
          * @param callback 
          */
-        void setKeyResponseCallback(std::function<void(p25::kmm::KeyItem, uint8_t, uint8_t)>&& callback) { m_keyRespCallback = callback; }
+        void setKeyResponseCallback(KeyResponseCallback&& callback) { m_keyRespCallback = callback; }
+        /**
+         * @brief Helper to set the UKEK/LLA encryption key response callback.
+         * @param callback 
+         */
+        void setKEKKeyResponseCallback(KEKKeyResponseCallback&& callback) { m_kekKeyRespCallback = callback; }
 
     public:
         /**
          * @brief Last received RTP sequence number.
          */
         DECLARE_RO_PROPERTY_PLAIN(uint16_t, pktLastSeq);
+
+        /**
+         * @brief Flag indicating that network unit-to-unit traffic is discarded.
+         */
+        DECLARE_RO_PROPERTY_PLAIN(bool, disallowUnitToUnit);
 
     protected:
         std::string m_address;
@@ -321,9 +472,18 @@ namespace network
 
         lookups::RadioIdLookup* m_ridLookup;
         lookups::TalkgroupRulesLookup* m_tidLookup;
+        lookups::RadioAliasLookup* m_ridAliasLookup;
+
+        PacketBuffer m_tgAdmissionPkt;
+        uint32_t m_tgAdmissionStreamId;
+
+        PacketBuffer m_radioAliasSyncPkt;
 
         uint8_t* m_salt;
 
+        uint8_t* m_kmfPresharedKey;
+
+        bool m_initRetry;
         Timer m_retryTimer;
         uint8_t m_retryCount;
         uint8_t m_maxRetryCount;
@@ -359,6 +519,10 @@ namespace network
          * @brief Flag indicating this peer will not disable networking services on a master ACL NAK.
          */
         bool m_neverDisableOnACLNAK;
+        /**
+         * @brief Flag indicating this peer will pass encryption keys without a preshared key set.
+         */
+        bool m_passKeysWithNoPresharedKey;
 
         /**
          * @brief Peer Connected Function Callback.
@@ -372,35 +536,236 @@ namespace network
         std::function<void()> m_peerDisconnectedCallback;
 
         /**
+         * @brief Optional DMR receive packet preprocessor.
+         *  (This is called before DMR receive stream selection.)
+         */
+        RxPacketPreprocessor m_dmrRxPacketPreprocessor;
+        /**
+         * @brief Optional P25 receive packet preprocessor.
+         *  (This is called before P25 receive stream selection.)
+         */
+        RxPacketPreprocessor m_p25RxPacketPreprocessor;
+        /**
+         * @brief Optional P25 Phase 2 receive packet preprocessor.
+         *  (This is called before P25 Phase 2 receive stream selection.)
+         */
+        RxPacketPreprocessor m_p25P2RxPacketPreprocessor;
+        /**
+         * @brief Optional NXDN receive packet preprocessor.
+         *  (This is called before NXDN receive stream selection.)
+         */
+        RxPacketPreprocessor m_nxdnRxPacketPreprocessor;
+        /**
+         * @brief Optional analog receive packet preprocessor.
+         *  (This is called before analog receive stream selection.)
+         */
+        RxPacketPreprocessor m_analogRxPacketPreprocessor;
+
+        /**
          * @brief DMR In-Call Control Function Callback.
          *  (This is called when the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo, 
-            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_dmrInCallCallback;
+        ICCSlotCallback m_dmrInCallCallback;
         /**
          * @brief P25 In-Call Control Function Callback.
          *  (This is called once the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId, 
-            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_p25InCallCallback;
+        ICCCallback m_p25InCallCallback;
+        /**
+         * @brief P25 Phase 2 In-Call Control Function Callback.
+         *  (This is called once the master sends a In-Call Control request.)
+         */
+        ICCSlotCallback m_p25P2InCallCallback;
         /**
          * @brief NXDN In-Call Control Function Callback.
          *  (This is called once the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId, 
-            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_nxdnInCallCallback;
+        ICCCallback m_nxdnInCallCallback;
         /**
          * @brief Analog In-Call Control Function Callback.
          *  (This is called once the master sends a In-Call Control request.)
          */
-        std::function<void(NET_ICC::ENUM command, uint32_t dstId, 
-            uint32_t peerId, uint32_t ssrc, uint32_t streamId)> m_analogInCallCallback;
+        ICCCallback m_analogInCallCallback;
 
         /**
          * @brief Encryption Key Response Function Callback.
          *  (This is called once the master responds to a key request.)
          */
-        std::function<void(p25::kmm::KeyItem ki, uint8_t algId, uint8_t keyLength)> m_keyRespCallback;
+        KeyResponseCallback m_keyRespCallback;
+        /**
+         * @brief LLA/UKEK Encryption Key Response Function Callback.
+         *  (This is called once the master responds to a key KEK request.)
+         */
+        KEKKeyResponseCallback m_kekKeyRespCallback;
+
+        /**
+         * @brief Function pointer type for packet handlers.
+         * @param network Instance of the Network class.
+         * @param peerId Peer ID.
+         * @param streamId Stream ID.
+         * @param now Current time in milliseconds.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
+         * @param buffer Buffer containing the packet data.
+         * @param length Length of buffer.
+         * @returns bool True, if the packet was handled, otherwise false.
+         */
+        using PacketHandlerFunc = bool (*)(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+            const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+        /**
+         * @brief Implements the packet handler functions for the MetadataNetwork class.
+         */
+        class PacketHandler {
+        public:
+            /**
+             * @brief Handles NET_FUNC::PROTOCOL packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool protocol(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::MASTER packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool master(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::RADIO_ALIAS_SYNC packets.
+             * @param network Instance of the Network class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing the received message.
+             * @param length Length of buffer.
+             * @returns bool True, if packet processing should stop, otherwise false.
+             */
+            static bool radioAliasSync(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::INCALL_CTRL packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool inCallControl(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::NAK packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool nak(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+            /**
+             * @brief Handles NET_FUNC::ACK packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool ack(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::KEY_RSP packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool keyResponse(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+            /**
+             * @brief Handles NET_FUNC::KEY_KEK_RSP packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool kekKeyResponse(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::MST_DISC packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool masterDisconnect(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+
+            /**
+             * @brief Handles NET_FUNC::PONG packets.
+             * @param network Instance of the TrafficNetwork class.
+             * @param peerId Peer ID.
+             * @param streamId Stream ID.
+             * @param now Current time in milliseconds.
+             * @param fneHeader RTP FNE Header.
+             * @param rtpHeader RTP Header.
+             * @param buffer Buffer containing message to send to peer.
+             * @param length Length of buffer.
+             * @returns bool True, if the packet was handled, otherwise false.
+             */
+            static bool pong(Network* network, uint32_t peerId, uint32_t streamId, uint64_t now,
+                const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader, const uint8_t* buffer, int length);
+        };
 
         /**
          * @brief Helper to verify the given RTP sequence for the given RTP stream.
@@ -421,6 +786,14 @@ namespace network
          */
         virtual void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
             uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader());
+        /**
+         * @brief User overrideable handler that allows user code to process NAKs received from the master.
+         * @param peerId Peer ID.
+         * @param reason Reason code.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
+         */
+        virtual bool userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader());
 
         /**
          * @brief Writes login request to the network.

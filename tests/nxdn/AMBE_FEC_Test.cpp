@@ -48,6 +48,5 @@ TEST_CASE("NXDN AMBE FEC Test", "[nxdn][ambe_fec]") {
     if (errors > 0)
         failed = true;
 
-cleanup:
     REQUIRE(failed==false);
 }

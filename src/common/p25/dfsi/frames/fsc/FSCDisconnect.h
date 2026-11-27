@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -39,7 +39,7 @@ namespace p25
                  * @brief Implements the FSC Disconnect Message.
                  * @ingroup dfsi_fsc_frames
                  */
-                class HOST_SW_API FSCDisconnect : public FSCMessage {
+                class DVM_COMMON_API FSCDisconnect : public FSCMessage {
                 public:
                     static const uint8_t LENGTH = 3U;
 

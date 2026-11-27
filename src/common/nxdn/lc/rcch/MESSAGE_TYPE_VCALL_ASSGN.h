@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -33,7 +33,7 @@ namespace nxdn
              * @brief Implements VCALL_ASSGN - Voice Call Assignment
              * @ingroup nxdn_rcch
              */
-            class HOST_SW_API MESSAGE_TYPE_VCALL_ASSGN : public RCCH {
+            class DVM_COMMON_API MESSAGE_TYPE_VCALL_ASSGN : public RCCH {
             public:
                 /**
                  * @brief Initializes a new instance of the MESSAGE_TYPE_VCALL_ASSGN class.

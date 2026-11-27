@@ -16,7 +16,6 @@
 #include "common/nxdn/NXDNUtils.h"
 #include "common/Log.h"
 #include "nxdn/packet/Data.h"
-#include "ActivityLog.h"
 
 using namespace nxdn;
 using namespace nxdn::defines;
@@ -103,7 +102,7 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
         if (!acl::AccessControl::validateSrcId(srcId)) {
             if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                 LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, RID rejection, srcId = %u", srcId);
-                ::ActivityLog("NXDN", true, "RF data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                ::ActivityLogEx(LOG_NXDN, true, "RF data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                 m_lastRejectId = srcId;
             }
 
@@ -119,7 +118,7 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
             if (!acl::AccessControl::validateSrcId(dstId)) {
                 if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                     LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, RID rejection, dstId = %u", dstId);
-                    ::ActivityLog("NXDN", true, "RF data rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "RF data rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
                     m_lastRejectId = dstId;
                 }
 
@@ -131,10 +130,10 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
             }
         }
         else {
-            if (!acl::AccessControl::validateTGId(dstId)) {
+            if (!acl::AccessControl::validateTGId(dstId) || !acl::AccessControl::validateTGAccess(srcId, dstId)) {
                 if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
-                    LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, TGID rejection, dstId = %u", dstId);
-                    ::ActivityLog("NXDN", true, "RF data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    LogWarning(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, TGID/RID admission rejection, srcId = %u, dstId = %u", srcId, dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "RF data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = dstId;
                 }
 
@@ -151,7 +150,7 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
                 srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
-        ::ActivityLog("NXDN", true, "RF data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
+        ::ActivityLogEx(LOG_NXDN, true, "RF data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
         LogInfoEx(LOG_RF, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
         m_nxdn->m_rfLC = lc;
@@ -197,7 +196,7 @@ bool Data::process(ChOption::E option, uint8_t* data, uint32_t len)
     m_nxdn->m_voice->m_rfFrames++;
 
     if (data[0U] == modem::TAG_EOT) {
-        ::ActivityLog("NXDN", true, "RF ended RF data transmission");
+        ::ActivityLogEx(LOG_NXDN, true, "RF ended RF data transmission");
 
         LogInfoEx(LOG_RF, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
             m_nxdn->m_voice->m_rfFrames);
@@ -221,6 +220,9 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
         resetNet();
     }
 
+    if (m_nxdn->m_netState == RS_NET_DATA)
+        m_nxdn->m_networkWatchdog.start();
+
     channel::UDCH udch;
     bool validUDCH = udch.decode(data + 2U);
     if (m_nxdn->m_netState == RS_NET_IDLE && !validUDCH)
@@ -236,6 +238,12 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
     uint16_t dstId = lc.getDstId();
     uint16_t srcId = lc.getSrcId();
     bool group = lc.getGroup();
+
+    if (m_nxdn->m_network != nullptr && m_nxdn->m_network->disallowUnitToUnit() && !group) {
+        LogWarning(LOG_NET, "NXDN, rejecting network individual data call, srcId = %u, dstId = %u",
+            srcId, dstId);
+        return false;
+    }
 
     // overwrite the destination ID if the network message header and
     // decoded network LC data don't agree (this can happen if the network is dynamically
@@ -281,7 +289,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
         if (!acl::AccessControl::validateSrcId(srcId)) {
             if (m_lastRejectId == 0U || m_lastRejectId != srcId) {
                 LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, RID rejection, srcId = %u", srcId);
-                ::ActivityLog("NXDN", true, "network data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                ::ActivityLogEx(LOG_NXDN, true, "network data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                 m_lastRejectId = srcId;
             }
 
@@ -294,7 +302,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
             if (!acl::AccessControl::validateSrcId(dstId)) {
                 if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                     LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, RID rejection, dstId = %u", dstId);
-                    ::ActivityLog("NXDN", true, "network data rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "network data rejection from %u to %s%u ", srcId, group? "TG " : "", dstId);
                     m_lastRejectId = dstId;
                 }
 
@@ -306,7 +314,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
             if (!acl::AccessControl::validateTGId(dstId)) {
                 if (m_lastRejectId == 0 || m_lastRejectId != dstId) {
                     LogWarning(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_DCALL_HDR " denial, TGID rejection, dstId = %u", dstId);
-                    ::ActivityLog("NXDN", true, "network data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
+                    ::ActivityLogEx(LOG_NXDN, true, "network data rejection from %u to %s%u ", srcId, group ? "TG " : "", dstId);
                     m_lastRejectId = dstId;
                 }
 
@@ -320,7 +328,7 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
                 srcId, dstId, lc.getPacketInfo().getDelivery(), lc.getPacketInfo().getBlockCount(), lc.getPacketInfo().getPadCount(), lc.getPacketInfo().getStart(), lc.getPacketInfo().getFragmentCount());
         }
 
-        ::ActivityLog("NXDN", false, "network data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
+        ::ActivityLogEx(LOG_NXDN, false, "network data transmission from %u to %s%u", srcId, group ? "TG " : "", dstId);
         LogInfoEx(LOG_NET, "NXDN Data Call, srcId = %u, dstId = %u", srcId, dstId);
 
         m_nxdn->m_netLC = lc;
@@ -362,12 +370,13 @@ bool Data::processNetwork(ChOption::E option, lc::RTCH& netLC, uint8_t* data, ui
     m_nxdn->m_voice->m_netFrames++;
 
     if (data[0U] == modem::TAG_EOT) {
-        ::ActivityLog("NXDN", true, "network ended RF data transmission");
+        ::ActivityLogEx(LOG_NXDN, true, "network ended RF data transmission");
 
         LogInfoEx(LOG_NET, "NXDN, " NXDN_RTCH_MSG_TYPE_TX_REL ", total frames: %d",
             m_nxdn->m_voice->m_netFrames);
 
         m_nxdn->writeEndNet();
+        m_nxdn->m_networkWatchdog.stop();
     }
 
     return true;
@@ -401,8 +410,16 @@ void Data::writeNetwork(const uint8_t *data, uint32_t len)
     if (m_nxdn->m_network == nullptr)
         return;
 
-    if (m_nxdn->m_rfTimeout.isRunning() && m_nxdn->m_rfTimeout.hasExpired())
+    if (m_nxdn->m_network->disallowUnitToUnit() && !m_nxdn->m_rfLC.getGroup())
         return;
 
-    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data, len);
+    if (m_nxdn->m_rfTimeoutTimer.isRunning() && m_nxdn->m_rfTimeoutTimer.hasExpired())
+        return;
+
+    if (len != NXDN_FRAME_LENGTH_BYTES + 2U) {
+        LogError(LOG_NET, "Data::writeNetwork(), invalid modem NXDN frame length, len = %u", len);
+        return;
+    }
+
+    m_nxdn->m_network->writeNXDN(m_nxdn->m_rfLC, data + 2U, NXDN_FRAME_LENGTH_BYTES);
 }

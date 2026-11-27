@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -27,7 +27,7 @@ namespace dmr
      * @brief This class implements various helper functions for validating DMR data.
      * @ingroup dmr
      */
-    class HOST_SW_API DMRUtils {
+    class DVM_COMMON_API DMRUtils {
     public:
         /**
          * @brief Helper to test and clamp a DMR color code.

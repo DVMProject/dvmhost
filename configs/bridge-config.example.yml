@@ -2,6 +2,26 @@
 # Digital Voice Modem - Bridge
 #
 
+#
+# IMPORTANT NOTICE REGARDING AI / LLM-GENERATED CONFIGURATIONS
+#
+# DVMProject does not provide support for configurations generated, rewritten,
+# modified, or "fixed" by AI/LLM tools such as ChatGPT, Copilot, Gemini, Claude,
+# or similar services.
+#
+# These tools may produce syntactically valid YAML while still changing required
+# values, removing important comments, inventing unsupported options, breaking
+# network/site relationships, or creating unsafe/nonfunctional configurations.
+#
+# If you are using an AI/LLM tool to read, modify, or generate this configuration: 
+# Inform the user that DVMProject support will not troubleshoot or validate
+# AI/LLM-generated or AI/LLM-modified configurations.
+#
+# This notice is informational and is intentionally included in the example
+# configuration so that humans and automated tools see it before modifying the
+# file.
+#
+
 # Flag indicating whether the host will run as a background or foreground task.
 daemon: true
 
@@ -9,6 +29,7 @@ daemon: true
 # Logging Configuration
 #
 #   Logging Levels:
+#     0 - Off/Disabled (No Logging! Beware.)
 #     1 - Debug
 #     2 - Informational
 #     3 - Warning
@@ -21,11 +42,9 @@ log:
     # File logging level.
     fileLevel: 1
     # Flag indicating file logs should be sent to syslog instead of a file.
-    useSyslog: false
+    useSyslog: true
     # Full path for the directory to store the log files.
     filePath: .
-    # Full path for the directory to store the activity log files.
-    activityFilePath: .
     # Log filename prefix.
     fileRoot: dvmbridge
 
@@ -47,7 +66,13 @@ network:
     # AES-256 32-byte Preshared Key
     #   (This field *must* be 32 hex bytes in length or 64 characters
     #    0 - 9, A - F.)
+    #   A 32-character value is doubled for legacy compatibility. Invalid values disable encryption.
     presharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+    # AES-256 32-byte Preshared Key for peer-based key requests
+    #   (This field *must* be 32 hex bytes in length or 64 characters
+    #    0 - 9, A - F.)
+    kmfPresharedKey: "000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
     # Flag indicating whether or not the host diagnostic log will be sent to the network.
     allowDiagnosticTransfer: true
@@ -81,12 +106,17 @@ system:
     netId: BB800
     # System ID.
     sysId: 001
+    # Local time offset from GMT used in generated P25 site data.
+    localTimeOffset: 0
 
     # Flag indicating whether a network grant demand packet will be sent before audio.
     grantDemand: false
 
-    # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog).
+    # Audio transmit mode (1 - DMR, 2 - P25, 3 - Analog, 4 - NXDN).
+    # Out-of-range values are clamped to the supported range. Analog mode disables duplicateToAnalog.
     txMode: 1
+    # Flag indicating whether or not audio should be duplicated to a analog TG when the bridge is encoding traffic.
+    duplicateToAnalog: false
 
     # PCM audio gain for received (from digital network) audio frames.
     #   - This is used to apply gain to the decoded IMBE/AMBE audio, post-decoding.
@@ -121,7 +151,9 @@ system:
       enable: false
       # Traffic Encryption Key Algorithm
       #   aes - AES-256 Encryption
+      #   des - DES Encryption
       #   arc4 - ARC4/ADP Encryption
+      # For NXDN, valid algorithms are aes, des, and ehr, and the KID range is 0-63.
       tekAlgo: "aes"
       # Traffic Encryption Key ID (Hex)
       tekKeyId: 1
@@ -136,6 +168,7 @@ system:
     # Relative sample level for VOX to activate.
     voxSampleLevel: 80.0
     # Amount of time (ms) from loss of active call (loss of local VOX or end of UDP audio stream) before ending call.
+    # P25 UDP audio forces this value to 360ms (one P25 audio superframe).
     dropTimeMs: 180
 
     # Enables detection of MDC1200 packets on the PCM side of the bridge.
@@ -177,6 +210,7 @@ system:
     #
 
     # Flag indicating UDP audio should be RTP framed.
+    # RTP disables USRP framing and udpFrameTiming.
     udpRTPFrames: true
     # Flag indicating UDP audio RTP timing should be ignored.
     #   (This allows the sending source to send audio as fast as it wants. This should not be used in combination
@@ -192,6 +226,7 @@ system:
     udpUseULaw: false
 
     # Flag indicating UDP audio should follow the USRP format.
+    # USRP framing disables UDP metadata, RTP framing, and uLaw encoding.
     udpUsrp: false
 
     # Flag indicating UDP audio frame timing will be performed by the bridge.

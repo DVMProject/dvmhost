@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -45,7 +45,11 @@ namespace p25
         //  Class Declaration
         // ---------------------------------------------------------------------------
 
-        class HOST_SW_API KMMRekeyAck : public KMMFrame {
+        /**
+         * @brief Represents a KMM rekey acknowledgment.
+         * @ingroup p25_kmm
+         */
+        class DVM_COMMON_API KMMRekeyAck : public KMMFrame {
         public:
             /**
              * @brief Initializes a new instance of the KMMRekeyAck class.
@@ -84,7 +88,7 @@ namespace p25
             /**
              * @brief 
              */
-            DECLARE_PROPERTY(uint8_t, messageId, MessageId);
+            DECLARE_PROPERTY(uint8_t, ackMessageId, AckMessageId);
             /**
              * @brief 
              */

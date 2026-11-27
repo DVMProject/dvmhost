@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -51,6 +51,37 @@ const uint8_t   BIT_MASK_TABLE[] = { 0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0
  */
 #define READ_BIT(p, i)     (p[(i) >> 3] & BIT_MASK_TABLE[(i) & 7])
 
+/**
+ * @brief Sets a uint64_t into 8 bytes of a buffer/array. (64-bit value).
+ * @ingroup common
+ * @param val uint64_t value to set
+ * @param buffer uint8_t buffer to set value on
+ * @param offset Offset within uint8_t buffer
+ */
+#define SET_UINT64(val, buffer, offset)                 \
+            buffer[0U + offset] = (val >> 56) & 0xFFU;  \
+            buffer[1U + offset] = (val >> 48) & 0xFFU;  \
+            buffer[2U + offset] = (val >> 40) & 0xFFU;  \
+            buffer[3U + offset] = (val >> 32) & 0xFFU;  \
+            buffer[4U + offset] = (val >> 24) & 0xFFU;  \
+            buffer[5U + offset] = (val >> 16) & 0xFFU;  \
+            buffer[6U + offset] = (val >> 8) & 0xFFU;   \
+            buffer[7U + offset] = (val >> 0) & 0xFFU;
+/**
+ * @brief Gets a uint64_t consisting of 8 bytes from a buffer/array. (64-bit value).
+ * @ingroup common
+ * @param buffer uint8_t buffer to get value from
+ * @param offset Offset within uint8_t buffer
+ */
+#define GET_UINT64(buffer, offset)                      \
+            ((uint64_t)buffer[offset + 0U] << 56)  |    \
+            ((uint64_t)buffer[offset + 1U] << 48)  |    \
+            ((uint64_t)buffer[offset + 2U] << 40)  |    \
+            ((uint64_t)buffer[offset + 3U] << 32)  |    \
+            ((uint64_t)buffer[offset + 4U] << 24)  |    \
+            ((uint64_t)buffer[offset + 5U] << 16)  |    \
+            ((uint64_t)buffer[offset + 6U] << 8)   |    \
+            ((uint64_t)buffer[offset + 7U] << 0);
 /**
  * @brief Sets a uint32_t into 4 bytes of a buffer/array. (32-bit value).
  * @ingroup common

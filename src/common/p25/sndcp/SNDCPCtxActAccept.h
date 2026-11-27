@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -34,7 +34,7 @@ namespace p25
          * @brief Represents a SNDCP PDU context accept response.
          * @ingroup p25_sndcp
          */
-        class HOST_SW_API SNDCPCtxActAccept : public SNDCPPacket {
+        class DVM_COMMON_API SNDCPCtxActAccept : public SNDCPPacket {
         public:
             /**
              * @brief Initializes a new instance of the SNDCPCtxActAccept class.
@@ -44,9 +44,10 @@ namespace p25
             /**
              * @brief Decode a SNDCP context activation response.
              * @param[in] data Buffer containing SNDCP packet data to decode.
+             * @param length Length of the packet data in bytes.
              * @returns bool True, if decoded, otherwise false.
              */
-            bool decode(const uint8_t* data) override;
+            bool decode(const uint8_t* data, uint32_t length) override;
             /**
              * @brief Encode a SNDCP context activation response.
              * @param[out] data Buffer to encode SNDCP packet data to.

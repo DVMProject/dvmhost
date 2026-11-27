@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -51,14 +51,14 @@ bool FSCACK::decode(const uint8_t* data)
 
     if (m_respLength > 0) {
         if (responseData != nullptr)
-            delete responseData;
+            delete[] responseData;
         responseData = new uint8_t[m_respLength];
         ::memset(responseData, 0x00U, m_respLength);
         ::memcpy(responseData, data + 7U, m_respLength);
     }
     else {
         if (responseData != nullptr)
-            delete responseData;
+            delete[] responseData;
         responseData = nullptr;
     }
 

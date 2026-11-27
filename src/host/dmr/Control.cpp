@@ -12,6 +12,7 @@
 #include "common/dmr/acl/AccessControl.h"
 #include "common/dmr/lc/CSBK.h"
 #include "common/dmr/lc/csbk/CSBKFactory.h"
+#include "common/RC4Crypto.h"
 #include "common/Log.h"
 #include "dmr/Control.h"
 #include "Host.h"
@@ -21,6 +22,32 @@ using namespace dmr::defines;
 
 #include <cassert>
 #include <algorithm>
+#include <memory>
+#include <random>
+
+// ---------------------------------------------------------------------------
+//  Global Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Calculates the registration authentication response.
+ * @param challenge Registration challenge.
+ * @param key Authentication key.
+ * @return Calculated registration authentication response.
+ */
+uint32_t calculateRegistrationAuthResponse(uint32_t challenge, const uint8_t key[16U])
+{
+    uint8_t rc4Key[19U];
+    rc4Key[0U] = (uint8_t)((challenge >> 16U) & 0xFFU);
+    rc4Key[1U] = (uint8_t)((challenge >> 8U) & 0xFFU);
+    rc4Key[2U] = (uint8_t)(challenge & 0xFFU);
+    ::memcpy(rc4Key + 3U, key, 16U);
+
+    crypto::RC4 rc4;
+    std::unique_ptr<uint8_t[]> stream(rc4.keystream(259U, rc4Key, sizeof(rc4Key)));
+    return ((uint32_t)stream[256U] << 16U) |
+        ((uint32_t)stream[257U] << 8U) | stream[258U];
+}
 
 // ---------------------------------------------------------------------------
 //  Public Class Members
@@ -33,7 +60,6 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     ::lookups::RadioIdLookup* ridLookup, ::lookups::TalkgroupRulesLookup* tidLookup, ::lookups::IdenTableLookup* idenTable, ::lookups::RSSIInterpolator* rssiMapper,
     uint32_t jitter, bool dumpDataPacket, bool repeatDataPacket, bool dumpCSBKData, bool debug, bool verbose) :
     m_authoritative(authoritative),
-    m_supervisor(false),
     m_colorCode(colorCode),
     m_modem(modem),
     m_network(network),
@@ -43,6 +69,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_ridLookup(ridLookup),
     m_tidLookup(tidLookup),
     m_enableTSCC(false),
+    m_requireAuthForReg(false),
     m_tsccCnt(0U),
     m_tsccCntInterval(1000U, 0U, DMR_SLOT_TIME / 2U),
     m_tsccSlotNo(0U),
@@ -50,6 +77,7 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     m_ccRunning(false),
     m_ccHalted(false),
     m_dumpCSBKData(dumpCSBKData),
+    m_debugIgnPktAdmission(false),
     m_verbose(verbose),
     m_debug(debug)
 {
@@ -61,6 +89,111 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
     assert(rssiMapper != nullptr);
 
     acl::AccessControl::init(m_ridLookup, m_tidLookup);
+    if (network != nullptr) {
+        network->setDMRRxPacketPreprocessor([this](const uint8_t* data, uint32_t length, uint32_t streamId, uint32_t rxStreamId) {
+            if (m_debugIgnPktAdmission)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            if (data == nullptr || length <= 15U)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+
+            // allow packets matching the currently locked receive stream to bypass destination filtering
+            if (rxStreamId != 0U && streamId == rxStreamId)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+            DataType::E dataType = DataType::VOICE;
+            if ((data[15U] & 0x20U) == 0x20U)
+                dataType = (DataType::E)(data[15U] & 0x0FU);
+            else if ((data[15U] & 0x10U) == 0x10U)
+                dataType = DataType::VOICE_SYNC;
+
+            // only apply destination filtering to voice calls
+            if (dataType == DataType::TERMINATOR_WITH_LC ||
+                (dataType != DataType::VOICE_LC_HEADER && dataType != DataType::VOICE_PI_HEADER &&
+                 dataType != DataType::VOICE_SYNC && dataType != DataType::VOICE)) {
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+            }
+
+            const uint32_t srcId = GET_UINT24(data, 5U);
+            const uint32_t dstId = GET_UINT24(data, 8U);
+
+            // enforce source ID access control
+            if (!acl::AccessControl::validateSrcId(srcId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "DMR packet denial, RID rejection, srcId = %u", srcId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            const uint32_t slotNo = (data[15U] & 0x80U) == 0x80U ? 2U : 1U;
+
+            //LogDebug(LOG_NET, "DMR packet, slot = %u, srcId = %u, dstId = %u, streamId = %u, rxStreamId = %u", slotNo, srcId, dstId, streamId, rxStreamId);
+
+            // enforce the permitted destination for non-authoritative hosts
+            if (!m_authoritative) {
+                switch (slotNo) {
+                case 1U:
+                    // allow packets on a dedicated control channel to bypass destination filtering
+                    if (m_slot1->m_dedicatedTSCC)
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+                    // reject packets when no destination is permitted for non-authoritative hosts
+                    if (m_slot1->m_permittedDstId == 0U) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 1 packet denial, no permitted destination");
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+
+                    // enforce the permitted destination for non-authoritative hosts
+                    if (dstId != m_slot1->m_permittedDstId) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 1 packet denial, destination rejection, dstId = %u, permittedDstId = %u",
+                                dstId, m_slot1->m_permittedDstId);
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+                    break;
+                case 2U:
+                    // allow packets on a dedicated control channel to bypass destination filtering
+                    if (m_slot2->m_dedicatedTSCC)
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
+                    // reject packets when no destination is permitted for non-authoritative hosts
+                    if (m_slot2->m_permittedDstId == 0U) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 2 packet denial, no permitted destination");
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+
+                    // enforce the permitted destination for non-authoritative hosts
+                    if (dstId != m_slot2->m_permittedDstId) {
+                        if (m_debug)
+                            LogDebug(LOG_NET, "[NON-AUTHORITATIVE] DMR Slot 2 packet denial, destination rejection, dstId = %u, permittedDstId = %u",
+                                dstId, m_slot2->m_permittedDstId);
+                        return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                    }
+                    break;
+                }
+            }
+
+            // enforce talkgroup or source ID access control
+            const bool group = (data[15U] & 0x40U) != 0x40U;
+            if (group) {
+                if (!acl::AccessControl::validateTGId(slotNo, dstId) || !acl::AccessControl::validateTGAccess(slotNo, srcId, dstId)) {
+                    if (m_debug)
+                        LogDebug(LOG_NET, "DMR Slot %u packet denial, TGID/RID admission rejection, srcId = %u, dstId = %u",
+                            slotNo, srcId, dstId);
+                    return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+                }
+            }
+            else if (!acl::AccessControl::validateSrcId(dstId)) {
+                if (m_debug)
+                    LogDebug(LOG_NET, "DMR Slot %u packet denial, RID rejection, dstId = %u", slotNo, dstId);
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::DROP;
+            }
+
+            return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+        });
+    }
+
     Slot::init(this, authoritative, colorCode, SiteData(), embeddedLCOnly, dumpTAData, callHang, modem, network, duplex, chLookup, m_ridLookup, m_tidLookup, m_idenTable, rssiMapper, jitter, verbose);
     lc::CSBK::setVerbose(m_dumpCSBKData);
 
@@ -80,19 +213,20 @@ Control::Control(bool authoritative, uint32_t colorCode, uint32_t callHang, uint
 
 Control::~Control()
 {
+    if (Slot::s_network != nullptr)
+        Slot::s_network->setDMRRxPacketPreprocessor({});
+
     delete m_slot2;
     delete m_slot1;
 }
 
 /* Helper to set DMR configuration options. */
 
-void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChData controlChData, 
+void Control::setOptions(yaml::Node& conf, ::lookups::VoiceChData controlChData,
     uint32_t netId, uint8_t siteId, uint8_t channelId, uint32_t channelNo, bool printOptions)
 {
     yaml::Node systemConf = conf["system"];
     yaml::Node dmrProtocol = conf["protocols"]["dmr"];
-
-    m_supervisor = supervisor;
 
     Slot::s_verifyReg = dmrProtocol["verifyReg"].as<bool>(false);
 
@@ -104,6 +238,17 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         backOff = 15U;
 
     yaml::Node control = dmrProtocol["control"];
+    m_requireAuthForReg = control["requireAuthForReg"].as<bool>(false);
+    if (m_requireAuthForReg && m_network != nullptr) {
+        m_network->setKEKKeyResponseCallback([this](uint32_t srcId, p25::kmm::KeyItem key,
+            uint8_t algId, uint8_t keyLength) {
+            processRegistrationAuthKey(srcId, key, algId, keyLength);
+        });
+    } else if (m_requireAuthForReg) {
+        LogWarning(LOG_DMR, "DMR registration authentication disabled; no FNE network is configured");
+        m_requireAuthForReg = false;
+    }
+
     bool enableTSCC = control["enable"].as<bool>(false);
     bool dedicatedTSCC = false;
     if (enableTSCC) {
@@ -124,13 +269,11 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
         switch (m_tsccSlotNo) {
         case 1U:
             m_slot1->setTSCC(enableTSCC, dedicatedTSCC);
-            m_slot1->setSupervisor(m_supervisor);
             m_slot1->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
             m_slot1->setCCDebug(ccDebug);
             break;
         case 2U:
             m_slot2->setTSCC(enableTSCC, dedicatedTSCC);
-            m_slot2->setSupervisor(m_supervisor);
             m_slot2->setDisableSourceIDGrantCheck(disableGrantSourceIdCheck);
             m_slot2->setCCDebug(ccDebug);
             break;
@@ -152,6 +295,9 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
     m_slot1->setNotifyCC(notifyCC);
     m_slot2->setNotifyCC(notifyCC);
 
+    bool disableGrpAffTimeout = dmrProtocol["disableGrpAffTimeout"].as<bool>(false);
+    m_slot1->s_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
+    m_slot2->s_affiliations->setDisableGrpAffTimeout(disableGrpAffTimeout);
     bool disableUnitRegTimeout = dmrProtocol["disableUnitRegTimeout"].as<bool>(false);
     m_slot1->s_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
     m_slot2->s_affiliations->setDisableUnitRegTimeout(disableUnitRegTimeout);
@@ -200,17 +346,13 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             uint8_t slotNo, uint32_t peerId, uint32_t ssrc, uint32_t streamId) { processInCallCtrl(command, dstId, slotNo); });
     }
 
-    /*
-    ** Network Grant Disables
-    */
-    bool disableNetworkGrant = dmrProtocol["disableNetworkGrant"].as<bool>(false);
-    m_slot1->m_disableNetworkGrant = disableNetworkGrant;
-    m_slot2->m_disableNetworkGrant = disableNetworkGrant;
-
     bool convNetGrantDemand = dmrProtocol["convNetGrantDemand"].as<bool>(false);
     m_slot1->m_convNetGrantDemand = convNetGrantDemand;
     m_slot2->m_convNetGrantDemand = convNetGrantDemand;
 
+    m_debugIgnPktAdmission = dmrProtocol["debugIgnPktAdmission"].as<bool>(false);
+    if (m_debugIgnPktAdmission)
+        LogWarning(LOG_DMR, "Ignoring network packet admission checks. This may cause odd behavior, proceed with caution.");
 
     if (printOptions) {
         if (enableTSCC) {
@@ -220,15 +362,19 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
             if (disableGrantSourceIdCheck) {
                 LogInfo("    TSCC Disable Grant Source ID Check: yes");
             }
-            if (m_supervisor)
-                LogInfoEx(LOG_DMR, "Host is configured to operate as a DMR TSCC, site controller mode.");
-        }
-        if (disableNetworkGrant) {
-            LogInfo("    Disable Network Grants: yes");
+            LogInfoEx(LOG_DMR, "Host is configured to operate as a DMR TSCC.");
         }
 
         if (defaultNetIdleTalkgroup != 0U) {
             LogInfo("    Default Network Idle Talkgroup: %u", defaultNetIdleTalkgroup);
+        }
+
+        if (disableGrpAffTimeout) {
+            LogInfo("    Disable Group Affiliation Timeout: yes");
+        }
+
+        if (disableUnitRegTimeout) {
+            LogInfo("    Disable Unit Registration Timeout: yes");
         }
 
         LogInfo("    Ignore Affiliation Check: %s", ignoreAffiliationCheck ? "yes" : "no");
@@ -239,6 +385,10 @@ void Control::setOptions(yaml::Node& conf, bool supervisor, ::lookups::VoiceChDa
 
         LogInfo("    Verify Registration: %s", Slot::s_verifyReg ? "yes" : "no");
         LogInfo("    Conventional Network Grant Demand: %s", convNetGrantDemand ? "yes" : "no");
+
+        if (m_debugIgnPktAdmission) {
+            LogInfo("    Ignore Network Packet Admission: yes");
+        }
     }
 }
 
@@ -405,27 +555,6 @@ void Control::clockSiteData(uint32_t ms)
 {
     m_slot1->clockSiteData(ms);
     m_slot2->clockSiteData(ms);
-}
-
-/* Sets a flag indicating whether DMR has supervisory functions and can send permit TG to voice channels. */
-
-void Control::setSupervisor(bool supervisor)
-{
-    if (!m_enableTSCC) {
-        return;
-    }
-
-    switch (m_tsccSlotNo) {
-    case 1U:
-        m_slot1->setSupervisor(supervisor);
-        break;
-    case 2U:
-        m_slot2->setSupervisor(supervisor);
-        break;
-    default:
-        LogError(LOG_DMR, "DMR, invalid slot, slotNo = %u", m_tsccSlotNo);
-        break;
-    }
 }
 
 /* Permits a TGID on a non-authoritative host. */
@@ -622,7 +751,7 @@ void Control::writeRF_Call_Alrt(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
 
 bool Control::isBusy() const
 {
-    return (m_slot1->m_rfState != RS_RF_LISTENING || m_slot1->m_netState != RS_NET_IDLE) &&
+    return (m_slot1->m_rfState != RS_RF_LISTENING || m_slot1->m_netState != RS_NET_IDLE) ||
         (m_slot2->m_rfState != RS_RF_LISTENING || m_slot2->m_netState != RS_NET_IDLE);
 }
 
@@ -787,6 +916,39 @@ void Control::processNetwork()
     }
 }
 
+/* Helper to process a registration authentication key. */
+
+void Control::processRegistrationAuthKey(uint32_t srcId, const p25::kmm::KeyItem& key, uint8_t algId, uint8_t keyLength)
+{
+    (void)algId; // The FNE labels this shared 16-byte key as the P25 AES-128 KEK type.
+    Slot* tscc = getTSCCSlot();
+    if (tscc == nullptr)
+        return;
+
+    auto it = tscc->m_authTransactions.find(srcId);
+    if (it == tscc->m_authTransactions.end())
+        return;
+
+    if (keyLength != 16U) {
+        tscc->m_authTransactions.erase(it);
+        tscc->m_control->writeRF_CSBK_NACK_RSP(srcId, ReasonCode::TS_DENY_RSN_REG_DENIED, ServiceKind::REG_SVC);
+        return;
+    }
+
+    uint8_t keyData[16U];
+    ::memset(keyData, 0U, 16U);
+    key.getKey(keyData);
+
+    static std::random_device random;
+    std::uniform_int_distribution<uint32_t> distribution(0U, 0xFFFCDFU);
+    it->second.challenge = distribution(random);
+    it->second.expectedResponse = calculateRegistrationAuthResponse(it->second.challenge, keyData);
+    it->second.challengeSent = true;
+    it->second.expires = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+    tscc->m_control->writeRF_CSBK_AHOY(srcId, ServiceKind::REG_SVC, it->second.challenge, false, 0U);
+}
+
 /* Helper to process an In-Call Control message. */
 
 void Control::processInCallCtrl(network::NET_ICC::ENUM command, uint32_t dstId, uint8_t slotNo)
@@ -911,6 +1073,24 @@ void Control::RPC_touchGrantTG(json::object& req, json::object& reply)
     if (slot == 0U || slot > 2U) {
         g_RPC->defaultResponse(reply, "illegal DMR slot");
         return;
+    }
+
+    Slot* tscc = getTSCCSlot();
+    if (tscc != nullptr && tscc->m_enableTSCC && !tscc->s_affiliations->isGranted(dstId) &&
+        req["srcId"].is<int>() && req["group"].is<bool>() && req["chNo"].is<int>()) {
+        uint32_t srcId = req["srcId"].get<uint32_t>();
+        bool group = req["group"].get<bool>();
+        uint32_t chNo = req["chNo"].get<uint32_t>();
+        ::lookups::VoiceChData voiceCh = tscc->s_affiliations->rfCh()->getRFChData(chNo);
+        if (!voiceCh.isValidCh()) {
+            g_RPC->defaultResponse(reply, "DMR payload channel is not configured", network::NetRPC::INVALID_ARGS);
+            return;
+        }
+        if (!tscc->m_control->writeRF_CSBK_Grant(srcId, dstId, 4U, group,
+            true, false, chNo, slot)) {
+            g_RPC->defaultResponse(reply, "failed to recreate DMR payload grant", network::NetRPC::BAD_REQUEST);
+            return;
+        }
     }
 
     // LogDebugEx(LOG_DMR, "Control::RPC_touchGrantTG()", "callback, dstId = %u, slot = %u", dstId, slot);

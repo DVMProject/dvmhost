@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements UU VCH GRANT - Unit-to-Unit Voice Channel Grant (OSP).
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_OSP_UU_VCH_GRANT : public AMBT {
+            class DVM_COMMON_API MBT_OSP_UU_VCH_GRANT : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_OSP_UU_VCH_GRANT class.

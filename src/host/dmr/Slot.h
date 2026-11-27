@@ -5,7 +5,7 @@
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
- *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2017-2026 Bryan Biedenkapp, N2PLL
  *
  */
 /**
@@ -19,6 +19,7 @@
 
 #include "Defines.h"
 #include "common/dmr/SiteData.h"
+#include "common/dmr/data/DataHeader.h"
 #include "common/lookups/RSSIInterpolator.h"
 #include "common/lookups/IdenTableLookup.h"
 #include "common/lookups/RadioIdLookup.h"
@@ -36,6 +37,16 @@
 
 #include <vector>
 #include <mutex>
+#include <chrono>
+#include <unordered_map>
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 namespace dmr
 {
@@ -179,17 +190,16 @@ namespace dmr
         void clockSiteData(uint32_t ms);
         /** @} */
 
-        /** @name Supervisory Control */
-        /**
-         * @brief Sets a flag indicating whether control has supervisory functions and can send permit TG to voice channels.
-         * @param supervisor Flag indicating whether control has supervisory functions.
-         */
-        void setSupervisor(bool supervisor) { m_supervisor = supervisor; }
         /**
          * @brief Permits a TGID on a non-authoritative host.
          * @param dstId Destination ID.
          */
         void permittedTG(uint32_t dstId);
+        /**
+         * @brief Determines whether this control channel currently owns grant decisions.
+         * @return True for configured authority or disconnected-network fallback.
+         */
+        bool isGrantAuthoritative() const;
         /**
          * @brief Grants a TGID on a non-authoritative host.
          * @param srcId Source Radio ID.
@@ -207,6 +217,15 @@ namespace dmr
          * @param dstId Destination ID.
          */
         void touchGrantTG(uint32_t dstId);
+        /**
+         * @brief Reissues a missing Tier III grant when a subscriber starts
+         * traffic directly on a retained payload channel.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination ID.
+         * @param grp Flag indicating group traffic.
+         * @returns bool True if no grant was needed or a grant was issued.
+         */
+        bool ensureTSCCPayloadGrant(uint32_t srcId, uint32_t dstId, bool grp);
         /** @} */
 
         /**
@@ -339,12 +358,51 @@ namespace dmr
 
     private:
         friend class Control;
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::HostTestHooks;
+#endif
         friend class packet::Voice;
         packet::Voice* m_voice;
         friend class packet::Data;
         packet::Data* m_data;
         friend class packet::ControlSignaling;
         packet::ControlSignaling* m_control;
+
+        /**
+         * @brief Represents an authentication transaction.
+         */
+        struct AuthTransaction {
+            uint8_t serviceOptions;                             //!< Service options for the authentication transaction.
+            uint32_t challenge;                                 //!< Challenge value for the authentication transaction.
+            uint32_t expectedResponse;                          //!< Expected response for the authentication transaction.
+            std::chrono::steady_clock::time_point expires;      //!< Expiration time of the authentication transaction.
+            bool challengeSent;                                 //!< Flag indicating whether the challenge has been sent.
+        };
+        std::unordered_map<uint32_t, AuthTransaction> m_authTransactions;
+
+        /**
+         * @brief Represents a Unified Data Transport (UDT) transaction.
+         */
+        struct UDTTransaction {
+            uint32_t target;                                    //!< Target ID of the UDT transaction.
+            bool group;                                         //!< Indicates whether the UDT transaction is for a group.
+            uint8_t serviceKind;                                //!< Service kind of the UDT transaction.
+            std::chrono::steady_clock::time_point expires;      //!< Expiration time of the UDT transaction.
+        };
+        std::unordered_map<uint32_t, UDTTransaction> m_udtTransactions;
+
+        /**
+         * @brief Represents a Tier III OACSU individual voice transaction.
+         * @ingroup host_dmr
+         */
+        struct U2UOACSUTransaction {
+            uint32_t callerId;                                  //!< Calling subscriber ID.
+            uint32_t calledId;                                  //!< Called subscriber ID.
+            uint8_t serviceOptions;                             //!< Voice service options from the original request.
+            std::chrono::steady_clock::time_point nextRetry;    //!< Time at which the availability enquiry is retransmitted.
+            std::chrono::steady_clock::time_point expires;      //!< Expiration time of the availability check.
+        };
+        std::unordered_map<uint32_t, U2UOACSUTransaction> m_u2uOACSUTransactions;
 
         uint32_t m_slotNo;
 
@@ -421,7 +479,6 @@ namespace dmr
         bool m_enableTSCC;
         bool m_dedicatedTSCC;
         bool m_ignoreAffiliationCheck;
-        bool m_disableNetworkGrant;
         bool m_convNetGrantDemand;
         bool m_legacyGroupReg;
 
@@ -432,18 +489,21 @@ namespace dmr
         bool m_tsccPayloadGroup;
         bool m_tsccPayloadVoice;
         Timer m_tsccPayloadActRetry;
+        Timer m_tsccPayloadActTimeout;
+        uint8_t m_tsccPayloadActRetryCount;
         uint8_t m_tsccAdjSSCnt;
 
         bool m_disableGrantSrcIdCheck;
 
         uint32_t m_lastLateEntry;
 
-        bool m_supervisor;
         bool m_notifyCC;
 
         bool m_ccDebug;
         bool m_verbose;
         bool m_debug;
+
+        network::NET_ICC::ENUM m_reverseChannelCommand;
 
         static Control* s_dmr;
 
@@ -513,8 +573,9 @@ namespace dmr
 
         /**
          * @brief Helper to process loss of frame stream from modem.
+         * @param type Type of RF frame loss.
          */
-        void processFrameLoss();
+        void processFrameLoss(RPT_RF_LOSS_TYPE type);
 
         /**
          * @brief Helper to send a REST API request to the CC to release a channel grant at the end of a call.
@@ -572,6 +633,72 @@ namespace dmr
          * @brief Clears the flag indicating whether the slot is a TSCC payload slot.
          */
         void clearTSCCActivated();
+        /**
+         * @brief Stops payload activation retry/deadline timers after traffic begins.
+         */
+        void confirmTSCCPayloadActive();
+
+        /**
+         * @brief Starts registration authentication using a key requested by the root controller.
+         * @param srcId Source Radio ID.
+         * @param serviceOptions Service options for the registration request.
+         */
+        void beginRegistrationAuth(uint32_t srcId, uint8_t serviceOptions);
+        /**
+         * @brief Validates an authentication response and completes the pending registration.
+         * @param srcId Source Radio ID.
+         * @param response Authentication response received from the radio.
+         * @return True if the response was valid and the registration was completed, false otherwise.
+         */
+        bool processRegistrationAuthResponse(uint32_t srcId, uint32_t response);
+
+        /**
+         * @brief Starts a TSCC-local Unified Data Transport transaction.
+         * @param srcId Source Radio ID.
+         * @param dstId Destination Radio ID.
+         * @param serviceKind Service kind for the UDT transaction.
+         */
+        void beginUDT(uint32_t srcId, uint32_t dstId, uint8_t serviceKind);
+        /**
+         * @brief Validates an inbound UDT upload and converts its header for delivery.
+         * @param header Reference to the DataHeader object representing the UDT header.
+         * @return True if the header was successfully prepared for delivery, false otherwise.
+         */
+        bool prepareUDTHeader(data::DataHeader& header);
+        /**
+         * @brief Completes an upload or waits for the individual recipient acknowledgement.
+         * @param srcId Source Radio ID.
+         */
+        void completeUDT(uint32_t srcId);
+        /**
+         * @brief Mirrors an individual recipient acknowledgement to the originating unit.
+         * @param targetId Target Radio ID.
+         * @return True if the acknowledgement was successfully processed, false otherwise.
+         */
+        bool processUDTAcknowledgement(uint32_t targetId);
+
+        /**
+         * @brief Starts a Tier III OACSU individual voice availability check.
+         * @param callerId Calling subscriber ID.
+         * @param calledId Called subscriber ID.
+         * @param serviceOptions Voice service options.
+         * @return True when a new or duplicate transaction was accepted.
+         */
+        bool beginU2UOACSU(uint32_t callerId, uint32_t calledId, uint8_t serviceOptions);
+        /**
+         * @brief Completes a pending OACSU availability check from a called-unit response.
+         * @param calledId Responding called subscriber ID.
+         * @param callerId Original calling subscriber ID.
+         * @param accepted Whether the called subscriber accepted the availability check.
+         * @return True when a matching transaction was processed.
+         */
+        bool processU2UOACSUResponse(uint32_t calledId, uint32_t callerId, bool accepted);
+        /**
+         * @brief Cancels a pending OACSU transaction initiated by a caller.
+         * @param callerId Calling subscriber ID.
+         * @return True when a matching transaction was cancelled.
+         */
+        bool cancelU2UOACSU(uint32_t callerId);
 
         /**
          * @brief Helper to set the DMR short LC.

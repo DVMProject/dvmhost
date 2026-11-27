@@ -21,6 +21,7 @@
 #include "common/restapi/http/HTTPRequestHandler.h"
 
 #include <thread>
+#include <chrono>
 #include <string>
 #include <signal.h>
 #include <utility>
@@ -60,6 +61,7 @@ namespace restapi
                 m_acceptor(m_ioService),
                 m_connectionManager(),
                 m_socket(m_ioService),
+                m_acceptRetryTimer(m_ioService),
                 m_requestHandler(),
                 m_debug(debug)
             {
@@ -95,6 +97,15 @@ namespace restapi
             }
 
             /**
+             * @brief Gets the TCP port on which the server is listening.
+             * @returns Bound TCP port, including an OS-assigned port when constructed with port 0.
+             */
+            uint16_t localPort() const
+            {
+                return m_acceptor.local_endpoint().port();
+            }
+
+            /**
              * @brief Run the servers ASIO IO service loop.
              */
             void run()
@@ -115,6 +126,7 @@ namespace restapi
                 // operations; once all operations have finished the m_ioService::run()
                 // call will exit
                 m_acceptor.close();
+                m_acceptRetryTimer.cancel();
                 m_connectionManager.stopAll();
             }
 
@@ -131,11 +143,26 @@ namespace restapi
                         return;
                     }
 
-                    if (!ec) {
-                        m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler, false, m_debug));
+                    if (ec == asio::error::operation_aborted) {
+                        return;
                     }
 
-                    accept();
+                    if (!ec) {
+                        m_connectionManager.start(std::make_shared<ConnectionType>(std::move(m_socket), m_connectionManager, m_requestHandler, false, m_debug));
+                        accept();
+                        return;
+                    }
+
+                    ::LogError(LOG_REST, "HTTPServer::accept(), %s, code = %u; retrying", ec.message().c_str(), ec.value());
+                    asio::error_code ignoredError;
+                    m_socket.close(ignoredError);
+                    m_socket = asio::ip::tcp::socket(m_ioService);
+                    m_acceptRetryTimer.expires_from_now(std::chrono::seconds(1U));
+                    m_acceptRetryTimer.async_wait([this](asio::error_code timerError) {
+                        if (!timerError && m_acceptor.is_open()) {
+                            accept();
+                        }
+                    });
                 });
             }
 
@@ -150,6 +177,7 @@ namespace restapi
             ServerConnectionManager<ConnectionTypePtr> m_connectionManager;
 
             asio::ip::tcp::socket m_socket;
+            asio::steady_timer m_acceptRetryTimer;
 
             RequestHandlerType m_requestHandler;
             bool m_debug;

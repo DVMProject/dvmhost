@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -33,7 +33,7 @@ namespace p25
              * @brief Implements ADJ STS BCAST - Adjacent Site Status Broadcast
              * @ingroup p25_lc
              */
-            class HOST_SW_API LC_ADJ_STS_BCAST : public TDULC {
+            class DVM_COMMON_API LC_ADJ_STS_BCAST : public TDULC {
             public:
                 /**
                  * @brief Initializes a new instance of the LC_ADJ_STS_BCAST class.

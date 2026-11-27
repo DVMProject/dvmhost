@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Digital Voice Modem - MBE Vocoder
  * GPLv2 Open Source. Use is subject to license terms.
@@ -181,7 +181,7 @@ static void encodeAMBE(const IMBE_PARAM* imbe_param, int b[], mbe_parms* cur_mp,
 
     // ref_pitch is Q8_8 in range 19.875 - 123.125
     int b0_i = (imbe_param->ref_pitch >> 5) - 159;
-    if (b0_i < 0 || b0_i > b0_lmax) {
+    if (b0_i < 0 || b0_i >= b0_lmax) {
         fprintf(stderr, "encode error b0_i %d\n", b0_i);
         return;
     }
@@ -195,7 +195,7 @@ static void encodeAMBE(const IMBE_PARAM* imbe_param, int b[], mbe_parms* cur_mp,
             b0_i++;
         else if (L > imbe_param->num_harms)
             b0_i--;
-        if (b0_i < 0 || b0_i > b0_lmax) {
+        if (b0_i < 0 || b0_i >= b0_lmax) {
             fprintf(stderr, "encode error2 b0_i %d\n", b0_i);
             return;
         }
@@ -238,9 +238,11 @@ static void encodeAMBE(const IMBE_PARAM* imbe_param, int b[], mbe_parms* cur_mp,
     float log_l_w0 = 0.5 * log2f(num_harms_f * AmbeW0table[b[0]] * 2.0 * M_PI) + 2.289;
     float lsa[NUM_HARMS_MAX];
     float lsa_sum = 0.0;
+    bool hasSpectralEnergy = false;
 
     for (int i1 = 0; i1 < imbe_param->num_harms; i1++) {
         float sa = (float)imbe_param->sa[i1];
+        hasSpectralEnergy |= sa >= 1.0f;
         if (sa < 1) sa = 1.0;
         if (imbe_param->v_uv_dsn[i1])
             lsa[i1] = log_l_2 + log2f(sa);
@@ -255,13 +257,17 @@ static void encodeAMBE(const IMBE_PARAM* imbe_param, int b[], mbe_parms* cur_mp,
     diff_gain -= gainAdjust;
 
     float error;
-    int error_index;
-    int max_dg = 32;
-    for (int i1 = 0; i1 < max_dg; i1++) {
-        float diff = fabsf(diff_gain - AmbeDg[i1]);
-        if ((i1 == 0) || (diff < error)) {
-            error = diff;
-            error_index = i1;
+    int error_index = 0;
+    // The logarithm floor must not create transmitted gain when analysis
+    // produced no harmonic energy at all.
+    if (hasSpectralEnergy) {
+        int max_dg = 32;
+        for (int i1 = 0; i1 < max_dg; i1++) {
+            float diff = fabsf(diff_gain - AmbeDg[i1]);
+            if ((i1 == 0) || (diff < error)) {
+                error = diff;
+                error_index = i1;
+            }
         }
     }
 
@@ -604,10 +610,9 @@ void MBEEncoder::encodeBits(uint8_t* bits, uint8_t* codeword)
         uint8_t rawAmbe[9U];
         ::memset(rawAmbe, 0x00U, 9U);
 
-        for (int i = 0; i < 9; ++i) {
-            for (int j = 0; j < 8; ++j) {
-                rawAmbe[i] |= (bits[(i * 8) + j] << (7 - j));
-            }
+        // Only 49 input entries are provided; the remaining packed bits stay zero.
+        for (uint32_t i = 0U; i < 49U; i++) {
+            WRITE_BIT(rawAmbe, i, (bits[i] & 1U) != 0U);
         }
 
         // build DMR AMBE bytes
@@ -645,13 +650,14 @@ void MBEEncoder::encode(int16_t* samples, uint8_t* codeword)
 
     int16_t frame_vector[8];	// result ignored
 
+    // Apply IMBE analysis gain before encoding the current frame. AMBE applies
+    // the same property directly when selecting its current gain index below.
+    if (m_mbeMode == ENCODE_88BIT_IMBE)
+        m_vocoder.set_gain_adjust(m_gainAdjust);
+
     // first do speech analysis to generate mbe model parameters
     m_vocoder.imbe_encode(frame_vector, samples);
     if (m_mbeMode == ENCODE_88BIT_IMBE) {
-        if (m_gainAdjust >= 1.0f) {
-            m_vocoder.set_gain_adjust(m_gainAdjust);
-        }
-
         uint32_t offset = 0U;
         int16_t mask = 0x0800;
 
@@ -714,4 +720,24 @@ void MBEEncoder::encode(int16_t* samples, uint8_t* codeword)
         encodeDmrAMBE(rawAmbe, dmrAMBE);
         ::memcpy(codeword, dmrAMBE, 9U);
     }
+}
+
+/* Encodes PCM samples to a deinterleaved 49-bit AMBE payload. */
+
+void MBEEncoder::encodeBits(int16_t* samples, uint8_t bits[])
+{
+    assert(samples != nullptr);
+    assert(bits != nullptr);
+
+    if (m_mbeMode != ENCODE_DMR_AMBE) {
+        ::memset(bits, 0x00U, 49U);
+        return;
+    }
+
+    int16_t frameVector[8];
+    m_vocoder.imbe_encode(frameVector, samples);
+
+    int b[9];
+    encodeAMBE(m_vocoder.param(), b, &m_curMBEParms, &m_prevMBEParms, m_gainAdjust);
+    encode49bit(bits, b);
 }

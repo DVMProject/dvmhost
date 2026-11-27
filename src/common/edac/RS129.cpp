@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -120,7 +120,7 @@ void RS129::encode(const uint8_t* msg, uint32_t nbytes, uint8_t* parity)
 //  Private Static Class Members
 // ---------------------------------------------------------------------------
 
-/* */
+/* Helper to multiply two numbers in GF(2^8) using the log and exponent tables. */
 
 uint8_t RS129::gmult(uint8_t a, uint8_t b)
 {

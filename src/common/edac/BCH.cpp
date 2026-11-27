@@ -1,80 +1,13 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
+ *  Copyright (C) 2016 Jonathan Naylor, G4KLX
+ *  Copyright (C) 2026 Bryan Biedenkapp, N2PLL
+ * 
  */
-/*
-* File:    bch3.c
-* Title:   Encoder/decoder for binary BCH codes in C (Version 3.1)
-* Author:  Robert Morelos-Zaragoza
-* Date:    August 1994
-* Revised: June 13, 1997
-*
-* ===============  Encoder/Decoder for binary BCH codes in C =================
-*
-* Version 1:   Original program. The user provides the generator polynomial
-*              of the code (cumbersome!).
-* Version 2:   Computes the generator polynomial of the code.
-* Version 3:   No need to input the coefficients of a primitive polynomial of
-*              degree m, used to construct the Galois Field GF(2**m). The
-*              program now works for any binary BCH code of length such that:
-*              2**(m-1) - 1 < length <= 2**m - 1
-*
-* Note:        You may have to change the size of the arrays to make it work.
-*
-* The encoding and decoding methods used in this program are based on the
-* book "Error Control Coding: Fundamentals and Applications", by Lin and
-* Costello, Prentice Hall, 1983.
-*
-* Thanks to Patrick Boyle (pboyle@era.com) for his observation that 'bch2.c'
-* did not work for lengths other than 2**m-1 which led to this new version.
-* Portions of this program are from 'rs.c', a Reed-Solomon encoder/decoder
-* in C, written by Simon Rockliff (simon@augean.ua.oz.au) on 21/9/89. The
-* previous version of the BCH encoder/decoder in C, 'bch2.c', was written by
-* Robert Morelos-Zaragoza (robert@spectra.eng.hawaii.edu) on 5/19/92.
-*
-* NOTE:
-*          The author is not responsible for any malfunctioning of
-*          this program, nor for any damage caused by it. Please include the
-*          original program along with these comments in any redistribution.
-*
-*  For more information, suggestions, or other ideas on implementing error
-*  correcting codes, please contact me at:
-*
-*                           Robert Morelos-Zaragoza
-*                           5120 Woodway, Suite 7036
-*                           Houston, Texas 77056
-*
-*                    email: r.morelos-zaragoza@ieee.org
-*
-* COPYRIGHT NOTICE: This computer program is free for non-commercial purposes.
-* You may implement this program for any non-commercial application. You may
-* also implement this program for commercial purposes, provided that you
-* obtain my written permission. Any modification of this program is covered
-* by this copyright.
-*
-* == Copyright (c) 1994-7,  Robert Morelos-Zaragoza. All rights reserved.  ==
-*
-* m = order of the Galois field GF(2**m)
-* n = 2**m - 1 = size of the multiplicative group of GF(2**m)
-* length = length of the BCH code
-* t = error correcting capability (max. no. of errors the code corrects)
-* d = 2*t + 1 = designed min. distance = no. of consecutive roots of g(x) + 1
-* k = n - deg(g(x)) = dimension (no. of information bits/codeword) of the code
-* p[] = coefficients of a primitive polynomial used to generate GF(2**m)
-* g[] = coefficients of the generator polynomial, g(x)
-* alpha_to [] = log table of GF(2**m)
-* index_of[] = antilog table of GF(2**m)
-* data[] = information bits = coefficients of data polynomial, i(x)
-* bb[] = coefficients of redundancy polynomial x^(length-k) i(x) modulo g(x)
-* numerr = number of errors
-* errpos[] = error positions
-* recd[] = coefficients of the received polynomial
-* decerror = number of decoding errors (in _message_ positions)
-*
-*/
 #include "Defines.h"
 #include "edac/BCH.h"
 #include "Utils.h"
@@ -82,6 +15,7 @@
 using namespace edac;
 
 #include <cassert>
+#include <cstring>
 
 // ---------------------------------------------------------------------------
 //  Constants
@@ -89,6 +23,10 @@ using namespace edac;
 
 const int length = 63;
 const int k = 16;
+const int t = 11;
+const int fieldOrder = 6;
+const int fieldSize = 1 << fieldOrder;
+const int primitivePolynomial = 0x43; // x^6 + x + 1
 
 const int g[] = {
     1, 1, 0,  0, 1, 1,  0, 1, 1,  0, 0, 1,  0, 0, 1,  1, 0, 0,  0, 0, 1,  0, 1, 1,
@@ -126,9 +64,153 @@ void BCH::encode(uint8_t* nid)
     }
 }
 
+/* Decodes and corrects a BCH(63,16,23) P25 NID codeword. */
+
+bool BCH::decode(uint8_t* nid, uint32_t& errors)
+{
+    assert(nid != nullptr);
+
+    errors = 0U;
+    uint8_t corrected[8U];
+    ::memcpy(corrected, nid, sizeof(corrected));
+
+    uint8_t syndromes[2 * t + 1] = { 0U };
+    bool valid = true;
+    for (int syndrome = 1; syndrome <= 2 * t; syndrome++) {
+        uint8_t value = 0U;
+        for (int bit = 0; bit < length; bit++) {
+            if (READ_BIT(corrected, bit) != 0U)
+                value ^= alphaPower(syndrome * (length - 1 - bit));
+        }
+        syndromes[syndrome] = value;
+        valid = valid && (value == 0U);
+    }
+
+    if (valid)
+        return true;
+
+    uint8_t locator[2 * t + 1] = { 0U };
+    uint8_t previous[2 * t + 1] = { 0U };
+    locator[0U] = 1U;
+    previous[0U] = 1U;
+
+    int degree = 0;
+    int shift = 1;
+    uint8_t previousDiscrepancy = 1U;
+
+    for (int step = 0; step < 2 * t; step++) {
+        uint8_t discrepancy = syndromes[step + 1];
+        for (int i = 1; i <= degree; i++)
+            discrepancy ^= multiply(locator[i], syndromes[step + 1 - i]);
+
+        if (discrepancy == 0U) {
+            shift++;
+            continue;
+        }
+
+        uint8_t saved[2 * t + 1];
+        for (int i = 0; i <= 2 * t; i++)
+            saved[i] = locator[i];
+
+        const uint8_t scale = multiply(discrepancy, inverse(previousDiscrepancy));
+        for (int i = 0; i + shift <= 2 * t; i++)
+            locator[i + shift] ^= multiply(scale, previous[i]);
+
+        if ((2 * degree) <= step) {
+            degree = step + 1 - degree;
+            for (int i = 0; i <= 2 * t; i++)
+                previous[i] = saved[i];
+            previousDiscrepancy = discrepancy;
+            shift = 1;
+        }
+        else {
+            shift++;
+        }
+    }
+
+    if ((degree <= 0) || (degree > t))
+        return false;
+
+    for (int polynomialPosition = 0; polynomialPosition < length; polynomialPosition++) {
+        const uint8_t root = alphaPower(-polynomialPosition);
+        uint8_t evaluation = locator[degree];
+        for (int i = degree - 1; i >= 0; i--)
+            evaluation = multiply(evaluation, root) ^ locator[i];
+
+        if (evaluation == 0U) {
+            const int bit = length - 1 - polynomialPosition;
+            WRITE_BIT(corrected, bit, READ_BIT(corrected, bit) == 0U);
+            errors++;
+        }
+    }
+
+    if (errors != static_cast<uint32_t>(degree))
+        return false;
+
+    for (int syndrome = 1; syndrome <= 2 * t; syndrome++) {
+        uint8_t value = 0U;
+        for (int bit = 0; bit < length; bit++) {
+            if (READ_BIT(corrected, bit) != 0U)
+                value ^= alphaPower(syndrome * (length - 1 - bit));
+        }
+        if (value != 0U)
+            return false;
+    }
+
+    ::memcpy(nid, corrected, sizeof(corrected));
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 //  Private Class Members
 // ---------------------------------------------------------------------------
+
+/* Multiplies two elements of GF(2^6). */
+
+uint8_t BCH::multiply(uint8_t a, uint8_t b)
+{
+    uint8_t product = 0U;
+
+    while (b != 0U) {
+        if ((b & 0x01U) != 0U)
+            product ^= a;
+
+        b >>= 1;
+        a <<= 1;
+        if ((a & fieldSize) != 0U)
+            a ^= primitivePolynomial;
+    }
+
+    return product;
+}
+
+/* Returns alpha raised to an exponent in GF(2^6). */
+
+uint8_t BCH::alphaPower(int exponent)
+{
+    while (exponent < 0)
+        exponent += length;
+    exponent %= length;
+
+    uint8_t value = 1U;
+    for (int i = 0; i < exponent; i++)
+        value = multiply(value, 0x02U);
+
+    return value;
+}
+
+/* Returns the multiplicative inverse of a nonzero GF(2^6) element. */
+
+uint8_t BCH::inverse(uint8_t value)
+{
+    assert(value != 0U);
+
+    uint8_t result = 1U;
+    for (int i = 0; i < fieldSize - 2; i++)
+        result = multiply(result, value);
+
+    return result;
+}
 
 /* Compute redundancy bb[], the coefficients of b(x). The redundancy polynomial b(x) is the 
    remainder after dividing x^(length-k)*data(x) by the generator polynomial g(x). */

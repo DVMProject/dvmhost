@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - MBE Vocoder
  * GPLv2 Open Source. Use is subject to license terms.
@@ -15,12 +15,16 @@
 #include "common/edac/Golay24128.h"
 #include "vocoder/MBEDecoder.h"
 
+#include <cassert>
+
 using namespace edac;
 using namespace vocoder;
 
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
+
+static const uint32_t IMBE_WORD_WIDTHS[8U] = {12U, 12U, 12U, 12U, 11U, 11U, 11U, 7U};
 
 const int MBEDecoder::dW[72] = { 0,0,3,2,1,1,0,0,1,1,0,0,3,2,1,1,3,2,1,1,0,0,3,2,0,0,3,2,1,1,0,0,1,1,0,0,3,2,1,1,3,2,1,1,0,0,3,2,0,0,3,2,1,1,0,0,1,1,0,0,3,2,1,1,3,3,2,1,0,0,3,3, };
 
@@ -70,12 +74,17 @@ const int MBEDecoder::rZ[36] = {
 /* Initializes a new instance of the MBEDecoder class. */
 
 MBEDecoder::MBEDecoder(MBE_DECODER_MODE mode) :
-    m_mbelibParms(NULL),
+    m_mbelibParms(nullptr),
+    m_imbeVocoder(nullptr),
     m_mbeMode(mode),
-    m_gainAdjust(1.0f)
+    m_gainAdjust(1.0f),
+    m_autoGain(false)
 {
     m_mbelibParms = new mbelibParms();
     mbe_initMbeParms(m_mbelibParms->m_cur_mp, m_mbelibParms->m_prev_mp, m_mbelibParms->m_prev_mp_enhanced);
+
+    if (m_mbeMode == DECODE_88BIT_IMBE)
+        m_imbeVocoder = new imbe_vocoder();
 
     ::memset(gainMaxBuf, 0, sizeof(float) * 200);
     gainMaxBufPtr = gainMaxBuf;
@@ -86,6 +95,7 @@ MBEDecoder::MBEDecoder(MBE_DECODER_MODE mode) :
 
 MBEDecoder::~MBEDecoder()
 {
+    delete m_imbeVocoder;
     delete m_mbelibParms;
 }
 
@@ -152,6 +162,42 @@ int32_t MBEDecoder::decodeBits(uint8_t* codeword, char* mbeBits)
     return errs;
 }
 
+/* Decodes a deinterleaved 49-bit AMBE payload to PCM samples. */
+
+int32_t MBEDecoder::decodeBits(const uint8_t* mbeBits, int16_t samples[])
+{
+    assert(mbeBits != nullptr);
+    assert(samples != nullptr);
+
+    if (m_mbeMode != DECODE_DMR_AMBE)
+        return -1;
+
+    char ambe[49U];
+    for (uint32_t i = 0U; i < 49U; i++)
+        ambe[i] = mbeBits[i] != 0U ? 1 : 0;
+
+    float decoded[160U];
+    int errs = 0;
+    int errs2 = 0;
+    char errStr[64U];
+    ::memset(errStr, 0x20U, sizeof(errStr));
+    mbe_processAmbe2450DataF(decoded, &errs, &errs2, errStr, ambe,
+        m_mbelibParms->m_cur_mp, m_mbelibParms->m_prev_mp,
+        m_mbelibParms->m_prev_mp_enhanced, 3);
+
+    for (uint32_t i = 0U; i < 160U; i++) {
+        float sample = decoded[i] * m_gainAdjust;
+        if (sample > 32760.0f)
+            sample = 32760.0f;
+        else if (sample < -32760.0f)
+            sample = -32760.0f;
+
+        samples[i] = static_cast<int16_t>(sample);
+    }
+
+    return errs2;
+}
+
 /* Decodes the given MBE codewords to PCM samples using the decoder mode. */
 
 int32_t MBEDecoder::decodeF(uint8_t* codeword, float samples[])
@@ -194,20 +240,22 @@ int32_t MBEDecoder::decodeF(uint8_t* codeword, float samples[])
 
     case DECODE_88BIT_IMBE:
     {
-        char imbe_d[88U];
-        ::memset(imbe_d, 0x00U, 88U);
+        int16_t frameVector[8U] = {0};
+        int16_t decoded[160U] = {0};
+        uint32_t offset = 0U;
 
-        for (int i = 0; i < 11; ++i) {
-            for (int j = 0; j < 8; j++) {
-                imbe_d[j + (8 * i)] = (1 & (codeword[i] >> (7 - j)));
+        for (uint32_t word = 0U; word < 8U; word++) {
+            for (uint32_t bit = 0U; bit < IMBE_WORD_WIDTHS[word]; bit++, offset++) {
+                frameVector[word] = static_cast<int16_t>((frameVector[word] << 1U) |
+                    ((codeword[offset / 8U] >> (7U - offset % 8U)) & 0x01U));
             }
         }
 
-        int ambeErrs;
-        char ambeErrStr[64U];
-        ::memset(ambeErrStr, 0x20U, 64U);
+        assert(m_imbeVocoder != nullptr);
+        m_imbeVocoder->imbe_decode(frameVector, decoded);
 
-        mbe_processImbe4400DataF(samples, &ambeErrs, &errs, ambeErrStr, imbe_d, m_mbelibParms->m_cur_mp, m_mbelibParms->m_prev_mp, m_mbelibParms->m_prev_mp_enhanced, 3);
+        for (uint32_t sample = 0U; sample < 160U; sample++)
+            samples[sample] = static_cast<float>(decoded[sample]);
     }
     break;
     }

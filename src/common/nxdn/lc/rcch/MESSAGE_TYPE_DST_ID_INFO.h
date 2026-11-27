@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -33,7 +33,7 @@ namespace nxdn
              * @brief Implements DST_ID_INFO - Digital Station ID
              * @ingroup nxdn_rcch
              */
-            class HOST_SW_API MESSAGE_TYPE_DST_ID_INFO : public RCCH {
+            class DVM_COMMON_API MESSAGE_TYPE_DST_ID_INFO : public RCCH {
             public:
                 /**
                  * @brief Initializes a new instance of the MESSAGE_TYPE_DST_ID_INFO class.

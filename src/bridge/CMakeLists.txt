@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: GPL-2.0-or-later
 #/*
 # * Digital Voice Modem - Bridge
 # * GPLv2 Open Source. Use is subject to license terms.
@@ -7,7 +7,7 @@
 # *  Copyright (C) 2024,2025 Bryan Biedenkapp, N2PLL
 # *
 # */
-file(GLOB bridge_SRC
+file(GLOB bridge_SRC CONFIGURE_DEPENDS
     "src/bridge/audio/*.h"
     "src/bridge/audio/*.c"
 

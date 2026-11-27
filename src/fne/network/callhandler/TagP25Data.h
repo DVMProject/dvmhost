@@ -4,7 +4,8 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  * 
- *  Copyright (C) 2023-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 Charles Bricker, K3NOP
  *
  */
 /**
@@ -29,7 +30,16 @@
 #include "common/p25/lc/TSBK.h"
 #include "common/p25/lc/TDULC.h"
 #include "network/TrafficNetwork.h"
+#include "network/callhandler/OrderedFrameQueue.h"
 #include "network/callhandler/packetdata/P25PacketData.h"
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
 
 namespace network
 {
@@ -57,6 +67,19 @@ namespace network
             ~TagP25Data();
 
             /**
+             * @brief Copies and enqueues a P25 Phase 1 frame in arrival order for its stream.
+             * @param data Network data buffer copied before this method returns.
+             * @param len Length of data in bytes.
+             * @param peerId Peer ID identifying the packet origin.
+             * @param ssrc RTP synchronization source ID.
+             * @param pktSeq RTP packet sequence.
+             * @param streamId Call stream ID.
+             * @param fromUpstream Flag indicating traffic is from an upstream master.
+             * @returns bool True if the frame was queued, otherwise false.
+             */
+            bool enqueueFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
+
+            /**
              * @brief Process a data frame from the network.
              * @param data Network data buffer.
              * @param len Length of data.
@@ -68,17 +91,20 @@ namespace network
              * @returns bool True, if frame is processed, otherwise false.
              */
             bool processFrame(const uint8_t* data, uint32_t len, uint32_t peerId, uint32_t ssrc, uint16_t pktSeq, uint32_t streamId, bool fromUpstream = false);
+
             /**
              * @brief Process a grant request frame from the network.
              * @param srcId Source Radio ID.
              * @param dstId Destination ID.
              * @param unitToUnit Flag indicating whether or not this grant is for unit-to-unit traffic.
+             * @param serviceOptions P25 service-options octet.
              * @param peerId Peer ID.
              * @param pktSeq RTP packet sequence.
              * @param streamId Stream ID.
              * @returns bool True, if the grant was processed, otherwise false.
              */
-            bool processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
+            bool processGrantReq(uint32_t srcId, uint32_t dstId, bool unitToUnit, uint8_t serviceOptions,
+                uint32_t peerId, uint16_t pktSeq, uint32_t streamId);
 
             /**
              * @brief Helper to trigger a call takeover from a In-Call control event.
@@ -151,6 +177,26 @@ namespace network
              */
             void write_TSDU_Ext_Func(uint32_t peerId, uint32_t func, uint32_t arg, uint32_t dstId);
             /**
+             * @brief Helper to write a status query.
+             * @param[in] peerId Peer ID.
+             * @param[in] dstId Destination Radio ID.
+             */
+            void write_TSDU_Status_Query(uint32_t peerId, uint32_t dstId);
+            /**
+             * @brief Helper to close a received status query response.
+             * @param[in] peerId Peer ID.
+             * @param[in] srcId Reporting Radio ID.
+             * @param[in] status Reported status value.
+             */
+            void write_TSDU_Status_Update(uint32_t peerId, uint32_t srcId, uint16_t status);
+            /**
+             * @brief Helper to write a coded message update.
+             * @param[in] peerId Peer ID.
+             * @param[in] dstId Destination Radio ID.
+             * @param[in] message Coded message value.
+             */
+            void write_TSDU_Message_Update(uint32_t peerId, uint32_t dstId, uint16_t message);
+            /**
              * @brief Helper to write a group affiliation query packet.
              * @param peerId Peer ID.
              * @param dstId Destination Radio ID.
@@ -169,8 +215,18 @@ namespace network
              */
             packetdata::P25PacketData* packetData() { return m_packetData; }
 
+            /**
+             * @brief Sets the debug flag.
+             * @param debug Debug flag.
+             */
+            void setDebug(bool debug);
+
         private:
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::FNETestHooks;
+#endif
             TrafficNetwork* m_network;
+            OrderedFrameQueue m_orderedFrames;
 
             /**
              * @brief Represents a stored parrot frame.
@@ -267,6 +323,7 @@ namespace network
             typedef std::pair<const uint32_t, RxStatus> StatusMapPair;
             concurrent::unordered_map<uint32_t, RxStatus> m_status;
             concurrent::unordered_map<uint32_t, RxStatus> m_statusPVCall;
+            concurrent::unordered_map<uint32_t, std::vector<uint32_t>> m_rejectedCallStreams;
 
             friend class packetdata::P25PacketData;
             packetdata::P25PacketData* m_packetData;
@@ -333,10 +390,38 @@ namespace network
              * @param control Instance of p25::lc::LC.
              * @param duid DUID.
              * @param[in] tsbk Instance of p25::lc::TSBK.
+             * @param frameType Frame Type.
              * @param streamId Stream ID.
              * @returns bool True, if valid, otherwise false.
              */
-            bool validate(uint32_t peerId, p25::lc::LC& control, P25DEF::DUID::E duid, const p25::lc::TSBK* tsbk, uint32_t streamId);
+            bool validate(uint32_t peerId, p25::lc::LC& control, P25DEF::DUID::E duid, const p25::lc::TSBK* tsbk, uint8_t frameType, uint32_t streamId);
+
+            /**
+             * @brief Helper to determine if the P25 traffic is telephone interconnect traffic.
+             * @param control Instance of p25::lc::LC.
+             * @param duid DUID.
+             * @param[in] tsbk Instance of p25::lc::TSBK.
+             * @returns bool True, if telephone interconnect traffic, otherwise false.
+             */
+            bool isTelIntTraffic(p25::lc::LC& control, P25DEF::DUID::E duid, const p25::lc::TSBK* tsbk);
+            /**
+             * @brief Helper to determine if the peer is a telephone interconnect gateway.
+             * @param peerId Peer ID.
+             * @returns bool True, if the peer is a telephone interconnect gateway, otherwise false.
+             */
+            bool isTelIntGateway(uint32_t peerId);
+            /**
+             * @brief Helper to determine if telephone interconnect traffic may be repeated to a peer. Traffic from a
+             *  site is only repeated to gateway peers, and traffic from a gateway is only repeated to the peer the
+             *  subscriber unit is registered to and its voice channel peers (or every site, if the registration is
+             *  unknown).
+             * @param srcPeerId Originating Peer ID.
+             * @param dstPeerId Destination Peer ID.
+             * @param dstConn Instance of the FNEPeerConnection for the destination peer.
+             * @param dstId Subscriber unit radio ID.
+             * @returns bool True, if permitted, otherwise false.
+             */
+            bool isTelIntPeerPermitted(uint32_t srcPeerId, uint32_t dstPeerId, const TrafficNetwork::PeerConnectionPtr& dstConn, uint32_t dstId);
 
             /**
              * @brief Helper to write a grant packet.
@@ -345,9 +430,11 @@ namespace network
              * @param dstId Destination ID.
              * @param serviceOptions Service Options.
              * @param grp Flag indicating the destination ID is a talkgroup.
+             * @param requestingPeer Flag indicating routing checks were already satisfied by the grant request.
              * @returns True, if granted, otherwise false.
              */
-            bool write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId, uint8_t serviceOptions, bool grp);
+            bool write_TSDU_Grant(uint32_t peerId, uint32_t srcId, uint32_t dstId,
+                uint8_t serviceOptions, bool grp, bool requestingPeer = false);
             /**
              * @brief Helper to write a deny packet.
              * @param peerId Peer ID.

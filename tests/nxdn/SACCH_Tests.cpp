@@ -39,7 +39,7 @@ TEST_CASE("SACCH encodes and decodes idle pattern", "[nxdn][sacch]") {
     REQUIRE(decoded.getStructure() == ChStructure::SR_SINGLE);
 
     // Verify data matches
-    uint8_t decodedData[3U];
+    uint8_t decodedData[3U] = {};
     decoded.getData(decodedData);
     REQUIRE(::memcmp(decodedData, SACCH_IDLE, 3U) == 0);
 }
@@ -157,7 +157,7 @@ TEST_CASE("SACCH handles multi-part structures", "[nxdn][sacch]") {
         REQUIRE(decoded.getStructure() == structure);
         REQUIRE(decoded.getRAN() == 7U);
 
-        uint8_t decodedData[3U];
+        uint8_t decodedData[3U] = {};
         decoded.getData(decodedData);
         Utils::dump(2U, "decodedData", decodedData, 3U);
         REQUIRE(::memcmp(decodedData, testData, 3U) == 0);

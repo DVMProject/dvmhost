@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2024,2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "Defines.h"
@@ -39,9 +39,10 @@ SNDCPCtxActAccept::SNDCPCtxActAccept() : SNDCPPacket(),
 
 /* Decode a SNDCP context activation response. */
 
-bool SNDCPCtxActAccept::decode(const uint8_t* data)
+bool SNDCPCtxActAccept::decode(const uint8_t* data, uint32_t length)
 {
-    assert(data != nullptr);
+    if (data == nullptr || length < 13U)
+        return false;
 
     /* stub */
 

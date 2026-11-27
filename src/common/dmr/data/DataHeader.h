@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -36,7 +36,7 @@ namespace dmr
          * @brief Represents the data header for PDU DMR packets.
          * @ingroup dmr_pdu
          */
-        class HOST_SW_API DataHeader {
+        class DVM_COMMON_API DataHeader {
         public:
             /**
              * @brief Initializes a copy instance of the DataHeader class.
@@ -192,13 +192,17 @@ namespace dmr
              */
             DECLARE_PROPERTY(uint8_t, dstPort, DstPort);
 
+            /** 
+             * @brief Unified Data Transport opcode (UDTHD/UDTHU).
+             */
+            DECLARE_PROPERTY(uint8_t, UDTO, UDTO);
+
         private:
             edac::BPTC19696 m_bptc;
 
             uint8_t* m_data;
             bool m_SF;
             bool m_PF;
-            uint8_t m_UDTO;
 
             /**
              * @brief Internal helper to copy the class.

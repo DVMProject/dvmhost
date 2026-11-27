@@ -26,6 +26,7 @@
 #include "common/yaml/Yaml.h"
 #include "common/Timer.h"
 #include "network/PeerNetwork.h"
+#include "mmdvm/DMRNetwork.h"
 #include "mmdvm/P25Network.h"
 
 #include <string>
@@ -76,6 +77,8 @@ private:
     uint8_t m_dstSlot;
     bool m_twoWayPatch;
 
+    bool m_mmdvmDMRGateway;
+    mmdvm::DMRNetwork* m_mmdvmDMRNet;
     bool m_mmdvmP25Reflector;
     mmdvm::P25Network* m_mmdvmP25Net;
     Timer m_mmdvmCallEndTimer;
@@ -141,13 +144,27 @@ private:
      * @returns bool True, if network connectivity was initialized, otherwise false.
      */
     bool createMMDVMP25Network();
+    /**
+     * @brief Initializes MMDVM DMRGateway connectivity.
+     * @returns bool True, if network connectivity was initialized, otherwise false.
+     */
+    bool createMMDVMDMRNetwork();
 
     /**
      * @brief Helper to process DMR network traffic.
-     * @param buffer 
-     * @param length 
+     * @param buffer DVM DMRD frame to process.
+     * @param length Length of the frame in bytes.
+     * @param fromMMDVM Flag indicating that the frame originated from DMRGateway.
      */
-    void processDMRNetwork(uint8_t* buffer, uint32_t length);
+    void processDMRNetwork(uint8_t* buffer, uint32_t length, bool fromMMDVM = false);
+
+    /**
+     * @brief Writes a rewritten DMR burst to its selected destination transport.
+     * @param[in] data DMR burst and metadata to write.
+     * @param toMMDVM Flag indicating that the destination is DMRGateway.
+     * @return bool True if the burst was written or queued, otherwise false.
+     */
+    bool writeDMR(dmr::data::NetData& data, bool toMMDVM);
 
     /**
      * @brief Helper to process P25 network traffic.

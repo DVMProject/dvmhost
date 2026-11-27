@@ -16,7 +16,9 @@
 #if !defined(__PEER_NETWORK_H__)
 #define __PEER_NETWORK_H__
 
-#include "Defines.h"
+#include "fne/Defines.h"
+#include "common/lookups/RadioAliasLookup.h"
+#include "common/json/json.h"
 #include "common/lookups/PeerListLookup.h"
 #include "common/network/Network.h"
 #include "common/network/PacketBuffer.h"
@@ -27,6 +29,10 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+
+#if defined(CATCH2_TEST_COMPILATION)
+class FNETestHooks;
+#endif
 
 namespace network
 {
@@ -61,7 +67,21 @@ namespace network
      * @ingroup fne_network
      */
     class HOST_SW_API PeerNetwork : public Network {
+#if defined(CATCH2_TEST_COMPILATION)
+        friend class ::FNETestHooks;
+#endif
     public:
+        /**
+         * @brief Callback for protocol packet processing.
+         * @param peer Pointer to the PeerNetwork instance.
+         * @param data Pointer to the packet data.
+         * @param length Length of the packet data.
+         * @param peerId Peer ID associated with the packet.
+         * @param fneHeader RTP FNE header.
+         * @param rtpHeader RTP header.
+         */
+        using ProtocolCallback = std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)>;
+
         /**
          * @brief Initializes a new instance of the PeerNetwork class.
          * @param address Network Hostname/IP address to connect to.
@@ -94,6 +114,11 @@ namespace network
          */
         void setMasterPeerId(uint32_t masterPeerId) { m_masterPeerId = masterPeerId; }
         /**
+         * @brief Sets the instnace of the Radio Alias lookup table.
+         * @param ridAliasLookup Radio Alias Lookup Table Instance
+         */
+        void setRadioAliasLookups(lookups::RadioAliasLookup* ridAliasLookup);
+        /**
          * @brief Sets the instances of the Peer List lookup tables.
          * @param pidLookup Peer List Lookup Table Instance
          */
@@ -114,22 +139,27 @@ namespace network
          * @brief Helper to set the DMR protocol callback.
          * @param callback 
          */
-        void setDMRCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_dmrCallback = callback; }
+        void setDMRCallback(ProtocolCallback&& callback) { m_dmrCallback = callback; }
         /**
          * @brief Helper to set the P25 protocol callback.
          * @param callback 
          */
-        void setP25Callback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_p25Callback = callback; }
+        void setP25Callback(ProtocolCallback&& callback) { m_p25Callback = callback; }
+        /**
+         * @brief Helper to set the P25 Phase 2 protocol callback.
+         * @param callback 
+         */
+        void setP25P2Callback(ProtocolCallback&& callback) { m_p25P2Callback = callback; }
         /**
          * @brief Helper to set the NXDN protocol callback.
          * @param callback 
          */
-        void setNXDNCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_nxdnCallback = callback; }
+        void setNXDNCallback(ProtocolCallback&& callback) { m_nxdnCallback = callback; }
         /**
          * @brief Helper to set the analog protocol callback.
          * @param callback 
          */
-        void setAnalogCallback(std::function<void(PeerNetwork*, const uint8_t*, uint32_t, uint32_t, const frame::RTPFNEHeader&, const frame::RTPHeader&)>&& callback) { m_analogCallback = callback; }
+        void setAnalogCallback(ProtocolCallback&& callback) { m_analogCallback = callback; }
 
         /**
          * @brief Helper to set the network tree disconnect callback.
@@ -138,9 +168,19 @@ namespace network
         void setNetTreeDiscCallback(std::function<void(PeerNetwork*, const uint32_t offendingPeerId)>&& callback) { m_netTreeDiscCallback = callback; }
         /**
          * @brief Helper to set the peer replica notification callback.
-         * @param callback 
+         * @param callback
          */
         void setNotifyPeerReplicaCallback(std::function<void(PeerNetwork*)>&& callback) { m_peerReplicaCallback = callback; }
+        /**
+         * @brief Helper to set the peer patch status callback.
+         * @param callback
+         */
+        void setPatchStatusCallback(std::function<void(PeerNetwork*, json::object)>&& callback) { m_patchStatusCallback = callback; }
+        /**
+         * @brief Sets the subscriber operation proxy response callback.
+         * @param callback Callback receiving the packed proxy response.
+         */
+        void setSubscriberOperationProxyCallback(std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId)>&& callback) { m_subscriberOperationProxyCallback = callback; }
 
         /**
          * @brief Writes a complete update of this CFNE's active peer list to the network.
@@ -235,6 +275,26 @@ namespace network
          * @returns bool True, if list was sent, otherwise false.
          */
         bool writeHAParams(std::vector<HAParameters>& haParams);
+        /**
+         * @brief Writes a complete console patch status update upstream.
+         * \code{.unparsed}
+         *  The patch status replication message is a JSON body, and is a packet
+         *  buffer compressed message.
+         *
+         *  {
+         *      "type": "publish",
+         *      "peerId": <Console Peer ID>,
+         *      "originFnePeerId": <Originating FNE Peer ID>,
+         *      "peerName": "<Console Peer Name>",
+         *      "sequence": <Console Sequence>,
+         *      "ttlSeconds": <TTL Seconds>,
+         *      "patches": []
+         *  }
+         * \endcode
+         * @param obj JSON patch status publish payload.
+         * @returns bool True, if patch status was sent, otherwise false.
+         */
+        bool writePatchStatus(json::object obj);
 
         /**
          * @brief Returns flag indicating whether or not this peer connection is peer replication enabled.
@@ -247,6 +307,14 @@ namespace network
          * @param enabled Flag to enable replicated ACL data saving.
          */
         void setPeerReplicationSaveACL(bool enabled) { m_peerReplicaSavesACL = enabled; }
+
+        /**
+         * @brief Set whether or not this peer has NAK fall-over enabled, and the amount of NAKs that will cause 
+         * this peer to fall over (restart).
+         * @param enabled Flag to enable NAK fall-over.
+         * @param count Number of NAKs that will trigger fall-over.
+         */
+        void setNakFallOver(bool enabled, uint32_t count) { m_nakFallOver = enabled; m_nakFallOverCountThreshold = count; }
 
         /**
          * @brief Gets the remote peer ID.
@@ -265,22 +333,27 @@ namespace network
          * @brief DMR Protocol Callback.
          *  (This is called when the master sends a DMR packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_dmrCallback;
+        ProtocolCallback m_dmrCallback;
         /**
          * @brief P25 Protocol Callback.
          *  (This is called when the master sends a P25 packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_p25Callback;
+        ProtocolCallback m_p25Callback;
+        /**
+         * @brief P25 Phase 2 Protocol Callback.
+         *  (This is called when the master sends a P25 Phase 2 packet.)
+         */
+        ProtocolCallback m_p25P2Callback;
         /**
          * @brief NXDN Protocol Callback.
          *  (This is called when the master sends a NXDN packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_nxdnCallback;
+        ProtocolCallback m_nxdnCallback;
         /**
          * @brief Analog Protocol Callback.
          *  (This is called when the master sends a analog packet.)
          */
-        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t streamId, const frame::RTPFNEHeader& fneHeader, const frame::RTPHeader& rtpHeader)> m_analogCallback;
+        ProtocolCallback m_analogCallback;
 
         /**
          * @brief Network Tree Disconnect Callback.
@@ -290,6 +363,14 @@ namespace network
          * @brief Peer Replica Notification Callback.
          */
         std::function<void(PeerNetwork* peer)> m_peerReplicaCallback;
+        /**
+         * @brief Peer patch status callback.
+         */
+        std::function<void(PeerNetwork* peer, json::object obj)> m_patchStatusCallback;
+        /**
+         * @brief Subscriber operation proxy response callback.
+         */
+        std::function<void(PeerNetwork* peer, const uint8_t* data, uint32_t length, uint32_t peerId)> m_subscriberOperationProxyCallback;
 
         /**
          * @brief User overrideable handler that allows user code to process network packets not handled by this class.
@@ -303,6 +384,14 @@ namespace network
          */
         void userPacketHandler(uint32_t peerId, FrameQueue::OpcodePair opcode, const uint8_t* data = nullptr, uint32_t length = 0U,
             uint32_t streamId = 0U, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader()) override;
+        /**
+         * @brief User overrideable handler that allows user code to process NAKs received from the master.
+         * @param peerId Peer ID.
+         * @param reason Reason code.
+         * @param fneHeader RTP FNE Header.
+         * @param rtpHeader RTP Header.
+         */
+        bool userNakHandler(uint32_t peerId, uint16_t reason, const frame::RTPFNEHeader& fneHeader = frame::RTPFNEHeader(), const frame::RTPHeader& rtpHeader = frame::RTPHeader()) override;
 
         /**
          * @brief Writes configuration to the network.
@@ -313,6 +402,7 @@ namespace network
     private:
         uint32_t m_masterPeerId;
 
+        lookups::RadioAliasLookup* m_ridAliasLookup;
         lookups::PeerListLookup* m_pidLookup;
         bool m_peerReplica;
         bool m_peerReplicaSavesACL;
@@ -320,10 +410,16 @@ namespace network
         PacketBuffer m_tgidPkt;
         PacketBuffer m_ridPkt;
         PacketBuffer m_pidPkt;
+        PacketBuffer m_ridAliasPkt;
+        PacketBuffer m_patchStatusPkt;
 
         ThreadPool m_threadPool;
 
         uint32_t m_prevSpanningTreeChildren;
+
+        bool m_nakFallOver;
+        uint32_t m_nakFallOverCount;
+        uint32_t m_nakFallOverCountThreshold;
 
         /**
          * @brief Entry point to process a given network packet.

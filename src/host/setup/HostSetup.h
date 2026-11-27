@@ -25,6 +25,7 @@
 #include "Defines.h"
 #include "common/edac/AMBEFEC.h"
 #include "common/lookups/IdenTableLookup.h"
+#include "common/p25/P25Defines.h"
 #include "common/yaml/Yaml.h"
 #include "common/RingBuffer.h"
 #include "common/StopWatch.h"
@@ -156,6 +157,7 @@ protected:
     bool m_nxdnEnabled;
 
     bool m_isHotspot;
+    bool m_isPTY;
 
     bool m_isConnected;
     bool m_debug;
@@ -256,6 +258,15 @@ protected:
      */
     void processDMR1KBER(const uint8_t* buffer, uint8_t seq);
     /**
+     * @brief Decodes and validates a P25 network identifier for BER processing.
+     * @param[in] buffer P25 frame containing the network identifier.
+     * @param[out] duid Corrected data unit ID.
+     * @param[out] nac Corrected network access code.
+     * @param[out] errs Number of corrected BCH and parity errors.
+     * @returns bool True, if the network identifier was decoded and validated, otherwise false.
+     */
+    bool decodeP25NID(const uint8_t* buffer, p25::defines::DUID::E& duid, uint32_t& nac, uint32_t& errs);
+    /**
      * @brief Process P25 Rx BER.
      * @param[in] buffer P25 data to measure for BER.
      */
@@ -324,7 +335,7 @@ protected:
     bool writeFlash();
 
     /**
-     * @brief 
+     * @brief Reboots the modem into ST bootloader mode.
      */
     void writeBootload();
 

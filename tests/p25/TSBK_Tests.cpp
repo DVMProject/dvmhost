@@ -4,12 +4,20 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2025-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "host/Defines.h"
 #include "common/p25/lc/tsbk/OSP_SCCB.h"
+#include "common/p25/lc/tsbk/OSP_SCCB_EXP.h"
+#include "common/p25/lc/tsbk/OSP_ADJ_STS_BCAST.h"
+#include "common/p25/lc/tsbk/OSP_SYS_SRV_BCAST.h"
+#include "common/p25/lc/tsbk/OSP_GRP_AFF_Q.h"
+#include "common/p25/lc/tsbk/ISP_GRP_AFF_Q_RSP.h"
 #include "common/p25/lc/tsbk/OSP_TSBK_RAW.h"
+#include "common/p25/lc/tsbk/TSBKFactory.h"
+#include "common/p25/data/DataBlock.h"
+#include "common/p25/data/DataHeader.h"
 #include "common/p25/P25Defines.h"
 #include "common/edac/CRC.h"
 #include "common/Log.h"
@@ -28,6 +36,375 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         REQUIRE(P25_TSBK_LENGTH_BYTES == 12);
         REQUIRE(P25_TSBK_FEC_LENGTH_BYTES == 25);
         REQUIRE(P25_TSBK_FEC_LENGTH_BITS == (P25_TSBK_FEC_LENGTH_BYTES * 8 - 4)); // 196 bits (Trellis)
+    }
+
+    SECTION("System_Service_Broadcast_Known_Bytes") {
+        const SiteData previousSiteData = TSBK::getSiteData();
+        SiteData siteData;
+        siteData.setNetActive(true);
+        siteData.setWuidValidity(0x02U);
+        TSBK::setSiteData(siteData);
+
+        OSP_SYS_SRV_BCAST source;
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        source.encode(raw, true, true);
+
+        const uint32_t expectedServices = SYS_SRV_TRUNK | SystemService::NET_ACTIVE;
+        const uint32_t servicesAvailable = GET_UINT24(raw, 3U)
+        const uint32_t servicesSupported = GET_UINT24(raw, 6U)
+        CHECK(raw[2U] == 0x02U);
+        CHECK(servicesAvailable == expectedServices);
+        CHECK(servicesSupported == expectedServices);
+        CHECK(raw[9U] == 0x00U);
+
+        OSP_SYS_SRV_BCAST broadcast;
+        REQUIRE(broadcast.decode(raw, true));
+        CHECK(broadcast.getWUIDValidity() == 0x02U);
+        CHECK(broadcast.getServicesAvailable() == expectedServices);
+        CHECK(broadcast.getServicesSupported() == expectedServices);
+        CHECK(broadcast.getRequestPriority() == 0x00U);
+
+        TSBK::setSiteData(previousSiteData);
+    }
+
+    SECTION("Secondary_Control_Channel_Broadcast_Known_Bytes") {
+        OSP_SCCB source;
+        source.setSCCBRFSSId(0x21U);
+        source.setSCCBSiteId(0x43U);
+        source.setSCCBChnId1(0x1567U);
+        source.setSCCBSvcClass1(0xA5U);
+        source.setSCCBChnId2(0x2ABCU);
+        source.setSCCBSvcClass2(0x5AU);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        source.encode(raw, true, true);
+
+        const uint8_t expected[] = { 0x21U, 0x43U, 0x15U, 0x67U, 0xA5U, 0x2AU, 0xBCU, 0x5AU };
+        CHECK(::memcmp(raw + 2U, expected, sizeof(expected)) == 0);
+
+        OSP_SCCB decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getSCCBRFSSId() == 0x21U);
+        CHECK(decoded.getSCCBSiteId() == 0x43U);
+        CHECK(decoded.getSCCBChnId1() == 0x1567U);
+        CHECK(decoded.getSCCBSvcClass1() == 0xA5U);
+        CHECK(decoded.getSCCBChnId2() == 0x2ABCU);
+        CHECK(decoded.getSCCBSvcClass2() == 0x5AU);
+    }
+
+    SECTION("Secondary_Control_Channel_Broadcast_Explicit_Known_Bytes") {
+        OSP_SCCB_EXP source;
+        source.setSCCBRFSSId(0x21U);
+        source.setSCCBSiteId(0x43U);
+        source.setSCCBChnId1(0x01U);
+        source.setSCCBChnNo(0x567U);
+        source.setSCCBChnId2(0x02U);
+        source.setSCCBChnNo2(0xABCU);
+        source.setSCCBSvcClass(0xA5U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        source.encode(raw, true, true);
+
+        const uint8_t expected[] = { 0x21U, 0x43U, 0x15U, 0x67U, 0x00U, 0x2AU, 0xBCU, 0xA5U };
+        CHECK(::memcmp(raw + 2U, expected, sizeof(expected)) == 0);
+
+        OSP_SCCB_EXP decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getSCCBRFSSId() == 0x21U);
+        CHECK(decoded.getSCCBSiteId() == 0x43U);
+        CHECK(decoded.getSCCBChnId1() == 0x01U);
+        CHECK(decoded.getSCCBChnNo() == 0x567U);
+        CHECK(decoded.getSCCBChnId2() == 0x02U);
+        CHECK(decoded.getSCCBChnNo2() == 0xABCU);
+        CHECK(decoded.getSCCBSvcClass() == 0xA5U);
+    }
+
+    SECTION("Adjacent_Status_Broadcast_Known_Bytes") {
+        OSP_ADJ_STS_BCAST source;
+        source.setAdjSiteLRA(0x12U);
+        source.setAdjSiteCFVA(0x0BU);
+        source.setAdjSiteSysId(0x345U);
+        source.setAdjSiteRFSSId(0x67U);
+        source.setAdjSiteId(0x89U);
+        source.setAdjSiteChnId(0x0AU);
+        source.setAdjSiteChnNo(0xBCDU);
+        source.setAdjSiteSvcClass(0x5AU);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        source.encode(raw, true, true);
+
+        const uint8_t expected[] = { 0x12U, 0xB3U, 0x45U, 0x67U, 0x89U, 0xABU, 0xCDU, 0x5AU };
+        CHECK(::memcmp(raw + 2U, expected, sizeof(expected)) == 0);
+
+        OSP_ADJ_STS_BCAST decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getAdjSiteLRA() == 0x12U);
+        CHECK(decoded.getAdjSiteCFVA() == 0x0BU);
+        CHECK(decoded.getAdjSiteSysId() == 0x345U);
+        CHECK(decoded.getAdjSiteRFSSId() == 0x67U);
+        CHECK(decoded.getAdjSiteId() == 0x89U);
+        CHECK(decoded.getAdjSiteChnId() == 0x0AU);
+        CHECK(decoded.getAdjSiteChnNo() == 0xBCDU);
+        CHECK(decoded.getAdjSiteSvcClass() == 0x5AU);
+    }
+
+    SECTION("Group_Affiliation_Query_Known_Bytes") {
+        OSP_GRP_AFF_Q query;
+        query.setDstId(0x123456U);
+        query.setSrcId(WUID_FNE);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        query.encode(raw, true, true);
+
+        CHECK(raw[2U] == 0x00U);
+        CHECK(raw[3U] == 0x00U);
+        CHECK(raw[4U] == 0x12U);
+        CHECK(raw[5U] == 0x34U);
+        CHECK(raw[6U] == 0x56U);
+        CHECK(raw[7U] == 0xFFU);
+        CHECK(raw[8U] == 0xFFU);
+        CHECK(raw[9U] == 0xFCU);
+
+        OSP_GRP_AFF_Q decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getDstId() == 0x123456U);
+        CHECK(decoded.getSrcId() == WUID_FNE);
+    }
+
+    SECTION("Group_Affiliation_Query_Response_Known_Bytes") {
+        ISP_GRP_AFF_Q_RSP response;
+        response.setEmergency(true);
+        response.setAnnounceGroup(0x2468U);
+        response.setDstId(0x1357U);
+        response.setSrcId(0x123456U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        response.encode(raw, true, true);
+
+        CHECK(raw[2U] == 0x80U);
+        CHECK(raw[3U] == 0x24U);
+        CHECK(raw[4U] == 0x68U);
+        CHECK(raw[5U] == 0x13U);
+        CHECK(raw[6U] == 0x57U);
+        CHECK(raw[7U] == 0x12U);
+        CHECK(raw[8U] == 0x34U);
+        CHECK(raw[9U] == 0x56U);
+
+        ISP_GRP_AFF_Q_RSP decoded;
+        REQUIRE(decoded.decode(raw, true));
+        CHECK(decoded.getEmergency());
+        CHECK(decoded.getAnnounceGroup() == 0x2468U);
+        CHECK(decoded.getDstId() == 0x1357U);
+        CHECK(decoded.getSrcId() == 0x123456U);
+    }
+
+    SECTION("Emergency_Alarm_Request_Roundtrip") {
+        ISP_EMERG_ALRM_REQ source;
+        source.setSpecialInfo1(0x01U);
+        source.setSpecialInfo2(0x00U);
+        source.setDstId(0x2345U);
+        source.setSrcId(0x654321U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        source.encode(raw, true, true);
+
+        const uint16_t groupId = GET_UINT16(raw, 5U);
+        const uint32_t srcId = GET_UINT24(raw, 7U);
+        REQUIRE((raw[0U] & 0x3FU) == TSBKO::ISP_EMERG_ALRM_REQ);
+        REQUIRE(raw[2U] == 0x01U);
+        REQUIRE(raw[3U] == 0x00U);
+        REQUIRE(raw[4U] == 0x00U);
+        REQUIRE(groupId == 0x2345U);
+        REQUIRE(srcId == 0x654321U);
+
+        std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+        REQUIRE(decoded != nullptr);
+        ISP_EMERG_ALRM_REQ* alarm = dynamic_cast<ISP_EMERG_ALRM_REQ*>(decoded.get());
+        REQUIRE(alarm != nullptr);
+        CHECK(alarm->getEmergency());
+        CHECK(alarm->getSpecialInfo1() == 0x01U);
+        CHECK(alarm->getSpecialInfo2() == 0x00U);
+        CHECK(alarm->getDstId() == 0x2345U);
+        CHECK(alarm->getSrcId() == 0x654321U);
+    }
+
+    SECTION("Emergency_Alarm_Cancel_Roundtrip") {
+        ISP_CAN_SRV_REQ source;
+        source.setAIV(true);
+        source.setService(TSBKO::ISP_EMERG_ALRM_REQ);
+        source.setResponse(0U);
+        source.setDstId(0x800000U | 0x2345U);
+        source.setSrcId(0x654321U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        source.encode(raw, true, true);
+
+        std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+        REQUIRE(decoded != nullptr);
+        ISP_CAN_SRV_REQ* cancel = dynamic_cast<ISP_CAN_SRV_REQ*>(decoded.get());
+        REQUIRE(cancel != nullptr);
+        CHECK(cancel->getAIV());
+        CHECK(cancel->getService() == TSBKO::ISP_EMERG_ALRM_REQ);
+        CHECK(cancel->getResponse() == 0U);
+        CHECK(cancel->getDstId() == (0x800000U | 0x2345U));
+        CHECK(cancel->getSrcId() == 0x654321U);
+    }
+
+    SECTION("Emergency_Alarm_ACK_Uses_System_Default_Source") {
+        IOSP_ACK_RSP ack;
+        ack.setAIV(true);
+        ack.setEX(false);
+        ack.setService(TSBKO::ISP_EMERG_ALRM_REQ);
+        ack.setDstId(WUID_SYSTEM);
+        ack.setSrcId(0x654321U);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES];
+        ::memset(raw, 0x00U, sizeof(raw));
+        ack.encode(raw, true, true);
+
+        const uint32_t sourceId = GET_UINT24(raw, 4U);
+        const uint32_t targetId = GET_UINT24(raw, 7U);
+        CHECK((raw[2U] & 0xC0U) == 0x80U);
+        CHECK(targetId == 0x654321U);
+        CHECK(sourceId == WUID_SYSTEM);
+    }
+
+    SECTION("Message_Update_Uses_16_Bit_Message_Value") {
+        const uint16_t messageValues[] = { 0x0000U, 0x1234U, 0xFFFFU };
+        for (uint16_t messageValue : messageValues) {
+            IOSP_MSG_UPDT source;
+            source.setMessage(messageValue);
+            source.setDstId(0x123456U);
+            source.setSrcId(0x654321U);
+
+            uint8_t raw[P25_TSBK_LENGTH_BYTES];
+            ::memset(raw, 0x00U, sizeof(raw));
+            source.encode(raw, true, true);
+
+            const uint16_t rawMessage = GET_UINT16(raw, 2U);
+            const uint32_t rawDstId = GET_UINT24(raw, 4U);
+            const uint32_t rawSrcId = GET_UINT24(raw, 7U);
+            CHECK(rawMessage == messageValue);
+            CHECK(rawDstId == 0x123456U);
+            CHECK(rawSrcId == 0x654321U);
+
+            std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+            REQUIRE(decoded != nullptr);
+            IOSP_MSG_UPDT* message = dynamic_cast<IOSP_MSG_UPDT*>(decoded.get());
+            REQUIRE(message != nullptr);
+            CHECK(message->getMessage() == messageValue);
+            CHECK(message->getDstId() == 0x123456U);
+            CHECK(message->getSrcId() == 0x654321U);
+        }
+    }
+
+    SECTION("Status_Update_Uses_16_Bit_Status_Value") {
+        const uint16_t statusValues[] = { 0x0000U, 0x1234U, 0xFFFFU };
+        for (uint16_t statusValue : statusValues) {
+            IOSP_STS_UPDT source;
+            source.setStatus(statusValue);
+            source.setDstId(0x123456U);
+            source.setSrcId(0x654321U);
+
+            uint8_t raw[P25_TSBK_LENGTH_BYTES];
+            ::memset(raw, 0x00U, sizeof(raw));
+            source.encode(raw, true, true);
+
+            const uint16_t rawStatus = GET_UINT16(raw, 2U);
+            const uint32_t rawDstId = GET_UINT24(raw, 4U);
+            const uint32_t rawSrcId = GET_UINT24(raw, 7U);
+            CHECK(rawStatus == statusValue);
+            CHECK(rawDstId == 0x123456U);
+            CHECK(rawSrcId == 0x654321U);
+
+            std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+            REQUIRE(decoded != nullptr);
+            IOSP_STS_UPDT* status = dynamic_cast<IOSP_STS_UPDT*>(decoded.get());
+            REQUIRE(status != nullptr);
+            CHECK(status->getStatus() == statusValue);
+            CHECK(status->getDstId() == 0x123456U);
+            CHECK(status->getSrcId() == 0x654321U);
+        }
+    }
+
+    SECTION("Status_Query_Uses_Reserved_Zero_And_Decodes_Response") {
+        OSP_STS_Q query;
+        query.setStatus(0xFFFFU);
+        query.setDstId(0x123456U);
+        query.setSrcId(WUID_FNE);
+
+        uint8_t raw[P25_TSBK_LENGTH_BYTES] = { 0U };
+        query.encode(raw, true, true);
+        const uint16_t reserved = GET_UINT16(raw, 2U);
+        CHECK(reserved == 0U);
+
+        ISP_STS_Q_RSP response;
+        response.setStatus(0x4321U);
+        response.setDstId(WUID_FNE);
+        response.setSrcId(0x123456U);
+        response.encode(raw, true, true);
+
+        std::unique_ptr<TSBK> decoded = TSBKFactory::createTSBK(raw, true);
+        REQUIRE(decoded != nullptr);
+        ISP_STS_Q_RSP* decodedResponse = dynamic_cast<ISP_STS_Q_RSP*>(decoded.get());
+        REQUIRE(decodedResponse != nullptr);
+        CHECK(decodedResponse->getStatus() == 0x4321U);
+        CHECK(decodedResponse->getSrcId() == 0x123456U);
+    }
+
+    SECTION("Standard_Unconfirmed_MBT_TELE_INT_DIAL_REQ") {
+        const uint8_t counts[] = { 1U, 10U, 11U, 34U };
+        for (uint8_t count : counts) {
+            MBT_ISP_TELE_INT_DIAL_REQ source;
+            source.setSrcId(0x654321U);
+            source.setEmergency(true);
+            source.setEncrypted(true);
+            source.setDuplex(true);
+            source.setPacketMode(false);
+            source.setPriority(5U);
+
+            uint8_t expectedDigits[34U];
+            for (uint8_t i = 0U; i < count; i++)
+                expectedDigits[i] = i % 12U;
+            REQUIRE(source.setDialDigits(expectedDigits, count));
+
+            data::DataHeader header;
+            uint8_t raw[2U * P25_PDU_UNCONFIRMED_LENGTH_BYTES] = { 0U };
+            source.encodeMBT(header, raw);
+
+            CHECK(header.getFormat() == PDUFormatType::UNCONFIRMED);
+            CHECK(header.getSAP() == PDUSAP::TRUNK_CTRL);
+            CHECK_FALSE(header.getOutbound());
+            CHECK(header.getBlocksToFollow() == ((count <= 10U) ? 1U : 2U));
+
+            data::DataBlock blocks[2U];
+            for (uint8_t i = 0U; i < header.getBlocksToFollow(); i++) {
+                blocks[i].setFormat(header);
+                blocks[i].setData(raw + (i * P25_PDU_UNCONFIRMED_LENGTH_BYTES));
+            }
+
+            std::unique_ptr<AMBT> decoded = TSBKFactory::createAMBT(header, blocks);
+            REQUIRE(decoded != nullptr);
+            MBT_ISP_TELE_INT_DIAL_REQ* dial = dynamic_cast<MBT_ISP_TELE_INT_DIAL_REQ*>(decoded.get());
+            REQUIRE(dial != nullptr);
+            CHECK(dial->getLCO() == TSBKO::IOSP_TELE_INT_DIAL);
+            CHECK(dial->getSrcId() == source.getSrcId());
+            CHECK(dial->getDigitCount() == count);
+            CHECK(dial->getEmergency());
+            CHECK(dial->getEncrypted());
+            CHECK(dial->getDuplex());
+            CHECK_FALSE(dial->getPacketMode());
+            CHECK(dial->getPriority() == 5U);
+
+            uint8_t actualDigits[34U] = { 0U };
+            CHECK(dial->getDialDigits(actualDigits) == count);
+            CHECK(::memcmp(actualDigits, expectedDigits, count) == 0);
+        }
     }
 
     SECTION("RawTSBK_Encode_Decode_NoTrellis") {
@@ -257,6 +634,22 @@ TEST_CASE("TSBK", "[p25][tsbk]") {
         REQUIRE(result == true);
         REQUIRE(tsbk2.getLCO() == 0x00);
         REQUIRE(tsbk2.getMFId() == 0x00);
+    }
+
+    SECTION("RawTSBK_Reports_Invalid_CRC_But_Decodes") {
+        OSP_TSBK_RAW tsbk;
+
+        uint8_t rawTSBK[P25_TSBK_LENGTH_BYTES];
+        ::memset(rawTSBK, 0x00U, P25_TSBK_LENGTH_BYTES);
+        rawTSBK[0] = 0x34;
+        rawTSBK[1] = 0x00;
+        edac::CRC::addCCITT162(rawTSBK, P25_TSBK_LENGTH_BYTES);
+        rawTSBK[P25_TSBK_LENGTH_BYTES - 1U] ^= 0xFFU;
+
+        REQUIRE_FALSE(edac::CRC::checkCCITT162(rawTSBK, P25_TSBK_LENGTH_BYTES, true));
+        REQUIRE(tsbk.decode(rawTSBK, true));
+        REQUIRE(tsbk.getLCO() == 0x34U);
+        REQUIRE(tsbk.getMFId() == 0x00U);
     }
 
     SECTION("AllOnes_Pattern") {

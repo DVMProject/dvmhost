@@ -31,4 +31,17 @@
 #undef __EXE_NAME__ 
 #define __EXE_NAME__ "dvmhost"
 
+/**
+ * @brief RF Frame Loss Types
+ */
+enum RPT_RF_LOSS_TYPE {
+    RF_LOSS_TYPE_TG_HANG_NOT_LISTENING,
+    RF_LOSS_TYPE_LOSS_WATCHDOG,
+    RF_LOSS_TYPE_EXCEEDED_FRAME_THRESHOLD,
+
+    RF_LOSS_TYPE_IN_CALL_CONTROL,
+
+    RF_LOSS_TYPE_UNKNOWN
+};
+
 #endif // __DEFINES_H__

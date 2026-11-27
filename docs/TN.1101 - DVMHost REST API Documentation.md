@@ -1,7 +1,7 @@
 # DVM Host REST API Technical Documentation
 
-**Version:** 1.0  
-**Date:** December 3, 2025  
+**Version:** 1.1
+**Date:** November 22, 2026
 **Author:** AI Assistant (based on source code analysis)
 
 AI WARNING: This document was mainly generated using AI assistance. As such, there is the possibility of some error or inconsistency. Examples in Section 13 are *strictly* examples only for how the API *could* be used.
@@ -14,7 +14,7 @@ AI WARNING: This document was mainly generated using AI assistance. As such, the
 2. [Authentication](#2-authentication)
 3. [System Endpoints](#3-system-endpoints)
 4. [Modem Control](#4-modem-control)
-5. [Trunking and Supervisory Control](#5-trunking-and-supervisory-control)
+5. [Trunking and Traffic Permit Control](#5-trunking-and-traffic-permit-control)
 6. [Radio ID Lookup](#6-radio-id-lookup)
 7. [DMR Protocol Endpoints](#7-dmr-protocol-endpoints)
 8. [P25 Protocol Endpoints](#8-p25-protocol-endpoints)
@@ -32,9 +32,8 @@ The DVM (Digital Voice Modem) Host REST API provides a comprehensive interface f
 
 ### 1.1 Base Configuration
 
-**Default Ports:**
-- HTTP: User-configurable (typically 9990)
-- HTTPS: User-configurable (typically 9443)
+**Listener Port:**
+- HTTP or HTTPS: `network.restPort` (default `9990`); enabling TLS changes the transport, not the configured port
 
 **Transport:**
 - Protocol: HTTP/1.1 or HTTPS
@@ -43,7 +42,7 @@ The DVM (Digital Voice Modem) Host REST API provides a comprehensive interface f
 
 **SSL/TLS Support:**
 - Optional HTTPS with certificate-based security
-- Configurable via `keyFile` and `certFile` parameters
+- Configurable via `network.restSsl`, `network.restSslKey`, and `network.restSslCertificate`
 - Uses OpenSSL when `ENABLE_SSL` is defined
 
 ### 1.2 API Architecture
@@ -533,99 +532,9 @@ Content-Type: application/json
 
 ---
 
-## 5. Trunking and Supervisory Control
+## 5. Trunking and Traffic Permit Control
 
-### 5.1 Endpoint: PUT /set-supervisor
-
-**Method:** `PUT`
-
-**Description:** Enable or disable supervisory (trunking) mode for the host.
-
-**Request Headers:**
-```
-X-DVM-Auth-Token: {token}
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "state": 4,
-  "enable": true
-}
-```
-
-**Request Fields:**
-- `state` (required, integer): Protocol state value
-  - `4` = DMR
-  - `5` = P25
-  - `6` = NXDN
-- `enable` (required, boolean): Enable (`true`) or disable (`false`) supervisory mode
-
-**Response (Success):**
-```json
-{
-  "status": 200,
-  "message": "OK"
-}
-```
-
-**Response Fields:**
-- `status`: HTTP status code (200)
-- `message`: Always `"OK"`
-
-**Error Responses:**
-
-**Host Not Authoritative:**
-```json
-{
-  "status": 400,
-  "message": "Host is not authoritative, cannot set supervisory state"
-}
-```
-
-**Invalid State Parameter:**
-```json
-{
-  "status": 400,
-  "message": "state was not a valid integer"
-}
-```
-
-**Invalid Enable Parameter:**
-```json
-{
-  "status": 400,
-  "message": "enable was not a boolean"
-}
-```
-
-**Invalid State Value:**
-```json
-{
-  "status": 400,
-  "message": "invalid mode"
-}
-```
-
-**Protocol Not Enabled:**
-```json
-{
-  "status": 503,
-  "message": "DMR mode is not enabled"
-}
-```
-*Similar messages for P25 and NXDN protocols*
-
-**Notes:**
-- Only available when host is configured as authoritative (`authoritative: true` in config)
-- Supervisory mode enables trunking control features for the specified protocol
-- The host must have the requested protocol enabled in its configuration
-- Each protocol (DMR, P25, NXDN) has independent supervisory mode settings
-
----
-
-### 5.2 Endpoint: PUT /permit-tg
+### 5.1 Endpoint: PUT /permit-tg
 
 **Method:** `PUT`
 
@@ -756,7 +665,7 @@ Content-Type: application/json
 
 ---
 
-### 5.3 Endpoint: PUT /grant-tg
+### 5.2 Endpoint: PUT /grant-tg
 
 **Method:** `PUT`
 
@@ -922,7 +831,7 @@ Content-Type: application/json
 
 ---
 
-### 5.4 Endpoint: GET /release-grants
+### 5.3 Endpoint: GET /release-grants
 
 **Method:** `GET`
 
@@ -961,7 +870,7 @@ X-DVM-Auth-Token: {token}
 
 ---
 
-### 5.5 Endpoint: GET /release-affs
+### 5.4 Endpoint: GET /release-affs
 
 **Method:** `GET`
 
@@ -1665,6 +1574,8 @@ X-DVM-Auth-Token: {token}
 ### 8.1 Endpoint: GET /p25/cc
 
 **Method:** `GET`
+
+The header also reserves `/p25/cc-fallback/{enable}`, but the current host REST dispatcher does not register that route; clients must not treat it as an available endpoint.
 
 **Description:** Fire a P25 control channel transmission.
 
@@ -2995,14 +2906,6 @@ or
 }
 ```
 
-**Unauthorized Operation:**
-```json
-{
-  "status": 400,
-  "message": "Host is not authoritative, cannot set supervisory state"
-}
-```
-
 **Protocol Conflicts:**
 ```json
 {
@@ -3108,7 +3011,7 @@ or
 
 - **Mode changes:** Use caution when changing modes during active traffic
 - **Kill command:** Restricted to authorized administrators
-- **Supervisory mode:** Only enable on authoritative/master hosts
+- **Traffic permits:** Restrict permit operations to trusted control channels and management systems
 - **Raw TSBK:** Advanced feature requiring protocol knowledge
 
 ---
@@ -3805,7 +3708,6 @@ if __name__ == "__main__":
 | GET | /voice-ch | Get voice channel states | Yes | N/A |
 | PUT | /mdm/mode | Set modem mode | Yes | N/A |
 | PUT | /mdm/kill | Shutdown host | Yes | N/A |
-| PUT | /set-supervisor | Set supervisory mode | Yes | N/A |
 | PUT | /permit-tg | Permit talkgroup | Yes | All |
 | PUT | /grant-tg | Grant voice channel | Yes | All |
 | GET | /release-grants | Release all grants | Yes | All |
@@ -3815,7 +3717,7 @@ if __name__ == "__main__":
 | GET | /dmr/beacon | Fire DMR beacon | Yes | DMR |
 | GET | /dmr/debug[/{debug}/{verbose}] | Get/Set DMR debug | Yes | DMR |
 | GET | /dmr/dump-csbk[/{enable}] | Get/Set CSBK dump | Yes | DMR |
-| PUT | /dmr/rid | DMR RID operations (7 commands) | Yes | DMR |
+| PUT | /dmr/rid | DMR RID operations (4 commands) | Yes | DMR |
 | GET | /dmr/cc-enable | Toggle DMR CC | Yes | DMR |
 | GET | /dmr/cc-broadcast | Toggle DMR CC broadcast | Yes | DMR |
 | GET | /dmr/report-affiliations | Get DMR affiliations | Yes | DMR |
@@ -3835,12 +3737,11 @@ if __name__ == "__main__":
 
 ### Command Summaries
 
-**DMR /rid Commands (7 total):**
+**DMR /rid Commands (4 total):**
 - `page` - Page radio
 - `check` - Radio check
 - `inhibit` - Inhibit radio
 - `uninhibit` - Uninhibit radio
-- `dmr-setmfid` - Set manufacturer ID
 
 **P25 /rid Commands (12 total):**
 - `p25-setmfid` - Set manufacturer ID
@@ -3863,27 +3764,20 @@ if __name__ == "__main__":
 ### REST API Configuration (YAML)
 
 ```yaml
-restApi:
-  # Enable REST API
-  enable: true
-  
-  # Bind address (0.0.0.0 = all interfaces)
-  address: 0.0.0.0
-  
-  # Port number
-  port: 9990
-  
-  # SHA-256 hashed password (plaintext - hashed internally)
-  password: "your_secure_password"
-  
-  # SSL/TLS Configuration (optional)
-  ssl:
-    enable: false
-    keyFile: /path/to/private.key
-    certFile: /path/to/certificate.crt
-  
-  # Enable debug logging
-  debug: false
+network:
+    # Enable REST API.
+    restEnable: true
+    # Bind address (0.0.0.0 = all interfaces).
+    restAddress: 127.0.0.1
+    # Port used for HTTP or HTTPS.
+    restPort: 9990
+    # Enable HTTPS/TLS.
+    restSsl: false
+    restSslCertificate: web.crt
+    restSslKey: web.key
+    # Plain-text server password; clients send SHA-256(password) to /auth.
+    restPassword: "PASSWORD"
+    restDebug: false
 ```
 
 ---
@@ -3907,6 +3801,7 @@ restApi:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | Dec 3, 2025 | Initial documentation based on source code analysis |
+| 1.1 | Nov 22, 2026 | Corrected listener/TLS configuration and DMR RID command count |
 
 ---
 

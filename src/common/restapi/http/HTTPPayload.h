@@ -49,7 +49,7 @@ namespace restapi
          *  HTTP client/server.
          * @ingroup http
          */
-        struct HTTPPayload {
+        struct DVM_COMMON_API HTTPPayload {
             /**
              * @brief HTTP Status/Response Codes
              */

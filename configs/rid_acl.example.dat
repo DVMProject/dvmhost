@@ -7,7 +7,11 @@
 #   * ENABLED           [REQUIRED] - Flag indicating whether or not this radio ID entry is enabled and valid.
 #   * ALIAS             [OPTIONAL] - Textual string representing an alias for this radio ID entry.
 #   * IP ADDRESS        [OPTIONAL] - IP Address assigned to this radio ID.
+#   * CAN REQUEST KEYS  [OPTIONAL] - Flag indicating whether this RID can request keys. (1 = Enabled / 0 = Disabled)
+#   * CAN REKEY         [OPTIONAL] - Flag indicating whether this RID can receive OTAR rekey payloads. (1 = Enabled / 0 = Disabled)
+#   * ALLOWED KIDS      [OPTIONAL] - Pipe-delimited list of allowed 16-bit key IDs for this RID in hexadecimal. (e.g. 0064|0101|0A50)
+#                                       If this list is left empty/blank, the RID is assumed to be allowed to request any/all keys.
 #
-# Entry Format: "RID,Enabled (1 = Enabled / 0 = Disabled),Optional Alias,Optional IP Address,<newline>"
+# Entry Format: "RID,Enabled (1 = Enabled / 0 = Disabled),Optional Alias,Optional IP Address,Can Request Keys,Can Rekey,Allowed KIDs,<newline>"
 # Example:
-#1234,1,RID Alias,IP Address,
+#1234,1,RID Alias,IP Address,1,1,0064|0101,

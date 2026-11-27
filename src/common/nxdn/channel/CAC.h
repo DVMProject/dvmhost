@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -31,7 +31,7 @@ namespace nxdn
          * @brief Implements NXDN Common Access Channel.
          * @ingroup nxdn_ch
          */
-        class HOST_SW_API CAC {
+        class DVM_COMMON_API CAC {
         public:
             /**
              * @brief Initializes a new instance of the CAC class.

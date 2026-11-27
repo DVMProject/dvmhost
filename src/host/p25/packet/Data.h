@@ -6,6 +6,7 @@
  *
  *  Copyright (C) 2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017-2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2026 David Andrzejewski
  *
  */
 /**
@@ -27,8 +28,19 @@
 #include "p25/Control.h"
 
 #include <cstdio>
+#include <deque>
+#include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
+// ---------------------------------------------------------------------------
+//  Class Prototypes
+// ---------------------------------------------------------------------------
+
+#if defined(CATCH2_TEST_COMPILATION)
+class HostTestHooks;
+#endif
 
 namespace p25
 {
@@ -78,13 +90,6 @@ namespace p25
             /** @} */
 
             /**
-             * @brief Helper to check if a logical link ID has registered with data services.
-             * @param llId Logical Link ID.
-             * @returns bool True, if ID has registered, otherwise false.
-             */
-            bool hasLLIdFNEReg(uint32_t llId) const;
-
-            /**
              * @brief Helper to write user data as a P25 PDU packet.
              * @param dataHeader Instance of a PDU data header.
              * @param extendedAddress Flag indicating whether or not extended addressing is in use.
@@ -92,7 +97,7 @@ namespace p25
              * @param pduUserData Buffer containing user data to transmit.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              */
-            void writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm = false);
+            bool writeRF_PDU_User(data::DataHeader& dataHeader, bool extendedAddress, bool auxiliaryES, uint8_t* pduUserData, bool imm = false);
             /**
              * @brief Helper to write user data as a P25 PDU packet.
              * @param dataHeader Instance of a PDU data header.
@@ -129,6 +134,9 @@ namespace p25
 
         private:
             friend class p25::Control;
+#if defined(CATCH2_TEST_COMPILATION)
+            friend class ::HostTestHooks;
+#endif
             Control* m_p25;
 
             RPT_RF_STATE m_prevRfState;
@@ -142,16 +150,41 @@ namespace p25
             uint16_t m_netDataBlockCnt;
             uint16_t m_netTotalBlocks;
 
-            uint8_t* m_retryPDUData;
-            uint32_t m_retryPDUBitLength;
-            uint8_t m_retryCount;
+            /**
+             * @brief Structure to maintain the retry state of a PDU.
+             */
+            struct RetryPDUState {
+                /**
+                 * @brief Buffer containing the PDU data.
+                 */
+                std::vector<uint8_t> data;
+                /**
+                 * @brief Length of the PDU in bits.
+                 */
+                uint32_t bitLength = 0U;
+                /**
+                 * @brief Number of times the PDU has been retried.
+                 */
+                uint8_t retryCount = 0U;
+            };
+            std::unordered_map<uint32_t, RetryPDUState> m_retryPDUState;
+
+            struct PendingPDU {
+                std::vector<uint8_t> data;
+                uint32_t bitLength = 0U;
+                bool imm = false;
+                bool ackRetry = false;
+                uint32_t retryLlId = 0U;
+                bool trackRetry = false;
+            };
+            std::deque<PendingPDU> m_pendingPDUs;
+            uint32_t m_pduPacingRemainingMs;
+            std::mutex m_pduPacingMutex;
 
             uint8_t* m_rfPduUserData;
             uint32_t m_rfPduUserDataLength;
             uint8_t* m_netPduUserData;
             uint32_t m_netPduUserDataLength;
-
-            std::unordered_map<uint32_t, uint32_t> m_fneRegTable;
 
             std::unordered_map<uint32_t, defines::SNDCPState::E> m_sndcpStateTable;
             std::unordered_map<uint32_t, Timer> m_sndcpReadyTimers;
@@ -184,13 +217,24 @@ namespace p25
              * @param pduUserData Buffer containing user data to transmit.
              * @returns bool True, if conventional data registration data was processed, otherwise false.
              */
-            bool processConvDataReg(const uint8_t* pduUserData);
+            bool processConvDataReg(const uint8_t* pduUserData, uint32_t length);
             /**
              * @brief Helper used to process SNDCP control data from PDU data.
              * @param pduUserData Buffer containing user data to transmit.
+             * @param length Length of the SNDCP control data in bytes.
              * @returns bool True, if SNDCP control data was processed, otherwise false.
              */
-            bool processSNDCPControl(const uint8_t* pduUserData);
+            bool processSNDCPControl(const uint8_t* pduUserData, uint32_t length);
+
+            /**
+             * @brief Helper to copy the encoded data block that follows a response header out of a
+             *  received RF PDU (e.g. the selective retry flags of an ACK RETRY response).
+             * @param[in] rfPDU Received RF PDU bits, starting with the preamble.
+             * @param rfPDUBits Number of valid bits held in rfPDU.
+             * @param[out] block Buffer of at least P25_PDU_FEC_LENGTH_BYTES receiving the encoded block.
+             * @returns bool True if the data block was received and copied; otherwise, false.
+             */
+            static bool getResponseDataBlock(const uint8_t* rfPDU, uint32_t rfPDUBits, uint8_t* block);
 
             /**
              * @brief Write data processed from RF to the network.
@@ -205,33 +249,45 @@ namespace p25
              * @brief Helper to reset received network blocks.
              */
             void resetReceivedBlocks();
+            /**
+             * @brief Helper to determine whether an RF PDU is held by, or still spaced by, the native-modem pacing guard.
+             * @returns bool True, if an RF PDU is held or the pacing guard is running, otherwise false.
+             */
+            bool isRFPDUPaced();
 
             /**
-             * @brief Helper to write a P25 PDU packet.
+             * @brief Helper to queue a complete P25 PDU packet.
              * @param[in] pdu Constructed PDU to transmit.
              * @param bitlength Length of PDU in bits.
              * @param imm Flag indicating the PDU should be written to the immediate queue.
              * @param ackRetry Flag indicating the PDU is being sent as an acknowledged retry.
+             * @param retryLlId Logical Link ID for retrying the PDU.
+             * @param trackRetry Flag indicating whether or not to track the retry.
              */
-            void writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false, bool ackRetry = false);
+            bool queueRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm = false, bool ackRetry = false,
+                uint32_t retryLlId = 0U, bool trackRetry = false);
+            /**
+             * @brief Helper to write a complete P25 PDU transaction without applying the native-modem guard.
+             * @param pdu Constructed PDU to transmit.
+             * @param bitLength Length of PDU in bits.
+             * @param imm Flag indicating the PDU should be written to the immediate queue.
+             * @param ackRetry Flag indicating the PDU is being sent as an acknowledged retry.
+             * @param retryLlId Logical Link ID for retrying the PDU.
+             * @param trackRetry Flag indicating whether or not to track the retry.
+             * @returns bool True, if the PDU was successfully written, otherwise false.
+             */
+            bool writeRF_PDU(const uint8_t* pdu, uint32_t bitLength, bool imm, bool ackRetry,
+                uint32_t retryLlId, bool trackRetry);
             /**
              * @brief Helper to write a network P25 PDU packet.
              * This will take buffered network PDU data and repeat it over the air.
              */
-            void writeNet_PDU_Buffered();
+            bool writeNet_PDU_Buffered();
             /**
              * @brief Helper to re-write a received P25 PDU packet.
              * This will take buffered received PDU data and repeat it over the air.
              */
             void writeRF_PDU_Buffered();
-            /**
-             * @brief Helper to write a PDU registration response.
-             * @param regType Registration Response.
-             * @param llId Logical Link ID.
-             * @param ipAddr 
-             * @param mfId 
-             */
-            void writeRF_PDU_Reg_Response(uint8_t regType, uint32_t llId, uint32_t ipAddr);
             /**
              * @brief Helper to write a PDU acknowledge response.
              * @param ackClass Acknowledgement Class.

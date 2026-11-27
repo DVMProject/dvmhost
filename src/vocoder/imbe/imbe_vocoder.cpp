@@ -61,3 +61,31 @@ imbe_vocoder::imbe_vocoder(void) :
     decode_init(&my_imbe_param);
     encode_init();
 }
+
+/* Generates the next stream-local pseudo-random sample. */
+
+Word16 imbe_vocoder::randGen(void)
+{
+    UWord32 lo = 16807U * (seed & 0xFFFFU);
+    const UWord32 hi = 16807U * (seed >> 16);
+
+    lo += (hi & 0x7FFFU) << 16;
+    lo += hi >> 15;
+
+    if (lo > 0x7FFFFFFFU)
+        lo -= 0x7FFFFFFFU;
+
+    seed = lo;
+    return static_cast<Word16>(lo);
+}
+
+/* Prepares stream-local random excitation without data-dependent advancement. */
+
+void imbe_vocoder::prepareRandomFrame(void)
+{
+    for (Word16 i = 0; i < NUM_HARMS_MAX; i++)
+        phaseRandom[i] = randGen();
+
+    for (Word16 i = 0; i < FFTLENGTH; i++)
+        unvoicedRandom[i] = randGen();
+}

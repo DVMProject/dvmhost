@@ -6,7 +6,7 @@
  *
  *  Copyright (C) 2015,2016,2017 Jonathan Naylor, G4KLX
  *  Copyright (C) 2017,2018 Andy Uribe, CA6JAU
- *  Copyright (C) 2021-2024 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2021-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "common/dmr/DMRDefines.h"
@@ -20,9 +20,11 @@
 #include "common/nxdn/NXDNDefines.h"
 #include "common/nxdn/channel/LICH.h"
 #include "common/nxdn/NXDNUtils.h"
+#include "common/edac/BCH.h"
 #include "common/edac/CRC.h"
 #include "modem/port/ModemNullPort.h"
 #include "modem/port/UARTPort.h"
+#include "modem/port/PseudoPTYPort.h"
 #include "common/Log.h"
 #include "common/Utils.h"
 #include "setup/HostSetup.h"
@@ -50,6 +52,8 @@ using namespace lookups;
 // ---------------------------------------------------------------------------
 //  Constants
 // ---------------------------------------------------------------------------
+
+const uint32_t P25_NID_MAX_ERRS = 11U;
 
 // Voice LC MS Header, CC: 1, srcID: 1, dstID: TG9
 const uint8_t VH_DMO1K[] = {
@@ -122,6 +126,7 @@ HostSetup::HostSetup(const std::string& confFile) :
     m_p25TduTest(false),
     m_nxdnEnabled(false),
     m_isHotspot(false),
+    m_isPTY(false),
     m_isConnected(false),
     m_debug(false),
     m_mode(STATE_DMR_CAL_1K),
@@ -800,7 +805,7 @@ bool HostSetup::createModem(bool consoleDisplay)
     if (portType == NULL_PORT) {
         modemPort = new port::ModemNullPort();
     }
-    else if (portType == UART_PORT) {
+    else if (portType == UART_PORT || portType == PTY_PORT) {
         port::SERIAL_SPEED serialSpeed = port::SERIAL_115200;
         switch (uartSpeed) {
         case 1200:
@@ -837,14 +842,22 @@ bool HostSetup::createModem(bool consoleDisplay)
             break;
         }
 
-        if (modemMode == MODEM_MODE_DFSI) {
-                modemPort = new port::UARTPort(uartPort, serialSpeed, false, true);
-                LogInfo("    RTS/DTR boot flags enabled");
-        } else {
-            modemPort = new port::UARTPort(uartPort, serialSpeed, true, false);
+        if (portType == PTY_PORT) {
+            modemPort = new port::UARTPort(uartPort, serialSpeed, false, false);
+            LogInfo("    PTY Port: %s", uartPort.c_str());
+            LogInfo("    PTY Speed: %u", uartSpeed);
+            m_isPTY = true;
         }
-        LogInfo("    UART Port: %s", uartPort.c_str());
-        LogInfo("    UART Speed: %u", uartSpeed);
+        else {
+            if (modemMode == MODEM_MODE_DFSI) {
+                    modemPort = new port::UARTPort(uartPort, serialSpeed, false, true);
+                    LogInfo("    RTS/DTR boot flags enabled");
+            } else {
+                modemPort = new port::UARTPort(uartPort, serialSpeed, true, false);
+            }
+            LogInfo("    UART Port: %s", uartPort.c_str());
+            LogInfo("    UART Speed: %u", uartSpeed);
+        }
     }
 
     LogInfo("    RX Invert: %s", rxInvert ? "yes" : "no");
@@ -1102,6 +1115,50 @@ void HostSetup::processDMR1KBER(const uint8_t* buffer, uint8_t seq)
     updateTUIBER(ber);
 }
 
+/* Decodes and validates a P25 network identifier for BER processing. */
+
+bool HostSetup::decodeP25NID(const uint8_t* buffer, p25::defines::DUID::E& duid, uint32_t& nac, uint32_t& errs)
+{
+    using namespace p25::defines;
+
+    uint8_t nid[P25_NID_LENGTH_BYTES];
+    p25::P25Utils::decode(buffer, nid, 48U, 114U);
+
+    edac::BCH bch;
+    errs = 0U;
+    if (!bch.decode(nid, errs)) {
+        return false;
+    }
+
+    const uint8_t duidValue = nid[1U] & 0x0FU;
+    const bool expectedParity = (((duidValue >> 1U) ^ duidValue) & 0x01U) != 0U;
+    const bool receivedParity = (nid[7U] & 0x01U) != 0U;
+    if (receivedParity != expectedParity) {
+        errs++;
+    }
+
+    if (errs > P25_NID_MAX_ERRS) {
+        return false;
+    }
+
+    switch (duidValue) {
+    case DUID::HDU:
+    case DUID::TDU:
+    case DUID::LDU1:
+    case DUID::TSDU:
+    case DUID::PDU:
+    case DUID::LDU2:
+    case DUID::TDULC:
+        duid = static_cast<DUID::E>(duidValue);
+        break;
+    default:
+        return false;
+    }
+
+    nac = ((uint32_t(nid[0U]) << 4U) | (uint32_t(nid[1U]) >> 4U)) & 0xFFFU;
+    return true;
+}
+
 /* Process P25 Rx BER. */
 
 void HostSetup::processP25BER(const uint8_t* buffer)
@@ -1119,9 +1176,18 @@ void HostSetup::processP25BER(const uint8_t* buffer)
     LogInfoEx(LOG_CAL, "P25, sync word, errs = %u, sync word = %02X %02X %02X %02X %02X %02X", syncErrs,
         sync[0U], sync[1U], sync[2U], sync[3U], sync[4U], sync[5U]);
 
-    uint8_t nid[P25_NID_LENGTH_BYTES];
-    P25Utils::decode(buffer, nid, 48U, 114U);
-    DUID::E duid = (DUID::E)(nid[1U] & 0x0FU);
+    DUID::E duid = DUID::HDU;
+    uint32_t nac = 0U;
+    uint32_t nidErrs = 0U;
+    if (!decodeP25NID(buffer, duid, nac, nidErrs)) {
+        LogWarning(LOG_CAL, "P25, uncorrectable NID");
+        m_berUncorrectable++;
+        return;
+    }
+
+    if (nidErrs > 0U) {
+        LogInfoEx(LOG_CAL, "P25, NID decoded with errors, errs = %u", nidErrs);
+    }
 
     uint32_t errs = 0U;
     uint8_t imbe[18U];
@@ -1137,7 +1203,7 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogInfoEx(LOG_CAL, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+            LogInfoEx(LOG_CAL, P25_HDU_STR ", nac = $%03X, dstId = %u, algo = %X, kid = %X", nac, lc.getDstId(), lc.getAlgId(), lc.getKId());
 
             uint8_t mi[MI_LENGTH_BYTES];
             ::memset(mi, 0x00U, MI_LENGTH_BYTES);
@@ -1181,8 +1247,8 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogInfoEx(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
-                lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
+            LogInfoEx(LOG_CAL, P25_LDU1_STR " LC, nac = $%03X, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
+                nac, lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
         P25Utils::decode(buffer, imbe, 114U, 262U);
@@ -1236,8 +1302,8 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogInfoEx(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
-                lc.getMFId(), lc.getAlgId(), lc.getKId());
+            LogInfoEx(LOG_CAL, P25_LDU2_STR " LC, nac = $%03X, mfId = $%02X, algo = %X, kid = %X",
+                nac, lc.getMFId(), lc.getAlgId(), lc.getKId());
 
             uint8_t mi[MI_LENGTH_BYTES];
             ::memset(mi, 0x00U, MI_LENGTH_BYTES);
@@ -1314,8 +1380,8 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             Utils::dump(1U, "P25, Unfixable PDU Data", pduBuffer, P25_PDU_FEC_LENGTH_BYTES);
         }
         else {
-            LogInfoEx(LOG_CAL, P25_PDU_STR ", ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
-                dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
+            LogInfoEx(LOG_CAL, P25_PDU_STR ", nac = $%03X, ack = %u, outbound = %u, fmt = $%02X, mfId = $%02X, sap = $%02X, fullMessage = %u, blocksToFollow = %u, padLength = %u, n = %u, seqNo = %u, lastFragment = %u, hdrOffset = %u",
+                nac, dataHeader.getAckNeeded(), dataHeader.getOutbound(), dataHeader.getFormat(), dataHeader.getMFId(), dataHeader.getSAP(), dataHeader.getFullMessage(),
                 dataHeader.getBlocksToFollow(), dataHeader.getPadLength(), dataHeader.getNs(), dataHeader.getFSN(), dataHeader.getLastFragment(),
                 dataHeader.getHeaderOffset());
         }
@@ -1334,8 +1400,8 @@ void HostSetup::processP25BER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogInfoEx(LOG_CAL, P25_TSDU_STR ", mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, netId = %u, sysId = %u",
-                tsbk->getMFId(), tsbk->getLCO(), tsbk->getSrcId(), tsbk->getDstId(), tsbk->getService(), tsbk->getNetId(), tsbk->getSysId());
+            LogInfoEx(LOG_CAL, P25_TSDU_STR ", nac = $%03X, mfId = $%02X, lco = $%02X, srcId = %u, dstId = %u, service = %u, netId = %u, sysId = %u",
+                nac, tsbk->getMFId(), tsbk->getLCO(), tsbk->getSrcId(), tsbk->getDstId(), tsbk->getService(), tsbk->getNetId(), tsbk->getSysId());
         }
     }
 }
@@ -1347,9 +1413,18 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
     using namespace p25::defines;
     using namespace p25;
 
-    uint8_t nid[P25_NID_LENGTH_BYTES];
-    P25Utils::decode(buffer, nid, 48U, 114U);
-    DUID::E duid = (DUID::E)(nid[1U] & 0x0FU);
+    DUID::E duid = DUID::HDU;
+    uint32_t nac = 0U;
+    uint32_t nidErrs = 0U;
+    if (!decodeP25NID(buffer, duid, nac, nidErrs)) {
+        LogWarning(LOG_CAL, "P25, uncorrectable NID");
+        m_berUncorrectable++;
+        return;
+    }
+
+    if (nidErrs > 0U) {
+        LogInfoEx(LOG_CAL, "P25, NID decoded with errors, errs = %u", nidErrs);
+    }
 
     uint32_t errs = 0U;
     lc::LC lc = lc::LC();
@@ -1363,7 +1438,7 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogInfoEx(LOG_RF, P25_HDU_STR ", dstId = %u, algo = %X, kid = %X", lc.getDstId(), lc.getAlgId(), lc.getKId());
+            LogInfoEx(LOG_RF, P25_HDU_STR ", nac = $%03X, dstId = %u, algo = %X, kid = %X", nac, lc.getDstId(), lc.getAlgId(), lc.getKId());
         }
 
         m_berBits = 0U;
@@ -1399,8 +1474,8 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogInfoEx(LOG_CAL, P25_LDU1_STR " LC, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
-                lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
+            LogInfoEx(LOG_CAL, P25_LDU1_STR " LC, nac = $%03X, mfId = $%02X, lco = $%02X, emerg = %u, encrypt = %u, prio = %u, group = %u, srcId = %u, dstId = %u",
+                nac, lc.getMFId(), lc.getLCO(), lc.getEmergency(), lc.getEncrypted(), lc.getPriority(), lc.getGroup(), lc.getSrcId(), lc.getDstId());
         }
 
         for (uint32_t i = 0U; i < 216U; i++)
@@ -1430,8 +1505,8 @@ void HostSetup::processP251KBER(const uint8_t* buffer)
             m_berUndecodableLC++;
         }
         else {
-            LogInfoEx(LOG_CAL, P25_LDU2_STR " LC, mfId = $%02X, algo = %X, kid = %X",
-                lc.getMFId(), lc.getAlgId(), lc.getKId());
+            LogInfoEx(LOG_CAL, P25_LDU2_STR " LC, nac = $%03X, mfId = $%02X, algo = %X, kid = %X",
+                nac, lc.getMFId(), lc.getAlgId(), lc.getKId());
         }
 
         for (uint32_t i = 0U; i < 216U; i++)
@@ -2076,7 +2151,7 @@ bool HostSetup::writeFlash()
     return true;
 }
 
-/* */
+/* Reboots the modem into ST bootloader mode. */
 
 void HostSetup::writeBootload()
 {

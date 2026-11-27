@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -80,6 +80,13 @@ bool AccessControl::validateTGId(uint32_t slotNo, uint32_t id)
     } else {
         return true;
     }
+}
+
+/* Validates whether a radio ID is admitted to a talkgroup. */
+
+bool AccessControl::validateTGAccess(uint32_t slotNo, uint32_t srcId, uint32_t dstId)
+{
+    return m_tidLookup->isRIDPermitted(dstId, static_cast<uint8_t>(slotNo), srcId);
 }
 
 /* Helper to determine if a talkgroup ID is non-preferred. */

@@ -41,7 +41,9 @@ TEST_CASE("RS452620 preserves all-zero payload", "[edac][rs452620]") {
     rs.encode452620(data);
     Utils::dump(2U, "encode452620()", data, 34U);
 
-    REQUIRE(rs.decode452620(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode452620(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 19.5 bytes (26 symbols * 6 bits = 156 bits) should be zero
     for (size_t i = 0; i < 19U; i++) {
@@ -57,7 +59,9 @@ TEST_CASE("RS452620 preserves all-ones payload", "[edac][rs452620]") {
     rs.encode452620(data);
     Utils::dump(2U, "encode452620()", data, 34U);
 
-    REQUIRE(rs.decode452620(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode452620(data, &errs));
+    REQUIRE(errs == 9);
 
     // First 19 bytes should be 0xFF
     for (size_t i = 0; i < 19U; i++) {
@@ -78,7 +82,9 @@ TEST_CASE("RS452620 preserves alternating pattern", "[edac][rs452620]") {
     rs.encode452620(data);
     Utils::dump(2U, "encode452620()", data, 34U);
 
-    REQUIRE(rs.decode452620(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode452620(data, &errs));
+    REQUIRE(errs == 9);
 
     // Verify first 19 bytes (data portion) match
     REQUIRE(::memcmp(data, original, 19U) == 0);
@@ -97,7 +103,9 @@ TEST_CASE("RS452620 preserves incrementing pattern", "[edac][rs452620]") {
     rs.encode452620(data);
     Utils::dump(2U, "encode452620()", data, 34U);
 
-    REQUIRE(rs.decode452620(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode452620(data, &errs));
+    REQUIRE(errs == 9);
 
     REQUIRE(::memcmp(data, original, 19U) == 0);
 }
@@ -127,10 +135,12 @@ TEST_CASE("RS452620 corrects symbol errors", "[edac][rs452620]") {
         corrupted[pos] ^= 0x3FU; // Flip 6 bits (1 symbol)
 
         RS634717 rsDec;
-        bool decoded = rsDec.decode452620(corrupted);
+        int8_t errs = -1;
+        bool decoded = rsDec.decode452620(corrupted, &errs);
 
         // RS(45,26,20) can correct up to 9 symbol errors
         if (decoded) {
+            REQUIRE(errs == 1);
             REQUIRE(::memcmp(corrupted, original, 19U) == 0);
         }
     }
@@ -157,7 +167,9 @@ TEST_CASE("RS452620 corrects multiple symbol errors", "[edac][rs452620]") {
     injectSymbolError(data, 15, 0x01);  // Corrupt data symbol 15 with single bit
     injectSymbolError(data, 20, 0x01);  // Corrupt data symbol 20 with single bit
 
-    REQUIRE(rs.decode452620(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode452620(data, &errs));
+    REQUIRE(errs == 3);
     REQUIRE(::memcmp(data, original, 19U) == 0);
 }
 
@@ -179,6 +191,8 @@ TEST_CASE("RS452620 detects uncorrectable errors", "[edac][rs452620]") {
         data[i] ^= 0xFFU;
     }
 
-    bool result = rs.decode452620(data);
-    REQUIRE(!result);
+    int8_t errs = -1;
+    bool result = rs.decode452620(data, &errs);
+    REQUIRE_FALSE(result);
+    REQUIRE(errs == -1);
 }

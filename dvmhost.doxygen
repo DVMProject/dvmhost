@@ -971,6 +971,7 @@ EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */build/*
 EXCLUDE_PATTERNS      += */tests/*
 EXCLUDE_PATTERNS      += */cmake/*
+EXCLUDE_PATTERNS      += */fw/v24/*
 EXCLUDE_PATTERNS      += */STM32F10X_Platform/*
 EXCLUDE_PATTERNS      += */STM32F4XX_Platform/*
 EXCLUDE_PATTERNS      += */STM32F4XX_Platform/*

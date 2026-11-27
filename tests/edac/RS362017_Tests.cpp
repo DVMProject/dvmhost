@@ -26,7 +26,9 @@ TEST_CASE("RS362017 preserves all-zero payload", "[edac][rs362017]") {
     rs.encode362017(data);
     Utils::dump(2U, "encode362017()", data, 27U);
 
-    REQUIRE(rs.decode362017(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode362017(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 15 bytes (20 symbols * 6 bits = 120 bits) should be zero
     for (size_t i = 0; i < 15U; i++) {
@@ -42,7 +44,9 @@ TEST_CASE("RS362017 preserves all-ones payload", "[edac][rs362017]") {
     rs.encode362017(data);
     Utils::dump(2U, "encode362017()", data, 27U);
 
-    REQUIRE(rs.decode362017(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode362017(data, &errs));
+    REQUIRE(errs == 0);
 
     // First 15 bytes should be 0xFF
     for (size_t i = 0; i < 15U; i++) {
@@ -63,7 +67,9 @@ TEST_CASE("RS362017 preserves alternating pattern", "[edac][rs362017]") {
     rs.encode362017(data);
     Utils::dump(2U, "encode362017()", data, 27U);
 
-    REQUIRE(rs.decode362017(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode362017(data, &errs));
+    REQUIRE(errs == 0);
 
     // Verify first 15 bytes (data portion) match
     REQUIRE(::memcmp(data, original, 15U) == 0);
@@ -82,7 +88,9 @@ TEST_CASE("RS362017 preserves incrementing pattern", "[edac][rs362017]") {
     rs.encode362017(data);
     Utils::dump(2U, "encode362017()", data, 27U);
 
-    REQUIRE(rs.decode362017(data));
+    int8_t errs = -1;
+    REQUIRE(rs.decode362017(data, &errs));
+    REQUIRE(errs == 0);
 
     REQUIRE(::memcmp(data, original, 15U) == 0);
 }
@@ -112,12 +120,13 @@ TEST_CASE("RS362017 corrects symbol errors", "[edac][rs362017]") {
         corrupted[pos] ^= 0x3FU; // Flip 6 bits (1 symbol)
 
         RS634717 rsDec;
-        bool decoded = rsDec.decode362017(corrupted);
+        int8_t errs = -1;
+        bool decoded = rsDec.decode362017(corrupted, &errs);
 
         // RS(36,20,17) can correct up to 8 symbol errors
-        if (decoded) {
-            REQUIRE(::memcmp(corrupted, original, 15U) == 0);
-        }
+        REQUIRE(decoded);
+        REQUIRE(errs >= 0);
+        REQUIRE(::memcmp(corrupted, original, 15U) == 0);
     }
 }
 
@@ -139,6 +148,8 @@ TEST_CASE("RS362017 detects uncorrectable errors", "[edac][rs362017]") {
         data[i] ^= 0xFFU;
     }
 
-    bool result = rs.decode362017(data);
-    REQUIRE(!result);
+    int8_t errs = -1;
+    bool result = rs.decode362017(data, &errs);
+    REQUIRE_FALSE(result);
+    REQUIRE(errs == -1);
 }

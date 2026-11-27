@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Digital Voice Modem - Common Library
  * GPLv2 Open Source. Use is subject to license terms.
@@ -35,7 +35,7 @@ namespace p25
              *  EXT FNCT CMD - Extended Function Command (OSP)
              * @ingroup p25_ambt
              */
-            class HOST_SW_API MBT_IOSP_EXT_FNCT : public AMBT {
+            class DVM_COMMON_API MBT_IOSP_EXT_FNCT : public AMBT {
             public:
                 /**
                  * @brief Initializes a new instance of the MBT_IOSP_EXT_FNCT class.

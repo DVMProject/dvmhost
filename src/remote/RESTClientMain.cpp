@@ -4,7 +4,7 @@
  * GPLv2 Open Source. Use is subject to license terms.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- *  Copyright (C) 2023,2024,2025 Bryan Biedenkapp, N2PLL
+ *  Copyright (C) 2023-2026 Bryan Biedenkapp, N2PLL
  *
  */
 #include "remote/RESTClient.h"
@@ -41,7 +41,13 @@
 #define RCD_FNE_GET_PEERCOUNT           "fne-peercount"
 #define RCD_FNE_GET_TGIDLIST            "fne-tgidlist"
 #define RCD_FNE_GET_FORCEUPDATE         "fne-force-update"
+#define RCD_FNE_GET_UNITREGS            "fne-unitregs"
 #define RCD_FNE_GET_AFFLIST             "fne-affs"
+#define RCD_FNE_GET_GRANTLIST           "fne-grants"
+
+#define RCD_FNE_GET_RID_OPERATION       "fne-rid-operation"
+#define RCD_FNE_GET_P25_RID_STATUS      "fne-p25-rid-status"
+
 #define RCD_FNE_GET_RELOADTGS           "fne-reload-tgs"
 #define RCD_FNE_GET_RELOADRIDS          "fne-reload-rids"
 #define RCD_FNE_GET_RELOADPEERLIST      "fne-reload-peerlist"
@@ -59,6 +65,7 @@
 #define RCD_FNE_SAVE_PEER_ACL           "fne-peer-commit"
 
 #define RCD_FNE_GET_STATS               "fne-stats"
+#define RCD_FNE_GET_HEALTH              "fne-health"
 #define RCD_FNE_PUT_RESET_TOTAL_CALLS   "fne-reset-total-calls"
 #define RCD_FNE_PUT_RESET_ACTIVE_CALLS  "fne-reset-active-calls"
 #define RCD_FNE_PUT_RESET_CALL_COLLISIONS "fne-reset-call-collisions"
@@ -186,7 +193,7 @@ void usage(const char* message, const char* arg)
         ::fprintf(stderr, "\n\n");
     }
 
-    ::fprintf(stdout, 
+    ::fprintf(stdout,
         "usage: %s [-dvhs]"
         "[-a <address>]"
         "[-p <port>]"
@@ -220,7 +227,11 @@ void usage(const char* message, const char* arg)
     reply += "  fne-peercount               Retrieves the count of connected peers (Converged FNE only)\r\n";
     reply += "  fne-tgidlist                Retrieves the list of configured TGIDs (Converged FNE only)\r\n";
     reply += "  fne-force-update            Forces the FNE to send list update (Converged FNE only)\r\n";
+    reply += "  fne-unitregs                Retrieves the list of currently registered unit IDs (Converged FNE only)\r\n";
     reply += "  fne-affs                    Retrieves the list of currently affiliated SUs (Converged FNE only)\r\n";
+    reply += "  fne-grants                  Retrieves the list of currently granted talkgroups (Converged FNE only)\r\n";
+    reply += "  fne-rid-operation <opid>    Retrieves a subscriber operation result (Converged FNE only)\r\n";
+    reply += "  fne-p25-rid-status <rid>    Retrieves the latest P25 status for a RID (Converged FNE only)\r\n";
     reply += "  fne-reload-tgs              Forces the FNE to reload its TGID list from disk (Converged FNE only)\r\n";
     reply += "  fne-reload-rids             Forces the FNE to reload its RID list from disk (Converged FNE only)\r\n";
     reply += "  fne-reload-peerlist         Forces the FNE to reload its peer list from disk (Converged FNE only)\r\n";
@@ -403,7 +414,7 @@ std::string getArgString(std::vector<std::string> args, uint32_t n)
 
 /*  */
 
-uint64_t getArgUInt64(std::vector<std::string> args, uint32_t n) { return (uint64_t)::atol(getArgString(args, n).c_str()); }
+uint64_t getArgUInt64(std::vector<std::string> args, uint32_t n) { return ::strtoull(getArgString(args, n).c_str(), nullptr, 10); }
 /*  */
 
 uint32_t getArgUInt32(std::vector<std::string> args, uint32_t n) { return (uint32_t)::atoi(getArgString(args, n).c_str()); }
@@ -418,10 +429,16 @@ uint16_t getArgUInt16(std::vector<std::string> args, uint32_t n) { return (uint1
 int16_t getArgInt16(std::vector<std::string> args, uint32_t n) { return (int16_t)::atoi(getArgString(args, n).c_str()); }
 /*  */
 
-uint8_t getArgUInt8(std::vector<std::string> args, uint32_t n) { return (uint8_t)::atoi(getArgString(args, n).c_str()); }
+uint8_t getArgUInt8(std::vector<std::string> args, uint32_t n)
+{
+    return (uint8_t)::atoi(getArgString(args, n).c_str());
+}
 /*  */
 
-int8_t getArgInt8(std::vector<std::string> args, uint32_t n) { return (int8_t)::atoi(getArgString(args, n).c_str()); }
+int8_t getArgInt8(std::vector<std::string> args, uint32_t n)
+{
+    return (int8_t)::atoi(getArgString(args, n).c_str());
+}
 
 // ---------------------------------------------------------------------------
 //  Program Entry Point
@@ -443,8 +460,7 @@ int main(int argc, char** argv)
         if (i < argc) {
             argc -= i;
             argv += i;
-        }
-        else {
+        } else {
             argc--;
             argv++;
         }
@@ -894,43 +910,43 @@ int main(int argc, char** argv)
         }
         else if (rcom == RCD_FNE_GET_PEERCOUNT) {
             retCode = client->send(HTTP_GET, FNE_GET_PEER_COUNT, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_TGIDLIST) {
+        } else if (rcom == RCD_FNE_GET_TGIDLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_TGID_QUERY, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_FORCEUPDATE) {
+        } else if (rcom == RCD_FNE_GET_FORCEUPDATE) {
             retCode = client->send(HTTP_GET, FNE_GET_FORCE_UPDATE, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_AFFLIST) {
+        } else if (rcom == RCD_FNE_GET_UNITREGS) {
+            retCode = client->send(HTTP_GET, FNE_GET_UNIT_REG_LIST, json::object(), response);
+        } else if (rcom == RCD_FNE_GET_AFFLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_AFF_LIST, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_RELOADTGS) {
+        } else if (rcom == RCD_FNE_GET_GRANTLIST) {
+            retCode = client->send(HTTP_GET, FNE_GET_GRANT_LIST, json::object(), response);
+        } else if (rcom == RCD_FNE_GET_RID_OPERATION && argCnt >= 1U) {
+            const uint64_t operationId = getArgUInt64(args, 0U);
+            retCode = client->send(HTTP_GET, FNE_GET_RID_OPERATION_BASE + std::to_string(operationId), json::object(), response);
+        } else if (rcom == RCD_FNE_GET_P25_RID_STATUS && argCnt >= 1U) {
+            const uint32_t subscriberId = getArgUInt32(args, 0U);
+            retCode = client->send(HTTP_GET, FNE_GET_P25_RID_STATUS_BASE + std::to_string(subscriberId), json::object(), response);
+        } else if (rcom == RCD_FNE_GET_RELOADTGS) {
             retCode = client->send(HTTP_GET, FNE_GET_RELOAD_TGS, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_RELOADRIDS) {
+        } else if (rcom == RCD_FNE_GET_RELOADRIDS) {
             retCode = client->send(HTTP_GET, FNE_GET_RELOAD_RIDS, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_RELOADPEERLIST) {
+        } else if (rcom == RCD_FNE_GET_RELOADPEERLIST) {
             retCode = client->send(HTTP_GET, FNE_GET_RELOAD_PEERLIST, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_RELOADCRYPTO) {
+        } else if (rcom == RCD_FNE_GET_RELOADCRYPTO) {
             retCode = client->send(HTTP_GET, FNE_GET_RELOAD_CRYPTO, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_PUT_RESETPEER && argCnt >= 1U) {
+        } else if (rcom == RCD_FNE_PUT_RESETPEER && argCnt >= 1U) {
             uint32_t peerId = getArgUInt32(args, 0U);
             json::object req = json::object();
             req["peerId"].set<uint32_t>(peerId);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_RESET, req, response);
-        }
-        else if (rcom == RCD_FNE_PUT_PEER_RESET_CONN && argCnt >= 1U) {
+        } else if (rcom == RCD_FNE_PUT_PEER_RESET_CONN && argCnt >= 1U) {
             uint32_t peerId = getArgUInt32(args, 0U);
             json::object req = json::object();
             req["peerId"].set<uint32_t>(peerId);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_RESET_CONN, req, response);
-        }
-        else if (rcom == RCD_FNE_PUT_PEER_NAK_BY_PEERID && argCnt >= 3U) {
+        } else if (rcom == RCD_FNE_PUT_PEER_NAK_BY_PEERID && argCnt >= 3U) {
             uint32_t peerId = getArgUInt32(args, 0U);
             std::string tag = getArgString(args, 1U);
             uint8_t reason = getArgUInt8(args, 2U);
@@ -940,8 +956,7 @@ int main(int argc, char** argv)
             req["reason"].set<uint8_t>(reason);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_NAK_PEERID, req, response);
-        }
-        else if (rcom == RCD_FNE_PUT_PEER_NAK_BY_ADDRESS && argCnt >= 5U) {
+        } else if (rcom == RCD_FNE_PUT_PEER_NAK_BY_ADDRESS && argCnt >= 5U) {
             uint32_t peerId = getArgUInt32(args, 0U);
             std::string tag = getArgString(args, 1U);
             uint8_t reason = getArgUInt8(args, 2U);
@@ -955,46 +970,37 @@ int main(int argc, char** argv)
             req["port"].set<uint16_t>(port);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_NAK_ADDRESS, req, response);
-        }
-        else if (rcom == RCD_FNE_PUT_PEER_ACL_ADD && argCnt >= 1U) {
+        } else if (rcom == RCD_FNE_PUT_PEER_ACL_ADD && argCnt >= 1U) {
             uint32_t peerId = getArgUInt32(args, 0U);
             json::object req = json::object();
             req["peerId"].set<uint32_t>(peerId);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_ADD, req, response);
-        }
-        else if (rcom == RCD_FNE_PUT_PEER_ACL_DELETE && argCnt >= 1U) {
+        } else if (rcom == RCD_FNE_PUT_PEER_ACL_DELETE && argCnt >= 1U) {
             uint32_t peerId = getArgUInt32(args, 0U);
             json::object req = json::object();
             req["peerId"].set<uint32_t>(peerId);
 
             retCode = client->send(HTTP_PUT, FNE_PUT_PEER_DELETE, req, response);
-        }
-        else if (rcom == RCD_FNE_SAVE_RID_ACL) {
+        } else if (rcom == RCD_FNE_SAVE_RID_ACL) {
             retCode = client->send(HTTP_GET, FNE_GET_RID_COMMIT, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_SAVE_TGID_ACL) {
+        } else if (rcom == RCD_FNE_SAVE_TGID_ACL) {
             retCode = client->send(HTTP_GET, FNE_GET_TGID_COMMIT, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_SAVE_PEER_ACL) {
+        } else if (rcom == RCD_FNE_SAVE_PEER_ACL) {
             retCode = client->send(HTTP_GET, FNE_GET_PEER_COMMIT, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_STATS) {
+        } else if (rcom == RCD_FNE_GET_STATS) {
             retCode = client->send(HTTP_GET, FNE_GET_STATS, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_PUT_RESET_TOTAL_CALLS) {
+        } else if (rcom == RCD_FNE_GET_HEALTH) {
+            retCode = client->send(HTTP_GET, FNE_GET_HEALTH, json::object(), response);
+        } else if (rcom == RCD_FNE_PUT_RESET_TOTAL_CALLS) {
             retCode = client->send(HTTP_GET, FNE_GET_RESET_TOTAL_CALLS, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_PUT_RESET_ACTIVE_CALLS) {
+        } else if (rcom == RCD_FNE_PUT_RESET_ACTIVE_CALLS) {
             retCode = client->send(HTTP_GET, FNE_GET_RESET_ACTIVE_CALLS, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_PUT_RESET_CALL_COLLISIONS) {
+        } else if (rcom == RCD_FNE_PUT_RESET_CALL_COLLISIONS) {
             retCode = client->send(HTTP_GET, FNE_GET_RESET_CALL_COLLISIONS, json::object(), response);
-        }
-        else if (rcom == RCD_FNE_GET_SPANNINGTREE) {
+        } else if (rcom == RCD_FNE_GET_SPANNINGTREE) {
             retCode = client->send(HTTP_GET, FNE_GET_SPANNING_TREE, json::object(), response);
-        }
-        else {
+        } else {
             args.clear();
             LogError(LOG_REST, BAD_CMD_STR " (\"%s\")", rcom.c_str());
         }
