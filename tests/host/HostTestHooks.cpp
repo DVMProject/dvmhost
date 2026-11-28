@@ -196,7 +196,8 @@ void HostTestHooks::dmrProcessNetworkGrant(dmr::Slot& slot, uint32_t srcId, uint
 
 /* Injects synthetic DMR RF voice call frame. */
 
-bool HostTestHooks::dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId, bool group)
+bool HostTestHooks::dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId,
+    bool group, bool encrypted)
 {
     uint8_t frame[dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U];
     ::memset(frame, 0x00U, sizeof(frame));
@@ -207,6 +208,10 @@ bool HostTestHooks::dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_
     frame[1U] = dmr::defines::SYNC_DATA | dmr::defines::DataType::VOICE_LC_HEADER;
 
     dmr::lc::LC lc(group ? dmr::defines::FLCO::GROUP : dmr::defines::FLCO::PRIVATE, srcId, dstId);
+    if (encrypted) {
+        lc.setFID(dmr::defines::FID_KENWOOD);
+        lc.setPF(true);
+    }
     dmr::lc::FullLC fullLC;
     fullLC.encode(lc, frame + 2U, dmr::defines::DataType::VOICE_LC_HEADER);
 
@@ -217,6 +222,18 @@ bool HostTestHooks::dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_
 
     dmr::Sync::addDMRDataSync(frame + 2U, dmr::Slot::s_duplex);
 
+    return slot.processFrame(frame, sizeof(frame));
+}
+
+/* Injects a synthetic DMR RF voice-sync frame. */
+
+bool HostTestHooks::dmrProcessRFVoiceSync(dmr::Slot& slot)
+{
+    uint8_t frame[dmr::defines::DMR_FRAME_LENGTH_BYTES + 2U];
+    ::memset(frame, 0x00U, sizeof(frame));
+    frame[0U] = modem::TAG_DATA;
+    frame[1U] = dmr::defines::SYNC_VOICE;
+    dmr::Sync::addDMRAudioSync(frame + 2U, dmr::Slot::s_duplex);
     return slot.processFrame(frame, sizeof(frame));
 }
 
@@ -975,7 +992,8 @@ void HostTestHooks::nxdnSetRFRejected(nxdn::Control& control)
 
 /* Injects synthetic NXDN RF call start frame. */
 
-bool HostTestHooks::nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId, bool group)
+bool HostTestHooks::nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId,
+    bool group, bool encrypted)
 {
     uint8_t start[nxdn::defines::NXDN_FRAME_LENGTH_BYTES + 2U];
     ::memset(start, 0x00U, sizeof(start));
@@ -1007,6 +1025,7 @@ bool HostTestHooks::nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint
     lc.setSrcId(srcId);
     lc.setDstId(dstId);
     lc.setGroup(group);
+    lc.setAlgId(encrypted ? NXDDEF::CIPHER_TYPE_AES : NXDDEF::CIPHER_TYPE_NONE);
     lc.setTransmissionMode(nxdn::defines::TransmissionMode::MODE_4800);
     lc.encode(buffer, nxdn::defines::NXDN_RTCH_LC_LENGTH_BITS);
 

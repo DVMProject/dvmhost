@@ -1098,6 +1098,33 @@ TEST_CASE("NXDN processFrame accepts a synthetic RF voice call", "[nxdn][host][c
     REQUIRE(harness.m_control->getLastDstId() == 2001U);
 }
 
+TEST_CASE("NXDN RF voice enforces strapped talkgroup encryption",
+    "[nxdn][host][control][rf][strapping]")
+{
+    constexpr uint32_t SOURCE_ID = 1001U;
+    constexpr uint32_t TALK_GROUP = 2001U;
+
+    SECTION("clear voice is rejected") {
+        NXDNHostHarness harness;
+        harness.m_tidLookup.addEntry(TALK_GROUP, 0U, true, false, false,
+            lookups::TG_STRAPPING_STRAPPED);
+
+        CHECK_FALSE(HostTestHooks::nxdnStartRFCall(
+            *harness.m_control, SOURCE_ID, TALK_GROUP, true, false));
+        CHECK(HostTestHooks::nxdnRFState(*harness.m_control) == RS_RF_REJECTED);
+    }
+
+    SECTION("encrypted voice is accepted") {
+        NXDNHostHarness harness;
+        harness.m_tidLookup.addEntry(TALK_GROUP, 0U, true, false, false,
+            lookups::TG_STRAPPING_STRAPPED);
+
+        CHECK(HostTestHooks::nxdnStartRFCall(
+            *harness.m_control, SOURCE_ID, TALK_GROUP, true, true));
+        CHECK(HostTestHooks::nxdnRFState(*harness.m_control) == RS_RF_AUDIO);
+    }
+}
+
 TEST_CASE("NXDN controller enforces TG admission without applying it to individual calls", "[nxdn][host][control][rf][talkgroup-admission]")
 {
     SECTION("restricted group traffic is rejected") {

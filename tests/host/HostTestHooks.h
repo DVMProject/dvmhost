@@ -141,9 +141,17 @@ public:
      * @param srcId Source ID for synthetic call.
      * @param dstId Destination ID for synthetic call.
      * @param group True for group call, false for private call.
+     * @param encrypted True to mark the synthetic call as encrypted.
      * @return bool True if frame processing succeeds.
      */
-    static bool dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId, bool group = true);
+    static bool dmrStartRFVoiceCall(dmr::Slot& slot, uint32_t srcId, uint32_t dstId,
+        bool group = true, bool encrypted = false);
+    /**
+     * @brief Injects a synthetic DMR RF voice-sync frame into a slot.
+     * @param slot DMR slot instance.
+     * @return bool True if frame processing succeeds.
+     */
+    static bool dmrProcessRFVoiceSync(dmr::Slot& slot);
     /**
      * @brief Detaches the shared DMR network pointer during test-fixture teardown.
      */
@@ -864,9 +872,12 @@ public:
      * @param control NXDN control instance.
      * @param srcId Source ID for synthetic call.
      * @param dstId Destination ID for synthetic call.
+     * @param group True for group call, false for individual call.
+     * @param encrypted True to mark the synthetic call as encrypted.
      * @return bool True if frame processing succeeds.
      */
-    static bool nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId, bool group = true);
+    static bool nxdnStartRFCall(nxdn::Control& control, uint32_t srcId, uint32_t dstId,
+        bool group = true, bool encrypted = false);
     /**
      * @brief Injects a synthetic NXDN network call start frame.
      * @param control NXDN control instance.

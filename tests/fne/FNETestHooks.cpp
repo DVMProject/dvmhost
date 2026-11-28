@@ -131,6 +131,14 @@ void FNETestHooks::clearPeerPayloadWrite(TrafficNetwork& network)
     network.m_testPeerPayloadWriteHandler = nullptr;
 }
 
+/* Writes the active talkgroup list to a peer. */
+
+void FNETestHooks::writeActiveTalkgroups(TrafficNetwork& network, uint32_t peerId,
+    uint32_t streamId)
+{
+    network.writeTGIDs(peerId, streamId, false);
+}
+
 /* Captures the next metadata response payload and opcodes. */
 
 void FNETestHooks::captureMetadataWrite(MetadataNetwork& metadata, std::vector<uint8_t>& payload,
@@ -326,7 +334,7 @@ bool FNETestHooks::isPeerPermitted(TrafficNetwork& network, ParrotProtocol proto
 /* Evaluates a call handler's group-call validation policy. */
 
 bool FNETestHooks::validateGroupCall(TrafficNetwork& network, ParrotProtocol protocol,
-    uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo)
+    uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo, bool encrypted)
 {
     constexpr uint32_t STREAM_ID = 102U;
 
@@ -347,8 +355,9 @@ bool FNETestHooks::validateGroupCall(TrafficNetwork& network, ParrotProtocol pro
         control.setSrcId(sourceId);
         control.setDstId(talkgroupId);
         control.setLCO(p25::defines::LCO::GROUP);
+        control.setAlgId(encrypted ? P25DEF::ALGO_AES_256 : P25DEF::ALGO_UNENCRYPT);
         return network.m_tagP25->validate(
-            peerId, control, p25::defines::DUID::LDU1, nullptr, 0U, STREAM_ID);
+            peerId, control, p25::defines::DUID::LDU2, nullptr, 0U, STREAM_ID);
     }
     case ParrotProtocol::P25P2:
         return network.m_tagP25P2->validate(
@@ -359,6 +368,7 @@ bool FNETestHooks::validateGroupCall(TrafficNetwork& network, ParrotProtocol pro
         control.setSrcId((uint16_t)sourceId);
         control.setDstId((uint16_t)talkgroupId);
         control.setGroup(true);
+        control.setAlgId(encrypted ? NXDDEF::CIPHER_TYPE_AES : NXDDEF::CIPHER_TYPE_NONE);
         return network.m_tagNXDN->validate(
             peerId, control, nxdn::defines::MessageType::RTCH_VCALL, STREAM_ID);
     }

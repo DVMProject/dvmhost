@@ -153,6 +153,14 @@ public:
      */
     static void clearPeerPayloadWrite(network::TrafficNetwork& network);
     /**
+     * @brief Writes the active talkgroup list to a peer.
+     * @param network Traffic network instance.
+     * @param peerId Destination peer ID.
+     * @param streamId Command stream ID.
+     */
+    static void writeActiveTalkgroups(network::TrafficNetwork& network, uint32_t peerId,
+        uint32_t streamId);
+    /**
      * @brief Captures the next metadata response payload and opcodes.
      * @param metadata Metadata network instance.
      * @param[out] payload Complete metadata response payload.
@@ -223,10 +231,12 @@ public:
      * @param sourceId Source subscriber ID.
      * @param talkgroupId Destination talkgroup ID.
      * @param slotNo Protocol slot number.
+     * @param encrypted Whether the synthetic call reports encrypted voice.
      * @return True when the call passes validation.
      */
     static bool validateGroupCall(network::TrafficNetwork& network, ParrotProtocol protocol,
-        uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo = 1U);
+        uint32_t peerId, uint32_t sourceId, uint32_t talkgroupId, uint8_t slotNo = 1U,
+        bool encrypted = false);
     /**
      * @brief Validates P25 individual traffic whose current LCO is not private.
      * @param network The TrafficNetwork instance.

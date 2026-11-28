@@ -85,6 +85,59 @@ public:
     network::MetadataNetwork metadata;
 };
 
+TEST_CASE("FNE active talkgroup updates encode encryption strapping flags",
+    "[fne][network][talkgroups][strapping]")
+{
+    constexpr uint32_t PEER_ID = 1001U;
+    constexpr uint32_t STREAM_ID = 0x12345678U;
+    constexpr uint32_t SELECTABLE_TG = 0x010203U;
+    constexpr uint32_t STRAPPED_TG = 0x040506U;
+    constexpr uint32_t CLEAR_TG = 0x070809U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, PEER_ID, network::NET_STAT_RUNNING, true);
+    harness.talkgroups.sendTalkgroups(true);
+    harness.talkgroups.addEntry(SELECTABLE_TG, 1U, true, false, false,
+        lookups::TG_STRAPPING_SELECTABLE);
+    harness.talkgroups.addEntry(STRAPPED_TG, 2U, true, true, false,
+        lookups::TG_STRAPPING_STRAPPED);
+    harness.talkgroups.addEntry(CLEAR_TG, 1U, true, false, false,
+        lookups::TG_STRAPPING_CLEAR);
+    lookups::TalkgroupRuleGroupVoice clearRule = harness.talkgroups.find(CLEAR_TG, 1U);
+    lookups::TalkgroupRuleConfig clearConfig = clearRule.config();
+    clearConfig.preferred({ PEER_ID + 1U });
+    clearRule.config(clearConfig);
+    harness.talkgroups.addEntry(clearRule);
+
+    std::vector<uint8_t> payload;
+    uint8_t function = network::NET_FUNC::ILLEGAL;
+    uint8_t subFunction = network::NET_SUBFUNC::NOP;
+    FNETestHooks::capturePeerPayloadWrite(harness.traffic, payload, function, subFunction);
+
+    FNETestHooks::writeActiveTalkgroups(harness.traffic, PEER_ID, STREAM_ID);
+
+    REQUIRE(function == network::NET_FUNC::MASTER);
+    REQUIRE(subFunction == network::NET_SUBFUNC::MASTER_SUBFUNC_ACTIVE_TGS);
+    REQUIRE(payload.size() == FNE_COMMAND_PREFIX_LENGTH + 4U + (3U * 5U));
+    const uint32_t talkgroupCount = GET_UINT32(payload.data(), FNE_COMMAND_PREFIX_LENGTH);
+    REQUIRE(talkgroupCount == 3U);
+
+    const uint32_t selectableOffset = FNE_COMMAND_PREFIX_LENGTH + 4U;
+    const uint32_t selectableTG = GET_UINT32(payload.data(), selectableOffset);
+    REQUIRE(selectableTG == SELECTABLE_TG);
+    REQUIRE(payload[selectableOffset + 4U] == 0x01U);
+
+    const uint32_t strappedOffset = selectableOffset + 5U;
+    const uint32_t strappedTG = GET_UINT32(payload.data(), strappedOffset);
+    REQUIRE(strappedTG == STRAPPED_TG);
+    REQUIRE(payload[strappedOffset + 4U] == 0x62U);
+
+    const uint32_t clearOffset = strappedOffset + 5U;
+    const uint32_t clearTG = GET_UINT32(payload.data(), clearOffset);
+    REQUIRE(clearTG == CLEAR_TG);
+    REQUIRE(payload[clearOffset + 4U] == 0x91U);
+}
+
 TEST_CASE("FNE metadata returns subscriber operation and P25 status results",
     "[fne][metadata][subscriber-operations]")
 {
@@ -1603,6 +1656,48 @@ TEST_CASE("FNE call handlers validate source radios and group state", "[fne][cal
         CAPTURE(static_cast<int>(protocol));
         CHECK_FALSE(FNETestHooks::validateGroupCall(
             harness.traffic, protocol, PEER_ID, SOURCE_ID, TALK_GROUP));
+    }
+}
+
+TEST_CASE("FNE digital call handlers enforce talkgroup encryption strapping",
+    "[fne][callhandler][strapping]")
+{
+    constexpr uint32_t PEER_ID = 1001U;
+    constexpr uint32_t SOURCE_ID = 2001U;
+    constexpr uint32_t TALK_GROUP = 3100U;
+
+    FNEHarness harness;
+    FNETestHooks::addPeer(harness.traffic, PEER_ID, network::NET_STAT_RUNNING, true);
+    harness.radios.addEntry(SOURCE_ID, true, "test source");
+
+    const std::vector<FNETestHooks::ParrotProtocol> protocols = {
+        FNETestHooks::ParrotProtocol::P25,
+        FNETestHooks::ParrotProtocol::NXDN
+    };
+
+    for (FNETestHooks::ParrotProtocol protocol : protocols) {
+        CAPTURE(static_cast<int>(protocol));
+
+        harness.talkgroups.addEntry(TALK_GROUP, 1U, true, false, false,
+            lookups::TG_STRAPPING_SELECTABLE);
+        CHECK(FNETestHooks::validateGroupCall(
+            harness.traffic, protocol, PEER_ID, SOURCE_ID, TALK_GROUP, 1U, false));
+        CHECK(FNETestHooks::validateGroupCall(
+            harness.traffic, protocol, PEER_ID, SOURCE_ID, TALK_GROUP, 1U, true));
+
+        harness.talkgroups.addEntry(TALK_GROUP, 1U, true, false, false,
+            lookups::TG_STRAPPING_STRAPPED);
+        CHECK_FALSE(FNETestHooks::validateGroupCall(
+            harness.traffic, protocol, PEER_ID, SOURCE_ID, TALK_GROUP, 1U, false));
+        CHECK(FNETestHooks::validateGroupCall(
+            harness.traffic, protocol, PEER_ID, SOURCE_ID, TALK_GROUP, 1U, true));
+
+        harness.talkgroups.addEntry(TALK_GROUP, 1U, true, false, false,
+            lookups::TG_STRAPPING_CLEAR);
+        CHECK(FNETestHooks::validateGroupCall(
+            harness.traffic, protocol, PEER_ID, SOURCE_ID, TALK_GROUP, 1U, false));
+        CHECK_FALSE(FNETestHooks::validateGroupCall(
+            harness.traffic, protocol, PEER_ID, SOURCE_ID, TALK_GROUP, 1U, true));
     }
 }
 

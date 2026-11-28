@@ -984,6 +984,35 @@ TEST_CASE("DMR processFrame accepts a synthetic RF voice call on the targeted sl
     REQUIRE(harness.m_control->getLastDstId(1U) == 2001U);
 }
 
+TEST_CASE("DMR RF voice enforces strapped talkgroup encryption",
+    "[dmr][host][control][rf][strapping]")
+{
+    constexpr uint32_t SOURCE_ID = 1001U;
+    constexpr uint32_t TALK_GROUP = 2001U;
+
+    SECTION("clear voice is rejected") {
+        DMRHostHarness harness;
+        dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+        harness.m_tidLookup.addEntry(TALK_GROUP, 1U, true, false, false,
+            lookups::TG_STRAPPING_STRAPPED);
+
+        REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, SOURCE_ID, TALK_GROUP));
+        CHECK_FALSE(HostTestHooks::dmrProcessRFVoiceSync(*slot));
+        CHECK(HostTestHooks::dmrRFState(*slot) == RS_RF_REJECTED);
+    }
+
+    SECTION("encrypted voice is accepted") {
+        DMRHostHarness harness;
+        dmr::Slot* slot = HostTestHooks::dmrSlot1(*harness.m_control);
+        harness.m_tidLookup.addEntry(TALK_GROUP, 1U, true, false, false,
+            lookups::TG_STRAPPING_STRAPPED);
+
+        REQUIRE(HostTestHooks::dmrStartRFVoiceCall(*slot, SOURCE_ID, TALK_GROUP, true, true));
+        CHECK(HostTestHooks::dmrProcessRFVoiceSync(*slot));
+        CHECK(HostTestHooks::dmrRFState(*slot) == RS_RF_AUDIO);
+    }
+}
+
 TEST_CASE("DMR controller enforces TG admission without applying it to private calls", "[dmr][host][control][rf][talkgroup-admission]")
 {
     SECTION("restricted group traffic is rejected") {

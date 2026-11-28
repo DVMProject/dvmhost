@@ -2419,6 +2419,42 @@ TEST_CASE("P25 processFrame accepts calibration-based RF LDU1 frame", "[p25][hos
     REQUIRE(harness.m_control->getLastDstId() == 1U);
 }
 
+TEST_CASE("P25 RF voice enforces strapped talkgroup encryption",
+    "[p25][host][control][rf][strapping]")
+{
+    constexpr uint32_t TALK_GROUP = 1U;
+
+    SECTION("clear voice is rejected") {
+        P25HostHarness harness;
+        harness.m_tidLookup.addEntry(TALK_GROUP, 0U, true, false, false,
+            lookups::TG_STRAPPING_STRAPPED);
+
+        uint8_t frame[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        buildP25RFFrame(CAL_P25_LDU1_1K, frame);
+        HostTestHooks::p25StampRFFrameNID(*harness.m_control, frame, p25::defines::DUID::LDU1);
+
+        CHECK_FALSE(harness.m_control->processFrame(frame, sizeof(frame)));
+        CHECK(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_REJECTED);
+    }
+
+    SECTION("encrypted voice is accepted") {
+        P25HostHarness harness;
+        harness.m_tidLookup.addEntry(TALK_GROUP, 0U, true, false, false,
+            lookups::TG_STRAPPING_STRAPPED);
+
+        uint8_t frame[p25::defines::P25_LDU_FRAME_LENGTH_BYTES + 2U];
+        buildP25RFFrame(CAL_P25_LDU1_1K, frame);
+        p25::lc::LC control;
+        REQUIRE(control.decodeLDU1(frame + 2U));
+        control.setEncrypted(true);
+        control.encodeLDU1(frame + 2U);
+        HostTestHooks::p25StampRFFrameNID(*harness.m_control, frame, p25::defines::DUID::LDU1);
+
+        CHECK(harness.m_control->processFrame(frame, sizeof(frame)));
+        CHECK(HostTestHooks::p25RFState(*harness.m_control) == RS_RF_AUDIO);
+    }
+}
+
 TEST_CASE("P25 controller enforces TG admission without applying it to U2U", "[p25][host][control][rf][talkgroup-admission]")
 {
     SECTION("restricted group traffic is rejected") {
