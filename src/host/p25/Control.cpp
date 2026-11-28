@@ -196,6 +196,12 @@ Control::Control(bool authoritative, uint32_t nac, uint32_t callHang, uint32_t q
             if (duid == DUID::TDU || duid == DUID::TDULC)
                 return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
 
+            // PDU messages pack SAP and PDU length into the header space used by the
+            // srcId/dstId/LCO fields below (see BaseNetwork::createP25_PDUMessage()), so
+            // they cannot be admitted on those fields; pass them to the data handler
+            if (duid == DUID::PDU)
+                return network::Network::RX_PACKET_PREPROCESS_RESULT::ACCEPT;
+
             const uint32_t srcId = GET_UINT24(data, 5U);
             const uint32_t dstId = GET_UINT24(data, 8U);
 
