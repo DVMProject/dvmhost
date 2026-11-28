@@ -265,8 +265,9 @@ namespace network
             /**
              * @brief Write data to the UDP socket.
              * @param[in] buffers Queue of buffers to write to socket.
-             * @param[out] lenWritten Total number of bytes written.
-             * @returns bool True, if messages were sent otherwise, false.
+             * @param[out] lenWritten Total number of bytes written, or -1 if any message was not sent.
+             * @returns bool True, if every message was sent; otherwise, false. A message that fails to send is dropped
+             *  and the remaining messages are still sent.
              */
             virtual bool write(BufferQueue* buffers, ssize_t* lenWritten = nullptr) noexcept;
 
