@@ -1773,6 +1773,9 @@ void ModemV24::convertToAirV24(const uint8_t *data, uint32_t length)
                             m_rxCall->lco = correctedLC.getLCO();
                             m_rxCall->mfId = correctedLC.getMFId();
                             if (correctedLC.isStandardMFId()) {
+                                m_rxCall->serviceOptions = (correctedLC.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
+                                                        (correctedLC.getEncrypted() ? 0x40U : 0x00U) +        // Encrypted Flag
+                                                        (correctedLC.getPriority() & 0x07U);                  // Priority
                                 m_rxCall->dstId = correctedLC.getDstId();
                                 m_rxCall->srcId = correctedLC.getSrcId();
                             }
@@ -2505,7 +2508,7 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                             bool emergency = m_rxCall->lastLDU1.getEmergency();
                             bool encryption = m_rxCall->lastLDU1.getEncrypted();
                             uint8_t priority = m_rxCall->lastLDU1.getPriority();
-                            m_rxCall->serviceOptions = (emergency ? 0x80U : 0x00U) +        // Emergency Flag
+                            m_rxCall->serviceOptions = (emergency ? 0x80U : 0x00U) +     // Emergency Flag
                                                     (encryption ? 0x40U : 0x00U) +       // Encrypted Flag
                                                     (priority & 0x07U);                  // Priority
 
@@ -2531,6 +2534,9 @@ void ModemV24::convertToAirTIA(const uint8_t *data, uint32_t length)
                                 m_rxCall->lco = correctedLC.getLCO();
                                 m_rxCall->mfId = correctedLC.getMFId();
                                 if (correctedLC.isStandardMFId()) {
+                                    m_rxCall->serviceOptions = (correctedLC.getEmergency() ? 0x80U : 0x00U) +     // Emergency Flag
+                                                            (correctedLC.getEncrypted() ? 0x40U : 0x00U) +        // Encrypted Flag
+                                                            (correctedLC.getPriority() & 0x07U);                  // Priority
                                     m_rxCall->dstId = correctedLC.getDstId();
                                     m_rxCall->srcId = correctedLC.getSrcId();
                                 }
