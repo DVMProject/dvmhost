@@ -17,3 +17,10 @@ file(GLOB ipsc_SRC
     "src/ipsc/*.h"
     "src/ipsc/*.cpp"
 )
+
+#
+# Windows Resource Scripts
+#
+file(GLOB ipsc_RC
+    "src/ipsc/win32/*.rc"
+)

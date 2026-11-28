@@ -113,7 +113,7 @@ namespace ipsc
          * @brief Checks if the client is registered with the IPSC network.
          * @returns bool True if the client is registered with the IPSC network. 
          */
-        bool connected() const { return m_state == State::CONNECTED; }
+        bool connected() const { return m_state == State::IPSC_CONNECTED; }
 
         /** 
          * @brief Sets the callback invoked for decoded IPSC voice packets. 
@@ -128,8 +128,16 @@ namespace ipsc
                         uint32_t burstLength);
 
     private:
-        /** @brief IPSC master registration state. */
-        enum class State { DISCONNECTED, REGISTERING, REQUESTING_MAP, CONNECTED };
+        /**
+         * @brief IPSC master registration state. 
+         */
+        enum State
+        {
+            IPSC_DISCONNECTED,
+            IPSC_REGISTERING,
+            IPSC_REQUESTING_MAP,
+            IPSC_CONNECTED
+        };
 
         std::string m_masterAddress;
         uint16_t m_masterPort;

@@ -41,7 +41,7 @@ IPSCClient::IPSCClient(const std::string& masterAddress, uint16_t masterPort, ui
     m_socket(localPort),
     m_master(),
     m_masterLength(0U),
-    m_state(State::DISCONNECTED),
+    m_state(State::IPSC_DISCONNECTED),
     m_protocolVersion(defines::PROTOCOL_MAX_VERSION),
     m_peers(),
     m_lastMasterTraffic(),
@@ -86,7 +86,7 @@ bool IPSCClient::open()
     if (!m_socket.open(m_master.ss_family))
         return false;
 
-    m_state = State::REGISTERING;
+    m_state = State::IPSC_REGISTERING;
     sendRegistration();
     return true;
 }
@@ -95,7 +95,7 @@ bool IPSCClient::open()
 
 void IPSCClient::close()
 {
-    if (m_state != State::DISCONNECTED) {
+    if (m_state != State::IPSC_DISCONNECTED) {
         uint8_t packet[defines::RETR_HEADER_LENGTH] = {0U};
         packet[0U] = uint8_t(MessageType::DEREGISTRATION_REQUEST);
         SET_UINT32(m_peerId, packet, 1U);
@@ -104,7 +104,7 @@ void IPSCClient::close()
 
     m_socket.close();
 
-    m_state = State::DISCONNECTED;
+    m_state = State::IPSC_DISCONNECTED;
 
     m_peers.clear();
 }
@@ -127,17 +127,17 @@ void IPSCClient::clock()
     }
 
     const auto now = std::chrono::steady_clock::now();
-    if (m_state == State::REGISTERING && now >= m_nextAction)
+    if (m_state == State::IPSC_REGISTERING && now >= m_nextAction)
         sendRegistration();
-    else if (m_state == State::REQUESTING_MAP && now >= m_nextAction)
+    else if (m_state == State::IPSC_REQUESTING_MAP && now >= m_nextAction)
         sendMapRequest();
-    else if (m_state == State::CONNECTED && now >= m_nextKeepAlive)
+    else if (m_state == State::IPSC_CONNECTED && now >= m_nextKeepAlive)
         sendKeepAlives();
 
     // check for master timeout and restart registration if necessary
-    if (m_state == State::CONNECTED && now - m_lastMasterTraffic > std::chrono::seconds(defines::MASTER_TIMEOUT_SECONDS)) {
+    if (m_state == State::IPSC_CONNECTED && now - m_lastMasterTraffic > std::chrono::seconds(defines::MASTER_TIMEOUT_SECONDS)) {
         LogWarning(LOG_NET, "IPSC master timed out; restarting registration");
-        m_state = State::REGISTERING;
+        m_state = State::IPSC_REGISTERING;
         sendRegistration();
     }
 
@@ -382,7 +382,7 @@ void IPSCClient::processMap(const uint8_t* packet, uint32_t length)
         send(request, sizeof(request), peer.address, peer.addressLength);
     }
 
-    m_state = State::CONNECTED;
+    m_state = State::IPSC_CONNECTED;
     m_nextKeepAlive = std::chrono::steady_clock::now();
 
     LogInfoEx(LOG_NET, "IPSC peer %u connected, peer count = %u", m_peerId, uint32_t(m_peers.size()));
@@ -577,10 +577,10 @@ void IPSCClient::process(const uint8_t* packet, uint32_t length, const sockaddr_
             m_protocolVersion = uint8_t(protocol & defines::PROTOCOL_VERSION_MASK);
             m_lastMasterTraffic = now;
             if (peerCount == 0U) {
-                m_state = State::CONNECTED;
+                m_state = State::IPSC_CONNECTED;
                 m_nextKeepAlive = now;
             } else {
-                m_state = State::REQUESTING_MAP;
+                m_state = State::IPSC_REQUESTING_MAP;
                 sendMapRequest();
             }
         }
