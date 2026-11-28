@@ -697,19 +697,37 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
     // iterate through the messages and begin transmission -- this loop will attempt to send all prepared messages 
     // using sendmmsg, handling partial sends and errors appropriately
     int totalMsgs = 0;
+    int droppedMsgs = 0;
     while (totalMsgs < msgs) {
         uint32_t remaining = (uint32_t)(msgs - totalMsgs);
         int ret = sendmmsg(m_fd, headers + totalMsgs, remaining, 0);
         if (ret < 0) {
-#if defined(_WIN32)
-            LogError(LOG_NET, "Error returned from sendmmsg after sending %d of %d packet, err: %lu", totalMsgs, msgs, ::GetLastError());
-#else
+#if !defined(_WIN32)
             if (errno == EINTR)
                 continue;
+#endif // !_WIN32
 
-            LogError(LOG_NET, "Error returned from sendmmsg after sending %d of %d packet, err: %d (%s)", totalMsgs, msgs, errno, strerror(errno));
+            // log only the first failure in the batch, with its destination, so a socket-wide error does not log
+            // once per queued datagram; any further drops are reported in one summary line after the loop
+            if (droppedMsgs == 0) {
+                std::string dropAddress = Socket::address(*addresses[totalMsgs]);
+                uint16_t dropPort = Socket::port(*addresses[totalMsgs]);
+#if defined(_WIN32)
+                LogError(LOG_NET, "Error returned from sendmmsg, dropping packet %d of %d to %s:%u, err: %lu", totalMsgs + 1, msgs,
+                    dropAddress.c_str(), dropPort, ::GetLastError());
+#else
+                LogError(LOG_NET, "Error returned from sendmmsg, dropping packet %d of %d to %s:%u, err: %d (%s)", totalMsgs + 1, msgs,
+                    dropAddress.c_str(), dropPort, errno, strerror(errno));
 #endif // _WIN32
-            break;
+            }
+
+            // sendmmsg() only returns an error when the first message of the call fails (a failure on a later message
+            // returns the count sent, and that message is retried as the first message of the next call); drop only
+            // the failed message so one unreachable destination does not discard the datagrams queued for others.
+            // Each drop advances the batch, so a persistent error cannot loop indefinitely.
+            ++droppedMsgs;
+            ++totalMsgs;
+            continue;
         }
 
         if (ret == 0 || ret > (int)remaining) {
@@ -717,13 +735,18 @@ bool Socket::write(BufferQueue* buffers, ssize_t* lenWritten) noexcept
             break;
         }
 
+        // a short count means the next message failed; it is retried as the first message of the next call
         if (ret < (int)remaining)
-            LogWarning(LOG_NET, "Required multiple writes to send all %d packet (this shouldn't happen!)", msgs);
+            LogDebug(LOG_NET, "sendmmsg sent %d of %u remaining packet, resuming at packet %d of %d", ret, remaining, totalMsgs + ret + 1, msgs);
 
         totalMsgs += ret;
     }
 
-    if (msgs > 0 && totalMsgs == msgs) {
+    if (droppedMsgs > 1) {
+        LogError(LOG_NET, "Dropped %d of %d packet from sendmmsg batch", droppedMsgs, msgs);
+    }
+
+    if (msgs > 0 && totalMsgs == msgs && droppedMsgs == 0) {
         result = true;
         if (lenWritten != nullptr)
             *lenWritten = sent;
