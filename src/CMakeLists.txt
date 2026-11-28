@@ -177,13 +177,27 @@ else ()
 endif (COMPILE_WIN32)
 target_include_directories(dvmpatch PRIVATE ${OPENSSL_INCLUDE_DIR} ${LIBDW_INCLUDE_DIR} src src/patch)
 
+#
+## dvmipsc
+#
+include(src/ipsc/CMakeLists.txt)
+add_executable(dvmipsc ${common_INCLUDE} ${ipsc_SRC})
+if (COMPILE_WIN32)
+    target_sources(dvmipsc PRIVATE ${ipsc_RC})
+    target_link_libraries(dvmipsc PRIVATE common ${OPENSSL_LIBRARIES} ${LIBDW_LIBRARY} asio::asio Threads::Threads)
+else ()
+    target_link_libraries(dvmipsc PRIVATE common ${OPENSSL_LIBRARIES} ${LIBDW_LIBRARY} dl asio::asio Threads::Threads)
+endif (COMPILE_WIN32)
+target_include_directories(dvmipsc PRIVATE ${OPENSSL_INCLUDE_DIR} ${LIBDW_INCLUDE_DIR} src src/ipsc)
+
 if (SHARED_LIBS AND NOT COMPILE_WIN32)
     set(_dvm_shared_library_consumers
         dvmhost
         dvmfne
         dvmcmd
         dvmbridge
-        dvmpatch)
+        dvmpatch
+        dvmipsc)
 
     if (ENABLE_TUI_SUPPORT AND (NOT DISABLE_TUI_APPS))
         list(APPEND _dvm_shared_library_consumers sysview tged peered)
