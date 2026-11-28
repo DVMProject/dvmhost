@@ -19,6 +19,7 @@
 #include "common/edac/CRC.h"
 #include "common/Utils.h"
 #include "common/p25/P25Defines.h"
+#include "common/p25/data/DataHeader.h"
 #include "common/p25/data/LowSpeedData.h"
 #include "common/p25/lc/LC.h"
 #include "common/p25/lc/MotTalkerAlias.h"
@@ -492,6 +493,34 @@ public:
 
         uint32_t messageLength = 0U;
         UInt8Array message = createP25_TDUMessage(messageLength, control, lsd, 0x00U);
+        if (message == nullptr || messageLength == 0U) {
+            return false;
+        }
+
+        return m_frameQueue->write(message.get(), messageLength, streamId, targetPeerId, m_peerId,
+            { network::NET_FUNC::PROTOCOL, network::NET_SUBFUNC::PROTOCOL_SUBFUNC_P25 }, seq, m_addr, m_addrLen);
+    }
+
+    /**
+     * @brief Sends one block of a confirmed packet data P25 PDU frame.
+     * @param targetPeerId The target peer ID.
+     * @param streamId The stream ID.
+     * @param seq The sequence number.
+     * @param pduLength Length in bytes of the PDU block payload carried by the frame.
+     * @returns bool True if the frame was successfully sent, false otherwise.
+     */
+    bool sendP25PDUFrame(uint32_t targetPeerId, uint32_t streamId, uint16_t seq, uint32_t pduLength)
+    {
+        p25::data::DataHeader header;
+        header.setFormat(p25::defines::PDUFormatType::CONFIRMED);
+        header.setSAP(p25::defines::PDUSAP::PACKET_DATA);
+        header.setMFId(p25::defines::MFG_STANDARD);
+        header.setBlocksToFollow(1U);
+
+        std::vector<uint8_t> pdu(pduLength, 0x5AU);
+
+        uint32_t messageLength = 0U;
+        UInt8Array message = createP25_PDUMessage(messageLength, header, 0U, pdu.data(), pduLength);
         if (message == nullptr || messageLength == 0U) {
             return false;
         }
@@ -2097,6 +2126,46 @@ TEST_CASE("P25 non-authoritative packet admission requires a matching permit", "
 
     REQUIRE(HostTestHooks::p25NetState(*harness.m_control) == RS_NET_AUDIO);
     REQUIRE(harness.network()->rxP25StreamId() == permittedStream);
+}
+
+TEST_CASE("P25 non-authoritative packet admission passes network PDUs to the data handler", "[p25][host][control][net][e2e][acl][non-authoritative][pdu]")
+{
+    const uint16_t hostPort = reserveLoopbackPort();
+    const uint16_t senderPort = reserveLoopbackPort();
+    REQUIRE(hostPort != 0U);
+    REQUIRE(senderPort != 0U);
+    REQUIRE(hostPort != senderPort);
+
+    const uint32_t hostPeerId = 6017U;
+    const uint32_t pduStream = 0x500501U;
+    const uint32_t llId = 9051U;
+
+    // PDU network messages carry the PDU length where other DUIDs carry the dstId,
+    // so pick a length that can never match the permitted LLID
+    const uint32_t pduLength = 25U;
+    REQUIRE(pduLength != llId);
+
+    P25HostHarness harness(false, true, hostPort, hostPeerId, false, true);
+    P25TestNetwork sender(senderPort, 6018U);
+    HostTestHooks::p25SetSNDCPSupport(*harness.m_control, true);
+
+    REQUIRE(harness.network() != nullptr);
+    REQUIRE(harness.network()->activateLoopback("127.0.0.1", senderPort));
+    REQUIRE(sender.activateLoopback("127.0.0.1", hostPort));
+
+    harness.m_control->permittedTG(llId, true);
+    REQUIRE(HostTestHooks::p25PermittedData(*harness.m_control));
+
+    REQUIRE(sender.sendP25PDUFrame(hostPeerId, pduStream, 1000U, pduLength));
+    for (uint32_t i = 0U; i < 50U; i++) {
+        sender.clock(1U);
+        harness.network()->clock(1U);
+        if (harness.network()->rxP25StreamId() == pduStream)
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    REQUIRE(harness.network()->rxP25StreamId() == pduStream);
 }
 
 TEST_CASE("P25 host network terminator clears active network voice state", "[p25][host][control]")
