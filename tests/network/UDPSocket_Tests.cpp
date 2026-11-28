@@ -527,7 +527,7 @@ TEST_CASE("UDP socket does not report a partial sendmmsg send as success", "[net
     REQUIRE(sender.open(AF_INET));
 
     const std::string firstPayload = "sent-before-error";
-    const std::string thirdPayload = "not-sent-after-error";
+    const std::string thirdPayload = "sent-after-error";
     BufferQueue queue;
     queue.push(makeDatagram(firstPayload, first.address(), first.addrLen()));
     queue.push(makeDatagram("invalid-address-length", third.address(), 0U));
@@ -538,7 +538,40 @@ TEST_CASE("UDP socket does not report a partial sendmmsg send as success", "[net
     REQUIRE(bytesWritten == -1);
     REQUIRE(queue.empty());
     REQUIRE(first.receive(firstPayload));
-    REQUIRE_FALSE(third.receive(thirdPayload));
+    REQUIRE(third.receive(thirdPayload));
+    REQUIRE_FALSE(third.receive("invalid-address-length"));
+
+    sender.close();
+}
+
+// A zero-length destination address makes sendmmsg() fail the message with EDESTADDRREQ, the same error the kernel
+// returns for a WireGuard peer with no current endpoint. Only the failed messages may be lost; a failure as the
+// first message, consecutive failures, and a failure as the last message must not stop delivery of the others.
+TEST_CASE("UDP socket delivers the rest of a sendmmsg around failed datagrams", "[network][udp]")
+{
+    LoopbackNetwork receivers[4U];
+    for (const LoopbackNetwork& receiver : receivers)
+        REQUIRE(receiver.valid());
+
+    Socket sender;
+    REQUIRE(sender.open(AF_INET));
+
+    const std::string payloads[4U] = { "unreachable-first", "unreachable-second", "deliverable", "unreachable-last" };
+    const bool deliverable[4U] = { false, false, true, false };
+    BufferQueue queue;
+    for (size_t i = 0U; i < 4U; i++)
+        queue.push(makeDatagram(payloads[i], receivers[i].address(), deliverable[i] ? receivers[i].addrLen() : 0U));
+
+    ssize_t bytesWritten = 0;
+    REQUIRE_FALSE(sender.write(&queue, &bytesWritten));
+    REQUIRE(bytesWritten == -1);
+    REQUIRE(queue.empty());
+    for (size_t i = 0U; i < 4U; i++) {
+        if (deliverable[i])
+            REQUIRE(receivers[i].receive(payloads[i]));
+        else
+            REQUIRE_FALSE(receivers[i].receive(payloads[i]));
+    }
 
     sender.close();
 }
